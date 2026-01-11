@@ -5,6 +5,25 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
+router.get("/check-handle", async (req, res) => {
+    try {
+        const { handle } = req.query;
+        if (!handle || typeof handle !== 'string') {
+            return res.status(400).json({ error: "Handle is required" });
+        }
+
+        const existingUser = await db.select().from(users).where(eq(users.account_id, handle)).limit(1);
+
+        if (existingUser.length > 0) {
+            return res.json({ available: false });
+        }
+        res.json({ available: true });
+    } catch (error) {
+        console.error("Check handle error:", error);
+        res.status(500).json({ error: "Failed to check handle" });
+    }
+});
+
 router.get("/:id", async (req, res) => {
     try {
         const id = parseInt(req.params.id);

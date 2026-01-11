@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { ChevronLeft, Camera, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, Camera, Loader2, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +14,48 @@ export const ProfileStep = () => {
     const [checking, setChecking] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    // Validation State
+    const [handleStatus, setHandleStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Debounce Check
+    useEffect(() => {
+        if (step !== 0 || handle.length < 3) {
+            setHandleStatus('idle');
+            setErrorMessage(null);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            checkHandleAvailability(handle);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [handle, step]);
+
+    const checkHandleAvailability = async (checkHandle: string) => {
+        if (checkHandle.length < 3) return;
+
+        setHandleStatus('checking');
+        setErrorMessage(null);
+
+        try {
+            const response = await fetch(`http://localhost:3001/api/users/check-handle?handle=${checkHandle}`);
+            const data = await response.json();
+
+            if (data.available) {
+                setHandleStatus('available');
+            } else {
+                setHandleStatus('taken');
+                setErrorMessage("This ID is already taken.");
+            }
+        } catch (error) {
+            console.error("Check failed", error);
+            setHandleStatus('idle'); // Retry allowed
+        }
+    };
 
     const handleBack = () => {
         if (step > 0) {
@@ -58,6 +99,7 @@ export const ProfileStep = () => {
 
     const handleNext = async () => {
         if (step < 2) {
+            if (step === 0 && handleStatus !== 'available') return;
             setStep(step + 1);
         } else {
             // Final submit
@@ -103,7 +145,7 @@ export const ProfileStep = () => {
     };
 
     const isNextDisabled = () => {
-        if (step === 0) return handle.length < 3;
+        if (step === 0) return handleStatus !== 'available';
         if (step === 1) return nickname.length < 1;
         if (step === 2) return checking || uploading;
         return false;
@@ -140,18 +182,56 @@ export const ProfileStep = () => {
                                     <h1 className="text-2xl font-bold">Create your ID</h1>
                                     <p className="text-muted-foreground">This will be your unique handle.</p>
                                 </div>
-                                <div className="relative pt-4">
-                                    <span className="absolute left-0 top-3 text-2xl font-bold text-muted-foreground">@</span>
-                                    <input
-                                        type="text"
-                                        placeholder="username"
-                                        value={handle}
-                                        onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
-                                        className="w-full pl-8 text-3xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted/20"
-                                        autoFocus
-                                    />
-                                </div>
-                            </>
+
+                                <div className="pt-4">
+                                    <div
+                                        className="
+      flex items-baseline gap-1
+      border-b-2 border-border
+      py-4
+      focus-within:border-primary transition-colors
+      relative
+    "
+                                    >
+                                        <span className="text-3xl font-bold text-muted-foreground leading-none">
+                                            @
+                                        </span>
+
+                                        <input
+                                            type="text"
+                                            placeholder="username"
+                                            value={handle}
+                                            onChange={(e) => {
+                                                const val = e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+                                                setHandle(val);
+                                                setHandleStatus('idle'); // Reset on type
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    checkHandleAvailability(handle);
+                                                }
+                                            }}
+                                            className="
+        flex-1
+        bg-transparent
+        text-3xl font-bold leading-none
+        outline-none
+        placeholder:text-muted/20
+      "
+                                            autoFocus
+                                        />
+
+                                        {/* Validation Icons */}
+                                        <div className="flex items-center absolute right-0 top-1/2 -translate-y-1/2">
+                                            {handleStatus === 'checking' && <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
+                                            {handleStatus === 'available' && <Check className="w-6 h-6 text-green-500" />}
+                                            {handleStatus === 'taken' && <X className="w-6 h-6 text-destructive" />}
+                                        </div>
+                                    </div>
+                                    {errorMessage && (
+                                        <p className="mt-2 text-sm text-destructive">{errorMessage}</p>
+                                    )}
+                                </div>                            </>
                         )}
 
                         {step === 1 && (
