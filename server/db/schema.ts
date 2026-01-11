@@ -15,6 +15,7 @@ export const users = pgTable("users", {
     visible_rank: integer("visible_rank").default(100),
     birthdate: date("birthdate"),
     gender: varchar("gender", { length: 1 }), // M, F, N
+    taste_cluster: varchar("taste_cluster", { length: 50 }),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
 });

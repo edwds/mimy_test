@@ -11,6 +11,9 @@ import { OtpStep } from '@/screens/register/OtpStep';
 import { ProfileStep } from '@/screens/register/ProfileStep';
 import { MainTab } from '@/screens/main/MainTab';
 import './i18n';
+import { QuizIntro } from '@/screens/quiz/QuizIntro';
+import { QuizScreen } from '@/screens/quiz/QuizScreen';
+import { QuizResult } from '@/screens/quiz/QuizResult';
 
 function App() {
     const [loading, setLoading] = useState(true);
@@ -37,10 +40,19 @@ function App() {
                         {/* Auth */}
                         <Route path="/login" element={<LoginPage />} />
 
+                        // ... (imports)
+
+                        // ...
+
                         {/* Registration Flow */}
                         <Route path="/register/phone" element={<PhoneStep />} />
                         <Route path="/register/otp" element={<OtpStep />} />
                         <Route path="/register/profile" element={<ProfileStep />} />
+
+                        {/* Quiz Flow */}
+                        <Route path="/quiz/intro" element={<QuizIntro />} />
+                        <Route path="/quiz/test" element={<QuizScreen />} />
+                        <Route path="/quiz/result" element={<QuizResult />} />
 
                         <Route path="/main" element={<MainTab />} />
                     </Routes>

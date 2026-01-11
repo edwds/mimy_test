@@ -41,7 +41,7 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const { account_id, nickname, bio, link, profile_image, phone, birthdate, gender } = req.body;
+        const { account_id, nickname, bio, link, profile_image, phone, birthdate, gender, taste_cluster } = req.body;
 
         const updatedUser = await db.update(users)
             .set({
@@ -53,6 +53,7 @@ router.put("/:id", async (req, res) => {
                 phone,
                 birthdate,
                 gender,
+                taste_cluster,
                 updated_at: new Date()
             })
             .where(eq(users.id, id))

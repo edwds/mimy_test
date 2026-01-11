@@ -38,9 +38,11 @@ router.post("/google", async (req, res) => {
 
         // Create new user
         const timestamp = Date.now();
+        const nickname = name ? name.substring(0, 20) : `User${timestamp.toString().slice(-4)}`;
+
         const newUser = await db.insert(users).values({
             email,
-            nickname: name,
+            nickname,
             profile_image: picture,
             phone: `temp_${timestamp}`, // Temporary
             account_id: `user_${timestamp}`,
@@ -49,9 +51,9 @@ router.post("/google", async (req, res) => {
         }).returning();
 
         res.json({ user: newUser[0], isNew: true });
-    } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ error: "Login failed" });
+    } catch (error: any) {
+        console.error("Login error details:", error);
+        res.status(500).json({ error: "Login failed", details: error.message });
     }
 });
 

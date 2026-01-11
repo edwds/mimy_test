@@ -131,7 +131,7 @@ export const ProfileStep = () => {
                     // Clear temp reg data
                     localStorage.removeItem("mimy_reg_birthyear");
                     localStorage.removeItem("mimy_reg_phone");
-                    navigate('/main');
+                    navigate('/quiz/intro');
                 } else {
                     alert("Failed to save profile");
                     setChecking(false);
