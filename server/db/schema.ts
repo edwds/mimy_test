@@ -76,24 +76,24 @@ export const shops = pgTable('shops', {
     address_full: text('address_full'),
     address_region: text('address_region'),
 
-    // name_i18n: jsonb('name_i18n'),
-    // description_i18n: jsonb('description_i18n'),
-    // address_i18n: jsonb('address_i18n'),
+    name_i18n: text('name_i18n'),
+    description_i18n: text('description_i18n'),
+    address_i18n: text('address_i18n'),
 
     kind: text('kind'),
     food_kind: text('food_kind'),
     lat: doublePrecision('lat'),
     lon: doublePrecision('lon'),
     thumbnail_img: text('thumbnail_img'),
-    sub_img: jsonb('sub_img'),
-    menu: jsonb('menu'),
+    sub_img: text('sub_img'),
+    menu: text('menu'),
     status: integer('status').default(2),
     country_code: varchar('country_code', { length: 5 }),
     visibility: boolean('visibility').default(true),
 
-    // Derived fields for matching
-    estimated_taste: jsonb('estimated_taste'),
-    taste_sample_count: integer('taste_sample_count').default(0),
+    // Derived fields for matching (Not in current DB)
+    // estimated_taste: jsonb('estimated_taste'),
+    // taste_sample_count: integer('taste_sample_count').default(0),
 
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
