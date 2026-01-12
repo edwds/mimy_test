@@ -18,7 +18,6 @@ import { QuizResult } from '@/screens/quiz/QuizResult';
 function App() {
     const [loading, setLoading] = useState(true);
     const isLoggedIn = false; // Force logged out for dev
-    const location = useLocation(); // Add useLocation hook
 
     useEffect(() => {
         const timer = setTimeout(() => setLoading(false), 2000);
@@ -32,28 +31,36 @@ function App() {
     }
 
     return (
-        <Route path="/login" element={<LoginPage />} />
+        <GoogleOAuthProvider clientId={googleClientId || ""}>
+            <BrowserRouter>
+                {loading ? (
+                    <SplashScreen />
+                ) : (
+                    <Routes>
+                        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <PublicHome />} />
 
-                        // ... (imports)
+                        {/* Onboarding Flow */}
+                        <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
+                        <Route path="/onboarding/agreement" element={<AgreementStep />} />
 
-                        // ...
+                        {/* Auth */}
+                        <Route path="/login" element={<LoginPage />} />
 
-                        {/* Registration Flow */ }
+                        {/* Registration Flow */}
                         <Route path="/register/phone" element={<PhoneStep />} />
                         <Route path="/register/otp" element={<OtpStep />} />
                         <Route path="/register/profile" element={<ProfileStep />} />
 
-    {/* Quiz Flow */ }
+                        {/* Quiz Flow */}
                         <Route path="/quiz/intro" element={<QuizIntro />} />
                         <Route path="/quiz/test" element={<QuizScreen />} />
                         <Route path="/quiz/result" element={<QuizResult />} />
 
                         <Route path="/main" element={<MainTab />} />
-                    </Routes >
-                )
-}
-            </BrowserRouter >
-        </GoogleOAuthProvider >
+                    </Routes>
+                )}
+            </BrowserRouter>
+        </GoogleOAuthProvider>
     );
 }
 
