@@ -3,10 +3,12 @@ import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
 import { useNavigate } from 'react-router-dom';
+import { SelectTypeBottomSheet } from '@/components/SelectTypeBottomSheet';
 
 export const MainTab = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('profile'); // Default to profile for testing
+    const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -32,12 +34,21 @@ export const MainTab = () => {
 
             {/* Floating Action Button */}
             <button
-                onClick={() => navigate('/write')}
+                onClick={() => setIsWriteSheetOpen(true)}
                 className="absolute bottom-24 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform z-50 focus:outline-none"
                 aria-label="Write Review"
             >
                 <Plus className="w-8 h-8" />
             </button>
+
+            <SelectTypeBottomSheet
+                isOpen={isWriteSheetOpen}
+                onClose={() => setIsWriteSheetOpen(false)}
+                onSelect={(type) => {
+                    setIsWriteSheetOpen(false);
+                    navigate(`/write?type=${type}`);
+                }}
+            />
 
             {/* Bottom Navigation */}
             <nav className="border-t border-border bg-card/80 backdrop-blur-lg pb-4 shrink-0">

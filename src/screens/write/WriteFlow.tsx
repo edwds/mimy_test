@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SelectTypeStep } from './SelectTypeStep';
 import { SearchShopStep } from './SearchShopStep';
 import { BasicInfoStep } from './BasicInfoStep';
@@ -10,10 +10,17 @@ import { ContentService } from '@/services/ContentService';
 
 export const WriteFlow = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState<'TYPE_SELECT' | 'SEARCH_SHOP' | 'BASIC_INFO' | 'WRITE_CONTENT' | 'RANKING'>('TYPE_SELECT');
+    const [searchParams] = useSearchParams();
+    const initialType = searchParams.get('type') as 'review' | 'post' | null;
+
+    const [step, setStep] = useState<'TYPE_SELECT' | 'SEARCH_SHOP' | 'BASIC_INFO' | 'WRITE_CONTENT' | 'RANKING'>(() => {
+        if (initialType === 'review') return 'SEARCH_SHOP';
+        if (initialType === 'post') return 'WRITE_CONTENT';
+        return 'TYPE_SELECT';
+    });
 
     // Data Accumulation
-    const [type, setType] = useState<'review' | 'post'>('review');
+    const [type, setType] = useState<'review' | 'post'>(initialType || 'review');
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const [basicInfo, setBasicInfo] = useState<{ satisfaction: string; visitDate: string; companions: any[] } | null>(null);
 

@@ -20,7 +20,7 @@ router.get("/search", async (req, res) => {
             .where(
                 or(
                     ilike(shops.name, query),
-                    ilike(shops.address_full, query)
+                    ilike(shops.address, query)
                 )
             )
             .limit(20);
