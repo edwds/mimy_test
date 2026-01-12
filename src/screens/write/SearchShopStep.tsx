@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
 import { ShopService } from '@/services/ShopService';
-import { Button } from '@/components/ui/button';
 
 interface Props {
     onSelect: (shop: any) => void;

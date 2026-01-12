@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Utensils, PenLine } from 'lucide-react';
 
 interface Props {

@@ -51,7 +51,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                     variant="ghost"
                     className="text-[var(--color-primary)] font-bold p-0"
                     onClick={handleSubmit}
-                    disabled={text.length === 0}
+                    disabled={text.length === 0 || uploading}
                 >
                     완료
                 </Button>
