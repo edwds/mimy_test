@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Settings, MapPin, Link as LinkIcon, Edit2, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/api';
 
 // Type definition (move to types/index.ts later)
 interface User {
@@ -25,7 +26,7 @@ export const ProfileScreen = () => {
             if (!userId) return;
 
             try {
-                const response = await fetch(`http://localhost:3001/api/users/${userId}`);
+                const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data);

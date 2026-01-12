@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -15,7 +16,7 @@ export const QuizResult = () => {
 
         if (userId) {
             try {
-                await fetch(`http://localhost:3001/api/users/${userId}`, {
+                await fetch(`${API_BASE_URL}/api/users/${userId}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
