@@ -18,47 +18,42 @@ import { QuizResult } from '@/screens/quiz/QuizResult';
 function App() {
     const [loading, setLoading] = useState(true);
     const isLoggedIn = false; // Force logged out for dev
+    const location = useLocation(); // Add useLocation hook
 
     useEffect(() => {
         const timer = setTimeout(() => setLoading(false), 2000);
         return () => clearTimeout(timer);
     }, []);
 
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+        console.error("Missing VITE_GOOGLE_CLIENT_ID in environment variables");
+    }
+
     return (
-        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-            <BrowserRouter>
-                {loading ? (
-                    <SplashScreen />
-                ) : (
-                    <Routes>
-                        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <PublicHome />} />
-
-                        {/* Onboarding Flow */}
-                        <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
-                        <Route path="/onboarding/agreement" element={<AgreementStep />} />
-
-                        {/* Auth */}
-                        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
                         // ... (imports)
 
                         // ...
 
-                        {/* Registration Flow */}
+                        {/* Registration Flow */ }
                         <Route path="/register/phone" element={<PhoneStep />} />
                         <Route path="/register/otp" element={<OtpStep />} />
                         <Route path="/register/profile" element={<ProfileStep />} />
 
-                        {/* Quiz Flow */}
+    {/* Quiz Flow */ }
                         <Route path="/quiz/intro" element={<QuizIntro />} />
                         <Route path="/quiz/test" element={<QuizScreen />} />
                         <Route path="/quiz/result" element={<QuizResult />} />
 
                         <Route path="/main" element={<MainTab />} />
-                    </Routes>
-                )}
-            </BrowserRouter>
-        </GoogleOAuthProvider>
+                    </Routes >
+                )
+}
+            </BrowserRouter >
+        </GoogleOAuthProvider >
     );
 }
 
