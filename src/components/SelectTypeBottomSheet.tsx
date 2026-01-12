@@ -1,5 +1,5 @@
 import React from 'react';
-import { Utensils, PenLine, X } from 'lucide-react';
+import { Utensils, PenLine } from 'lucide-react';
 
 interface Props {
     isOpen: boolean;
