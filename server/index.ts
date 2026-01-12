@@ -28,7 +28,7 @@ app.get("/health", (_req, res) => {
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, async () => {
         console.log(`Server running on port ${port}`);
-        await QuizManager.getInstance().loadData();
+        await QuizManager.getInstance().checkAndSeed().catch(console.error);
     });
 }
 

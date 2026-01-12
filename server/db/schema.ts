@@ -34,3 +34,19 @@ export const terms = pgTable("terms", {
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
 });
+
+export const clusters = pgTable("clusters", {
+    id: serial("id").primaryKey(),
+    cluster_id: integer("cluster_id").unique().notNull(), // Logical ID from JSON
+    name: varchar("name", { length: 100 }).notNull(),
+    tagline: text("tagline"),
+    medoid_value: varchar("medoid_value", { length: 100 }),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Using vector as PK because it is unique and used for lookup
+export const quiz_matches = pgTable("quiz_matches", {
+    vector: varchar("vector", { length: 50 }).primaryKey(), // "-2,-2,-2,..."
+    cluster_id: integer("cluster_id").notNull(), // FK to clusters.cluster_id logically (not enforced if not seeded yet)
+});

@@ -1,4 +1,6 @@
-
+import { db } from '../db/index';
+import { clusters, quiz_matches } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { MATCH_DATA } from '../data/matchData';
 import CLUSTER_DATA from '../data/cluster.json';
 
@@ -6,15 +8,19 @@ import CLUSTER_DATA from '../data/cluster.json';
 
 
 interface ClusterData {
-    cluster_id: string; // or number, json has string
-    cluster_medoid_value: string;
-    cluster_name: string;
-    cluster_tagline: string;
+    cluster_id: string | number; // or number, json has string
+    medoid_value: string;
+    name: string;
+    tagline: string;
 }
 
 export interface QuizResult {
     clusterId: number;
-    clusterData: ClusterData | null;
+    clusterData: {
+        cluster_id: string; // Keep string for compatibility if needed, but DB is int
+        cluster_name: string;
+        cluster_tagline: string;
+    } | null;
     scores: Record<string, number>;
 }
 
@@ -38,8 +44,6 @@ const AXIS_ORDER = [
 
 export class QuizManager {
     private static instance: QuizManager;
-    private lookupTable: Map<string, number> = new Map(); // "v1,v2,v3,v4,v5,v6,v7" -> clusterId
-    private clusterData: Map<number, ClusterData> = new Map();
     private isLoaded: boolean = false;
 
     private constructor() { }
@@ -51,67 +55,82 @@ export class QuizManager {
         return QuizManager.instance;
     }
 
-    public async loadData() {
+    public async checkAndSeed() {
         if (this.isLoaded) return;
 
-        // Load Data synchronously from imports
         try {
-            // Load Match Data
+            console.log("[QuizManager] Checking if seeding is needed...");
+            // Check if matches exist
+            const existingMatch = await db.select().from(quiz_matches).limit(1);
+            if (existingMatch.length > 0) {
+                console.log("[QuizManager] DB already seeded.");
+                this.isLoaded = true;
+                return;
+            }
+
+            console.log("[QuizManager] Seeding DB from memory...");
+
+            // 1. Seed Clusters
+            for (const c of CLUSTER_DATA) {
+                await db.insert(clusters)
+                    .values({
+                        cluster_id: parseInt(c.cluster_id),
+                        name: c.cluster_name,
+                        tagline: c.cluster_tagline,
+                        medoid_value: c.cluster_medoid_value
+                    })
+                    .onConflictDoNothing();
+            }
+
+            // 2. Seed Matches
             const lines = MATCH_DATA.split('\n');
-            let count = 0;
+            const matchesToInsert: { vector: string; cluster_id: number }[] = [];
+
             for (const line of lines) {
                 if (!line.trim() || line.startsWith('value')) continue;
                 const parts = line.split('\t');
                 if (parts.length >= 2) {
-                    const vector = parts[0].trim();
-                    const clusterId = parseInt(parts[1].trim(), 10);
-                    this.lookupTable.set(vector, clusterId);
-                    count++;
+                    matchesToInsert.push({
+                        vector: parts[0].trim(),
+                        cluster_id: parseInt(parts[1].trim(), 10)
+                    });
                 }
             }
-            console.log(`[QuizManager] Loaded ${count} match rows from memory.`);
 
-            // Load Cluster Data
-            const clusters: any[] = CLUSTER_DATA;
-            for (const c of clusters) {
-                this.clusterData.set(parseInt(c.cluster_id), c as ClusterData);
+            // Batch Insert
+            const BATCH_SIZE = 1000;
+            for (let i = 0; i < matchesToInsert.length; i += BATCH_SIZE) {
+                const batch = matchesToInsert.slice(i, i + BATCH_SIZE);
+                await db.insert(quiz_matches)
+                    .values(batch)
+                    .onConflictDoNothing();
+                if (i % 5000 === 0) console.log(`[QuizManager] Seeded ${i} rows...`);
             }
-            console.log(`[QuizManager] Loaded ${clusters.length} clusters from memory.`);
 
             this.isLoaded = true;
-            console.log(`[QuizManager] Initialization complete. Loaded: ${this.isLoaded}`);
+            console.log(`[QuizManager] Seeding complete.`);
 
         } catch (error) {
-            console.error('[QuizManager] Failed to load data:', error);
+            console.error('[QuizManager] Failed to seed data:', error);
         }
     }
 
-    public calculate(answers: Record<number, number>): QuizResult {
+    public async calculate(answers: Record<number, number>): Promise<QuizResult> {
+        // Ensure data is loaded/seeded
         if (!this.isLoaded) {
-            console.warn('[QuizManager] Data not loaded, attempting to load now...');
-            // In a synch call we can't await, but hopefully it was loaded on startup.
-            // If strictly needed, we throw or handle async differently.
-            // For now assuming loadData() was called on server start.
+            await this.checkAndSeed();
         }
 
+        // ... calculation strictly same as before ...
         // 1. Calculate Averages
-        // Group answers by axis (3 questions per axis)
         const sums: Record<string, number> = {};
         const counts: Record<string, number> = {};
 
-        // Helper: Map question ID to Axis Index (0-6) based on 3 questions per axis
-        // Q1-3 -> Index 0
-        // Q4-6 -> Index 1
-        // ...
         for (let qId = 1; qId <= 21; qId++) {
             const axisIndex = Math.ceil(qId / 3) - 1;
             const axisName = AXIS_ORDER[axisIndex];
-
-            const rawVal = answers[qId] || 3; // Default to neutral if missing
-            // Map 1..5 to -2..2
-            // 1->-2, 2->-1, 3->0, 4->1, 5->2
+            const rawVal = answers[qId] || 3;
             const score = rawVal - 3;
-
             sums[axisName] = (sums[axisName] || 0) + score;
             counts[axisName] = (counts[axisName] || 0) + 1;
         }
@@ -121,42 +140,45 @@ export class QuizManager {
 
         for (const axis of AXIS_ORDER) {
             const sum = sums[axis] || 0;
-            const count = counts[axis] || 3; // Should be 3
-            // Float Average
+            const count = counts[axis] || 3;
             const avg = sum / count;
-            // Round to integer -2..2
             const rounded = Math.round(avg);
-            // Clamp just in case
             const clamped = Math.max(-2, Math.min(2, rounded));
-
             scoreVector.push(clamped);
             scoresMap[axis] = clamped;
         }
 
-        // 2. Create Lookup Key
+        // 2. Lookup Key
         const lookupKey = scoreVector.join(',');
 
-        // 3. Find Cluster
-        // Default to cluster 1 or logical fallback if not found (though match.tsv should be exhaustive)
-        let clusterId = this.lookupTable.get(lookupKey);
+        // 3. Find Cluster from DB
+        let clusterId = 1;
+        const match = await db.select().from(quiz_matches).where(eq(quiz_matches.vector, lookupKey)).limit(1);
 
-        if (clusterId === undefined) {
+        if (match.length > 0) {
+            clusterId = match[0].cluster_id;
+        } else {
             console.warn(`[QuizManager] No match found for vector: ${lookupKey}. Defaulting to 1.`);
-            clusterId = 1;
         }
 
-        // 4. Get Data
-        const clusterData = this.clusterData.get(clusterId) || null;
+        // 4. Get Data from DB
+        const cluster = await db.select().from(clusters).where(eq(clusters.cluster_id, clusterId)).limit(1);
+        let clusterInfo = null;
 
-        if (!clusterData) {
-            console.error(`[QuizManager] key matched to ID ${clusterId} but no cluster data found.`);
+        if (cluster.length > 0) {
+            clusterInfo = {
+                cluster_id: cluster[0].cluster_id.toString(),
+                cluster_name: cluster[0].name,
+                cluster_tagline: cluster[0].tagline || ""
+            };
+            console.log(`[QuizManager] Calculation success: Vector=${lookupKey} -> ID=${clusterId} -> Name=${cluster[0].name}`);
         } else {
-            console.log(`[QuizManager] Calculation success: Vector=${lookupKey} -> ID=${clusterId} -> Name=${clusterData.cluster_name}`);
+            console.error(`[QuizManager] ID ${clusterId} has no cluster data in DB.`);
         }
 
         return {
             clusterId,
-            clusterData,
+            clusterData: clusterInfo,
             scores: scoresMap
         };
     }

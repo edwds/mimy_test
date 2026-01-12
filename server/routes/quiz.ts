@@ -18,7 +18,7 @@ router.post("/submit", async (req, res) => {
         }
 
         const quizManager = QuizManager.getInstance();
-        const result = quizManager.calculate(answers);
+        const result = await quizManager.calculate(answers);
 
         // Update User if userId provided
         if (userId) {

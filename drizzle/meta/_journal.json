@@ -15,6 +15,13 @@
       "when": 1768145997363,
       "tag": "0001_clumsy_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768186973621,
+      "tag": "0002_yielding_silver_fox",
+      "breakpoints": true
     }
   ]
 }
