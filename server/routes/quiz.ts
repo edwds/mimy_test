@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { QuizManager } from "../utils/quiz";
-import { db } from "../db/database";
+import { db } from "../db/index";
 import { users } from "../db/schema";
 import { eq } from "drizzle-orm";
 
