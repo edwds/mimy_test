@@ -257,8 +257,8 @@ export const clusters = pgTable('clusters', {
     tagline: text('tagline'),
     medoid_value: text('medoid_value'), // "0,0,0..."
 
-    name_i18n: jsonb('name_i18n'),
-    tagline_i18n: jsonb('tagline_i18n'),
+    // name_i18n: jsonb('name_i18n'),
+    // tagline_i18n: jsonb('tagline_i18n'),
 
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
