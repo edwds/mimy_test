@@ -1,4 +1,4 @@
-CREATE TABLE "phone_verifications" (
+CREATE TABLE IF NOT EXISTS "phone_verifications" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"phone" varchar(20) NOT NULL,
 	"country_code" varchar(5) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "phone_verifications" (
 	"verified_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "terms" (
+CREATE TABLE IF NOT EXISTS "terms" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"code" varchar(50) NOT NULL,
 	"title" varchar(200) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE "terms" (
 	CONSTRAINT "terms_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "user_term_agreements" (
+CREATE TABLE IF NOT EXISTS "user_term_agreements" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
 	"term_id" integer NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE "user_term_agreements" (
 	CONSTRAINT "user_term_agreements_user_id_term_id_term_version_unique" UNIQUE("user_id","term_id","term_version")
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"channel" integer DEFAULT 0 NOT NULL,
 	"email" varchar(128),
@@ -56,5 +56,5 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_account_id_unique" UNIQUE("account_id")
 );
 --> statement-breakpoint
-ALTER TABLE "user_term_agreements" ADD CONSTRAINT "user_term_agreements_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_term_agreements" ADD CONSTRAINT "user_term_agreements_term_id_terms_id_fk" FOREIGN KEY ("term_id") REFERENCES "public"."terms"("id") ON DELETE no action ON UPDATE no action;
+-- ALTER TABLE "user_term_agreements" ADD CONSTRAINT "user_term_agreements_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+-- ALTER TABLE "user_term_agreements" ADD CONSTRAINT "user_term_agreements_term_id_terms_id_fk" FOREIGN KEY ("term_id") REFERENCES "public"."terms"("id") ON DELETE no action ON UPDATE no action;

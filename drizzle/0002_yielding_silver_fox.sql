@@ -1,4 +1,4 @@
-CREATE TABLE "clusters" (
+CREATE TABLE IF NOT EXISTS "clusters" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"cluster_id" integer NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE "clusters" (
 	CONSTRAINT "clusters_cluster_id_unique" UNIQUE("cluster_id")
 );
 --> statement-breakpoint
-CREATE TABLE "quiz_matches" (
+CREATE TABLE IF NOT EXISTS "quiz_matches" (
 	"vector" varchar(50) PRIMARY KEY NOT NULL,
 	"cluster_id" integer NOT NULL
 );

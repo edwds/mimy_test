@@ -54,6 +54,7 @@ router.get("/:id", async (req, res) => {
             ...clusterInfo
         });
     } catch (error) {
+        console.error("Fetch user error:", error);
         res.status(500).json({ error: "Failed to fetch user" });
     }
 });
