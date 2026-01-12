@@ -73,12 +73,12 @@ export const shops = pgTable('shops', {
 
     name: text('name').notNull(),
     description: text('description'),
-    address: text('address'),
+    address_full: text('address_full'),
     address_region: text('address_region'),
 
-    name_i18n: jsonb('name_i18n'),
-    description_i18n: jsonb('description_i18n'),
-    address_i18n: jsonb('address_i18n'),
+    // name_i18n: jsonb('name_i18n'),
+    // description_i18n: jsonb('description_i18n'),
+    // address_i18n: jsonb('address_i18n'),
 
     kind: text('kind'),
     food_kind: text('food_kind'),

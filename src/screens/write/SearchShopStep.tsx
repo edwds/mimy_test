@@ -68,7 +68,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                         <div className="font-bold text-[var(--color-text-primary)]">{shop.name}</div>
                                         <div className="text-sm text-[var(--color-text-secondary)] flex items-center gap-1">
                                             <MapPin className="w-3 h-3" />
-                                            {shop.address_region || shop.address}
+                                            {shop.address_region || shop.address_full}
                                         </div>
                                         <div className="text-xs text-[var(--color-text-tertiary)] mt-1">{shop.food_kind}</div>
                                     </div>
