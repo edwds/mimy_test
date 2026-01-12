@@ -68,7 +68,7 @@ export const LoginPage = () => {
                     disabled
                 >
                     <Apple className="mr-2 w-5 h-5 fill-current" />
-                    Continue with Apple (Coming Soon)
+                    Continue with Apple
                 </Button>
 
                 <div className="relative my-8">
@@ -88,7 +88,7 @@ export const LoginPage = () => {
                     disabled
                 >
                     <Mail className="mr-2 w-4 h-4" />
-                    Continue with Email (Coming Soon)
+                    Continue with Email
                 </Button>
             </main>
         </div>

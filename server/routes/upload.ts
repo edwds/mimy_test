@@ -22,6 +22,7 @@ router.post("/", upload.single("file"), async (req, res) => {
         const blob = await put(req.file.originalname, req.file.buffer, {
             access: "public",
             token: process.env.BLOB_READ_WRITE_TOKEN,
+            addRandomSuffix: true, // Prevent filename collisions
         });
 
         console.log("Upload success:", blob.url);
