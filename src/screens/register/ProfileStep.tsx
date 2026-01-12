@@ -73,6 +73,8 @@ export const ProfileStep = () => {
             setUploading(true);
             // 1. Resize
             const resizedBlob = await resizeImage(file, 1280);
+            console.log("Resized blob size:", resizedBlob.size);
+            if (resizedBlob.size === 0) throw new Error("Resized image is empty");
 
             // 2. Upload
             const formData = new FormData();
@@ -87,7 +89,8 @@ export const ProfileStep = () => {
                 const data = await response.json();
                 setPhotoUrl(data.url);
             } else {
-                alert("Upload failed");
+                const errorText = await response.text();
+                alert(`Upload failed: ${response.status} ${response.statusText}\n${errorText}`);
             }
         } catch (err) {
             console.error(err);
