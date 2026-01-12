@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MapPin, Link as LinkIcon, Edit2, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,16 +50,21 @@ export const ProfileScreen = () => {
 
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
-            {/* Header / Nav Area could go here if global header not used */}
-
             <main className="flex-1 overflow-y-auto">
-                <div className="p-6 pb-2">
+                <div className="p-6 pt-10 pb-2">
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">
                         {/* Left: Info */}
-                        <div className="flex-1 pr-4">
-                            <h1 className="text-2xl font-bold mb-1">{user.nickname || "No Name"}</h1>
-                            <p className="text-muted-foreground text-sm mb-3">@{user.account_id}</p>
+                        <div className="flex-1 pr-4 flex flex-col min-w-0">
+                            {/* Name + Handle */}
+                            <div className="flex items-baseline gap-2 mb-1 min-w-0">
+                                <h1 className="text-2xl font-bold truncate">
+                                    {user.nickname || "No Name"}
+                                </h1>
+                                <span className="text-muted-foreground text-sm shrink-0">
+                                    @{user.account_id}
+                                </span>
+                            </div>
 
                             {/* Stats */}
                             <div className="flex gap-4 mb-4">
@@ -86,7 +92,7 @@ export const ProfileScreen = () => {
 
                         {/* Right: Image & Edit */}
                         <div
-                            className="relative group cursor-pointer"
+                            className="relative group cursor-pointer flex-shrink-0 ml-4"
                             onClick={() => navigate('/profile/edit')}
                         >
                             <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
@@ -121,9 +127,9 @@ export const ProfileScreen = () => {
                     )}
                 </div>
 
-                {/* Tabs Sticky Header */}
-                <div className="sticky top-0 bg-background z-10 border-b border-border">
-                    <div className="flex px-4">
+                {/* Tabs Sticky Header - Chip Style */}
+                <div className="sticky top-0 bg-background z-10 py-2">
+                    <div className="flex px-4 gap-2 overflow-x-auto no-scrollbar">
                         <TabButton
                             active={activeTab === "content"}
                             onClick={() => setActiveTab("content")}
@@ -171,14 +177,11 @@ export const ProfileScreen = () => {
 const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
     <button
         onClick={onClick}
-        className={`flex-1 py-3 text-sm font-medium transition-colors relative ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+        className={`px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap ${active
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
             }`}
     >
         {label}
-        {active && (
-            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary mx-4 rounded-t-full" />
-        )}
     </button>
 );
-
-
