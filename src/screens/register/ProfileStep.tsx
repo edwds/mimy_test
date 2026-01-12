@@ -103,6 +103,11 @@ export const ProfileStep = () => {
     const handleNext = async () => {
         if (step < 2) {
             if (step === 0 && handleStatus !== 'available') return;
+
+            if (step === 1 && nickname.trim() === "") {
+                setNickname(handle);
+            }
+
             setStep(step + 1);
         } else {
             // Final submit
@@ -149,7 +154,7 @@ export const ProfileStep = () => {
 
     const isNextDisabled = () => {
         if (step === 0) return handleStatus !== 'available';
-        if (step === 1) return nickname.length < 1;
+        // if (step === 1) return nickname.length < 1; // Allow empty nickname
         if (step === 2) return checking || uploading;
         return false;
     };
@@ -233,6 +238,11 @@ export const ProfileStep = () => {
                                     </div>
                                     {errorMessage && (
                                         <p className="mt-2 text-sm text-destructive">{errorMessage}</p>
+                                    )}
+                                    {!errorMessage && (
+                                        <p className="mt-2 text-sm text-muted-foreground/60">
+                                            Lowercase, numbers, (-), (_), (.) allowed.
+                                        </p>
                                     )}
                                 </div>                            </>
                         )}
