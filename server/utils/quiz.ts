@@ -98,6 +98,7 @@ export class QuizManager {
             }
 
             this.isLoaded = true;
+            console.log(`[QuizManager] Initialization complete. Loaded: ${this.isLoaded}`);
 
         } catch (error) {
             console.error('[QuizManager] Failed to load data:', error);
@@ -156,10 +157,21 @@ export class QuizManager {
 
         // 3. Find Cluster
         // Default to cluster 1 or logical fallback if not found (though match.tsv should be exhaustive)
-        const clusterId = this.lookupTable.get(lookupKey) || 1;
+        let clusterId = this.lookupTable.get(lookupKey);
+
+        if (clusterId === undefined) {
+            console.warn(`[QuizManager] No match found for vector: ${lookupKey}. Defaulting to 1.`);
+            clusterId = 1;
+        }
 
         // 4. Get Data
         const clusterData = this.clusterData.get(clusterId) || null;
+
+        if (!clusterData) {
+            console.error(`[QuizManager] key matched to ID ${clusterId} but no cluster data found.`);
+        } else {
+            console.log(`[QuizManager] Calculation success: Vector=${lookupKey} -> ID=${clusterId} -> Name=${clusterData.cluster_name}`);
+        }
 
         return {
             clusterId,
