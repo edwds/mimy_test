@@ -121,7 +121,7 @@ export const ProfileScreen = () => {
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
             <main className="flex-1 overflow-y-auto">
-                <div className="p-6 pt-10 pb-2 relative">
+                <div className="p-6 pt-14 pb-2 relative">
 
                     {/* Menu Button (Absolute Top Right) */}
                     <div className="absolute top-2 right-4 z-20">
