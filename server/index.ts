@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { db } from "./db";
-import { users } from "./db/schema";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/users";
 import uploadRoutes from "./routes/upload";
@@ -20,7 +18,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
 
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
     res.send("OK");
 });
 

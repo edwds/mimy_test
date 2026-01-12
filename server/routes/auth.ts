@@ -27,7 +27,7 @@ router.post("/google", async (req, res) => {
         }
 
         const googleUser = await userInfoResponse.json();
-        const { email, name, sub: googleId, picture } = googleUser;
+        const { email, name, picture } = googleUser;
 
         // Check if user exists
         const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
