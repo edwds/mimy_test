@@ -45,10 +45,10 @@ router.post("/ranking", async (req, res) => {
         const result = await db.insert(users_ranking).values({
             user_id,
             shop_id,
-            sort_key: parseFloat(sort_key)
+            rank: parseInt(sort_key) // sort_key from frontend maps to rank
         }).onConflictDoUpdate({
             target: [users_ranking.user_id, users_ranking.shop_id],
-            set: { sort_key: parseFloat(sort_key), updated_at: new Date() }
+            set: { rank: parseInt(sort_key), updated_at: new Date() }
         }).returning();
 
         res.json({ success: true, data: result[0] });

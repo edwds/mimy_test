@@ -168,12 +168,12 @@ export const users_ranking = pgTable('users_ranking', {
     id: serial('id').primaryKey(),
     user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     shop_id: integer('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
-    sort_key: doublePrecision('sort_key').notNull(), // Lower is better
+    rank: integer('rank').notNull(), // Lower is better
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
 }, (table) => ({
     unique_ranking: unique().on(table.user_id, table.shop_id),
-    user_sort_idx: index('idx_ranking_user_sort').on(table.user_id, table.sort_key),
+    user_rank_idx: index('idx_ranking_user_rank').on(table.user_id, table.rank),
 }));
 
 export const users_lists = pgTable('users_lists', {
