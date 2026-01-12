@@ -273,11 +273,11 @@ export const ProfileStep = () => {
                                         placeholder="Nickname"
                                         value={nickname}
                                         onChange={(e) => {
-                                            // Allow only English, Numbers, Special characters, and Space
-                                            const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                            const val = e.target.value
+                                                .replace(/[\p{C}]/gu, '')  // remove control chars
+                                                .slice(0, 30);             // max length
                                             setNickname(val);
-                                        }}
-                                        className="w-full text-3xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted/20"
+                                        }} className="w-full text-3xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted/20"
                                         autoFocus
                                     />
                                     <p className="mt-4 text-sm text-muted-foreground">

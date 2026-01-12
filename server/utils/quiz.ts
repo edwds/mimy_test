@@ -1,16 +1,15 @@
 
-import fs from 'fs';
-import path from 'path';
+import { MATCH_DATA } from '../data/matchData';
+import CLUSTER_DATA from '../data/cluster.json';
 
 
 
 
 interface ClusterData {
-    cluster_id: string;
+    cluster_id: string; // or number, json has string
     cluster_medoid_value: string;
     cluster_name: string;
     cluster_tagline: string;
-    // Add other fields if necessary from cluster.json
 }
 
 export interface QuizResult {
@@ -55,59 +54,29 @@ export class QuizManager {
     public async loadData() {
         if (this.isLoaded) return;
 
+        // Load Data synchronously from imports
         try {
-            // Paths relative to this file's compiled location
-            // Assuming structure: /server/utils/quiz.js -> /server/data/match.tsv
-            // So we go up one level from utils to server, then into data
-
-            // Try __dirname first (safe for serverless bundles if structure preserved)
-            const dataDir = path.join(__dirname, '../data');
-
-            let matchPath = path.join(dataDir, 'match.tsv');
-            let clusterPath = path.join(dataDir, 'cluster.json');
-
-            // Fallback for local dev if needed (proces.cwd)
-            if (!fs.existsSync(matchPath)) {
-                console.warn(`[QuizManager] Data not found at ${matchPath}, trying process.cwd()`);
-                const projectRoot = process.cwd();
-                matchPath = path.join(projectRoot, 'server/data/match.tsv');
-                clusterPath = path.join(projectRoot, 'server/data/cluster.json');
-            }
-
-
-            // Load Match TSV
-            // Format: value\tcluster_id
-            // -2,-2,-2,-2,-2,-2,-2\t2
-            if (fs.existsSync(matchPath)) {
-                const matchContent = await fs.promises.readFile(matchPath, 'utf-8');
-                const lines = matchContent.split('\n');
-                let count = 0;
-                for (const line of lines) {
-                    if (!line.trim() || line.startsWith('value')) continue; // Skip header and empty lines
-                    const parts = line.split('\t');
-                    if (parts.length >= 2) {
-                        const vector = parts[0].trim();
-                        const clusterId = parseInt(parts[1].trim(), 10);
-                        this.lookupTable.set(vector, clusterId);
-                        count++;
-                    }
+            // Load Match Data
+            const lines = MATCH_DATA.split('\n');
+            let count = 0;
+            for (const line of lines) {
+                if (!line.trim() || line.startsWith('value')) continue;
+                const parts = line.split('\t');
+                if (parts.length >= 2) {
+                    const vector = parts[0].trim();
+                    const clusterId = parseInt(parts[1].trim(), 10);
+                    this.lookupTable.set(vector, clusterId);
+                    count++;
                 }
-                console.log(`[QuizManager] Loaded ${count} match rows.`);
-            } else {
-                console.error(`[QuizManager] match.tsv not found at ${matchPath}`);
             }
+            console.log(`[QuizManager] Loaded ${count} match rows from memory.`);
 
-            // Load Cluster JSON
-            if (fs.existsSync(clusterPath)) {
-                const clusterContent = await fs.promises.readFile(clusterPath, 'utf-8');
-                const clusters: ClusterData[] = JSON.parse(clusterContent);
-                for (const c of clusters) {
-                    this.clusterData.set(parseInt(c.cluster_id), c);
-                }
-                console.log(`[QuizManager] Loaded ${clusters.length} clusters.`);
-            } else {
-                console.error(`[QuizManager] cluster.json not found at ${clusterPath}`);
+            // Load Cluster Data
+            const clusters: any[] = CLUSTER_DATA;
+            for (const c of clusters) {
+                this.clusterData.set(parseInt(c.cluster_id), c as ClusterData);
             }
+            console.log(`[QuizManager] Loaded ${clusters.length} clusters from memory.`);
 
             this.isLoaded = true;
             console.log(`[QuizManager] Initialization complete. Loaded: ${this.isLoaded}`);
