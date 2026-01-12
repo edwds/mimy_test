@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from 'react';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, MoreHorizontal, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
@@ -26,6 +26,13 @@ export const ProfileScreen = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<ProfileTabType>("content");
 
+    // Menu & Sheet State
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isIdSheetOpen, setIsIdSheetOpen] = useState(false);
+    const [newId, setNewId] = useState("");
+    const [savingId, setSavingId] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const loadUser = async () => {
             const userId = localStorage.getItem("mimy_user_id");
@@ -45,13 +52,124 @@ export const ProfileScreen = () => {
         loadUser();
     }, []);
 
+    // Close menu on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        if (isMenuOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isMenuOpen]);
+
+    const handleLogout = () => {
+        if (window.confirm("Are you sure you want to logout?")) {
+            localStorage.removeItem("mimy_user_id");
+            navigate('/login');
+        }
+    };
+
+    const handleRetakeQuiz = () => {
+        if (window.confirm("Retaking the quiz will update your taste profile. Continue?")) {
+            navigate('/quiz/intro');
+        }
+    };
+
+    const handleReport = () => {
+        alert("Coming soon!");
+        setIsMenuOpen(false);
+    };
+
+    const openIdSheet = () => {
+        setNewId(user?.account_id || "");
+        setIsIdSheetOpen(true);
+        setIsMenuOpen(false);
+    };
+
+    const handleSaveId = async () => {
+        if (!user || !newId.trim()) return;
+        setSavingId(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ account_id: newId })
+            });
+
+            if (response.ok) {
+                setUser({ ...user, account_id: newId });
+                setIsIdSheetOpen(false);
+                alert("ID updated successfully");
+            } else {
+                const err = await response.json();
+                alert(err.error || "Failed to update ID");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error updating ID");
+        } finally {
+            setSavingId(false);
+        }
+    };
+
     if (loading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
     if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
+        <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
             <main className="flex-1 overflow-y-auto">
-                <div className="p-6 pt-10 pb-2">
+                <div className="p-6 pt-10 pb-2 relative">
+
+                    {/* Menu Button (Absolute Top Right) */}
+                    <div className="absolute top-2 right-4 z-20">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full"
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        >
+                            <MoreHorizontal className="w-6 h-6" />
+                        </Button>
+
+                        {/* Dropdown Menu */}
+                        {isMenuOpen && (
+                            <div
+                                ref={menuRef}
+                                className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-200"
+                            >
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={openIdSheet}
+                                >
+                                    Change ID
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={handleRetakeQuiz}
+                                >
+                                    Retake Taste Quiz
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={handleReport}
+                                >
+                                    Report / Feedback
+                                </button>
+                                <div className="h-px bg-border my-1" />
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                    onClick={handleLogout}
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">
                         {/* Left: Info */}
@@ -90,7 +208,7 @@ export const ProfileScreen = () => {
                             )}
                         </div>
 
-                        {/* Right: Image & Edit */}
+                        {/* Right: Image & Edit from previous step */}
                         <div
                             className="relative group cursor-pointer flex-shrink-0 ml-4"
                             onClick={() => navigate('/profile/edit')}
@@ -170,6 +288,50 @@ export const ProfileScreen = () => {
                     )}
                 </div>
             </main>
+
+            {/* Bottom Sheet for ID Change */}
+            {isIdSheetOpen && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200"
+                        onClick={() => setIsIdSheetOpen(false)}
+                    />
+
+                    {/* Sheet */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-background rounded-t-xl z-50 p-6 animate-in slide-in-from-bottom duration-300 shadow-lg">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold">Change ID</h3>
+                            <button onClick={() => setIsIdSheetOpen(false)} className="p-2 -mr-2 text-muted-foreground">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">New ID</label>
+                                <input
+                                    type="text"
+                                    value={newId}
+                                    onChange={(e) => setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                                    className="w-full border-b border-border py-2 text-xl bg-transparent focus:outline-none focus:border-primary font-mono"
+                                    autoFocus
+                                    placeholder="your_id"
+                                />
+                                <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, dots, and underscores.</p>
+                            </div>
+
+                            <Button
+                                className="w-full h-12 text-lg mt-4"
+                                onClick={handleSaveId}
+                                disabled={savingId || !newId || newId === user.account_id}
+                            >
+                                {savingId ? <Loader2 className="animate-spin" /> : "Save Changes"}
+                            </Button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
