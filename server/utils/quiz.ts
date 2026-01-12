@@ -56,12 +56,24 @@ export class QuizManager {
         if (this.isLoaded) return;
 
         try {
-            // Paths are relative to the project root when running via tsx/node from root
-            // Or we can try to find them relative to this file
-            // Assuming the server process starts from project root.
-            const projectRoot = process.cwd();
-            const matchPath = path.join(projectRoot, 'match.tsv');
-            const clusterPath = path.join(projectRoot, 'cluster.json');
+            // Paths relative to this file's compiled location
+            // Assuming structure: /server/utils/quiz.js -> /server/data/match.tsv
+            // So we go up one level from utils to server, then into data
+
+            // Try __dirname first (safe for serverless bundles if structure preserved)
+            const dataDir = path.join(__dirname, '../data');
+
+            let matchPath = path.join(dataDir, 'match.tsv');
+            let clusterPath = path.join(dataDir, 'cluster.json');
+
+            // Fallback for local dev if needed (proces.cwd)
+            if (!fs.existsSync(matchPath)) {
+                console.warn(`[QuizManager] Data not found at ${matchPath}, trying process.cwd()`);
+                const projectRoot = process.cwd();
+                matchPath = path.join(projectRoot, 'server/data/match.tsv');
+                clusterPath = path.join(projectRoot, 'server/data/cluster.json');
+            }
+
 
             // Load Match TSV
             // Format: value\tcluster_id
