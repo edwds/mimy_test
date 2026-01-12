@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, MoreHorizontal, X, Loader2 } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
@@ -131,7 +131,7 @@ export const ProfileScreen = () => {
                             className="rounded-full"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
-                            <MoreHorizontal className="w-6 h-6" />
+                            <Settings className="w-5 h-5 text-muted-foreground" />
                         </Button>
 
                         {/* Dropdown Menu */}
@@ -232,9 +232,7 @@ export const ProfileScreen = () => {
 
                     {/* Taste Card Area */}
                     {user.cluster_name ? (
-                        <div className="bg-surface border border-border rounded-xl p-4 mb-6 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-bl-full -mr-4 -mt-4" />
-                            <h3 className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">My Taste</h3>
+                        <div className="bg-surface border border-border rounded-xl p-4 mb-2 shadow-sm relative overflow-hidden">
                             <div className="text-xl font-bold mb-1">{user.cluster_name}</div>
                             <p className="text-sm text-muted-foreground">{user.cluster_tagline}</p>
                         </div>
@@ -246,8 +244,8 @@ export const ProfileScreen = () => {
                 </div>
 
                 {/* Tabs Sticky Header - Chip Style */}
-                <div className="sticky top-0 bg-background z-10 py-2">
-                    <div className="flex px-4 gap-2 overflow-x-auto no-scrollbar">
+                <div className="sticky top-0 p-6 bg-background z-10 py-2">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         <TabButton
                             active={activeTab === "content"}
                             onClick={() => setActiveTab("content")}
@@ -340,8 +338,8 @@ const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () =>
     <button
         onClick={onClick}
         className={`px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap ${active
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "bg-muted/50 text-muted-foreground hover:bg-muted"
             }`}
     >
         {label}
