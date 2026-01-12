@@ -76,8 +76,10 @@ export const ProfileScreen = () => {
                             {user.bio && <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>}
                             {user.link && (
                                 <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
-                                    <LinkIcon className="w-3 h-3 mr-1" />
-                                    {user.link.replace(/^https?:\/\//, '')}
+                                    <LinkIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                    <span className="truncate max-w-[200px]">
+                                        {user.link.replace(/^(https?:\/\/)?(www\.)?/, '')}
+                                    </span>
                                 </a>
                             )}
                         </div>
@@ -97,7 +99,7 @@ export const ProfileScreen = () => {
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-background border-2 border-background shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-background border-2 border-background shadow-md"
                             >
                                 <Edit2 className="w-3 h-3" />
                             </Button>

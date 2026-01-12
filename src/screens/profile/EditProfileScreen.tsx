@@ -21,6 +21,15 @@ export const EditProfileScreen = () => {
     const [handle, setHandle] = useState(""); // Needed for API put but not editable here
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bioRef = useRef<HTMLTextAreaElement>(null);
+
+    // Auto-resize bio
+    useEffect(() => {
+        if (bioRef.current) {
+            bioRef.current.style.height = 'auto';
+            bioRef.current.style.height = `${Math.min(bioRef.current.scrollHeight, 24 * 3 + 20)}px`; // approx 3 lines
+        }
+    }, [bio]);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -194,11 +203,13 @@ export const EditProfileScreen = () => {
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-muted-foreground">Bio</label>
                         <textarea
-                            className="w-full border-b border-border py-2 text-base bg-transparent focus:outline-none focus:border-primary transition-colors resize-none min-h-[80px]"
+                            ref={bioRef}
+                            className="w-full border-b border-border py-2 text-base bg-transparent focus:outline-none focus:border-primary transition-colors resize-none overflow-hidden"
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
                             placeholder="Introduce yourself..."
-                            rows={3}
+                            rows={1}
+                            style={{ minHeight: '40px' }}
                         />
                     </div>
 
