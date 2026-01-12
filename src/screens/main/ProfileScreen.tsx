@@ -83,8 +83,11 @@ export const ProfileScreen = () => {
                         </div>
 
                         {/* Right: Image & Edit */}
-                        <div className="flex flex-col items-end gap-3">
-                            <div className="w-20 h-20 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
+                        <div
+                            className="relative group cursor-pointer"
+                            onClick={() => navigate('/profile/edit')}
+                        >
+                            <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
                                 {user.profile_image ? (
                                     <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
@@ -93,12 +96,10 @@ export const ProfileScreen = () => {
                             </div>
                             <Button
                                 variant="outline"
-                                size="sm"
-                                className="h-8 px-3 text-xs"
-                                onClick={() => navigate('/register/profile')}
+                                size="icon"
+                                className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-background border-2 border-background shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                                <Edit2 className="w-3 h-3 mr-1" />
-                                Edit
+                                <Edit2 className="w-3 h-3" />
                             </Button>
                         </div>
                     </div>

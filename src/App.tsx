@@ -14,6 +14,7 @@ import './i18n';
 import { QuizIntro } from '@/screens/quiz/QuizIntro';
 import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
+import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 
 function App() {
     const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ function App() {
                         <Route path="/quiz/result" element={<QuizResult />} />
 
                         <Route path="/main" element={<MainTab />} />
+                        <Route path="/profile/edit" element={<EditProfileScreen />} />
                     </Routes>
                 )}
             </BrowserRouter>
