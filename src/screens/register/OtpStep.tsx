@@ -16,6 +16,15 @@ export const OtpStep = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            inputRef.current?.focus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
@@ -65,31 +74,22 @@ export const OtpStep = () => {
                             ))}
                         </div>
 
-                        const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-                                inputRef.current?.focus();
-        }, 300);
-        return () => clearTimeout(timer);
-    }, []);
-
-                            {/* Hidden Input */}
-                            <input
-                                ref={inputRef}
-                                id="otp-input"
-                                type="text" // 'number' ignores maxLength on some browsers
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                maxLength={6}
-                                value={code}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, '');
-                                    setCode(val);
-                                }}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-text"
-                                autoFocus
-                            />
+                        {/* Hidden Input */}
+                        <input
+                            ref={inputRef}
+                            id="otp-input"
+                            type="text" // 'number' ignores maxLength on some browsers
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={6}
+                            value={code}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                setCode(val);
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+                            autoFocus
+                        />
                     </div>
 
                     <div className="flex justify-between text-sm px-2">
