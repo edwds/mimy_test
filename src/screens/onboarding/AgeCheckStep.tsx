@@ -110,7 +110,7 @@ export const AgeCheckStep = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background p-6 animate-in fade-in duration-500">
+        <div className="flex flex-col h-full bg-background p-6 animate-in fade-in duration-500 overflow-hidden">
             <header className="flex items-center mb-8">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted">
                     <ChevronLeft className="w-6 h-6" />

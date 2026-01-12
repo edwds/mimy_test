@@ -30,7 +30,7 @@ export const SplashScreen = () => {
     if (!ready) return <div className="h-full bg-orange-500" />;
 
     return (
-        <div className="h-full bg-orange-500 flex items-center justify-center">
+        <div className="h-full bg-orange-500 flex items-center justify-center overflow-hidden">
             {/* 전체 페이드아웃 + 블러 (마지막 구간에서만) */}
             <motion.div
                 className="flex flex-col items-center justify-center"
