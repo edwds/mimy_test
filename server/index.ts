@@ -7,7 +7,12 @@ import uploadRoutes from "./routes/upload";
 import quizRoutes from "./routes/quiz";
 import { QuizManager } from "./utils/quiz";
 
+import { runMigrations } from "./db/migrate";
+
 dotenv.config();
+
+// Run migrations (fire and forget for latency, or await if critical)
+runMigrations().catch(console.error);
 
 const app = express();
 const port = process.env.PORT || 3001;
