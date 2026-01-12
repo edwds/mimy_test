@@ -63,12 +63,12 @@ export const LoginPage = () => {
 
                 {/* Apple */}
                 <Button
-                    className="w-full bg-black text-white hover:bg-black/90"
+                    className="w-full bg-black text-white hover:bg-black/90 opacity-50 cursor-not-allowed"
                     size="lg"
-                    onClick={() => alert("Apple Login not implemented yet")}
+                    disabled
                 >
                     <Apple className="mr-2 w-5 h-5 fill-current" />
-                    Continue with Apple
+                    Continue with Apple (Coming Soon)
                 </Button>
 
                 <div className="relative my-8">
@@ -77,18 +77,18 @@ export const LoginPage = () => {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                         <span className="bg-background px-2 text-muted-foreground">
-                            Or continue with
+                            Or
                         </span>
                     </div>
                 </div>
 
                 <Button
                     variant="ghost"
-                    className="w-full text-muted-foreground"
-                    onClick={() => navigate('/register/phone')} // Fallback for email flow
+                    className="w-full text-muted-foreground opacity-50 cursor-not-allowed"
+                    disabled
                 >
                     <Mail className="mr-2 w-4 h-4" />
-                    Continue with Email
+                    Continue with Email (Coming Soon)
                 </Button>
             </main>
         </div>

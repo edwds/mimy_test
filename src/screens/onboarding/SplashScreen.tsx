@@ -55,7 +55,7 @@ export const SplashScreen = () => {
                         }}
                         transition={{ duration: D, ease: 'easeOut', times: [0, 0.18, 0.32, 0.40, 1] }}
                     >
-                        Make It My Yummy.
+                        Make It My Yummy
                     </motion.p>
 
                     {/* mimy (동일 자리) */}
@@ -85,7 +85,7 @@ export const SplashScreen = () => {
                         }}
                         transition={{ duration: D, ease: 'easeOut', times: [0, 0.48, 0.60, 1] }}
                     >
-                        Rank what you ate.
+                        Rank what you ate
                     </motion.p>
                 </div>
             </motion.div>

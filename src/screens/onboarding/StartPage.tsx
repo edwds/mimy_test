@@ -8,7 +8,7 @@ const slides = [
     {
         icon: <Search className="w-12 h-12 text-primary" />,
         title: "Discover Your Taste",
-        desc: "Find out your unique taste profile with our 3-minute quiz."
+        desc: "Find out your unique taste profile with our 1-minute quiz."
     },
     {
         icon: <Heart className="w-12 h-12 text-primary" />,

@@ -9,7 +9,7 @@ export const PhoneStep = () => {
     useTranslation();
     const navigate = useNavigate();
     const [phone, setPhone] = useState("");
-    const [countryCode] = useState("82");
+    const [countryCode, setCountryCode] = useState("82");
 
     const formatPhoneNumber = (value: string) => {
         const numbers = value.replace(/[^\d]/g, "");
@@ -46,13 +46,26 @@ export const PhoneStep = () => {
                 </div>
 
                 <div className="flex space-x-4">
-                    <div className="w-28 border-b-2 border-border py-4 text-xl font-bold text-center flex items-center justify-center gap-2">
-                        <span className="text-2xl">🇰🇷</span>
-                        <span>+{countryCode}</span>
-                    </div>
+                    <select
+                        value={countryCode}
+                        onChange={(e) => {
+                            setCountryCode(e.target.value);
+                            setPhone(""); // Reset phone on country change
+                        }}
+                        className="w-28 border-b-2 border-border py-4 text-xl font-bold bg-transparent focus:outline-none focus:border-primary text-center appearance-none"
+                    >
+                        <option value="82">🇰🇷 +82</option>
+                        <option value="81">🇯🇵 +81</option>
+                        <option value="886">🇹🇼 +886</option>
+                        <option value="852">🇭🇰 +852</option>
+                        <option value="65">🇸🇬 +65</option>
+                        <option value="66">🇹🇭 +66</option>
+                        <option value="1">🇺🇸 +1</option>
+                        <option value="61">🇦🇺 +61</option>
+                    </select>
                     <input
                         type="tel"
-                        placeholder="010-0000-0000"
+                        placeholder="Phone Number"
                         value={phone}
                         onChange={handlePhoneChange}
                         className={cn(
