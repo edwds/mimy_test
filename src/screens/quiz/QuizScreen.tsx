@@ -1,55 +1,55 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { QUESTIONS, LIKERT_MAP, QuizAxis } from '@/data/quiz';
+import { QUESTIONS } from '@/data/quiz';
 
 export const QuizScreen = () => {
     const navigate = useNavigate();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<number, number>>({});
-    const [scores, setScores] = useState<Record<QuizAxis, number>>({
-        boldness: 0,
-        acidity: 0,
-        richness: 0,
-        experimental: 0,
-        spiciness: 0,
-        sweetness: 0,
-        umami: 0
-    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const currentQuestion = QUESTIONS[currentIndex];
     const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
 
     const handleAnswer = (val: number) => {
-        const scoreChange = LIKERT_MAP[val];
-        const axis = currentQuestion.axis;
-
-        // Update answers for UI state (selected button)
+        // Update answers for UI state
         setAnswers(prev => ({ ...prev, [currentQuestion.id]: val }));
-
-        // Update Scores (Optimistic)
-        setScores(prev => ({
-            ...prev,
-            [axis]: prev[axis] + scoreChange
-        }));
 
         // Next Question
         if (currentIndex < QUESTIONS.length - 1) {
             setTimeout(() => setCurrentIndex(prev => prev + 1), 250);
         } else {
-            finishQuiz();
+            // Wait a bit to show selection
+            setTimeout(() => finishQuiz({ ...answers, [currentQuestion.id]: val }), 250);
         }
     };
 
-    const finishQuiz = () => {
-        // Calculate Dominant
-        // For now, simple max score logic
-        const sortedAxes = Object.entries(scores).sort(([, a], [, b]) => b - a);
-        const topAxis = sortedAxes[0][0];
+    const finishQuiz = async (finalAnswers: Record<number, number>) => {
+        setIsSubmitting(true);
+        try {
+            const userId = localStorage.getItem("mimy_user_id");
+            const response = await fetch(`${API_BASE_URL}/api/quiz/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, answers: finalAnswers })
+            });
 
-        navigate('/quiz/result', { state: { cluster: topAxis, details: scores } });
+            if (!response.ok) throw new Error("Quiz submission failed");
+
+            const data = await response.json();
+            // Expected data.result = { clusterId, clusterData, scores }
+
+            navigate('/quiz/result', { state: { result: data.result } });
+
+        } catch (error) {
+            console.error(error);
+            alert("Failed to submit quiz. Please try again.");
+            setIsSubmitting(false);
+        }
     };
 
     const handleBack = () => {
@@ -59,6 +59,17 @@ export const QuizScreen = () => {
             navigate(-1);
         }
     };
+
+    if (isSubmitting) {
+        return (
+            <div className="flex items-center justify-center h-full bg-background">
+                <div className="text-center space-y-4">
+                    <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+                    <p className="text-lg font-medium text-muted-foreground">Analyzing your taste profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
