@@ -7,6 +7,9 @@ import uploadRoutes from "./routes/upload";
 import quizRoutes from "./routes/quiz";
 import { QuizManager } from "./utils/quiz";
 
+import shopRoutes from "./routes/shops";
+import contentRoutes from "./routes/content";
+
 dotenv.config();
 
 const app = express();
@@ -20,6 +23,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/quiz", quizRoutes);
+app.use("/api/shops", shopRoutes);
+app.use("/api/content", contentRoutes);
 
 app.get("/health", (_req, res) => {
     res.send("OK");

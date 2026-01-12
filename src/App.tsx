@@ -15,6 +15,7 @@ import { QuizIntro } from '@/screens/quiz/QuizIntro';
 import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
+import { WriteFlow } from '@/screens/write/WriteFlow';
 
 function App() {
     const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ function App() {
                         <Route path="/quiz/test" element={<QuizScreen />} />
                         <Route path="/quiz/result" element={<QuizResult />} />
 
+                        <Route path="/write" element={<WriteFlow />} />
                         <Route path="/main" element={<MainTab />} />
                         <Route path="/profile/edit" element={<EditProfileScreen />} />
                     </Routes>
