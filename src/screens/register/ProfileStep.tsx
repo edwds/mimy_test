@@ -29,7 +29,7 @@ export const ProfileStep = () => {
         const timer = setTimeout(() => {
             if (step === 0) handleInputRef.current?.focus();
             if (step === 1) nicknameInputRef.current?.focus();
-        }, 100);
+        }, 300);
         return () => clearTimeout(timer);
     }, [step]);
 
@@ -272,7 +272,11 @@ export const ProfileStep = () => {
                                         type="text"
                                         placeholder="Nickname"
                                         value={nickname}
-                                        onChange={(e) => setNickname(e.target.value)}
+                                        onChange={(e) => {
+                                            // Allow only English, Numbers, Special characters, and Space
+                                            const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                            setNickname(val);
+                                        }}
                                         className="w-full text-3xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted/20"
                                         autoFocus
                                     />
