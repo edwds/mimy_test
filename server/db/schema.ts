@@ -250,7 +250,7 @@ export const user_term_agreements = pgTable('user_term_agreements', {
 }));
 
 // --- Quiz/Clusters Domain (Support existing code) ---
-export const clusters = pgTable('taste_clusters', {
+export const clusters = pgTable('clusters', {
     id: serial('id').primaryKey(),
     cluster_id: integer('cluster_id').unique().notNull(),
     name: text('name').notNull(),
