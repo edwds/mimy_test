@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, MapPin, Link as LinkIcon, Edit2, Grid, List } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
@@ -12,19 +12,23 @@ interface User {
     profile_image: string | null;
     bio: string | null;
     link: string | null;
+    // New fields from backend join
+    cluster_name?: string;
+    cluster_tagline?: string;
 }
+
+type ProfileTabType = "content" | "list" | "saved";
 
 export const ProfileScreen = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<ProfileTabType>("content");
 
     useEffect(() => {
-        // Fetch user data
         const loadUser = async () => {
             const userId = localStorage.getItem("mimy_user_id");
             if (!userId) return;
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
                 if (response.ok) {
@@ -45,91 +49,133 @@ export const ProfileScreen = () => {
 
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
-            {/* Header */}
-            <header className="px-6 py-4 flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-md z-10 border-b border-border/50">
-                <span className="font-bold text-lg">@{user.account_id}</span>
-                <button className="p-2 -mr-2 hover:bg-muted rounded-full transition-colors">
-                    <Settings className="w-6 h-6" />
-                </button>
-            </header>
+            {/* Header / Nav Area could go here if global header not used */}
 
             <main className="flex-1 overflow-y-auto">
-                <div className="p-6 space-y-6">
-                    {/* Profile Header */}
-                    <div className="flex items-start justify-between">
-                        {/* Image */}
-                        <div className="relative group cursor-pointer">
-                            <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
+                <div className="p-6 pb-2">
+                    {/* Top Area: 2 Columns */}
+                    <div className="flex justify-between items-start mb-6">
+                        {/* Left: Info */}
+                        <div className="flex-1 pr-4">
+                            <h1 className="text-2xl font-bold mb-1">{user.nickname || "No Name"}</h1>
+                            <p className="text-muted-foreground text-sm mb-3">@{user.account_id}</p>
+
+                            {/* Stats */}
+                            <div className="flex gap-4 mb-4">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="font-bold">0</span>
+                                    <span className="text-xs text-muted-foreground">Contents</span>
+                                </div>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="font-bold">0</span>
+                                    <span className="text-xs text-muted-foreground">Followers</span>
+                                </div>
+                            </div>
+
+                            {/* Bio & Link */}
+                            {user.bio && <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>}
+                            {user.link && (
+                                <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
+                                    <LinkIcon className="w-3 h-3 mr-1" />
+                                    {user.link.replace(/^https?:\/\//, '')}
+                                </a>
+                            )}
+                        </div>
+
+                        {/* Right: Image & Edit */}
+                        <div className="flex flex-col items-end gap-3">
+                            <div className="w-20 h-20 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
                                 {user.profile_image ? (
                                     <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-3xl">😊</span>
+                                    <div className="w-full h-full flex items-center justify-center text-2xl">😊</div>
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-1 border border-border shadow-sm">
-                                <div className="bg-primary rounded-full p-1 text-primary-foreground">
-                                    <Edit2 className="w-3 h-3" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="flex-1 flex justify-around items-center ml-4">
-                            <StatItem label="Posts" value="0" />
-                            <StatItem label="Followers" value="0" />
-                            <StatItem label="Following" value="0" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => navigate('/register/profile')}
+                            >
+                                <Edit2 className="w-3 h-3 mr-1" />
+                                Edit
+                            </Button>
                         </div>
                     </div>
 
-                    {/* Info */}
-                    <div className="space-y-1">
-                        <h1 className="text-lg font-bold">{user.nickname || "No Name"}</h1>
-                        {user.bio && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user.bio}</p>}
-                        {user.link && (
-                            <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-sm text-primary hover:underline mt-1">
-                                <LinkIcon className="w-3 h-3 mr-1" />
-                                {user.link.replace(/^https?:\/\//, '')}
-                            </a>
-                        )}
-                    </div>
+                    {/* Taste Card Area */}
+                    {user.cluster_name ? (
+                        <div className="bg-surface border border-border rounded-xl p-4 mb-6 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-bl-full -mr-4 -mt-4" />
+                            <h3 className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">My Taste</h3>
+                            <div className="text-xl font-bold mb-1">{user.cluster_name}</div>
+                            <p className="text-sm text-muted-foreground">{user.cluster_tagline}</p>
+                        </div>
+                    ) : (
+                        <div className="bg-muted/30 border border-dashed border-border rounded-xl p-4 mb-6 text-center cursor-pointer" onClick={() => navigate('/quiz/intro')}>
+                            <p className="text-sm text-muted-foreground">Discover your taste profile +</p>
+                        </div>
+                    )}
+                </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            className="flex-1 h-9 text-sm font-medium"
-                            onClick={() => navigate('/register/profile')} // Re-use wizard for editing for now
-                        >
-                            Edit Profile
-                        </Button>
-                        <Button variant="outline" className="h-9 px-3">
-                            <MapPin className="w-4 h-4" />
-                        </Button>
+                {/* Tabs Sticky Header */}
+                <div className="sticky top-0 bg-background z-10 border-b border-border">
+                    <div className="flex px-4">
+                        <TabButton
+                            active={activeTab === "content"}
+                            onClick={() => setActiveTab("content")}
+                            label="Content"
+                        />
+                        <TabButton
+                            active={activeTab === "list"}
+                            onClick={() => setActiveTab("list")}
+                            label="List"
+                        />
+                        <TabButton
+                            active={activeTab === "saved"}
+                            onClick={() => setActiveTab("saved")}
+                            label="Want to go"
+                        />
                     </div>
                 </div>
 
-                {/* Content Tabs (Placeholder) */}
-                <div className="border-t border-border mt-2">
-                    <div className="flex">
-                        <button className="flex-1 py-3 border-b-2 border-primary flex justify-center text-primary">
-                            <Grid className="w-6 h-6" />
-                        </button>
-                        <button className="flex-1 py-3 border-b-2 border-transparent flex justify-center text-muted-foreground hover:text-foreground">
-                            <List className="w-6 h-6" />
-                        </button>
-                    </div>
-                    <div className="p-8 text-center text-muted-foreground text-sm">
-                        No posts yet
-                    </div>
+                {/* Tab Content */}
+                <div className="min-h-[300px] bg-muted/5">
+                    {activeTab === "content" && (
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                            <Grid className="w-10 h-10 mb-2 opacity-20" />
+                            <p className="text-sm">No contents yet</p>
+                        </div>
+                    )}
+                    {activeTab === "list" && (
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                            <List className="w-10 h-10 mb-2 opacity-20" />
+                            <p className="text-sm">No lists created</p>
+                        </div>
+                    )}
+                    {activeTab === "saved" && (
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                            <MapPin className="w-10 h-10 mb-2 opacity-20" />
+                            <p className="text-sm">No saved places</p>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
     );
 };
 
-const StatItem = ({ label, value }: { label: string, value: string }) => (
-    <div className="flex flex-col items-center">
-        <span className="font-bold text-lg">{value}</span>
-        <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
+const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
+    <button
+        onClick={onClick}
+        className={`flex-1 py-3 text-sm font-medium transition-colors relative ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+    >
+        {label}
+        {active && (
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary mx-4 rounded-t-full" />
+        )}
+    </button>
 );
+
+

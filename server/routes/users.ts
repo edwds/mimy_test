@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index";
-import { users } from "../db/schema";
+import { users, clusters } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -32,7 +32,27 @@ router.get("/:id", async (req, res) => {
         if (user.length === 0) {
             return res.status(404).json({ error: "User not found" });
         }
-        res.json(user[0]);
+        const userData = user[0];
+        let clusterInfo = null;
+
+        if (userData.taste_cluster) {
+            // taste_cluster is stored as string ID (e.g. "1")
+            const clusterId = parseInt(userData.taste_cluster);
+            if (!isNaN(clusterId)) {
+                const cluster = await db.select().from(clusters).where(eq(clusters.cluster_id, clusterId)).limit(1);
+                if (cluster.length > 0) {
+                    clusterInfo = {
+                        cluster_name: cluster[0].name,
+                        cluster_tagline: cluster[0].tagline
+                    };
+                }
+            }
+        }
+
+        res.json({
+            ...userData,
+            ...clusterInfo
+        });
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch user" });
     }
@@ -60,8 +80,11 @@ router.put("/:id", async (req, res) => {
             .returning();
 
         res.json(updatedUser[0]);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Update error:", error);
+        if (error.code === '23505') {
+            return res.status(409).json({ error: "Phone number or Account ID already in use" });
+        }
         res.status(500).json({ error: "Failed to update user" });
     }
 });
