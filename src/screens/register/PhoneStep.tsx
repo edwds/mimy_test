@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,16 @@ export const PhoneStep = () => {
     const navigate = useNavigate();
     const [phone, setPhone] = useState("");
     const [countryCode, setCountryCode] = useState("82");
+
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // Delay focus to ensure animation completes and keyboard triggers
+        const timer = setTimeout(() => {
+            inputRef.current?.focus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
 
     const formatPhoneNumber = (value: string) => {
         const numbers = value.replace(/[^\d]/g, "");
@@ -64,6 +74,7 @@ export const PhoneStep = () => {
                         <option value="61">🇦🇺 +61</option>
                     </select>
                     <input
+                        ref={inputRef}
                         type="tel"
                         placeholder="Phone Number"
                         value={phone}

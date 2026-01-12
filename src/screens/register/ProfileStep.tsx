@@ -21,6 +21,18 @@ export const ProfileStep = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const handleInputRef = useRef<HTMLInputElement>(null);
+    const nicknameInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto focus on step change
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (step === 0) handleInputRef.current?.focus();
+            if (step === 1) nicknameInputRef.current?.focus();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [step]);
+
     // Debounce Check
     useEffect(() => {
         if (step !== 0 || handle.length < 3) {
@@ -207,6 +219,7 @@ export const ProfileStep = () => {
                                         </span>
 
                                         <input
+                                            ref={handleInputRef}
                                             type="text"
                                             placeholder="username"
                                             value={handle}

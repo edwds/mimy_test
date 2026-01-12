@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -65,21 +65,31 @@ export const OtpStep = () => {
                             ))}
                         </div>
 
-                        {/* Hidden Input */}
-                        <input
-                            id="otp-input"
-                            type="text" // 'number' ignores maxLength on some browsers
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            maxLength={6}
-                            value={code}
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/[^0-9]/g, '');
-                                setCode(val);
-                            }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-text"
-                            autoFocus
-                        />
+                        const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+                                inputRef.current?.focus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+                            {/* Hidden Input */}
+                            <input
+                                ref={inputRef}
+                                id="otp-input"
+                                type="text" // 'number' ignores maxLength on some browsers
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                value={code}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                    setCode(val);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+                                autoFocus
+                            />
                     </div>
 
                     <div className="flex justify-between text-sm px-2">
