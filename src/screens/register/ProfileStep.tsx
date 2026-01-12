@@ -154,7 +154,8 @@ export const ProfileStep = () => {
                     localStorage.removeItem("mimy_reg_phone");
                     navigate('/quiz/intro');
                 } else {
-                    alert("Failed to save profile");
+                    const errorData = await response.json();
+                    alert(errorData.error || "Failed to save profile");
                     setChecking(false);
                 }
             } catch (e) {
