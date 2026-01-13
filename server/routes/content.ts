@@ -1,10 +1,150 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { content, users_ranking, shops } from "../db/schema.js";
+import { content, users_ranking, shops, users } from "../db/schema.js";
 import { eq, desc, inArray, and, gt, gte, ne, sql } from "drizzle-orm";
 
 const router = Router();
+
+// GET /api/content/feed
+router.get("/feed", async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = (page - 1) * limit;
+
+        // 1. Fetch Content + User Info
+        const feedItems = await db.select({
+            id: content.id,
+            user_id: content.user_id,
+            type: content.type,
+            text: content.text,
+            img: content.img,
+            created_at: content.created_at,
+            review_prop: content.review_prop,
+            keyword: content.keyword,
+            user: {
+                nickname: users.nickname,
+                account_id: users.account_id,
+                profile_image: users.profile_image
+            }
+        })
+            .from(content)
+            .leftJoin(users, eq(content.user_id, users.id))
+            .orderBy(desc(content.created_at))
+            .limit(limit)
+            .offset(offset);
+
+        // 2. Collect IDs for enrichment
+        const shopIds = new Set<number>();
+        const userIds = new Set<number>();
+
+        feedItems.forEach(item => {
+            if (item.type === 'review' && item.review_prop) {
+                const prop = item.review_prop as any;
+                if (prop.shop_id) {
+                    shopIds.add(Number(prop.shop_id));
+                    userIds.add(item.user_id);
+                }
+            }
+        });
+
+        // 3. Batch Fetch Shops, Rankings, VisitCounts
+        const shopMap = new Map();
+        const rankMap = new Map<string, number>(); // key: `${userId}-${shopId}`
+        const visitCountMap = new Map<string, number>(); // key: `${userId}-${shopId}`
+
+        if (shopIds.size > 0) {
+            const sIds = Array.from(shopIds);
+            const uIds = Array.from(userIds);
+
+            // Shops
+            const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
+            shopList.forEach(s => shopMap.set(s.id, s));
+
+            // Rankings (Current rank for each user-shop pair)
+            const rankings = await db.select().from(users_ranking)
+                .where(and(
+                    inArray(users_ranking.user_id, uIds),
+                    inArray(users_ranking.shop_id, sIds)
+                ));
+            rankings.forEach(r => rankMap.set(`${r.user_id}-${r.shop_id}`, r.rank));
+
+            // Visit Counts
+            // Efficient aggregation: Group by user_id, shop_id
+            // Since Drizzle simple aggregations are tricky with specific filters, 
+            // we'll fetch relevant reviews OR use a raw query.
+            // For MVP simplicity and small batch size (20 items * users), let's just count in memory from metadata 
+            // BUT we need total count, not just what's in the feed.
+            // Let's use a simpler approach: Select count per user/shop from content table.
+            // "SELECT user_id, review_prop->>'shop_id', count(*) FROM content WHERE ..."
+
+            // To avoid complex raw SQL right now, let's just fetch ALL reviews for these users/shops (might be heavy later)
+            // Better: select ID and props only
+            const allRelevantReviews = await db.select({
+                user_id: content.user_id,
+                prop: content.review_prop
+            }).from(content)
+                .where(and(
+                    inArray(content.user_id, uIds),
+                    eq(content.type, 'review')
+                ));
+
+            allRelevantReviews.forEach(r => {
+                const p = r.prop as any;
+                if (p && p.shop_id && sIds.includes(Number(p.shop_id))) {
+                    const key = `${r.user_id}-${p.shop_id}`;
+                    visitCountMap.set(key, (visitCountMap.get(key) || 0) + 1);
+                }
+            });
+        }
+
+        // 4. Enrich
+        const result = feedItems.map(item => {
+            let enrichedProp = item.review_prop as any;
+
+            if (item.type === 'review' && enrichedProp?.shop_id) {
+                const sid = Number(enrichedProp.shop_id);
+                const shop = shopMap.get(sid);
+                const rank = rankMap.get(`${item.user_id}-${sid}`);
+                const visitCount = visitCountMap.get(`${item.user_id}-${sid}`) || 1;
+
+                if (shop) {
+                    enrichedProp = {
+                        ...enrichedProp,
+                        shop_name: shop.name,
+                        shop_address: shop.address_region || shop.address_full,
+                        thumbnail_img: shop.thumbnail_img,
+                        rank: rank || null,
+                        visit_count: visitCount
+                    };
+                }
+            }
+
+            return {
+                id: item.id,
+                user: item.user || { nickname: 'Unknown', account_id: 'unknown', profile_image: null },
+                text: item.text,
+                images: item.img || [],
+                created_at: item.created_at,
+                type: item.type,
+                review_prop: enrichedProp,
+                stats: {
+                    likes: 0,
+                    comments: 0,
+                    is_liked: false,
+                    is_saved: false
+                }
+            };
+        });
+
+        res.json(result);
+
+    } catch (error) {
+        console.error("Feed error:", error);
+        res.status(500).json({ error: "Failed to fetch feed" });
+    }
+});
 
 // POST /api/content (Create Review/Post)
 router.post("/", async (req, res) => {

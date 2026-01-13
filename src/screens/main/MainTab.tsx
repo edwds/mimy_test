@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
 import { useNavigate } from 'react-router-dom';
 import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
+import { HomeTab } from './HomeTab';
 
 export const MainTab = () => {
     const navigate = useNavigate();
@@ -13,14 +15,7 @@ export const MainTab = () => {
     return (
         <div className="flex flex-col h-full bg-background">
             <main className="flex-1 overflow-hidden relative">
-                {activeTab === 'home' && (
-                    <div className="flex-1 flex flex-col items-center justify-center p-4 h-full">
-                        <div className="text-center space-y-4 animate-in zoom-in-95 duration-500">
-                            <h1 className="text-2xl font-bold text-foreground">Welcome to Mimy</h1>
-                            <p className="text-muted-foreground">Your personalized gourmet journal awaits.</p>
-                        </div>
-                    </div>
-                )}
+                {activeTab === 'home' && <HomeTab />}
 
                 {activeTab === 'profile' && <ProfileScreen />}
 
