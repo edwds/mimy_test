@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
@@ -261,7 +262,57 @@ export const ProfileScreen = () => {
         }
     };
 
-    if (loading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
+    if (loading) {
+        return (
+            <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-6 pt-14 pb-2 relative">
+                        {/* Top Area Skeleton */}
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="flex-1 pr-4 flex flex-col min-w-0">
+                                <Skeleton className="h-8 w-40 mb-2" />
+                                <Skeleton className="h-4 w-24 mb-4" />
+
+                                {/* Stats Skeleton */}
+                                <div className="flex gap-4 mb-4">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-4 w-16" />
+                                </div>
+
+                                {/* Bio Skeleton */}
+                                <div className="space-y-1 mb-2">
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-2/3" />
+                                </div>
+                            </div>
+
+                            {/* Image Skeleton */}
+                            <Skeleton className="w-20 h-20 rounded-full flex-shrink-0 ml-4" />
+                        </div>
+
+                        {/* Taste Card Skeleton */}
+                        <Skeleton className="w-full h-20 rounded-xl mb-2" />
+                    </div>
+
+                    {/* Tabs Skeleton */}
+                    <div className="p-6 py-2 bg-background">
+                        <div className="flex gap-2">
+                            <Skeleton className="h-9 w-20 rounded-full" />
+                            <Skeleton className="h-9 w-16 rounded-full" />
+                            <Skeleton className="h-9 w-24 rounded-full" />
+                        </div>
+                    </div>
+
+                    {/* Content Grid Skeleton */}
+                    <div className="min-h-[300px] bg-muted/5 p-4 space-y-4">
+                        <Skeleton className="h-64 w-full rounded-xl" />
+                        <Skeleton className="h-64 w-full rounded-xl" />
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
     if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
 
     return (
