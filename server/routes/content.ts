@@ -232,12 +232,27 @@ router.get("/user/:userId", async (req, res) => {
             }
         });
 
-        // 3. Fetch Shops
+        // 3. Fetch Shops and Rankings
         const shopMap = new Map();
+        const rankMap = new Map<number, number>();
+
         if (shopIds.size > 0) {
+            const idsList = Array.from(shopIds);
+
+            // Shops
             const shopList = await db.select().from(shops)
-                .where(inArray(shops.id, Array.from(shopIds)));
+                .where(inArray(shops.id, idsList));
             shopList.forEach(shop => shopMap.set(shop.id, shop));
+
+            // Rankings
+            const rankingList = await db.select().from(users_ranking)
+                .where(
+                    and(
+                        eq(users_ranking.user_id, userId),
+                        inArray(users_ranking.shop_id, idsList)
+                    )
+                );
+            rankingList.forEach(r => rankMap.set(r.shop_id, r.rank));
         }
 
         // 4. Transform Data
@@ -245,11 +260,15 @@ router.get("/user/:userId", async (req, res) => {
             let enrichedProp = item.review_prop as any;
             if (item.type === 'review' && enrichedProp?.shop_id && shopMap.has(enrichedProp.shop_id)) {
                 const shop = shopMap.get(enrichedProp.shop_id);
+                const rank = rankMap.get(enrichedProp.shop_id);
+
                 enrichedProp = {
                     ...enrichedProp,
                     shop_name: shop.name,
                     shop_address: shop.address_region || shop.address_full,
-                    thumbnail_img: shop.thumbnail_img
+                    thumbnail_img: shop.thumbnail_img,
+                    rank: rank || null, // Add rank
+                    // satisfaction is already in enrichedProp from DB JSON
                 };
             }
 

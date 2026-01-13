@@ -21,6 +21,7 @@ export interface ContentCardProps {
             visit_date?: string;
             companions?: string[]; // e.g. ["UserA", "UserB"] or count
             satisfaction?: string;
+            rank?: number;
         };
         stats: {
             likes: number;
@@ -54,8 +55,20 @@ export const ContentCard = ({ user, content }: ContentCardProps) => {
                         <span className="text-[13px] text-gray-400 font-normal leading-tight">@{user.account_id}</span>
                     </div>
                     {contextText && (
-                        <div className="text-[13px] text-gray-500 mt-0.5 leading-tight">
-                            {contextText}
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[13px] text-gray-500 leading-tight">
+                                {contextText}
+                            </span>
+                            {content.review_prop?.satisfaction && (
+                                <span className={cn(
+                                    "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide",
+                                    content.review_prop.satisfaction === 'best' ? "bg-orange-100 text-orange-600" :
+                                        content.review_prop.satisfaction === 'good' ? "bg-green-100 text-green-600" :
+                                            "bg-gray-100 text-gray-500"
+                                )}>
+                                    {content.review_prop.satisfaction}
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -82,7 +95,14 @@ export const ContentCard = ({ user, content }: ContentCardProps) => {
 
             {/* Shop Info Card */}
             {content.review_prop && (
-                <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors">
+                <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative">
+                    {/* Rank Badge */}
+                    {content.review_prop.rank && (
+                        <div className="absolute -top-2 -left-2 bg-yellow-400 text-white min-w-[24px] h-6 flex items-center justify-center rounded-full text-xs font-bold border-2 border-white shadow-sm z-10 px-1">
+                            {content.review_prop.rank}
+                        </div>
+                    )}
+
                     <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
                         {content.review_prop.thumbnail_img ? (
                             <img src={content.review_prop.thumbnail_img} alt="Shop" className="w-full h-full object-cover" />
@@ -112,8 +132,7 @@ export const ContentCard = ({ user, content }: ContentCardProps) => {
                 {/* Time & Preview */}
                 <div className="flex items-center justify-between mb-3">
                     <span className="text-[12px] text-gray-400">
-                        {/* Mock Time Ago */}
-                        3 hours ago
+                        {new Date(content.created_at).toLocaleString()}
                     </span>
                     {content.stats.comments > 0 && (
                         <span className="text-[12px] text-gray-400 flex items-center gap-1">
