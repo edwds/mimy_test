@@ -12,13 +12,41 @@ export const MainTab = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('home');
     const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
+    const [refreshTriggers, setRefreshTriggers] = useState({
+        home: 0,
+        discover: 0,
+        profile: 0,
+        ranking: 0 // placeholder
+    });
+
+    const handleTabClick = (tab: string) => {
+        if (activeTab === tab) {
+            // Double tap - trigger refresh
+            setRefreshTriggers(prev => ({ ...prev, [tab]: Date.now() }));
+        } else {
+            setActiveTab(tab);
+        }
+    };
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
-                {activeTab === 'home' && <HomeTab onWrite={() => setIsWriteSheetOpen(true)} />}
-                {activeTab === 'discover' && <DiscoveryTab />}
-                {activeTab === 'profile' && <ProfileScreen />}
+                <div className={cn("h-full w-full", activeTab === 'home' ? 'block' : 'hidden')}>
+                    <HomeTab
+                        onWrite={() => setIsWriteSheetOpen(true)}
+                        refreshTrigger={refreshTriggers.home}
+                    />
+                </div>
+                <div className={cn("h-full w-full", activeTab === 'discover' ? 'block' : 'hidden')}>
+                    <DiscoveryTab
+                        refreshTrigger={refreshTriggers.discover}
+                    />
+                </div>
+                <div className={cn("h-full w-full", activeTab === 'profile' ? 'block' : 'hidden')}>
+                    <ProfileScreen
+                        refreshTrigger={refreshTriggers.profile}
+                    />
+                </div>
 
                 {/* Placeholder for other tabs */}
                 {(activeTab === 'ranking') && (
@@ -53,25 +81,25 @@ export const MainTab = () => {
                         icon={<Home className="w-6 h-6" />}
                         label="Home"
                         active={activeTab === 'home'}
-                        onClick={() => setActiveTab('home')}
+                        onClick={() => handleTabClick('home')}
                     />
                     <NavIcon
                         icon={<Compass className="w-6 h-6" />}
                         label="Discover"
                         active={activeTab === 'discover'}
-                        onClick={() => setActiveTab('discover')}
+                        onClick={() => handleTabClick('discover')}
                     />
                     <NavIcon
                         icon={<Trophy className="w-6 h-6" />}
                         label="Ranking"
                         active={activeTab === 'ranking'}
-                        onClick={() => setActiveTab('ranking')}
+                        onClick={() => handleTabClick('ranking')}
                     />
                     <NavIcon
                         icon={<User className="w-6 h-6" />}
                         label="Profile"
                         active={activeTab === 'profile'}
-                        onClick={() => setActiveTab('profile')}
+                        onClick={() => handleTabClick('profile')}
                     />
                 </div>
             </nav>

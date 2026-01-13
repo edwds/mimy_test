@@ -10,7 +10,11 @@ import { useUser } from '@/context/UserContext';
 
 type ProfileTabType = "content" | "list" | "saved";
 
-export const ProfileScreen = () => {
+interface Props {
+    refreshTrigger?: number;
+}
+
+export const ProfileScreen = ({ refreshTrigger }: Props) => {
     const navigate = useNavigate();
     const { user, loading, refreshUser } = useUser();
     const [activeTab, setActiveTab] = useState<ProfileTabType>("content");
@@ -26,6 +30,16 @@ export const ProfileScreen = () => {
     // Content State
     const [contents, setContents] = useState<any[]>([]);
     const [loadingContent, setLoadingContent] = useState(false);
+
+    // Refresh listener
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            refreshUser();
+            // Content fetch will be handled by the dependency below if we include it, 
+            // OR we can explicitly fetch here. 
+            // Let's modify the dependency array of the content fetcher to include refreshTrigger
+        }
+    }, [refreshTrigger]);
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -46,7 +60,7 @@ export const ProfileScreen = () => {
         };
 
         fetchContent();
-    }, [user?.id, activeTab]);
+    }, [user?.id, activeTab, refreshTrigger]); // Added refreshTrigger here
 
     // Close menu on click outside
     useEffect(() => {
