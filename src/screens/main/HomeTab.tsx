@@ -163,9 +163,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }} // Compensate for fixed header
             >
-                <div className="pb-24 pt-4 px-5">
+                <div className="pb-24 pt-4">
                     {/* Chips */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 px-5">
                         {CHIPS.map(chip => (
                             <button
                                 key={chip}
@@ -186,7 +186,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                     {/* Upload Nudge Banner */}
                     <div
                         onClick={onWrite}
-                        className="mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
+                        className="mx-5 mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
                         style={{
                             background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
                         }}
