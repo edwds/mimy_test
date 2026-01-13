@@ -52,7 +52,8 @@ router.get("/feed", async (req, res) => {
         // 3. Batch Fetch Shops, Rankings, VisitCounts
         const shopMap = new Map();
         const rankMap = new Map<string, number>(); // key: `${userId}-${shopId}`
-        const visitCountMap = new Map<string, number>(); // key: `${userId}-${shopId}`
+        // Refactored: visitCountMap removed, using contentVisitRankMap
+        const contentVisitRankMap = new Map<number, number>(); // contentId -> Nth visit
 
         if (shopIds.size > 0) {
             const sIds = Array.from(shopIds);
