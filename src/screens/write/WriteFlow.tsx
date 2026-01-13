@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SelectTypeStep } from './SelectTypeStep';
+import { SelectTypeBottomSheet } from '@/components/SelectTypeBottomSheet';
 import { SearchShopStep } from './SearchShopStep';
 import { BasicInfoStep } from './BasicInfoStep';
 import { WriteContentStep } from './WriteContentStep';
@@ -86,7 +86,11 @@ export const WriteFlow = () => {
 
     return (
         <div className="h-screen bg-[var(--color-background)]">
-            {step === 'TYPE_SELECT' && <SelectTypeStep onSelect={handleTypeSelect} />}
+            <SelectTypeBottomSheet
+                isOpen={step === 'TYPE_SELECT'}
+                onClose={() => navigate('/main')}
+                onSelect={handleTypeSelect}
+            />
 
             {step === 'SEARCH_SHOP' && (
                 <SearchShopStep
@@ -103,18 +107,20 @@ export const WriteFlow = () => {
                 />
             )}
 
-            <WriteContentStep
-                mode={type}
-                onNext={handleContentNext}
-                onBack={() => {
-                    if (type === 'review') {
-                        setStep('BASIC_INFO');
-                    } else {
-                        // If it's a post, we go back to main tab, effectively cancelling
-                        navigate('/main');
-                    }
-                }}
-            />
+            {step === 'WRITE_CONTENT' && (
+                <WriteContentStep
+                    mode={type}
+                    onNext={handleContentNext}
+                    onBack={() => {
+                        if (type === 'review') {
+                            setStep('BASIC_INFO');
+                        } else {
+                            // If it's a post, we go back to main tab, effectively cancelling
+                            navigate('/main');
+                        }
+                    }}
+                />
+            )}
 
             {step === 'RANKING' && selectedShop && (
                 <RankingStep
