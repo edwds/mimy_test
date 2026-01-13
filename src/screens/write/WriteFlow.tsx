@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SelectTypeBottomSheet } from '@/components/SelectTypeBottomSheet';
+import { SelectTypeStep } from './SelectTypeStep';
 import { SearchShopStep } from './SearchShopStep';
 import { BasicInfoStep } from './BasicInfoStep';
 import { WriteContentStep } from './WriteContentStep';
@@ -86,7 +86,7 @@ export const WriteFlow = () => {
 
     return (
         <div className="h-screen bg-[var(--color-background)]">
-            <SelectTypeBottomSheet
+            <SelectTypeStep
                 isOpen={step === 'TYPE_SELECT'}
                 onClose={() => navigate('/main')}
                 onSelect={handleTypeSelect}

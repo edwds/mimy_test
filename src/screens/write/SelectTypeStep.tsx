@@ -1,115 +1,91 @@
-import React from "react";
-import { Utensils, PenLine } from "lucide-react";
+import React from 'react';
+import { Utensils, PenLine, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props {
-    onSelect: (type: "review" | "post") => void;
-    onClose?: () => void;
-    open?: boolean;
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (type: 'review' | 'post') => void;
 }
 
-export const SelectTypeBottomSheet: React.FC<Props> = ({
-    onSelect,
-    onClose,
-    open = true,
-}) => {
-    if (!open) return null;
+export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
+    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50">
-            {/* Overlay (backdrop) */}
-            <button
-                type="button"
-                aria-label="Close"
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
                 onClick={onClose}
-                className="absolute inset-0 bg-black/40"
             />
 
-            {/* Sheet Panel */}
+            {/* Panel */}
             <div
-                className="
-          absolute inset-x-0 bottom-0
-          rounded-t-3xl
-          bg-[var(--color-surface)]
-          border-t border-[var(--color-border)]
-          shadow-[0_-12px_40px_rgba(0,0,0,0.25)]
-        "
-                style={{
-                    // iOS safe-area 대응
-                    paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
-                }}
+                className={cn(
+                    "relative w-full max-w-[400px] bg-white text-gray-900 shadow-2xl overflow-hidden",
+                    "animate-in slide-in-from-bottom duration-300 sm:zoom-in-95 sm:fade-in sm:slide-in-from-bottom-0",
+                    "rounded-t-[32px] sm:rounded-[32px]", // Mobile: Top Rounded, PC: All Rounded
+                    "p-6 pb-10 sm:p-8"
+                )}
             >
-                {/* Grab handle */}
-                <div className="flex justify-center pt-3">
-                    <div className="h-1 w-10 rounded-full bg-black/15" />
+                {/* Mobile Handle */}
+                <div className="flex justify-center mb-6 sm:hidden pointer-events-none">
+                    <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
                 </div>
 
-                <div className="px-6 pt-4 pb-2">
-                    <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-                        어떤 이야기를 기록하시겠어요?
-                    </h1>
-                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                        기록 타입을 선택하세요
-                    </p>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8 px-1">
+                    <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+                        Create Content
+                    </h2>
+                    {/* PC Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
 
-                <div className="px-6 pb-4">
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={() => onSelect("review")}
-                            className="
-                w-full text-left
-                rounded-2xl
-                bg-[var(--color-background)]
-                border border-[var(--color-border)]
-                px-5 py-4
-                hover:border-[var(--color-primary)]
-                active:scale-[0.99]
-                transition
-              "
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-orange-100 flex items-center justify-center">
-                                    <Utensils className="w-5 h-5 text-orange-600" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="text-base font-bold text-[var(--color-text-primary)]">
-                                        방문 후기 쓰기
-                                    </div>
-                                    <div className="mt-0.5 text-sm text-[var(--color-text-secondary)]">
-                                        다녀온 맛집을 기록하고 랭킹을 매겨보세요
-                                    </div>
-                                </div>
-                            </div>
-                        </button>
+                {/* List Items */}
+                <div className="space-y-3">
+                    <button
+                        onClick={() => onSelect('review')}
+                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-gray-100"
+                    >
+                        {/* Icon Circle */}
+                        <div className="w-14 h-14 rounded-full bg-[#EFE9FA] flex items-center justify-center text-[#7C3AED] mr-5 shrink-0 group-hover:scale-110 transition-transform">
+                            <Utensils size={24} strokeWidth={2.5} />
+                        </div>
+                        {/* Text */}
+                        <div className="flex-1 text-left">
+                            <h3 className="text-[17px] font-bold text-gray-900 mb-0.5 group-hover:text-[#7C3AED] transition-colors">
+                                Review Place
+                            </h3>
+                            <p className="text-[15px] text-gray-500 font-medium">
+                                Rank and review restaurants
+                            </p>
+                        </div>
+                    </button>
 
-                        <button
-                            onClick={() => onSelect("post")}
-                            className="
-                w-full text-left
-                rounded-2xl
-                bg-[var(--color-background)]
-                border border-[var(--color-border)]
-                px-5 py-4
-                hover:border-[var(--color-primary)]
-                active:scale-[0.99]
-                transition
-              "
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-blue-100 flex items-center justify-center">
-                                    <PenLine className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="text-base font-bold text-[var(--color-text-primary)]">
-                                        자유 글쓰기
-                                    </div>
-                                    <div className="mt-0.5 text-sm text-[var(--color-text-secondary)]">
-                                        맛집 이야기나 미식 경험을 자유롭게 나눠요
-                                    </div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => onSelect('post')}
+                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-gray-100"
+                    >
+                        {/* Icon Circle */}
+                        <div className="w-14 h-14 rounded-full bg-[#E0F2FE] flex items-center justify-center text-[#0284C7] mr-5 shrink-0 group-hover:scale-110 transition-transform">
+                            <PenLine size={24} strokeWidth={2.5} />
+                        </div>
+                        {/* Text */}
+                        <div className="flex-1 text-left">
+                            <h3 className="text-[17px] font-bold text-gray-900 mb-0.5 group-hover:text-[#0284C7] transition-colors">
+                                Free Post
+                            </h3>
+                            <p className="text-[15px] text-gray-500 font-medium">
+                                Share your food stories
+                            </p>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
