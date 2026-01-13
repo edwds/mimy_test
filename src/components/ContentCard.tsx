@@ -151,10 +151,10 @@ export const ContentCard = ({
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
-        ? `Visited ${shopName} ${content.review_prop?.visit_date
-            ? `on ${new Date(content.review_prop.visit_date).toLocaleDateString()}`
+        ? `Visited ${shopName}${content.review_prop?.visit_date
+            ? ` on ${new Date(content.review_prop.visit_date).toLocaleDateString()}`
             : ''
-        }`
+        }${typeof visitCount === 'number' && visitCount >= 2 ? ` • ${visitCount}번째 방문` : ''}`
         : null;
 
     return (
@@ -239,13 +239,6 @@ export const ContentCard = ({
                                     )}
                                 >
                                     {satisfaction}
-                                </span>
-                            )}
-
-                            {/* Visit Count Badge */}
-                            {typeof visitCount === 'number' && visitCount >= 2 && (
-                                <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
-                                    {visitCount}회 방문
                                 </span>
                             )}
                         </div>
