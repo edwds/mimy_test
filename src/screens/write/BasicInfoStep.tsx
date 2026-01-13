@@ -9,12 +9,12 @@ import { cn } from '@/lib/utils';
 
 interface Props {
     shopName: string;
-    onNext: (info: { satisfaction: 'good' | 'okay' | 'bad'; visitDate: string; companions: any[] }) => void;
+    onNext: (info: { satisfaction: 'good' | 'ok' | 'bad'; visitDate: string; companions: any[] }) => void;
     onBack: () => void;
 }
 
 export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => {
-    const [satisfaction, setSatisfaction] = useState<'good' | 'okay' | 'bad' | null>(null);
+    const [satisfaction, setSatisfaction] = useState<'good' | 'ok' | 'bad' | null>(null);
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Smooth transition simulation
@@ -52,7 +52,7 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                     <div className="grid grid-cols-3 gap-3">
                         {[
                             { value: 'good', icon: Smile, label: '맛있어요', color: 'text-orange-600', activeBg: 'bg-orange-50 border-orange-200 ring-2 ring-orange-100' },
-                            { value: 'okay', icon: Meh, label: '괜찮아요', color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-200 ring-2 ring-yellow-100' },
+                            { value: 'ok', icon: Meh, label: '괜찮아요', color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-200 ring-2 ring-yellow-100' },
                             { value: 'bad', icon: Frown, label: '별로예요', color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-200 ring-2 ring-gray-100' },
                         ].map((item) => (
                             <button
