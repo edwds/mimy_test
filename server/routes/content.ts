@@ -70,31 +70,34 @@ router.get("/feed", async (req, res) => {
                 ));
             rankings.forEach(r => rankMap.set(`${r.user_id}-${r.shop_id}`, r.rank));
 
-            // Visit Counts
-            // Efficient aggregation: Group by user_id, shop_id
-            // Since Drizzle simple aggregations are tricky with specific filters, 
-            // we'll fetch relevant reviews OR use a raw query.
-            // For MVP simplicity and small batch size (20 items * users), let's just count in memory from metadata 
-            // BUT we need total count, not just what's in the feed.
-            // Let's use a simpler approach: Select count per user/shop from content table.
-            // "SELECT user_id, review_prop->>'shop_id', count(*) FROM content WHERE ..."
-
-            // To avoid complex raw SQL right now, let's just fetch ALL reviews for these users/shops (might be heavy later)
-            // Better: select ID and props only
+            // Visit Counts (Ordinal Logic: N-th visit)
+            // 1. Fetch metadata for ALL reviews
             const allRelevantReviews = await db.select({
+                id: content.id,
                 user_id: content.user_id,
-                prop: content.review_prop
+                prop: content.review_prop,
+                created_at: content.created_at
             }).from(content)
                 .where(and(
                     inArray(content.user_id, uIds),
                     eq(content.type, 'review')
-                ));
+                ))
+                .orderBy(content.created_at); // ASC order to count 1st, 2nd...
+
+            const contentVisitRankMap = new Map<number, number>(); // contentId -> Nth
+            const userShopCounter = new Map<string, number>();
 
             allRelevantReviews.forEach(r => {
                 const p = r.prop as any;
-                if (p && p.shop_id && sIds.includes(Number(p.shop_id))) {
-                    const key = `${r.user_id}-${p.shop_id}`;
-                    visitCountMap.set(key, (visitCountMap.get(key) || 0) + 1);
+                if (p && p.shop_id) {
+                    const sid = Number(p.shop_id);
+                    // Only track if relevant
+                    if (sIds.includes(sid)) {
+                        const key = `${r.user_id}-${sid}`;
+                        const current = (userShopCounter.get(key) || 0) + 1;
+                        userShopCounter.set(key, current);
+                        contentVisitRankMap.set(r.id, current);
+                    }
                 }
             });
         }
@@ -107,7 +110,8 @@ router.get("/feed", async (req, res) => {
                 const sid = Number(enrichedProp.shop_id);
                 const shop = shopMap.get(sid);
                 const rank = rankMap.get(`${item.user_id}-${sid}`);
-                const visitCount = visitCountMap.get(`${item.user_id}-${sid}`) || 1;
+                // Use ordinal rank specific to this content item
+                const visitCount = contentVisitRankMap.get(item.id) || 1;
 
                 if (shop) {
                     enrichedProp = {
@@ -388,23 +392,31 @@ router.get("/user/:userId", async (req, res) => {
                 );
             rankingList.forEach(r => rankMap.set(r.shop_id, r.rank));
 
-            // Visit Counts (based on review content)
-            const reviews = await db.select({
-                prop: content.review_prop
+            // Visit Counts (Ordinal)
+            const allUserReviews = await db.select({
+                id: content.id,
+                prop: content.review_prop,
+                created_at: content.created_at
             }).from(content)
                 .where(
                     and(
                         eq(content.user_id, userId),
                         eq(content.type, 'review')
                     )
-                );
+                )
+                .orderBy(content.created_at);
 
-            reviews.forEach(r => {
+            const shopCounter = new Map<number, number>();
+            const contentVisitRankMap = new Map<number, number>();
+
+            allUserReviews.forEach(r => {
                 const p = r.prop as any;
                 if (p && p.shop_id) {
                     const sid = Number(p.shop_id);
                     if (idsList.includes(sid)) {
-                        visitCountMap.set(sid, (visitCountMap.get(sid) || 0) + 1);
+                        const current = (shopCounter.get(sid) || 0) + 1;
+                        shopCounter.set(sid, current);
+                        contentVisitRankMap.set(r.id, current);
                     }
                 }
             });
@@ -416,7 +428,7 @@ router.get("/user/:userId", async (req, res) => {
             if (item.type === 'review' && enrichedProp?.shop_id && shopMap.has(enrichedProp.shop_id)) {
                 const shop = shopMap.get(enrichedProp.shop_id);
                 const rank = rankMap.get(enrichedProp.shop_id);
-                const visitCount = visitCountMap.get(enrichedProp.shop_id) || 1;
+                const visitCount = contentVisitRankMap.get(item.id) || 1;
 
                 enrichedProp = {
                     ...enrichedProp,
