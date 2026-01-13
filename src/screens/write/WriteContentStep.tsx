@@ -5,6 +5,8 @@ import { Image as ImageIcon, X, ChevronLeft } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
+import { ImageEditModal } from './ImageEditModal';
+
 interface Props {
     onNext: (content: { text: string; images: string[] }) => void;
     onBack: () => void;
@@ -14,17 +16,28 @@ interface Props {
 export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
     const [text, setText] = useState('');
     const [images, setImages] = useState<string[]>([]);
-    const [uploading, setUploading] = useState(false);
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files) return;
+    // New Image Edit States
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
         const files = Array.from(e.target.files);
 
-        setUploading(true);
-        // Mock upload logic
-        const newImages = files.map(file => URL.createObjectURL(file));
-        setImages(prev => [...prev, ...newImages]);
-        setUploading(false);
+        // Open Editor
+        setPendingFiles(files);
+        setIsEditModalOpen(true);
+
+        // Reset input
+        e.target.value = '';
+    };
+
+    const handleUploadComplete = (newUrls: string[]) => {
+        setImages(prev => [...prev, ...newUrls]);
+        setPendingFiles([]);
+        // Modal closes itself via onClose in props if needed, or we close it here
+        setIsEditModalOpen(false);
     };
 
     const handleSubmit = () => {
@@ -33,6 +46,14 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
+            {/* New Image Edit Modal */}
+            <ImageEditModal
+                files={pendingFiles}
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onUploadComplete={handleUploadComplete}
+            />
+
             {/* Header */}
             <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] sticky top-0 z-10">
                 <button
@@ -48,7 +69,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                     variant="ghost"
                     className="text-[var(--color-primary)] font-bold text-base hover:bg-[var(--color-primary)]/10 px-3 h-9"
                     onClick={handleSubmit}
-                    disabled={text.trim().length === 0 || uploading}
+                    disabled={text.trim().length === 0}
                 >
                     완료
                 </Button>
