@@ -8,6 +8,7 @@ export interface User {
     profile_image: string | null;
     bio: string | null;
     link: string | null;
+    links?: string[];
     cluster_name?: string;
     cluster_tagline?: string;
     stats?: {
