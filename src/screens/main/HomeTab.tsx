@@ -2,11 +2,13 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { UserService } from '@/services/UserService';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, Bell, Search } from 'lucide-react';
 
 interface Props {
     onWrite: () => void;
 }
+
+const CHIPS = ["Trending", "Following", "Nearby", "Liked"];
 
 export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [_, setPage] = useState(1);
@@ -14,6 +16,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [activeChip, setActiveChip] = useState("Trending");
     const observer = useRef<IntersectionObserver | null>(null);
 
     const fetchFeed = async (pageNum: number) => {
@@ -60,31 +63,59 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
+            {/* Header */}
+            <div className="sticky top-0 bg-[var(--color-background)]/95 backdrop-blur-sm z-10 px-5 pt-4 pb-2">
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-2xl font-bold font-display">Today</h1>
+                    <div className="flex gap-4">
+                        <button className="p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors relative">
+                            <Bell className="w-6 h-6 text-[var(--color-text-primary)]" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--color-background)]" />
+                        </button>
+                        <button className="p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors">
+                            <Search className="w-6 h-6 text-[var(--color-text-primary)]" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Chips */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    {CHIPS.map(chip => (
+                        <button
+                            key={chip}
+                            onClick={() => setActiveChip(chip)}
+                            className={`
+                                px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border
+                                ${activeChip === chip
+                                    ? 'bg-[var(--color-gray-900)] text-white border-transparent'
+                                    : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[var(--color-gray-50)]'
+                                }
+                            `}
+                        >
+                            {chip}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Feed List */}
             <div className="flex-1 overflow-y-auto">
-                <div className="pb-24">
-                    {/* Upload Nudge */}
-                    <div className="mx-4 mt-4 mb-4 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm flex gap-3 relative overflow-hidden cursor-pointer" onClick={onWrite}>
-                        <div className="shrink-0">
-                            {currentUser?.profile_image ? (
-                                <img
-                                    src={currentUser.profile_image}
-                                    alt="Profile"
-                                    className="w-10 h-10 rounded-full object-cover border border-[var(--color-border)]"
-                                />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-[var(--color-gray-100)] flex items-center justify-center text-[var(--color-text-tertiary)]">
-                                    <UserIcon size={20} />
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <button
-                                className="w-full h-10 rounded-full bg-[var(--color-gray-50)] text-left px-4 text-[var(--color-text-tertiary)] text-sm hover:bg-[var(--color-gray-100)] transition-colors flex items-center justify-between group"
-                            >
-                                <span>오늘의 미식 경험을 기록해보세요!</span>
-                            </button>
-                        </div>
+                <div className="pb-24 pt-2">
+                    {/* Upload Nudge Banner */}
+                    <div className="mx-5 mb-6 p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                        <h2 className="text-xl font-bold mb-2">
+                            오늘의 미식 경험을<br />기록해보세요
+                        </h2>
+                        <p className="text-[var(--color-text-secondary)] mb-6 text-sm leading-relaxed">
+                            방문한 맛집, 카페에서의 경험을 남겨주세요.<br />
+                            데이터가 쌓일수록 더 정확한 추천을 받을 수 있어요.
+                        </p>
+                        <button
+                            onClick={onWrite}
+                            className="px-6 py-3 bg-[#4F46E5] text-white rounded-full font-bold text-sm hover:bg-[#4338CA] transition-colors shadow-lg shadow-indigo-500/20"
+                        >
+                            기록하기 {'>'}
+                        </button>
                     </div>
 
                     {items.map((item, index) => {
