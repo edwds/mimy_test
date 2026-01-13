@@ -8,6 +8,8 @@ import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
 
+const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
+
 export const MainTab = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('home');
@@ -18,31 +20,39 @@ export const MainTab = () => {
         profile: 0,
         ranking: 0 // placeholder
     });
+    const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
     const handleTabClick = (tab: string) => {
         if (activeTab === tab) {
             // Double tap - trigger refresh
             setRefreshTriggers(prev => ({ ...prev, [tab]: Date.now() }));
         } else {
+            const currentIndex = TAB_ORDER.indexOf(activeTab);
+            const newIndex = TAB_ORDER.indexOf(tab);
+            setSlideDirection(newIndex > currentIndex ? 'right' : 'left');
             setActiveTab(tab);
         }
+    };
+
+    const getAnimationClass = () => {
+        return `animate-in duration-100 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
     };
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
-                <div className={cn("h-full w-full", activeTab === 'home' ? 'block animate-in slide-in-from-left-2 duration-100' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'home' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <HomeTab
                         onWrite={() => setIsWriteSheetOpen(true)}
                         refreshTrigger={refreshTriggers.home}
                     />
                 </div>
-                <div className={cn("h-full w-full", activeTab === 'discover' ? 'block animate-in slide-in-from-left-2 duration-100' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'discover' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <DiscoveryTab
                         refreshTrigger={refreshTriggers.discover}
                     />
                 </div>
-                <div className={cn("h-full w-full", activeTab === 'profile' ? 'block animate-in slide-in-from-right-2 duration-100' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'profile' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <ProfileScreen
                         refreshTrigger={refreshTriggers.profile}
                     />
@@ -50,7 +60,7 @@ export const MainTab = () => {
 
                 {/* Placeholder for other tabs */}
                 {(activeTab === 'ranking') && (
-                    <div className="flex-1 flex items-center justify-center h-full text-muted-foreground animate-in slide-in-from-right-2 duration-100">
+                    <div className={cn("flex-1 flex items-center justify-center h-full text-muted-foreground", getAnimationClass())}>
                         Coming Soon
                     </div>
                 )}
