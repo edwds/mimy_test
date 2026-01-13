@@ -64,7 +64,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             <div className="flex-1 overflow-y-auto">
                 <div className="pb-24">
                     {/* Upload Nudge */}
-                    <div className="px-5 py-4 border-b border-[var(--color-border)] flex gap-3 bg-[var(--color-surface)]" onClick={onWrite}>
+                    <div className="mx-4 mt-6 mb-4 p-4 rounded-2xl border border-[var(--color-border)] shadow-sm flex gap-3 bg-[var(--color-surface)]" onClick={onWrite}>
                         <div className="shrink-0">
                             {currentUser?.profile_image ? (
                                 <img
