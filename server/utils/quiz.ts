@@ -1,8 +1,22 @@
-import { db } from '../db/index';
-import { clusters, quiz_matches } from '../db/schema';
+import { db } from '../db/index.js';
+import { clusters, quiz_matches } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { MATCH_DATA } from '../data/matchData';
-import CLUSTER_DATA from '../data/cluster.json';
+import { MATCH_DATA } from '../data/matchData.js';
+import CLUSTER_DATA from '../data/cluster.json' with { type: "json" };
+// Note: JSON import in ESM might require assertions or just default import if handled by node. 
+// Standard Node ESM for JSON: import data from './data.json' with { type: 'json' };
+// But TS might complain. 
+// Actually, with "moduleResolution": "Bundler", it might be fine.
+// But mostly safer to just require or keep as is if TS handles it?
+// Node requires "with { type: 'json' }" for JSON modules in ESM.
+// Let's stick to standard imports first. If it breaks, we fix.
+// Wait, `import CLUSTER_DATA from '../data/cluster.json';`
+// In native Node ESM, this throws "TypeError: ... needs an import assertion of type 'json'".
+// Let's use `createRequire` or `with { type: 'json' }`.
+// Since we are targeting Node 22 (or modern), `with` is the standard.
+// But let's check matches first.
+// `../data/matchData` is likely a TS file?
+
 
 
 

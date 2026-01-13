@@ -1,8 +1,8 @@
 
 import { Router } from "express";
-import { QuizManager } from "../utils/quiz";
-import { db } from "../db/index";
-import { users } from "../db/schema";
+import { QuizManager } from "../utils/quiz.js";
+import { db } from "../db/index.js";
+import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 
 const router = Router();

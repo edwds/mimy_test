@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import authRoutes from "./routes/auth";
-import userRoutes from "./routes/users";
-import uploadRoutes from "./routes/upload";
-import quizRoutes from "./routes/quiz";
-import { QuizManager } from "./utils/quiz";
+import authRoutes from "./routes/auth.js";
+import userRoutes from "./routes/users.js";
+import uploadRoutes from "./routes/upload.js";
+import quizRoutes from "./routes/quiz.js";
+import { QuizManager } from "./utils/quiz.js";
 
-import shopRoutes from "./routes/shops";
-import contentRoutes from "./routes/content";
+import shopRoutes from "./routes/shops.js";
+import contentRoutes from "./routes/content.js";
 
 dotenv.config();
 
