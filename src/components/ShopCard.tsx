@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapPin, Calendar, Bookmark, PenLine } from 'lucide-react';
+import React from 'react';
+import { MapPin, Calendar, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatVisitDate } from '@/lib/utils';
 

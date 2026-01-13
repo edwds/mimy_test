@@ -22,7 +22,7 @@ export const DiscoveryTab = () => {
     const [shops, setShops] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const [page, setPage] = useState(1);
+    const [, setPage] = useState(1);
     const observer = useRef<IntersectionObserver | null>(null);
     const seedRef = useRef(getSessionSeed());
 
