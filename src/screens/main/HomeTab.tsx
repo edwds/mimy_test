@@ -56,18 +56,18 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     }, [loading, hasMore]);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--color-background)]">
+        <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="sticky top-0 bg-[var(--color-background)]/95 backdrop-blur-sm z-10 px-5 pt-4 pb-2">
+            <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-5 pt-4 pb-2">
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold font-display">Today</h1>
+                    <h1 className="text-2xl font-bold">Today</h1>
                     <div className="flex gap-4">
-                        <button className="p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors relative">
-                            <Bell className="w-6 h-6 text-[var(--color-text-primary)]" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[var(--color-background)]" />
+                        <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
+                            <Bell className="w-6 h-6 text-foreground" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
                         </button>
-                        <button className="p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors">
-                            <Search className="w-6 h-6 text-[var(--color-text-primary)]" />
+                        <button className="p-2 rounded-full hover:bg-muted transition-colors">
+                            <Search className="w-6 h-6 text-foreground" />
                         </button>
                     </div>
                 </div>
@@ -81,8 +81,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                             className={`
                                 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border
                                 ${activeChip === chip
-                                    ? 'bg-[var(--color-gray-900)] text-white border-transparent'
-                                    : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[var(--color-gray-50)]'
+                                    ? 'bg-foreground text-background border-transparent'
+                                    : 'bg-card text-muted-foreground border-border hover:bg-muted'
                                 }
                             `}
                         >
@@ -96,11 +96,11 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             <div className="flex-1 overflow-y-auto">
                 <div className="pb-24 pt-2">
                     {/* Upload Nudge Banner */}
-                    <div className="mx-5 mb-6 p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                    <div className="mx-5 mb-6 p-6 rounded-3xl bg-card border border-border shadow-sm">
                         <h2 className="text-xl font-bold mb-2">
                             오늘의 미식 경험을<br />기록해보세요
                         </h2>
-                        <p className="text-[var(--color-text-secondary)] mb-6 text-sm leading-relaxed">
+                        <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
                             방문한 맛집, 카페에서의 경험을 남겨주세요.<br />
                             데이터가 쌓일수록 더 정확한 추천을 받을 수 있어요.
                         </p>
@@ -120,25 +120,25 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                                     user={item.user}
                                     content={item}
                                 />
-                                <div className="h-1 bg-[var(--color-gray-50)]" />
+                                <div className="h-1 bg-muted/50" />
                             </div>
                         );
                     })}
 
                     {loading && (
                         <div className="py-8 flex justify-center">
-                            <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         </div>
                     )}
 
                     {!hasMore && items.length > 0 && (
-                        <div className="py-8 text-center text-[var(--color-text-tertiary)] text-sm">
+                        <div className="py-8 text-center text-muted-foreground text-sm">
                             모든 콘텐츠를 확인했습니다.
                         </div>
                     )}
 
                     {!loading && items.length === 0 && (
-                        <div className="py-20 text-center text-[var(--color-text-tertiary)]">
+                        <div className="py-20 text-center text-muted-foreground">
                             등록된 콘텐츠가 없습니다.
                         </div>
                     )}
