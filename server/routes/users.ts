@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, shops, users_wantstogo } from "../db/schema.js";
-import { eq, and, desc } from "drizzle-orm";
+import { users, clusters, shops, users_wantstogo, users_follow, content } from "../db/schema.js";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -49,9 +49,37 @@ router.get("/:id", async (req, res) => {
             }
         }
 
+        // Stats Counts
+        // 1. Content Count
+        const contentCountRes = await db.select({ count: sql<number>`count(*)` })
+            .from(content)
+            .where(and(
+                eq(content.user_id, id),
+                eq(content.is_deleted, false)
+                // Optional: Create simple posts vs reviews split if needed, effectively "Content" implies both
+            ));
+        const contentCount = Number(contentCountRes[0]?.count || 0);
+
+        // 2. Follower Count (People following this user)
+        const followerCountRes = await db.select({ count: sql<number>`count(*)` })
+            .from(users_follow)
+            .where(eq(users_follow.following_id, id));
+        const followerCount = Number(followerCountRes[0]?.count || 0);
+
+        // 3. Following Count (People this user follows)
+        const followingCountRes = await db.select({ count: sql<number>`count(*)` })
+            .from(users_follow)
+            .where(eq(users_follow.follower_id, id));
+        const followingCount = Number(followingCountRes[0]?.count || 0);
+
         res.json({
             ...userData,
-            ...clusterInfo
+            ...clusterInfo,
+            stats: {
+                content_count: contentCount,
+                follower_count: followerCount,
+                following_count: followingCount
+            }
         });
     } catch (error) {
         console.error("Fetch user error:", error);
