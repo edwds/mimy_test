@@ -93,6 +93,8 @@ export interface ContentCardProps {
             thumbnail_img?: string;
             visit_date?: string;
             companions?: string[];
+            rank?: number;
+            satisfaction?: Satisfaction;
         };
 
         // POI: move rank/satisfaction here (or keep under review_prop if you want, but per request: POI side)
@@ -141,8 +143,8 @@ export const ContentCard = ({
     const shopName = content.poi?.shop_name ?? content.review_prop?.shop_name;
     const shopAddress = content.poi?.shop_address ?? content.review_prop?.shop_address;
     const shopThumbnail = content.poi?.thumbnail_img ?? content.review_prop?.thumbnail_img;
-    const rank = content.poi?.rank;
-    const satisfaction = content.poi?.satisfaction;
+    const rank = content.poi?.rank ?? content.review_prop?.rank;
+    const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
