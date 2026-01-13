@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Heart, MessageCircle, Share, MessageSquare, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
@@ -204,19 +204,23 @@ export const ContentCard = ({
             {/* Shop Info Card */}
             {shopName && (
                 <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative">
-                    <div className="relative w-12 h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
-                        {/* Rank Badge on thumbnail */}
+                    {/* Image Wrapper with Badge */}
+                    <div className="relative flex-shrink-0">
                         {typeof rank === 'number' && (
-                            <div className="absolute -top-2 -left-2 bg-yellow-400 text-white min-w-[24px] h-6 flex items-center justify-center rounded-full text-xs font-bold border-2 border-white shadow-sm z-10 px-1">
+                            <div className={cn(
+                                "absolute -top-1.5 -left-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[10px] font-bold border-2 border-white shadow-sm z-10 px-1",
+                                rank <= 3 ? "bg-yellow-400 text-white" : "bg-gray-400 text-white"
+                            )}>
                                 {rank}
                             </div>
                         )}
-
-                        {shopThumbnail ? (
-                            <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
-                        )}
+                        <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden">
+                            {shopThumbnail ? (
+                                <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -247,22 +251,26 @@ export const ContentCard = ({
                             type="button"
                             onClick={() => onTogglePoiBookmark?.(content.id)}
                             className={cn(
-                                'h-9 w-9 rounded-md flex items-center justify-center transition-colors',
+                                'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
                                 isPoiBookmarked
                                     ? 'bg-gray-900 text-white hover:bg-gray-800'
                                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                             )}
                             aria-label="Bookmark shop"
                         >
-                            <Bookmark size={18} className={cn(isPoiBookmarked && 'fill-white text-white')} />
+                            <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-white text-white')} />
                         </button>
 
                         <button
                             type="button"
                             onClick={() => onReservePoi?.(content.id)}
-                            className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-md hover:bg-orange-100 transition-colors h-9"
+                            className={cn(
+                                'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                                'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                            )}
+                            aria-label="Reserve"
                         >
-                            예약
+                            <Calendar size={16} />
                         </button>
                     </div>
                 </div>
