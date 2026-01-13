@@ -129,35 +129,28 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     // Scroll & Header Logic
     const containerRef = useRef<HTMLDivElement>(null);
-    const staticTabsRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
     const lastScrollY = useRef(0);
-    const [showFloatingTabs, setShowFloatingTabs] = useState(false);
-    const [tabsOffset, setTabsOffset] = useState(0);
 
-    // Measure where static tabs start
-    useEffect(() => {
-        if (staticTabsRef.current) {
-            setTabsOffset(staticTabsRef.current.offsetTop);
-        }
-    }, [user, activeTab]);
+    // Header State
+    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
 
     const handleScroll = () => {
         if (!containerRef.current) return;
         const currentScrollY = containerRef.current.scrollTop;
         const diff = currentScrollY - lastScrollY.current;
 
-        // Show floating tabs when scrolled past the static tabs
-        if (currentScrollY > tabsOffset) {
-            if (diff < 0) { // Scrolling Up
-                setShowFloatingTabs(true);
-            } else if (diff > 5) { // Scrolling Down
-                setShowFloatingTabs(false);
+        // Smart Header Logic
+        if (currentScrollY < 10) {
+            setIsHeaderVisible(true);
+        } else if (Math.abs(diff) > 10) {
+            if (diff > 0) { // Down
+                setIsHeaderVisible(false);
+                setIsMenuOpen(false);
+            } else { // Up
+                setIsHeaderVisible(true);
             }
-        } else {
-            setShowFloatingTabs(false);
         }
-
         lastScrollY.current = currentScrollY;
     };
 
@@ -165,29 +158,14 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
         if (containerRef.current) {
             scrollPositions.current[activeTab] = containerRef.current.scrollTop;
         }
-
         setActiveTab(newTab);
+        setIsHeaderVisible(true);
 
+        // Simple scroll restore
         requestAnimationFrame(() => {
             if (containerRef.current) {
-                const savedPos = scrollPositions.current[newTab];
-                let targetPos = savedPos;
-
-                if (targetPos === undefined) {
-                    if (scrollPositions.current[activeTab] > tabsOffset) {
-                        targetPos = tabsOffset;
-                    } else {
-                        targetPos = 0;
-                    }
-                }
-
-                containerRef.current.scrollTo({ top: targetPos, behavior: 'instant' });
-
-                if (targetPos >= tabsOffset) {
-                    setShowFloatingTabs(true);
-                } else {
-                    setShowFloatingTabs(false);
-                }
+                const savedPos = scrollPositions.current[newTab] || 0;
+                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
             }
         });
     };
@@ -292,44 +270,30 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
 
-            {/* Smart Floating Header (Duplicate) */}
+            {/* Smart Header (Title + Settings) */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300",
-                    showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50",
+                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
             >
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
-                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
-                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
-                </div>
-            </div>
-
-            <main
-                ref={containerRef}
-                className="flex-1 overflow-y-auto"
-                onScroll={handleScroll}
-            >
-                {/* Top Area */}
-                <div className="p-6 pt-6 pb-2 relative">
-
-                    {/* Menu Button (Absolute Top Right) */}
-                    <div className="absolute top-2 right-4 z-20">
+                <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-xl font-bold">Profile</h1>
+                    <div className="relative">
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-muted"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
-                            <Settings className="w-5 h-5 text-muted-foreground" />
+                            <Settings className="w-6 h-6 text-foreground" />
                         </Button>
 
                         {/* Dropdown Menu */}
                         {isMenuOpen && (
                             <div
                                 ref={menuRef}
-                                className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-200"
+                                className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-[100] animate-in fade-in zoom-in-95 duration-200"
                             >
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -359,6 +323,16 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                             </div>
                         )}
                     </div>
+                </div>
+            </div>
+
+            <main
+                ref={containerRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={handleScroll}
+            >
+                {/* Top Area */}
+                <div className="p-6 pt-20 pb-2 relative">
 
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">
