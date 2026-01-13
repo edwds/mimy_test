@@ -103,13 +103,18 @@ export const WriteFlow = () => {
                 />
             )}
 
-            {step === 'WRITE_CONTENT' && (
-                <WriteContentStep
-                    mode={type}
-                    onNext={handleContentNext}
-                    onBack={() => type === 'review' ? setStep('BASIC_INFO') : setStep('TYPE_SELECT')}
-                />
-            )}
+            <WriteContentStep
+                mode={type}
+                onNext={handleContentNext}
+                onBack={() => {
+                    if (type === 'review') {
+                        setStep('BASIC_INFO');
+                    } else {
+                        // If it's a post, we go back to main tab, effectively cancelling
+                        navigate('/main');
+                    }
+                }}
+            />
 
             {step === 'RANKING' && selectedShop && (
                 <RankingStep
