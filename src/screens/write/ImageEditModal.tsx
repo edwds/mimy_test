@@ -250,6 +250,14 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [originalUrl, setOriginalUrl] = useState<string>('');
+
+    // Load original image for editing
+    useEffect(() => {
+        const url = URL.createObjectURL(item.file);
+        setOriginalUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [item.file]);
 
     // Limits
     const minScale = 1;
