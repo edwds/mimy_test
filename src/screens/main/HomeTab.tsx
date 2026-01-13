@@ -1,13 +1,20 @@
-
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
+import { UserService } from '@/services/UserService';
+import { User as UserIcon, ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export const HomeTab = () => {
+interface Props {
+    onWrite: () => void;
+}
+
+export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const observer = useRef<IntersectionObserver | null>(null);
 
     const fetchFeed = async (pageNum: number) => {
@@ -31,6 +38,8 @@ export const HomeTab = () => {
 
     useEffect(() => {
         fetchFeed(1);
+        const user = UserService.getUser();
+        if (user) setCurrentUser(user);
     }, []);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
@@ -50,14 +59,33 @@ export const HomeTab = () => {
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
-            {/* Header */}
-            <div className="sticky top-0 bg-[var(--color-surface)]/80 backdrop-blur-md z-10 border-b border-[var(--color-border)] px-5 h-14 flex items-center justify-between">
-                <div className="font-display text-xl font-bold tracking-tight text-[var(--color-primary)]">Mimy</div>
-            </div>
-
             {/* Feed List */}
             <div className="flex-1 overflow-y-auto">
                 <div className="pb-24">
+                    {/* Upload Nudge */}
+                    <div className="px-5 py-4 border-b border-[var(--color-border)] flex gap-3 bg-[var(--color-surface)]" onClick={onWrite}>
+                        <div className="shrink-0">
+                            {currentUser?.profile_image ? (
+                                <img
+                                    src={currentUser.profile_image}
+                                    alt="Profile"
+                                    className="w-10 h-10 rounded-full object-cover border border-[var(--color-border)]"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-[var(--color-gray-100)] flex items-center justify-center text-[var(--color-text-tertiary)]">
+                                    <UserIcon size={20} />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <button
+                                className="w-full h-10 rounded-full bg-[var(--color-gray-50)] text-left px-4 text-[var(--color-text-tertiary)] text-sm hover:bg-[var(--color-gray-100)] transition-colors flex items-center justify-between group"
+                            >
+                                <span>오늘의 미식 경험을 기록해보세요!</span>
+                            </button>
+                        </div>
+                    </div>
+
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
                         return (
@@ -65,7 +93,6 @@ export const HomeTab = () => {
                                 <ContentCard
                                     user={item.user}
                                     content={item}
-                                // Handlers can be added later (like, comment, etc.)
                                 />
                                 <div className="h-1 bg-[var(--color-gray-50)]" />
                             </div>

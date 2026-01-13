@@ -15,7 +15,7 @@ export const MainTab = () => {
     return (
         <div className="flex flex-col h-full bg-background">
             <main className="flex-1 overflow-hidden relative">
-                {activeTab === 'home' && <HomeTab />}
+                {activeTab === 'home' && <HomeTab onWrite={() => setIsWriteSheetOpen(true)} />}
 
                 {activeTab === 'profile' && <ProfileScreen />}
 
