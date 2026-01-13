@@ -95,6 +95,7 @@ export interface ContentCardProps {
             companions?: string[];
             rank?: number;
             satisfaction?: Satisfaction;
+            visit_count?: number;
         };
 
         // POI: move rank/satisfaction here (or keep under review_prop if you want, but per request: POI side)
@@ -104,6 +105,7 @@ export interface ContentCardProps {
             thumbnail_img?: string;
             rank?: number;
             satisfaction?: Satisfaction;
+            visit_count?: number;
             is_bookmarked?: boolean;
         };
 
@@ -145,6 +147,7 @@ export const ContentCard = ({
     const shopThumbnail = content.poi?.thumbnail_img ?? content.review_prop?.thumbnail_img;
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
+    const visitCount = content.poi?.visit_count ?? content.review_prop?.visit_count;
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
@@ -236,6 +239,13 @@ export const ContentCard = ({
                                     )}
                                 >
                                     {satisfaction}
+                                </span>
+                            )}
+
+                            {/* Visit Count Badge */}
+                            {typeof visitCount === 'number' && visitCount >= 2 && (
+                                <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
+                                    {visitCount}회 방문
                                 </span>
                             )}
                         </div>

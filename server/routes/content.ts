@@ -235,6 +235,7 @@ router.get("/user/:userId", async (req, res) => {
         // 3. Fetch Shops and Rankings
         const shopMap = new Map();
         const rankMap = new Map<number, number>();
+        const visitCountMap = new Map<number, number>();
 
         if (shopIds.size > 0) {
             const idsList = Array.from(shopIds);
@@ -253,6 +254,27 @@ router.get("/user/:userId", async (req, res) => {
                     )
                 );
             rankingList.forEach(r => rankMap.set(r.shop_id, r.rank));
+
+            // Visit Counts (based on review content)
+            const reviews = await db.select({
+                prop: content.review_prop
+            }).from(content)
+                .where(
+                    and(
+                        eq(content.user_id, userId),
+                        eq(content.type, 'review')
+                    )
+                );
+
+            reviews.forEach(r => {
+                const p = r.prop as any;
+                if (p && p.shop_id) {
+                    const sid = Number(p.shop_id);
+                    if (idsList.includes(sid)) {
+                        visitCountMap.set(sid, (visitCountMap.get(sid) || 0) + 1);
+                    }
+                }
+            });
         }
 
         // 4. Transform Data
@@ -261,6 +283,7 @@ router.get("/user/:userId", async (req, res) => {
             if (item.type === 'review' && enrichedProp?.shop_id && shopMap.has(enrichedProp.shop_id)) {
                 const shop = shopMap.get(enrichedProp.shop_id);
                 const rank = rankMap.get(enrichedProp.shop_id);
+                const visitCount = visitCountMap.get(enrichedProp.shop_id) || 1;
 
                 enrichedProp = {
                     ...enrichedProp,
@@ -268,6 +291,7 @@ router.get("/user/:userId", async (req, res) => {
                     shop_address: shop.address_region || shop.address_full,
                     thumbnail_img: shop.thumbnail_img,
                     rank: rank || null, // Add rank
+                    visit_count: visitCount
                     // satisfaction is already in enrichedProp from DB JSON
                 };
             }
