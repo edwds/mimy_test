@@ -435,9 +435,9 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                     {user.bio && (
                         <div className="mb-6">
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user.bio}</p>
-                            {user.links && user.links.length > 0 && (
+                            {(user.links || user.link) && (
                                 <div className="mt-2 flex flex-col gap-1">
-                                    {user.links.map((link: string, idx: number) => (
+                                    {(user.links || (user.link ? [user.link] : [])).map((link: string, idx: number) => (
                                         <a
                                             key={idx}
                                             href={link.startsWith('http') ? link : `https://${link}`}
