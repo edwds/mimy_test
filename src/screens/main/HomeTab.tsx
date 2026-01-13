@@ -186,7 +186,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                     {/* Upload Nudge Banner */}
                     <div
                         onClick={onWrite}
-                        className="mx-5 mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
+                        className="mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
                         style={{
                             background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
                         }}

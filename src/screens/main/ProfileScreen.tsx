@@ -129,6 +129,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     // Scroll & Header Logic
     const containerRef = useRef<HTMLDivElement>(null);
+    const staticTabsRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
     const lastScrollY = useRef(0);
 
