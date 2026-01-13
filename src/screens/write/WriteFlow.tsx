@@ -24,8 +24,8 @@ export const WriteFlow = () => {
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const [basicInfo, setBasicInfo] = useState<{ satisfaction: string; visitDate: string; companions: any[] } | null>(null);
 
-    // TODO: Get real user ID from context/storage
-    const currentUserId = 1;
+    // Get real user ID
+    const currentUserId = Number(localStorage.getItem("mimy_user_id") || 0);
 
     const handleTypeSelect = (selectedType: 'review' | 'post') => {
         setType(selectedType);
@@ -48,6 +48,11 @@ export const WriteFlow = () => {
 
     const handleContentNext = async (contentData: { text: string; images: string[] }) => {
         try {
+            if (!currentUserId) {
+                alert("Login required");
+                navigate('/login');
+                return;
+            }
             // Prepare payload
             const payload = {
                 user_id: currentUserId,
