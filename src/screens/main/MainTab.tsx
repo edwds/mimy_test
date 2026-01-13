@@ -31,18 +31,18 @@ export const MainTab = () => {
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
-                <div className={cn("h-full w-full", activeTab === 'home' ? 'block' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'home' ? 'block animate-in fade-in slide-in-from-left-4 duration-300' : 'hidden')}>
                     <HomeTab
                         onWrite={() => setIsWriteSheetOpen(true)}
                         refreshTrigger={refreshTriggers.home}
                     />
                 </div>
-                <div className={cn("h-full w-full", activeTab === 'discover' ? 'block' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'discover' ? 'block animate-in fade-in slide-in-from-left-4 duration-300' : 'hidden')}>
                     <DiscoveryTab
                         refreshTrigger={refreshTriggers.discover}
                     />
                 </div>
-                <div className={cn("h-full w-full", activeTab === 'profile' ? 'block' : 'hidden')}>
+                <div className={cn("h-full w-full", activeTab === 'profile' ? 'block animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden')}>
                     <ProfileScreen
                         refreshTrigger={refreshTriggers.profile}
                     />
@@ -50,7 +50,7 @@ export const MainTab = () => {
 
                 {/* Placeholder for other tabs */}
                 {(activeTab === 'ranking') && (
-                    <div className="flex-1 flex items-center justify-center h-full text-muted-foreground">
+                    <div className="flex-1 flex items-center justify-center h-full text-muted-foreground animate-in fade-in slide-in-from-right-4 duration-300">
                         Coming Soon
                     </div>
                 )}
