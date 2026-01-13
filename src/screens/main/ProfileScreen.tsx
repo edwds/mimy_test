@@ -454,7 +454,9 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                             )}
                         </div>
                     )}
-                </div>* Tab Content */}
+                </div>
+
+                {/* Tab Content */}
                 <div className="min-h-[300px] bg-muted/5">
                     {activeTab === "content" && (
                         <div className="pb-20">
