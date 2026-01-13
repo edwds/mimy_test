@@ -19,7 +19,7 @@ export const ContentService = {
         if (!response.ok) throw new Error('Failed to submit ranking');
         return response.json();
     },
-    applyRanking: async (data: { user_id: number; shop_id: number; insert_index: number }) => {
+    applyRanking: async (data: { user_id: number; shop_id: number; insert_index: number; satisfaction?: string }) => {
         const response = await fetch('/api/content/ranking/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
