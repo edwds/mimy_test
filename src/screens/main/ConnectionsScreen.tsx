@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, User as UserIcon } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
