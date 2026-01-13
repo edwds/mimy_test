@@ -12,17 +12,17 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div className="absolute inset-0 z-50 flex items-end justify-center sm:items-center">
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
                 onClick={onClose}
             />
 
             {/* Panel */}
             <div
                 className={cn(
-                    "relative w-full max-w-[400px] bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-2xl overflow-hidden",
+                    "relative w-full max-w-[400px] bg-background text-foreground shadow-2xl overflow-hidden",
                     "animate-in slide-in-from-bottom duration-300 sm:zoom-in-95 sm:fade-in sm:slide-in-from-bottom-0",
                     "rounded-t-[32px] sm:rounded-[32px]", // Mobile: Top Rounded, PC: All Rounded
                     "p-6 pb-10 sm:p-8"

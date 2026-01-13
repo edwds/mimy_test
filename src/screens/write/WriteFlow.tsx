@@ -87,7 +87,7 @@ export const WriteFlow = () => {
     };
 
     return (
-        <div className="h-screen bg-[var(--color-background)]">
+        <div className="relative h-full bg-background">
             <SelectTypeStep
                 isOpen={step === 'TYPE_SELECT'}
                 onClose={() => navigate('/main')}
