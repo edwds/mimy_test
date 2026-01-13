@@ -452,6 +452,15 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                     )}
                 </div>
 
+                {/* Tabs Static Header (In Flow) */}
+                <div ref={staticTabsRef} className="bg-background py-2 sticky top-0 z-10 border-b border-border/50">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-6">
+                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
+                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
+                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
+                    </div>
+                </div>
+
                 {/* Tab Content */}
                 <div className="min-h-[300px] bg-muted/5">
                     {activeTab === "content" && (
