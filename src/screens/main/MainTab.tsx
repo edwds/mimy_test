@@ -35,7 +35,7 @@ export const MainTab = () => {
     };
 
     const getAnimationClass = () => {
-        return `animate-in duration-100 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
+        return `animate-in duration-150 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
     };
 
     return (
