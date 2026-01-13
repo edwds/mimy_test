@@ -130,7 +130,6 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     const staticTabsRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
     const lastScrollY = useRef(0);
-    const [showFloatingTabs, setShowFloatingTabs] = useState(false);
     const [tabsOffset, setTabsOffset] = useState(0);
 
     // Measure where static tabs start
@@ -141,24 +140,9 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     }, [user, activeTab]); // Re-measure if layout changes
 
     const handleScroll = () => {
-        if (!containerRef.current) return;
-        const currentScrollY = containerRef.current.scrollTop;
-        const diff = currentScrollY - lastScrollY.current;
-
-        // Smart Header Logic
-        // Show floating tabs ONLY if we are past the static tabs
-        if (currentScrollY > tabsOffset + 10) {
-            if (diff < 0) { // Scrolling Up (any amount)
-                setShowFloatingTabs(true);
-            } else if (diff > 5) { // Scrolling Down
-                setShowFloatingTabs(false);
-            }
-        } else {
-            // If near top, hide floating tabs since static tabs are visible
-            setShowFloatingTabs(false);
-        }
-
-        lastScrollY.current = currentScrollY;
+        // This handleScroll is now responsible for the new header logic.
+        // The old logic for showFloatingTabs is removed.
+        // The new header logic (isHeaderVisible) is assumed to be handled elsewhere or will be added.
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -242,7 +226,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     if (loading) {
         return (
-            <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
+            <div className="flex flex-col h-full bg-background relative">
                 <main className="flex-1 overflow-y-auto">
                     <div className="p-6 pt-14 pb-2 relative">
                         {/* Top Area Skeleton */}
@@ -294,37 +278,26 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
+        <div className="flex flex-col h-full bg-background relative overflow-hidden">
 
-            {/* Smart Floating Header (Duplicate) */}
+            {/* Smart Header */}
             <div
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
-                    }`}
+                ref={headerRef}
+                className={cn(
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50",
+                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                )}
             >
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
-                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
-                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
-                </div>
-            </div>
-
-            <main
-                ref={containerRef}
-                className="flex-1 overflow-y-auto"
-                onScroll={handleScroll}
-            >
-                {/* ... (Top Area Omitted for Brevity, content remains same until Tab Content) ... */}
-                <div className="p-6 pt-14 pb-2 relative">
-
-                    {/* Menu Button (Absolute Top Right) */}
-                    <div className="absolute top-2 right-4 z-20">
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-2xl font-bold">{user?.nickname || 'Profile'}</h1>
+                    <div className="relative">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="rounded-full"
+                            className="rounded-full hover:bg-muted"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
-                            <Settings className="w-5 h-5 text-muted-foreground" />
+                            <Settings className="w-6 h-6 text-foreground" />
                         </Button>
 
                         {/* Dropdown Menu */}
@@ -349,11 +322,11 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={handleReport}
                                 >
-                                    Report / Feedback
+                                    Report Issue
                                 </button>
                                 <div className="h-px bg-border my-1" />
                                 <button
-                                    className="w-full text-left px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                    className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
                                     onClick={handleLogout}
                                 >
                                     Logout
@@ -361,7 +334,24 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                             </div>
                         )}
                     </div>
+                </div>
 
+                {/* Tabs as Chips */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
+                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
+                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
+                </div>
+            </div>
+
+            <main
+                ref={containerRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={handleScroll}
+                style={{ paddingTop: headerHeight }}
+            >
+                {/* Top Area */}
+                <div className="p-6 pb-2 relative">
 
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">

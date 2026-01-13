@@ -94,6 +94,36 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
+    // Smart Header State
+    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+    const lastScrollY = useRef(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const [headerHeight, setHeaderHeight] = useState(0);
+
+    useEffect(() => {
+        if (headerRef.current) {
+            setHeaderHeight(headerRef.current.offsetHeight);
+        }
+    }, []);
+
+    const handleScroll = () => {
+        if (!containerRef.current) return;
+        const currentScrollY = containerRef.current.scrollTop;
+        const diff = currentScrollY - lastScrollY.current;
+
+        if (currentScrollY < 10) {
+            setIsHeaderVisible(true);
+        } else if (Math.abs(diff) > 10) {
+            if (diff > 0) {
+                setIsHeaderVisible(false);
+            } else {
+                setIsHeaderVisible(true);
+            }
+        }
+        lastScrollY.current = currentScrollY;
+    };
+
     const handleSave = async (shopId: number) => {
         const userId = localStorage.getItem('mimy_user_id');
         if (!userId) {
@@ -137,23 +167,29 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="p-5 pt-6 pb-2">
-                <h1 className="text-2xl font-bold mb-4">Discovery</h1>
-                {/* Search Bar Placeholder */}
-                <div className="relative">
-                    <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="새로운 맛집을 찾아보세요"
-                        className="w-full pl-10 pr-4 py-3 bg-muted/50 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    />
+        <div className="flex flex-col h-full bg-background relative overflow-hidden">
+            {/* Smart Header */}
+            <div
+                ref={headerRef}
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-2xl font-bold">Discovery</h1>
+                    <div className="flex gap-4">
+                        <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
+                            <Search className="w-6 h-6 text-foreground" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto px-5 pt-2 pb-24">
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto px-5 pb-24"
+                onScroll={handleScroll}
+                style={{ paddingTop: headerHeight + 20 }} // Add some extra padding used in list
+            >
                 {shops.map((shop, index) => {
                     const isLast = index === shops.length - 1;
                     return (
