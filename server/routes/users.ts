@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { users, clusters, shops, users_wantstogo } from "../db/schema.js";
+import { eq, and, desc } from "drizzle-orm";
 
 const router = Router();
 
@@ -87,6 +87,41 @@ router.put("/:id", async (req, res) => {
             return res.status(409).json({ error: "Phone number or Account ID already in use" });
         }
         res.status(500).json({ error: "Failed to update user" });
+    }
+});
+
+router.get("/:id/saved_shops", async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+
+        // Fetch saved shops
+        const savedShops = await db.select({
+            id: shops.id,
+            name: shops.name,
+            description: shops.description,
+            address_full: shops.address_full,
+            thumbnail_img: shops.thumbnail_img,
+            kind: shops.kind,
+            saved_at: users_wantstogo.created_at
+        })
+            .from(users_wantstogo)
+            .innerJoin(shops, eq(users_wantstogo.shop_id, shops.id))
+            .where(and(
+                eq(users_wantstogo.user_id, id),
+                eq(users_wantstogo.is_deleted, false)
+            ))
+            .orderBy(desc(users_wantstogo.created_at));
+
+        // Enrich with is_saved=true (since we are fetching saved list)
+        const enriched = savedShops.map(shop => ({
+            ...shop,
+            is_saved: true
+        }));
+
+        res.json(enriched);
+    } catch (error) {
+        console.error("Fetch saved shops error:", error);
+        res.status(500).json({ error: "Failed to fetch saved shops" });
     }
 });
 

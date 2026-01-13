@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
+import { ShopCard } from '@/components/ShopCard';
 
 // Type definition (move to types/index.ts later)
 interface User {
@@ -212,6 +213,50 @@ export const ProfileScreen = () => {
         });
     };
 
+    // Saved State
+    const [savedShops, setSavedShops] = useState<any[]>([]);
+    const [loadingSaved, setLoadingSaved] = useState(false);
+
+    useEffect(() => {
+        const fetchSaved = async () => {
+            if (!user?.id || activeTab !== 'saved') return;
+
+            setLoadingSaved(true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSavedShops(data);
+                }
+            } catch (error) {
+                console.error("Failed to load saved shops", error);
+            } finally {
+                setLoadingSaved(false);
+            }
+        };
+
+        fetchSaved();
+    }, [user?.id, activeTab]);
+
+    const handleUnsave = async (shopId: number) => {
+        // Optimistic remove from list
+        setSavedShops(prev => prev.filter(s => s.id !== shopId));
+
+        try {
+            // We can reuse the toggle endpoint
+            const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user?.id })
+            });
+            if (!res.ok) throw new Error("Unsave failed");
+        } catch (e) {
+            console.error(e);
+            alert("저장 취소 실패");
+            // Revert logic would need to re-fetch or keep deleted item in memory hidden
+        }
+    };
+
     if (loading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
     if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
 
@@ -235,6 +280,7 @@ export const ProfileScreen = () => {
                 className="flex-1 overflow-y-auto"
                 onScroll={handleScroll}
             >
+                {/* ... (Top Area Omitted for Brevity, content remains same until Tab Content) ... */}
                 <div className="p-6 pt-14 pb-2 relative">
 
                     {/* Menu Button (Absolute Top Right) */}
@@ -417,9 +463,28 @@ export const ProfileScreen = () => {
                         </div>
                     )}
                     {activeTab === "saved" && (
-                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                            <MapPin className="w-10 h-10 mb-2 opacity-20" />
-                            <p className="text-sm">No saved places</p>
+                        <div className="pb-20 px-5 pt-4">
+                            {savedShops.map((shop: any) => (
+                                <ShopCard
+                                    key={shop.id}
+                                    shop={shop}
+                                    onSave={() => handleUnsave(shop.id)}
+                                // onWrite, onReserve handled by generic alert or nav if needed
+                                />
+                            ))}
+
+                            {!loadingSaved && savedShops.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                    <MapPin className="w-10 h-10 mb-2 opacity-20" />
+                                    <p className="text-sm">No saved places</p>
+                                </div>
+                            )}
+
+                            {loadingSaved && (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

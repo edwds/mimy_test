@@ -1,10 +1,127 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { shops } from "../db/schema.js";
-import { ilike, or, eq } from "drizzle-orm";
+import { shops, users_wantstogo } from "../db/schema.js";
+import { ilike, or, eq, sql, and } from "drizzle-orm";
 
 const router = Router();
+
+// GET /api/shops/discovery?page=1&limit=20&seed=123
+// Returns random shops consistently for the same seed
+router.get("/discovery", async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const seed = req.query.seed || 'default_seed';
+
+        // Use MD5 hash of (id || seed) for consistent random sort
+        const results = await db.select({
+            id: shops.id,
+            name: shops.name,
+            description: shops.description,
+            address_full: shops.address_full,
+            thumbnail_img: shops.thumbnail_img,
+            kind: shops.kind,
+            // Check if saved by current user if userId provided
+            // For now, simpler to just return shop data and let caching handle it, 
+            // OR join. Let's do a left join approach if possible, but keep it simple first:
+            // Fetch shops first.
+        })
+            .from(shops)
+            .orderBy(sql`md5(${shops.id}::text || ${seed})`)
+            .limit(limit)
+            .offset((page - 1) * limit);
+
+        // If user is logged in (client sends header/param?), we should enrich `is_saved`.
+        // For MVP, assuming client might fetch status or we assume generic feed first.
+        // Let's check query `userId` for simple auth context if needed, or just return shops.
+        // User requested: "Refresh resets".
+
+        // Enrich with "is_saved" if userId is present in query header (custom simple auth)
+        // Or handle in frontend. Let's try to handle it here if passed.
+        const userId = req.headers['x-user-id'];
+
+        if (userId) {
+            const uid = parseInt(userId as string);
+            const enriched = await Promise.all(results.map(async (shop) => {
+                const saved = await db.select().from(users_wantstogo)
+                    .where(and(
+                        eq(users_wantstogo.user_id, uid),
+                        eq(users_wantstogo.shop_id, shop.id),
+                        eq(users_wantstogo.is_deleted, false)
+                    ))
+                    .limit(1);
+                return {
+                    ...shop,
+                    is_saved: saved.length > 0,
+                    saved_at: saved.length > 0 ? saved[0].created_at : null
+                };
+            }));
+            return res.json(enriched);
+        }
+
+        res.json(results);
+    } catch (error) {
+        console.error("Discovery feed error:", error);
+        res.status(500).json({ error: "Failed to fetch discovery feed" });
+    }
+});
+
+// POST /api/shops/:id/save
+// Toggle save status
+router.post("/:id/save", async (req, res) => {
+    try {
+        const shopId = parseInt(req.params.id);
+        const { userId } = req.body; // Expect userId in body for MVP auth
+
+        if (!userId || isNaN(shopId)) {
+            return res.status(400).json({ error: "Invalid parameters" });
+        }
+
+        // Check if exists
+        const existing = await db.select().from(users_wantstogo)
+            .where(and(
+                eq(users_wantstogo.user_id, userId),
+                eq(users_wantstogo.shop_id, shopId)
+            ))
+            .limit(1);
+
+        let isSaved = false;
+
+        if (existing.length > 0) {
+            // Toggle deletion status or remove
+            // Spec says "users_wantstogo" table has is_deleted.
+            const current = existing[0];
+            if (current.is_deleted) {
+                // Restore
+                await db.update(users_wantstogo)
+                    .set({ is_deleted: false, updated_at: new Date() })
+                    .where(eq(users_wantstogo.id, current.id));
+                isSaved = true;
+            } else {
+                // Delete (Soft)
+                await db.update(users_wantstogo)
+                    .set({ is_deleted: true, updated_at: new Date() })
+                    .where(eq(users_wantstogo.id, current.id));
+                isSaved = false;
+            }
+        } else {
+            // Insert
+            await db.insert(users_wantstogo).values({
+                user_id: userId,
+                shop_id: shopId,
+                channel: 'discovery', // Default channel
+                is_deleted: false
+            });
+            isSaved = true;
+        }
+
+        res.json({ success: true, is_saved: isSaved });
+    } catch (error) {
+        console.error("Save shop error:", error);
+        res.status(500).json({ error: "Failed to save shop" });
+    }
+});
 
 // GET /api/shops/search?q=query
 router.get("/search", async (req, res) => {

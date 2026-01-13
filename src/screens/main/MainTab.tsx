@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
 import { useNavigate } from 'react-router-dom';
 import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
+import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
 
 export const MainTab = () => {
@@ -16,11 +17,11 @@ export const MainTab = () => {
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
                 {activeTab === 'home' && <HomeTab onWrite={() => setIsWriteSheetOpen(true)} />}
-
+                {activeTab === 'discover' && <DiscoveryTab />}
                 {activeTab === 'profile' && <ProfileScreen />}
 
                 {/* Placeholder for other tabs */}
-                {(activeTab === 'discover' || activeTab === 'ranking') && (
+                {(activeTab === 'ranking') && (
                     <div className="flex-1 flex items-center justify-center h-full text-muted-foreground">
                         Coming Soon
                     </div>
