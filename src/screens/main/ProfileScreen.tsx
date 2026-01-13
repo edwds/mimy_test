@@ -28,10 +28,9 @@ interface User {
 type ProfileTabType = "content" | "list" | "saved";
 
 export const ProfileScreen = () => {
-    // ... (rest of component)
-    // ...
-    // ...
-    // ...
+    // ... (logic preserved)
+
+    {/* Stats */ }
     <div className="flex gap-4 mb-4">
         <div className="flex items-baseline gap-1">
             <span className="font-bold">{user.stats?.content_count || 0}</span>
@@ -40,6 +39,10 @@ export const ProfileScreen = () => {
         <div className="flex items-baseline gap-1">
             <span className="font-bold">{user.stats?.follower_count || 0}</span>
             <span className="text-xs text-muted-foreground">Followers</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+            <span className="font-bold">{user.stats?.following_count || 0}</span>
+            <span className="text-xs text-muted-foreground">Following</span>
         </div>
     </div>
 
