@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
-import { Bell, Search } from 'lucide-react';
+import { UserService } from '@/services/UserService';
+import { User as UserIcon, Bell, Search, PenLine } from 'lucide-react';
 
 interface Props {
     onWrite: () => void;
@@ -14,6 +15,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [activeChip, setActiveChip] = useState("Trending");
     const observer = useRef<IntersectionObserver | null>(null);
 
@@ -38,6 +40,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
 
     useEffect(() => {
         fetchFeed(1);
+        // Fetch current user async
+        UserService.getCurrentUser().then((user: any) => {
+            if (user) setCurrentUser(user);
+        });
     }, []);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
@@ -96,20 +102,43 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             <div className="flex-1 overflow-y-auto">
                 <div className="pb-24 pt-2">
                     {/* Upload Nudge Banner */}
-                    <div className="mx-5 mb-6 p-6 rounded-3xl bg-card border border-border shadow-sm">
-                        <h2 className="text-xl font-bold mb-2">
-                            오늘의 미식 경험을<br />기록해보세요
-                        </h2>
-                        <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-                            방문한 맛집, 카페에서의 경험을 남겨주세요.<br />
-                            데이터가 쌓일수록 더 정확한 추천을 받을 수 있어요.
-                        </p>
-                        <button
-                            onClick={onWrite}
-                            className="px-6 py-3 bg-[#4F46E5] text-white rounded-full font-bold text-sm hover:bg-[#4338CA] transition-colors shadow-lg shadow-indigo-500/20"
-                        >
-                            기록하기
-                        </button>
+                    <div
+                        onClick={onWrite}
+                        className="mx-5 mb-6 p-6 rounded-3xl border border-border shadow-sm relative overflow-hidden cursor-pointer group"
+                        style={{
+                            background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
+                        }}
+                    >
+                        <div className="relative z-10 flex justify-between items-start">
+                            <div>
+                                <h2 className="text-xl font-bold mb-2 text-foreground">
+                                    오늘의 미식 경험을<br />기록해보세요
+                                </h2>
+                                <p className="text-muted-foreground text-sm leading-relaxed">
+                                    방문한 맛집, 카페에서의 경험을 남겨주세요.
+                                </p>
+                            </div>
+
+                            {/* User Profile + Write Button Group */}
+                            <div className="flex relative mt-1">
+                                <div className="w-12 h-12 rounded-full border-2 border-background overflow-hidden bg-muted shadow-md z-10">
+                                    {currentUser?.profile_image ? (
+                                        <img
+                                            src={currentUser.profile_image}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                            <UserIcon size={20} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                    <PenLine size={14} />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {items.map((item, index) => {
