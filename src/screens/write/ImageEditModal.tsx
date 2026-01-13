@@ -251,27 +251,40 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
     const [originalUrl, setOriginalUrl] = useState<string>('');
+    const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
-    // Load original image for editing
+    // Constants
+    const CROP_SIZE = 300;
+    const OUTPUT_SIZE = 1080;
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 3;
+
+    // Load original image & dimensions
     useEffect(() => {
         const url = URL.createObjectURL(item.file);
         setOriginalUrl(url);
+
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+            setImgDims({ w: img.naturalWidth, h: img.naturalHeight });
+        };
+
         return () => URL.revokeObjectURL(url);
     }, [item.file]);
-
-    // Limits
-    const minScale = 1;
-    const maxScale = 3;
 
     const handleSave = async () => {
         setIsProcessing(true);
         try {
-            // Apply scale/position to create new blob
-            // Note: position (x,y) are relative to the view.
-            // Our processor expects crop params.
-            // We need to pass 'scale' directly.
-            // 'x' and 'y' from drag are pixels. We pass them as is.
-            const newBlob = await processImageWithCrop(item.file, { x: position.x, y: position.y, scale }, 1080);
+            // Scale position from UI coords (300px base) to Output coords (1080px base)
+            const ratio = OUTPUT_SIZE / CROP_SIZE;
+            const scaledPos = {
+                x: position.x * ratio,
+                y: position.y * ratio,
+                scale: scale
+            };
+
+            const newBlob = await processImageWithCrop(item.file, scaledPos, OUTPUT_SIZE);
             onSave(item.id, newBlob);
         } catch (e) {
             console.error(e);
@@ -280,18 +293,41 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
         }
     };
 
-    // Simple pan logic
     const handlePan = (e: React.PointerEvent) => {
         if (e.buttons !== 1) return;
+        // e.movementX/Y is in screen pixels.
+        // We apply this directly to translate(x, y).
+        // Since the image is scaled by `scale`, visually 1px drag = 1px move.
+        // Code maps this 1:1.
         setPosition(prev => ({
             x: prev.x + e.movementX,
             y: prev.y + e.movementY
         }));
     };
 
+    // Calculate dimensions for standard "Cover" fit in 300px box
+    const getRenderStyle = () => {
+        if (!imgDims) return {};
+
+        // Base scale to make shortest side = CROP_SIZE
+        const minDim = Math.min(imgDims.w, imgDims.h);
+        const baseScale = CROP_SIZE / minDim;
+
+        // Apply user scale
+        const currentScale = baseScale * scale;
+
+        return {
+            width: imgDims.w * currentScale,
+            height: imgDims.h * currentScale,
+            transform: `translate(${position.x}px, ${position.y}px)`, // Centered by flex, then offset
+            transition: 'width 0.1s, height 0.1s' // Smooth zoom
+        };
+    };
+
     return (
         <div className="absolute inset-0 z-50 bg-black flex flex-col">
-            <div className="flex items-center justify-between p-4 z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 z-10 bg-black/50 backdrop-blur-md">
                 <button onClick={onCancel} className="p-2 text-white">
                     <X />
                 </button>
@@ -301,44 +337,60 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
                 </button>
             </div>
 
-            <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#111]" onPointerMove={handlePan}>
-                <div className="relative w-[300px] h-[300px] border-2 border-white/20 overflow-hidden shadow-2xl">
-                    <div
-                        className="w-full h-full flex items-center justify-center cursor-move"
-                        style={{
-                            backgroundImage: originalUrl ? `url(${originalUrl})` : undefined,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-                            transformOrigin: 'center',
-                            transition: 'transform 0.05s linear'
-                        }}
+            {/* Editor Area */}
+            <div
+                className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#111] touch-none"
+                onPointerMove={handlePan}
+            >
+                {/* Image Layer - Centered by Flex */}
+                {originalUrl && imgDims && (
+                    <img
+                        src={originalUrl}
+                        alt="Edit Target"
+                        style={getRenderStyle()}
+                        className="object-cover pointer-events-none select-none max-w-none max-h-none"
+                        draggable={false}
                     />
-                    {/* Grid Overlay */}
-                    <div className="absolute inset-0 pointer-events-none opacity-30">
-                        <div className="absolute top-1/3 w-full h-px bg-white/50" />
-                        <div className="absolute top-2/3 w-full h-px bg-white/50" />
-                        <div className="absolute left-1/3 h-full w-px bg-white/50" />
-                        <div className="absolute left-2/3 h-full w-px bg-white/50" />
+                )}
+
+                {/* Overlay Layer - Fixed Center Crop Box */}
+                <div
+                    className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                >
+                    <div
+                        style={{ width: CROP_SIZE, height: CROP_SIZE }}
+                        className="border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.7)]"
+                    >
+                        {/* Grid Lines */}
+                        <div className="absolute inset-0 opacity-50">
+                            <div className="absolute top-1/3 w-full h-px bg-white/50" />
+                            <div className="absolute top-2/3 w-full h-px bg-white/50" />
+                            <div className="absolute left-1/3 h-full w-px bg-white/50" />
+                            <div className="absolute left-2/3 h-full w-px bg-white/50" />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="p-8 pb-12 bg-black/50">
+            {/* Controls */}
+            <div className="p-8 pb-12 bg-black/90 z-10">
                 <div className="flex items-center gap-4">
                     <span className="text-xs text-white/50">축소</span>
                     <Slider
                         value={[scale]}
-                        min={minScale}
-                        max={maxScale}
+                        min={MIN_SCALE}
+                        max={MAX_SCALE}
                         step={0.01}
-                        onValueChange={(vals: number[]) => setScale(vals[0])}
+                        onValueChange={(vals) => setScale(vals[0])}
                         className="flex-1"
                     />
                     <span className="text-xs text-white/50">확대</span>
                 </div>
                 <div className="text-center mt-4">
-                    <button onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }} className="text-xs text-white/50 flex items-center justify-center gap-1 mx-auto">
+                    <button
+                        onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }}
+                        className="text-xs text-white/50 flex items-center justify-center gap-1 mx-auto hover:text-white transition-colors"
+                    >
                         <RotateCcw size={12} /> 초기화
                     </button>
                 </div>
