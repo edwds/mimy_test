@@ -31,18 +31,18 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
             {/* Header */}
-            <div className="px-4 py-3 flex items-center bg-[var(--color-surface)] border-b border-[var(--color-border)] sticky top-0 z-10">
+            <div className="px-4 py-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 border-b">
                 <button
                     onClick={onBack}
-                    className="p-2 -ml-2 text-[var(--color-text-primary)] hover:bg-[var(--color-gray-50)] rounded-full transition-colors"
+                    className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
                 >
                     <ChevronLeft size={24} />
                 </button>
             </div>
 
             <div className={cn("flex-1 overflow-y-auto pb-24 p-6 transition-opacity duration-500", isLoaded ? "opacity-100" : "opacity-0")}>
-                <h1 className="text-2xl font-bold mb-8 text-[var(--color-text-primary)] leading-tight">
-                    <span className="text-[var(--color-primary)]">{shopName}</span>에서의<br />
+                <h1 className="text-2xl font-bold mb-8 text-foreground leading-tight">
+                    <span className="text-primary">{shopName}</span>에서의<br />
                     경험은 어떠셨나요?
                 </h1>
 
@@ -71,7 +71,7 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                                     )}
                                     strokeWidth={satisfaction === item.value ? 2.5 : 2}
                                 />
-                                <span className={cn("font-bold text-sm", satisfaction === item.value ? item.color : "")}>{item.label}</span>
+                                <span className={cn("font-bold text-sm mt-1", satisfaction === item.value ? item.color : "text-muted-foreground font-medium")}>{item.label}</span>
                             </button>
                         ))}
                     </div>
@@ -82,12 +82,12 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                     <div className="space-y-2">
                         <Label>방문일</Label>
                         <div className="relative">
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-tertiary)] pointer-events-none" />
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                             <Input
                                 type="date"
                                 value={visitDate}
                                 onChange={(e) => setVisitDate(e.target.value)}
-                                className="pl-10 text-[var(--color-text-primary)] font-medium"
+                                className="pl-10 text-foreground font-medium bg-muted/30 border-transparent focus:bg-background transition-all"
                             />
                         </div>
                     </div>
@@ -95,8 +95,8 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                     <div className="space-y-2">
                         <Label>함께한 사람</Label>
                         <div className="relative">
-                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-tertiary)] pointer-events-none" />
-                            <button className="w-full flex items-center h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-10 text-base text-[var(--color-text-tertiary)] hover:bg-[var(--color-gray-50)] transition-colors text-left">
+                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <button className="w-full flex items-center h-10 rounded-md border border-input bg-muted/30 px-10 text-base text-muted-foreground hover:bg-muted transition-colors text-left text-sm">
                                 친구 태그하기 (준비중)
                             </button>
                         </div>
@@ -105,7 +105,7 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
             </div>
 
             {/* Bottom Floating Action */}
-            <div className="p-4 bg-[var(--color-surface)] border-t border-[var(--color-border)] absolute bottom-0 left-0 right-0 safe-area-bottom pb-8">
+            <div className="p-4 bg-background/95 backdrop-blur-sm border-t absolute bottom-0 left-0 right-0 safe-area-bottom pb-8">
                 <Button
                     className={cn(
                         "w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all duration-300",

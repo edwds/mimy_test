@@ -55,19 +55,19 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
             />
 
             {/* Header */}
-            <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] sticky top-0 z-10">
+            <div className="px-4 py-3 flex items-center justify-between border-b bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
                 <button
                     onClick={onBack}
-                    className="p-2 -ml-2 text-[var(--color-text-primary)] hover:bg-[var(--color-gray-50)] rounded-full transition-colors"
+                    className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
                 >
                     <ChevronLeft size={24} />
                 </button>
-                <div className="font-bold text-lg text-[var(--color-text-primary)]">
+                <div className="font-bold text-lg text-foreground">
                     {mode === 'review' ? '후기 작성' : '새 게시글'}
                 </div>
                 <Button
                     variant="ghost"
-                    className="text-[var(--color-primary)] font-bold text-base hover:bg-[var(--color-primary)]/10 px-3 h-9"
+                    className="text-primary font-bold text-base hover:bg-primary/10 px-3 h-9"
                     onClick={handleSubmit}
                     disabled={text.trim().length === 0}
                 >
@@ -97,7 +97,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                         </Label>
                         <div className="grid grid-cols-4 gap-3">
                             {images.map((src, idx) => (
-                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-[var(--color-border)] shadow-sm">
+                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm">
                                     <img src={src} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                                     <button
                                         onClick={() => setImages(images.filter((_, i) => i !== idx))}
@@ -109,7 +109,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                             ))}
 
                             {images.length < 10 && (
-                                <label className="aspect-square rounded-xl border border-dashed border-[var(--color-border)] flex flex-col items-center justify-center text-[var(--color-text-tertiary)] cursor-pointer hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all bg-[var(--color-surface)]">
+                                <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20">
                                     <ImageIcon className="w-6 h-6 mb-1" />
                                     <span className="text-xs font-medium">추가</span>
                                     <input
