@@ -6,54 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 
-// MOCK DATA
-const MOCK_CONTENTS = [
-    {
-        id: 1,
-        text: "Had an amazing omakase experience at Mosu. The abalone taco was the highlight! 🌮✨ Definitely coming back for the wine pairing next time.",
-        images: [
-            "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=2874&ixlib=rb-4.0.3",
-            "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2940&ixlib=rb-4.0.3"
-        ],
-        created_at: "2024-03-20T10:00:00Z",
-        review_prop: {
-            shop_name: "Mosu Seoul",
-            shop_address: "Yongsan-gu, Seoul",
-            thumbnail_img: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=2874&ixlib=rb-4.0.3",
-            visit_date: "2024-03-19",
-            companions: ["@edwards"],
-            satisfaction: "good"
-        },
-        stats: {
-            likes: 42,
-            comments: 5,
-            is_liked: true,
-            is_saved: false
-        }
-    },
-    {
-        id: 2,
-        text: "Just found this hidden gem in Hannam-dong. Best latte in town? ☕️ Quiet atmosphere perfect for reading.",
-        images: [
-            "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=2942&ixlib=rb-4.0.3"
-        ],
-        created_at: "2024-03-18T15:30:00Z",
-        review_prop: {
-            shop_name: "Anthracite Coffee",
-            shop_address: "Hannam-dong",
-            thumbnail_img: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=2942&ixlib=rb-4.0.3",
-            visit_date: "2024-03-18",
-            satisfaction: "ok"
-        },
-        stats: {
-            likes: 12,
-            comments: 0,
-            is_liked: false,
-            is_saved: true
-        }
-    }
-];
-
 // Type definition (move to types/index.ts later)
 interface User {
     id: number;
@@ -100,6 +52,31 @@ export const ProfileScreen = () => {
         };
         loadUser();
     }, []);
+
+    // Content State
+    const [contents, setContents] = useState<any[]>([]);
+    const [loadingContent, setLoadingContent] = useState(false);
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            if (!user?.id || activeTab !== 'content') return;
+
+            setLoadingContent(true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setContents(data);
+                }
+            } catch (error) {
+                console.error("Failed to load content", error);
+            } finally {
+                setLoadingContent(false);
+            }
+        };
+
+        fetchContent();
+    }, [user?.id, activeTab]);
 
     // Close menu on click outside
     useEffect(() => {
@@ -317,8 +294,8 @@ export const ProfileScreen = () => {
                 <div className="min-h-[300px] bg-muted/5">
                     {activeTab === "content" && (
                         <div className="pb-20">
-                            {/* MOCK DATA RENDER */}
-                            {MOCK_CONTENTS.map((content) => (
+                            {/* Real Data Render */}
+                            {contents.map((content: any) => (
                                 <ContentCard
                                     key={content.id}
                                     user={{
@@ -331,10 +308,16 @@ export const ProfileScreen = () => {
                             ))}
 
                             {/* If empty */}
-                            {MOCK_CONTENTS.length === 0 && (
+                            {!loadingContent && contents.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                     <Grid className="w-10 h-10 mb-2 opacity-20" />
                                     <p className="text-sm">No contents yet</p>
+                                </div>
+                            )}
+
+                            {loadingContent && (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             )}
                         </div>
