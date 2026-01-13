@@ -154,24 +154,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                     </div>
                 </div>
 
-                {/* Chips */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-                    {CHIPS.map(chip => (
-                        <button
-                            key={chip}
-                            onClick={() => handleChipChange(chip)}
-                            className={`
-                                px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                ${activeChip === chip
-                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                                }
-                            `}
-                        >
-                            {chip}
-                        </button>
-                    ))}
-                </div>
             </div>
 
             {/* Feed List */}
@@ -181,7 +163,26 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }} // Compensate for fixed header
             >
-                <div className="pb-24 pt-2">
+                <div className="pb-24 pt-4 px-5">
+                    {/* Chips */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+                        {CHIPS.map(chip => (
+                            <button
+                                key={chip}
+                                onClick={() => handleChipChange(chip)}
+                                className={`
+                                    px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap
+                                    ${activeChip === chip
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                                    }
+                                `}
+                            >
+                                {chip}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Upload Nudge Banner */}
                     <div
                         onClick={onWrite}

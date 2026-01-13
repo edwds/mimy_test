@@ -279,24 +279,37 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
 
-            {/* Smart Header */}
+            {/* Smart Floating Header (Duplicate) */}
             <div
-                ref={headerRef}
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50",
-                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300",
+                    showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
                 )}
             >
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">{user?.nickname || 'Profile'}</h1>
-                    <div className="relative">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
+                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
+                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
+                </div>
+            </div>
+
+            <main
+                ref={containerRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={handleScroll}
+            >
+                {/* Top Area */}
+                <div className="p-6 pt-6 pb-2 relative">
+
+                    {/* Menu Button (Absolute Top Right) */}
+                    <div className="absolute top-2 right-4 z-20">
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-muted"
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
-                            <Settings className="w-6 h-6 text-foreground" />
+                            <Settings className="w-5 h-5 text-muted-foreground" />
                         </Button>
 
                         {/* Dropdown Menu */}
@@ -333,24 +346,6 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                             </div>
                         )}
                     </div>
-                </div>
-
-                {/* Tabs as Chips */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
-                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
-                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
-                </div>
-            </div>
-
-            <main
-                ref={containerRef}
-                className="flex-1 overflow-y-auto"
-                onScroll={handleScroll}
-                style={{ paddingTop: headerHeight }}
-            >
-                {/* Top Area */}
-                <div className="p-6 pb-2 relative">
 
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">
