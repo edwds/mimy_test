@@ -13,8 +13,8 @@ export const MainTab = () => {
     const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            <main className="flex-1 overflow-hidden relative">
+        <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+            <main className="flex-1 overflow-hidden relative min-h-0">
                 {activeTab === 'home' && <HomeTab onWrite={() => setIsWriteSheetOpen(true)} />}
 
                 {activeTab === 'profile' && <ProfileScreen />}
