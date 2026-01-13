@@ -2,8 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { UserService } from '@/services/UserService';
-import { User as UserIcon, ImageIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { User as UserIcon } from 'lucide-react';
 
 interface Props {
     onWrite: () => void;
@@ -38,8 +37,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
 
     useEffect(() => {
         fetchFeed(1);
-        const user = UserService.getUser();
-        if (user) setCurrentUser(user);
+        // Fetch current user async
+        UserService.getCurrentUser().then((user: any) => {
+            if (user) setCurrentUser(user);
+        });
     }, []);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
