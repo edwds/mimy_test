@@ -141,12 +141,87 @@ export const ProfileScreen = () => {
         }
     };
 
+    // Scroll & Header Logic
+    const containerRef = useRef<HTMLDivElement>(null);
+    const staticTabsRef = useRef<HTMLDivElement>(null);
+    const scrollPositions = useRef<{ [key: string]: number }>({});
+    const lastScrollY = useRef(0);
+    const [showFloatingTabs, setShowFloatingTabs] = useState(false);
+    const [tabsOffset, setTabsOffset] = useState(0);
+
+    // Measure where static tabs start
+    useEffect(() => {
+        if (staticTabsRef.current) {
+            setTabsOffset(staticTabsRef.current.offsetTop);
+        }
+    }, [user, activeTab]); // Re-measure if layout changes
+
+    const handleScroll = () => {
+        if (!containerRef.current) return;
+        const currentScrollY = containerRef.current.scrollTop;
+        const diff = currentScrollY - lastScrollY.current;
+
+        // Smart Header Logic
+        // Show floating tabs ONLY if we are past the static tabs AND scrolling up
+        if (currentScrollY > tabsOffset + 50) {
+            if (diff < -5) { // Scrolling Up significanly
+                setShowFloatingTabs(true);
+            } else if (diff > 5) { // Scrolling Down significantly
+                setShowFloatingTabs(false);
+            }
+        } else {
+            // If near top, hide floating tabs
+            setShowFloatingTabs(false);
+        }
+
+        lastScrollY.current = currentScrollY;
+    };
+
+    const handleTabChange = (newTab: ProfileTabType) => {
+        if (containerRef.current) {
+            scrollPositions.current[activeTab] = containerRef.current.scrollTop;
+        }
+
+        setActiveTab(newTab);
+
+        requestAnimationFrame(() => {
+            if (containerRef.current) {
+                const savedPos = scrollPositions.current[newTab] || 0;
+                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
+
+                // If we are deep down, ensure the floating header is visible
+                if (savedPos > tabsOffset) {
+                    setShowFloatingTabs(true);
+                } else {
+                    setShowFloatingTabs(false);
+                }
+            }
+        });
+    };
+
     if (loading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
     if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
 
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 relative">
-            <main className="flex-1 overflow-y-auto">
+
+            {/* Smart Floating Header (Duplicate) */}
+            <div
+                className={`fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-30 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
+                    }`}
+            >
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
+                    <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
+                    <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
+                </div>
+            </div>
+
+            <main
+                ref={containerRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={handleScroll}
+            >
                 <div className="p-6 pt-14 pb-2 relative">
 
                     {/* Menu Button (Absolute Top Right) */}
@@ -269,22 +344,22 @@ export const ProfileScreen = () => {
                     )}
                 </div>
 
-                {/* Tabs Sticky Header - Chip Style */}
-                <div className="sticky top-0 p-6 bg-background z-10 py-2">
+                {/* Tabs Static Header (In Flow) */}
+                <div ref={staticTabsRef} className="p-6 bg-background py-2">
                     <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         <TabButton
                             active={activeTab === "content"}
-                            onClick={() => setActiveTab("content")}
+                            onClick={() => handleTabChange("content")}
                             label="Content"
                         />
                         <TabButton
                             active={activeTab === "list"}
-                            onClick={() => setActiveTab("list")}
+                            onClick={() => handleTabChange("list")}
                             label="List"
                         />
                         <TabButton
                             active={activeTab === "saved"}
-                            onClick={() => setActiveTab("saved")}
+                            onClick={() => handleTabChange("saved")}
                             label="Want to go"
                         />
                     </div>

@@ -19,6 +19,64 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [activeChip, setActiveChip] = useState("Trending");
     const observer = useRef<IntersectionObserver | null>(null);
 
+    // Smart Header & Scroll Preservation
+    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+    const lastScrollY = useRef(0);
+    const scrollPositions = useRef<{ [key: string]: number }>({});
+    const containerRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const [headerHeight, setHeaderHeight] = useState(0);
+
+    // Measure Header Height for padding
+    useEffect(() => {
+        if (headerRef.current) {
+            setHeaderHeight(headerRef.current.offsetHeight);
+        }
+    }, []);
+
+    // Scroll Handler
+    const handleScroll = () => {
+        if (!containerRef.current) return;
+        const currentScrollY = containerRef.current.scrollTop;
+        const diff = currentScrollY - lastScrollY.current;
+
+        // Smart Header Logic
+        if (currentScrollY < 10) {
+            setIsHeaderVisible(true);
+        } else if (Math.abs(diff) > 10) { // Threshold
+            if (diff > 0) { // Scrolling Down
+                setIsHeaderVisible(false);
+            } else { // Scrolling Up
+                setIsHeaderVisible(true);
+            }
+        }
+        lastScrollY.current = currentScrollY;
+    };
+
+    const handleChipChange = (newChip: string) => {
+        if (containerRef.current) {
+            // Save current scroll
+            scrollPositions.current[activeChip] = containerRef.current.scrollTop;
+        }
+
+        setActiveChip(newChip);
+
+        // Restore scroll for new chip (after render)
+        requestAnimationFrame(() => {
+            if (containerRef.current) {
+                const savedPos = scrollPositions.current[newChip] || 0;
+                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
+                // Ensure header is visible if we want "chip list to top" style upon switch or just nice UX
+                // But user requirement says: "Clicking chip moves list to top... content remembers scroll".
+                // If we restore deep scroll, we might want to show header? 
+                // Let's ensure header is visible on switch.
+                setIsHeaderVisible(true);
+            }
+        });
+    };
+
+    // ... existing fetchFeed and useEffect ...
+
     const fetchFeed = async (pageNum: number) => {
         if (loading) return;
         setLoading(true);
@@ -40,7 +98,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
 
     useEffect(() => {
         fetchFeed(1);
-        // Fetch current user async
         UserService.getCurrentUser().then((user: any) => {
             if (user) setCurrentUser(user);
         });
@@ -62,9 +119,13 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     }, [loading, hasMore]);
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* Header */}
-            <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 px-5 pt-4 pb-2">
+        <div className="flex flex-col h-full bg-background relative overflow-hidden">
+            {/* Smart Header */}
+            <div
+                ref={headerRef}
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-20 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                    }`}
+            >
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-2xl font-bold">Today</h1>
                     <div className="flex gap-4">
@@ -83,7 +144,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                     {CHIPS.map(chip => (
                         <button
                             key={chip}
-                            onClick={() => setActiveChip(chip)}
+                            onClick={() => handleChipChange(chip)}
                             className={`
                                 px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap
                                 ${activeChip === chip
@@ -99,7 +160,12 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             </div>
 
             {/* Feed List */}
-            <div className="flex-1 overflow-y-auto">
+            <div
+                ref={containerRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={handleScroll}
+                style={{ paddingTop: headerHeight }} // Compensate for fixed header
+            >
                 <div className="pb-24 pt-2">
                     {/* Upload Nudge Banner */}
                     <div
@@ -149,7 +215,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                                     user={item.user}
                                     content={item}
                                 />
-                                <div className="h-1 bg-muted/50" />
+                                <div className="bg-muted" />
                             </div>
                         );
                     })}
