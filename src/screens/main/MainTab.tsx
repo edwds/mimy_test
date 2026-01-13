@@ -3,7 +3,7 @@ import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
 import { useNavigate } from 'react-router-dom';
-import { SelectTypeBottomSheet } from '@/components/SelectTypeBottomSheet';
+import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 
 export const MainTab = () => {
     const navigate = useNavigate();
@@ -41,7 +41,7 @@ export const MainTab = () => {
                 <Plus className="w-8 h-8" />
             </button>
 
-            <SelectTypeBottomSheet
+            <SelectTypeStep
                 isOpen={isWriteSheetOpen}
                 onClose={() => setIsWriteSheetOpen(false)}
                 onSelect={(type) => {
