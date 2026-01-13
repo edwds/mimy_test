@@ -129,18 +129,16 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     // Scroll & Header Logic
     const containerRef = useRef<HTMLDivElement>(null);
-    const headerRef = useRef<HTMLDivElement>(null);
+    const staticTabsRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
     const lastScrollY = useRef(0);
+    const [showFloatingTabs, setShowFloatingTabs] = useState(false);
+    const [tabsOffset, setTabsOffset] = useState(0);
 
-    // Smart Header State
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const [headerHeight, setHeaderHeight] = useState(0);
-
-    // Measure Header Height
+    // Measure where static tabs start
     useEffect(() => {
-        if (headerRef.current) {
-            setHeaderHeight(headerRef.current.offsetHeight);
+        if (staticTabsRef.current) {
+            setTabsOffset(staticTabsRef.current.offsetTop);
         }
     }, [user, activeTab]);
 
@@ -149,16 +147,17 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
         const currentScrollY = containerRef.current.scrollTop;
         const diff = currentScrollY - lastScrollY.current;
 
-        if (currentScrollY < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) {
-            if (diff > 0) {
-                setIsHeaderVisible(false);
-                setIsMenuOpen(false);
-            } else {
-                setIsHeaderVisible(true);
+        // Show floating tabs when scrolled past the static tabs
+        if (currentScrollY > tabsOffset) {
+            if (diff < 0) { // Scrolling Up
+                setShowFloatingTabs(true);
+            } else if (diff > 5) { // Scrolling Down
+                setShowFloatingTabs(false);
             }
+        } else {
+            setShowFloatingTabs(false);
         }
+
         lastScrollY.current = currentScrollY;
     };
 
@@ -171,10 +170,24 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
         requestAnimationFrame(() => {
             if (containerRef.current) {
-                const savedPos = scrollPositions.current[newTab] || 0;
-                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
-                // Ensure header is visible on tab change
-                setIsHeaderVisible(true);
+                const savedPos = scrollPositions.current[newTab];
+                let targetPos = savedPos;
+
+                if (targetPos === undefined) {
+                    if (scrollPositions.current[activeTab] > tabsOffset) {
+                        targetPos = tabsOffset;
+                    } else {
+                        targetPos = 0;
+                    }
+                }
+
+                containerRef.current.scrollTo({ top: targetPos, behavior: 'instant' });
+
+                if (targetPos >= tabsOffset) {
+                    setShowFloatingTabs(true);
+                } else {
+                    setShowFloatingTabs(false);
+                }
             }
         });
     };
