@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Heart, MessageCircle, Share, MessageSquare, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
