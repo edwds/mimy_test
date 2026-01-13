@@ -74,11 +74,8 @@ export const WriteFlow = () => {
             // If review, update ranking (mock or real)
             if (type === 'review') {
                 // Submit a default rank for MVP
-                await ContentService.submitRanking({
-                    user_id: currentUserId,
-                    shop_id: selectedShop.id,
-                    sort_key: 1 // Default rank 1 (Best)
-                });
+                // Removed automatic submitRanking. RankingStep handles it.
+                // await ContentService.submitRanking({...});
                 setStep('RANKING');
             } else {
                 navigate('/main');
