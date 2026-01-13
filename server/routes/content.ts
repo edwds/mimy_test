@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { content, users_ranking, shops } from "../db/schema.js";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, gt, gte, ne, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -34,43 +34,153 @@ router.post("/", async (req, res) => {
     }
 });
 
-// POST /api/content/ranking (Submit Ranking)
-router.post("/ranking", async (req, res) => {
-    try {
-        const { user_id, shop_id, sort_key } = req.body;
+// Helper
+function mapSatisfactionToTier(satisfaction: string): number {
+    switch (satisfaction) {
+        case 'best': return 3;
+        case 'good': return 2;
+        case 'ok': return 1;
+        case 'bad': return 0;
+        default: return 2; // Default to 'good'
+    }
+}
 
-        if (!user_id || !shop_id || sort_key === undefined) {
+// POST /api/content/ranking/apply (Apply Ranking with Dense Rank Logic)
+router.post("/ranking/apply", async (req, res) => {
+    try {
+        const { user_id, shop_id, insert_index } = req.body;
+
+        if (!user_id || !shop_id || insert_index === undefined) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        const result = await db.insert(users_ranking).values({
-            user_id,
-            shop_id,
-            rank: parseInt(sort_key) // sort_key from frontend maps to rank
-        }).onConflictDoUpdate({
-            target: [users_ranking.user_id, users_ranking.shop_id],
-            set: { rank: parseInt(sort_key), updated_at: new Date() }
-        }).returning();
+        // 1. Determine Satisfaction Tier from Latest Content
+        // Find latest review for this user/shop
+        const latestContent = await db.select().from(content)
+            .where(
+                and(
+                    eq(content.user_id, user_id),
+                    eq(content.type, 'review')
+                )
+            )
+            .orderBy(desc(content.created_at))
+            .limit(10); // Check recent few to find matching shop_id
 
-        res.json({ success: true, data: result[0] });
+        let satisfaction = 'good'; // default
+        for (const c of latestContent) {
+            const prop = c.review_prop as any;
+            if (prop && Number(prop.shop_id) === Number(shop_id)) {
+                if (prop.satisfaction) satisfaction = prop.satisfaction;
+                break;
+            }
+        }
+
+        const new_tier = mapSatisfactionToTier(satisfaction);
+        const new_rank = insert_index + 1; // 1-based rank
+
+        // 2. Execute Transaction
+        await db.transaction(async (tx) => {
+            // Check existing ranking
+            const existing = await tx.select().from(users_ranking)
+                .where(
+                    and(
+                        eq(users_ranking.user_id, user_id),
+                        eq(users_ranking.shop_id, shop_id)
+                    )
+                ).limit(1);
+
+            if (existing.length > 0) {
+                const old_tier = existing[0].satisfaction_tier;
+                const old_rank = existing[0].rank;
+
+                // Case B: Existing row exists
+                // 1. Remove temporarily (to avoid unique constraint during shift)
+                await tx.delete(users_ranking)
+                    .where(eq(users_ranking.id, existing[0].id));
+
+                // 2. Close gap in OLD group
+                await tx.update(users_ranking)
+                    .set({ rank: sql`${users_ranking.rank} - 1` })
+                    .where(
+                        and(
+                            eq(users_ranking.user_id, user_id),
+                            eq(users_ranking.satisfaction_tier, old_tier),
+                            gt(users_ranking.rank, old_rank)
+                        )
+                    );
+
+                // 3. Open gap in NEW group
+                // Note: If old_tier == new_tier, logic still holds because we deleted the row first.
+                await tx.update(users_ranking)
+                    .set({ rank: sql`${users_ranking.rank} + 1` })
+                    .where(
+                        and(
+                            eq(users_ranking.user_id, user_id),
+                            eq(users_ranking.satisfaction_tier, new_tier),
+                            gte(users_ranking.rank, new_rank)
+                        )
+                    );
+
+                // 4. Insert at new position
+                await tx.insert(users_ranking).values({
+                    user_id,
+                    shop_id,
+                    satisfaction_tier: new_tier,
+                    rank: new_rank
+                });
+
+            } else {
+                // Case A: New shop
+                // 1. Shift down items in target group
+                await tx.update(users_ranking)
+                    .set({ rank: sql`${users_ranking.rank} + 1` })
+                    .where(
+                        and(
+                            eq(users_ranking.user_id, user_id),
+                            eq(users_ranking.satisfaction_tier, new_tier),
+                            gte(users_ranking.rank, new_rank)
+                        )
+                    );
+
+                // 2. Insert new row
+                await tx.insert(users_ranking).values({
+                    user_id,
+                    shop_id,
+                    satisfaction_tier: new_tier,
+                    rank: new_rank
+                });
+            }
+        });
+
+        res.json({ success: true, shop_id, satisfaction_tier: new_tier, rank: new_rank });
+
     } catch (error) {
-        console.error("Ranking update error:", error);
-        res.status(500).json({ error: "Failed to update ranking" });
+        console.error("Ranking apply error:", error);
+        res.status(500).json({ error: "Failed to apply ranking" });
     }
 });
+
 // GET /api/content/ranking/candidates (Fetch candidates for tournament)
 router.get("/ranking/candidates", async (req, res) => {
     try {
-        const { user_id, satisfaction } = req.query;
-        if (!user_id || !satisfaction) {
+        const { user_id, satisfaction, satisfaction_tier, exclude_shop_id } = req.query;
+        if (!user_id) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
         const userId = parseInt(user_id as string);
+        let tier = 2; // Default good
 
-        // Fetch all rankings for this user joined with shop info
-        // Note: Drizzle join syntax might be verbose, using raw SQL or manual merge for simplicity in this MVP
-        const rankings = await db.select({
+        if (satisfaction_tier) {
+            tier = parseInt(satisfaction_tier as string);
+        } else if (satisfaction) {
+            tier = mapSatisfactionToTier(satisfaction as string);
+        }
+
+        const excludeId = exclude_shop_id ? parseInt(exclude_shop_id as string) : -1;
+
+        // Fetch rankings directly from users_ranking
+        const candidates = await db.select({
             shop_id: users_ranking.shop_id,
             rank: users_ranking.rank,
             shop_name: shops.name,
@@ -78,33 +188,14 @@ router.get("/ranking/candidates", async (req, res) => {
         })
             .from(users_ranking)
             .leftJoin(shops, eq(users_ranking.shop_id, shops.id))
-            .where(eq(users_ranking.user_id, userId))
-            .orderBy(users_ranking.rank);
-
-        // Now we need to filter by satisfaction. 
-        // Since satisfaction is in 'content' table (review_prop), and one shop might have multiple reviews,
-        // we assume the latest review's satisfaction counts, or we check if ANY review for this shop has the target satisfaction.
-
-        // Optimize: Fetch all contents for this user that match the satisfaction
-        const matchingContents = await db.select({
-            review_prop: content.review_prop
-        })
-            .from(content)
             .where(
-                eq(content.user_id, userId)
-            );
-
-        // Filter rankings
-        // Set of shop_ids that have the target satisfaction
-        const validShopIds = new Set<number>();
-        matchingContents.forEach(c => {
-            const prop = c.review_prop as any;
-            if (prop && prop.satisfaction === satisfaction && prop.shop_id) {
-                validShopIds.add(Number(prop.shop_id));
-            }
-        });
-
-        const candidates = rankings.filter(r => validShopIds.has(r.shop_id));
+                and(
+                    eq(users_ranking.user_id, userId),
+                    eq(users_ranking.satisfaction_tier, tier),
+                    ne(users_ranking.shop_id, excludeId)
+                )
+            )
+            .orderBy(users_ranking.rank);
 
         res.json(candidates);
     } catch (error) {

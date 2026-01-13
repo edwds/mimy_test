@@ -28,17 +28,30 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
     const [maxIdx, setMaxIdx] = useState(0);
     const [compareIdx, setCompareIdx] = useState(0);
 
+    // Helper to map satisfaction to tier
+    function mapSatisfactionToTier(satisfaction: string): number {
+        switch (satisfaction) {
+            case 'best': return 3;
+            case 'good': return 2;
+            case 'ok': return 1;
+            case 'bad': return 0;
+            default: return 2;
+        }
+    }
+
     useEffect(() => {
         const init = async () => {
             try {
-                // Fetch candidates with same satisfaction
-                const res = await fetch(`${API_BASE_URL}/api/content/ranking/candidates?user_id=${userId}&satisfaction=${satisfaction}`);
+                // Fetch candidates with same satisfaction tier, excluding current shop
+                const tier = mapSatisfactionToTier(satisfaction);
+                const res = await fetch(`${API_BASE_URL}/api/content/ranking/candidates?user_id=${userId}&satisfaction_tier=${tier}&exclude_shop_id=${currentShop.id}`);
+
                 if (res.ok) {
                     const data: Candidate[] = await res.json();
 
                     if (data.length === 0) {
-                        // No existing items in this group -> Automatic Rank 1
-                        await saveRank(1);
+                        // No existing items in this group -> Automatic Rank 1 (Insert Index 0)
+                        await saveRank(0);
                         setMode('SUCCESS');
                     } else {
                         // Start Binary Search
@@ -59,11 +72,11 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
         init();
     }, []);
 
-    const saveRank = async (rank: number) => {
-        await ContentService.submitRanking({
+    const saveRank = async (insertIndex: number) => {
+        await ContentService.applyRanking({
             user_id: userId,
             shop_id: currentShop.id,
-            sort_key: rank
+            insert_index: insertIndex
         });
     };
 
@@ -81,16 +94,8 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
 
         if (newMin > newMax) {
             // Comparison done!
-            const insertIndex = newMin;
-
-            // Determine Rank Value:
-            // If we insert at index i, we take rank of item at i?
-            // If i is out of bounds (appended to end), we take last rank + 1.
-            const calculatedRank = insertIndex < candidates.length
-                ? candidates[insertIndex].rank
-                : (candidates[candidates.length - 1].rank + 1);
-
-            await saveRank(calculatedRank);
+            // newMin is the insertion index
+            await saveRank(newMin);
             setMode('SUCCESS');
             return;
         }
