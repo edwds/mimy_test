@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
@@ -413,41 +414,47 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                         </div>
                     </div>
 
-                    {/* Taste Card Area */}
-                    {user.cluster_name ? (
-                        <div className="bg-surface border border-border rounded-xl p-4 mb-2 shadow-sm relative overflow-hidden">
-                            <div className="text-xl font-bold mb-1">{user.cluster_name}</div>
-                            <p className="text-sm text-muted-foreground">{user.cluster_tagline}</p>
+                    {/* Profile Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="text-center cursor-pointer" onClick={() => handleTabChange('content')}>
+                            <div className="font-bold text-lg">{user.stats?.content_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Content</div>
                         </div>
-                    ) : (
-                        <div className="bg-muted/30 border border-dashed border-border rounded-xl p-4 mb-6 text-center cursor-pointer" onClick={() => navigate('/quiz/intro')}>
-                            <p className="text-sm text-muted-foreground">Discover your taste profile +</p>
+                        <div className="text-center cursor-pointer" onClick={() => setIsFollowersOpen(true)}>
+                            <div className="font-bold text-lg">{user.stats?.follower_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Followers</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-lg text-muted-foreground">{user.stats?.following_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Following</div>
+                        </div>
+                    </div>
+
+                    {/* Bio */}
+                    {user.bio && (
+                        <div className="mb-6">
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user.bio}</p>
+                            {user.links && user.links.length > 0 && (
+                                <div className="mt-2 flex flex-col gap-1">
+                                    {user.links.map((link: string, idx: number) => (
+                                        <a
+                                            key={idx}
+                                            href={link.startsWith('http') ? link : `https://${link}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                                        >
+                                            <LinkIcon size={10} />
+                                            {link.replace(/^https?:\/\//, '').length > 30
+                                                ? `${link.replace(/^https?:\/\//, '').substring(0, 30)}...`
+                                                : link.replace(/^https?:\/\//, '')}
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-
-                {/* Tabs Static Header (In Flow) */}
-                <div ref={staticTabsRef} className="p-6 bg-background py-2">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                        <TabButton
-                            active={activeTab === "content"}
-                            onClick={() => handleTabChange("content")}
-                            label="Content"
-                        />
-                        <TabButton
-                            active={activeTab === "list"}
-                            onClick={() => handleTabChange("list")}
-                            label="List"
-                        />
-                        <TabButton
-                            active={activeTab === "saved"}
-                            onClick={() => handleTabChange("saved")}
-                            label="Want to go"
-                        />
-                    </div>
-                </div>
-
-                {/* Tab Content */}
+                </div>* Tab Content */}
                 <div className="min-h-[300px] bg-muted/5">
                     {activeTab === "content" && (
                         <div className="pb-20">
