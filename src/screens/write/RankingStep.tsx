@@ -73,11 +73,19 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
     }, []);
 
     const saveRank = async (insertIndex: number) => {
-        await ContentService.applyRanking({
-            user_id: userId,
-            shop_id: currentShop.id,
-            insert_index: insertIndex
-        });
+        try {
+            await ContentService.applyRanking({
+                user_id: userId,
+                shop_id: currentShop.id,
+                insert_index: insertIndex,
+                satisfaction: satisfaction // Explicitly pass satisfaction
+            });
+        } catch (error) {
+            console.error(error);
+            alert("랭킹 저장 중 오류가 발생했습니다.");
+            // We still set SUCCESS to avoid trapping the user, or we could keep them here.
+            // But usually safe to proceed.
+        }
     };
 
     const handleChoice = async (winner: 'NEW' | 'EXISTING') => {
@@ -94,7 +102,6 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
 
         if (newMin > newMax) {
             // Comparison done!
-            // newMin is the insertion index
             await saveRank(newMin);
             setMode('SUCCESS');
             return;
@@ -111,33 +118,33 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
         const opponent = candidates[compareIdx];
         return (
             <div className="flex flex-col h-full bg-[var(--color-surface)] p-6">
-                <h2 className="text-xl font-bold text-center mb-8 mt-4">어떤 곳이 더 만족스러웠나요?</h2>
+                <h2 className="text-xl font-bold text-center mb-8 mt-4 text-[var(--color-text-primary)]">어떤 곳이 더 만족스러웠나요?</h2>
 
                 <div className="flex-1 flex flex-col gap-4 justify-center">
                     {/* New Shop */}
                     <button
                         onClick={() => handleChoice('NEW')}
-                        className="flex flex-col items-center p-6 bg-white border-2 border-[var(--color-primary)] rounded-2xl shadow-sm active:scale-95 transition-transform"
+                        className="flex flex-col items-center p-6 bg-[var(--color-surface)] border-2 border-[var(--color-primary)] rounded-2xl shadow-sm active:scale-95 transition-transform"
                     >
                         <span className="text-lg font-bold text-[var(--color-primary)] mb-1">New!</span>
-                        <span className="text-2xl font-bold">{currentShop.name}</span>
-                        <span className="text-sm text-gray-500 mt-2">{currentShop.food_kind}</span>
+                        <span className="text-2xl font-bold text-[var(--color-text-primary)]">{currentShop.name}</span>
+                        <span className="text-sm text-[var(--color-text-secondary)] mt-2">{currentShop.food_kind}</span>
                     </button>
 
-                    <div className="text-center font-bold text-gray-400">VS</div>
+                    <div className="text-center font-bold text-[var(--color-text-tertiary)]">VS</div>
 
                     {/* Opponent */}
                     <button
                         onClick={() => handleChoice('EXISTING')}
-                        className="flex flex-col items-center p-6 bg-white border border-gray-200 rounded-2xl shadow-sm active:scale-95 transition-transform hover:border-gray-400"
+                        className="flex flex-col items-center p-6 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-sm active:scale-95 transition-transform hover:border-[var(--color-text-tertiary)]"
                     >
-                        <span className="text-lg font-bold text-gray-700">Rank {opponent.rank}</span>
-                        <span className="text-2xl font-bold text-gray-900">{opponent.shop_name}</span>
-                        <span className="text-sm text-gray-500 mt-2">{opponent.food_kind}</span>
+                        <span className="text-lg font-bold text-[var(--color-text-secondary)]">Rank {opponent.rank}</span>
+                        <span className="text-2xl font-bold text-[var(--color-text-primary)]">{opponent.shop_name}</span>
+                        <span className="text-sm text-[var(--color-text-secondary)] mt-2">{opponent.food_kind}</span>
                     </button>
 
                     {/* Priority Hint */}
-                    <p className="text-xs text-center text-gray-400 mt-4">
+                    <p className="text-xs text-center text-[var(--color-text-tertiary)] mt-4">
                         (Tip: 같은 종류의 음식점이거나, 더 인상 깊었던 곳을 선택해주세요)
                     </p>
                 </div>

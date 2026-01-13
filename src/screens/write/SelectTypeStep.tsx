@@ -22,7 +22,7 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
             {/* Panel */}
             <div
                 className={cn(
-                    "relative w-full max-w-[400px] bg-white text-gray-900 shadow-2xl overflow-hidden",
+                    "relative w-full max-w-[400px] bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-2xl overflow-hidden",
                     "animate-in slide-in-from-bottom duration-300 sm:zoom-in-95 sm:fade-in sm:slide-in-from-bottom-0",
                     "rounded-t-[32px] sm:rounded-[32px]", // Mobile: Top Rounded, PC: All Rounded
                     "p-6 pb-10 sm:p-8"
@@ -30,18 +30,18 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
             >
                 {/* Mobile Handle */}
                 <div className="flex justify-center mb-6 sm:hidden pointer-events-none">
-                    <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+                    <div className="w-12 h-1.5 bg-[var(--color-border)] rounded-full" />
                 </div>
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 px-1">
-                    <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+                    <h2 className="text-2xl font-bold tracking-tight">
                         Create Content
                     </h2>
                     {/* PC Close Button */}
                     <button
                         onClick={onClose}
-                        className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+                        className="hidden sm:flex p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors text-[var(--color-text-tertiary)]"
                     >
                         <X size={20} />
                     </button>
@@ -51,18 +51,18 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                 <div className="space-y-3">
                     <button
                         onClick={() => onSelect('review')}
-                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-gray-100"
+                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-[var(--color-gray-50)] active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-[var(--color-border)]"
                     >
                         {/* Icon Circle */}
-                        <div className="w-14 h-14 rounded-full bg-[#EFE9FA] flex items-center justify-center text-[#7C3AED] mr-5 shrink-0 group-hover:scale-110 transition-transform">
+                        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-5 shrink-0 group-hover:scale-110 transition-transform">
                             <Utensils size={24} strokeWidth={2.5} />
                         </div>
                         {/* Text */}
                         <div className="flex-1 text-left">
-                            <h3 className="text-[17px] font-bold text-gray-900 mb-0.5 group-hover:text-[#7C3AED] transition-colors">
+                            <h3 className="text-[17px] font-bold mb-0.5 group-hover:text-primary transition-colors">
                                 Review Place
                             </h3>
-                            <p className="text-[15px] text-gray-500 font-medium">
+                            <p className="text-[15px] text-[var(--color-text-secondary)] font-medium">
                                 Rank and review restaurants
                             </p>
                         </div>
@@ -70,18 +70,18 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
 
                     <button
                         onClick={() => onSelect('post')}
-                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-gray-100"
+                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-[var(--color-gray-50)] active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-[var(--color-border)]"
                     >
                         {/* Icon Circle */}
-                        <div className="w-14 h-14 rounded-full bg-[#E0F2FE] flex items-center justify-center text-[#0284C7] mr-5 shrink-0 group-hover:scale-110 transition-transform">
+                        <div className="w-14 h-14 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mr-5 shrink-0 group-hover:scale-110 transition-transform">
                             <PenLine size={24} strokeWidth={2.5} />
                         </div>
                         {/* Text */}
                         <div className="flex-1 text-left">
-                            <h3 className="text-[17px] font-bold text-gray-900 mb-0.5 group-hover:text-[#0284C7] transition-colors">
+                            <h3 className="text-[17px] font-bold mb-0.5 group-hover:text-blue-500 transition-colors">
                                 Free Post
                             </h3>
-                            <p className="text-[15px] text-gray-500 font-medium">
+                            <p className="text-[15px] text-[var(--color-text-secondary)] font-medium">
                                 Share your food stories
                             </p>
                         </div>

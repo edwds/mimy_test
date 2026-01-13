@@ -189,29 +189,32 @@ function mapSatisfactionToTier(satisfaction: string): number {
 router.post("/ranking/apply", async (req, res) => {
     try {
         const { user_id, shop_id, insert_index } = req.body;
+        let { satisfaction } = req.body; // Allow satisfaction to be passed
 
         if (!user_id || !shop_id || insert_index === undefined) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // 1. Determine Satisfaction Tier from Latest Content
-        // Find latest review for this user/shop
-        const latestContent = await db.select().from(content)
-            .where(
-                and(
-                    eq(content.user_id, user_id),
-                    eq(content.type, 'review')
+        // 1. Determine Satisfaction Tier
+        if (!satisfaction) {
+            // Fallback: Find latest review for this user/shop
+            const latestContent = await db.select().from(content)
+                .where(
+                    and(
+                        eq(content.user_id, user_id),
+                        eq(content.type, 'review')
+                    )
                 )
-            )
-            .orderBy(desc(content.created_at))
-            .limit(10); // Check recent few to find matching shop_id
+                .orderBy(desc(content.created_at))
+                .limit(10);
 
-        let satisfaction = 'good'; // default
-        for (const c of latestContent) {
-            const prop = c.review_prop as any;
-            if (prop && Number(prop.shop_id) === Number(shop_id)) {
-                if (prop.satisfaction) satisfaction = prop.satisfaction;
-                break;
+            satisfaction = 'good'; // default
+            for (const c of latestContent) {
+                const prop = c.review_prop as any;
+                if (prop && Number(prop.shop_id) === Number(shop_id)) {
+                    if (prop.satisfaction) satisfaction = prop.satisfaction;
+                    break;
+                }
             }
         }
 
