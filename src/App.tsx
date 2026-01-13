@@ -17,6 +17,7 @@ import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
+import { UserProvider } from '@/context/UserContext';
 
 function App() {
     const isLoggedIn = !!localStorage.getItem("mimy_user_id");
@@ -37,38 +38,40 @@ function App() {
 
     return (
         <GoogleOAuthProvider clientId={googleClientId || ""}>
-            <BrowserRouter>
-                {loading ? (
-                    <SplashScreen />
-                ) : (
-                    <Routes>
-                        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
-                        <Route path="/start" element={<StartPage onStart={() => window.location.href = '/onboarding/age-check'} />} />
+            <UserProvider>
+                <BrowserRouter>
+                    {loading ? (
+                        <SplashScreen />
+                    ) : (
+                        <Routes>
+                            <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
+                            <Route path="/start" element={<StartPage onStart={() => window.location.href = '/onboarding/age-check'} />} />
 
-                        {/* Onboarding Flow */}
-                        <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
-                        <Route path="/onboarding/agreement" element={<AgreementStep />} />
+                            {/* Onboarding Flow */}
+                            <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
+                            <Route path="/onboarding/agreement" element={<AgreementStep />} />
 
-                        {/* Auth */}
-                        <Route path="/login" element={<LoginPage />} />
+                            {/* Auth */}
+                            <Route path="/login" element={<LoginPage />} />
 
-                        {/* Registration Flow */}
-                        <Route path="/register/phone" element={<PhoneStep />} />
-                        <Route path="/register/otp" element={<OtpStep />} />
-                        <Route path="/register/profile" element={<ProfileStep />} />
+                            {/* Registration Flow */}
+                            <Route path="/register/phone" element={<PhoneStep />} />
+                            <Route path="/register/otp" element={<OtpStep />} />
+                            <Route path="/register/profile" element={<ProfileStep />} />
 
-                        {/* Quiz Flow */}
-                        <Route path="/quiz/intro" element={<QuizIntro />} />
-                        <Route path="/quiz/test" element={<QuizScreen />} />
-                        <Route path="/quiz/result" element={<QuizResult />} />
+                            {/* Quiz Flow */}
+                            <Route path="/quiz/intro" element={<QuizIntro />} />
+                            <Route path="/quiz/test" element={<QuizScreen />} />
+                            <Route path="/quiz/result" element={<QuizResult />} />
 
-                        <Route path="/write" element={<WriteFlow />} />
-                        <Route path="/main" element={<MainTab />} />
-                        <Route path="/profile/edit" element={<EditProfileScreen />} />
-                        <Route path="/profile/connections" element={<ConnectionsScreen />} />
-                    </Routes>
-                )}
-            </BrowserRouter>
+                            <Route path="/write" element={<WriteFlow />} />
+                            <Route path="/main" element={<MainTab />} />
+                            <Route path="/profile/edit" element={<EditProfileScreen />} />
+                            <Route path="/profile/connections" element={<ConnectionsScreen />} />
+                        </Routes>
+                    )}
+                </BrowserRouter>
+            </UserProvider>
         </GoogleOAuthProvider>
     );
 }

@@ -6,31 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
-
-// Type definition (move to types/index.ts later)
-interface User {
-    id: number;
-    nickname: string | null;
-    account_id: string;
-    profile_image: string | null;
-    bio: string | null;
-    link: string | null;
-    // New fields from backend join
-    cluster_name?: string;
-    cluster_tagline?: string;
-    stats?: {
-        content_count: number;
-        follower_count: number;
-        following_count: number;
-    };
-}
+import { useUser } from '@/context/UserContext';
 
 type ProfileTabType = "content" | "list" | "saved";
 
 export const ProfileScreen = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, loading, refreshUser } = useUser();
     const [activeTab, setActiveTab] = useState<ProfileTabType>("content");
 
     // Menu & Sheet State
@@ -40,24 +22,6 @@ export const ProfileScreen = () => {
     const [savingId, setSavingId] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const loadUser = async () => {
-            const userId = localStorage.getItem("mimy_user_id");
-            if (!userId) return;
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/users/${userId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setUser(data);
-                }
-            } catch (error) {
-                console.error("Failed to load user", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadUser();
-    }, []);
 
     // Content State
     const [contents, setContents] = useState<any[]>([]);
@@ -132,7 +96,7 @@ export const ProfileScreen = () => {
             });
 
             if (response.ok) {
-                setUser({ ...user, account_id: newId });
+                await refreshUser();
                 setIsIdSheetOpen(false);
                 alert("ID updated successfully");
             } else {
