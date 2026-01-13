@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
-import { UserService } from '@/services/UserService';
-import { User as UserIcon, Bell, Search } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 
 interface Props {
     onWrite: () => void;
@@ -15,7 +14,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const [currentUser, setCurrentUser] = useState<any>(null);
     const [activeChip, setActiveChip] = useState("Trending");
     const observer = useRef<IntersectionObserver | null>(null);
 
@@ -40,10 +38,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
 
     useEffect(() => {
         fetchFeed(1);
-        // Fetch current user async
-        UserService.getCurrentUser().then((user: any) => {
-            if (user) setCurrentUser(user);
-        });
     }, []);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
