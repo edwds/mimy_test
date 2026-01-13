@@ -19,35 +19,51 @@ export function appendJosa(word: string, josa: '을/를' | '이/가' | '은/는'
     return `${word}${josaMap[josa]}`;
 }
 
-export function formatRelativeTime(dateString: string): string {
+// Format YYYY-MM-DD visit date
+export function formatVisitDate(dateString: string): string {
     const now = new Date();
     const date = new Date(dateString);
-    const diffMs = now.getTime() - date.getTime();
-    const diffSec = diffMs / 1000;
-    const diffMin = diffSec / 60;
-    const diffHour = diffMin / 60;
-    const diffDay = diffHour / 24;
 
-    // 0~1시간 미만 : n분 전
-    if (diffHour < 1) {
-        return `${Math.max(0, Math.floor(diffMin))}분 전`;
+    // Reset time components for date comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const diffTime = today.getTime() - target.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // Same day
+    if (diffDays === 0) {
+        return '오늘';
     }
-    // 1~24시간 미만 : n시간 전
-    if (diffHour < 24) {
-        return `${Math.floor(diffHour)}시간 전`;
+
+    // ~7일 미만
+    if (diffDays < 7) {
+        return `${diffDays}일 전`;
     }
-    // 24시간~7일 미만 : n일 전
-    if (diffDay < 7) {
-        return `${Math.floor(diffDay)}일 전`;
+
+    // 7일~1개월 미만 (Use 30 days as approx)
+    if (diffDays < 30) {
+        return `${Math.floor(diffDays / 7)}주 전`;
     }
-    // 7일~1개월 미만 : n주 전 (1달 = 30일 기준)
-    if (diffDay < 30) {
-        return `${Math.floor(diffDay / 7)}주 전`;
+
+    // 1개월~12개월 미만
+    if (diffDays < 365) {
+        return `${Math.floor(diffDays / 30)}달 전`;
     }
-    // 1개월~12개월 미만 : n달 전
-    if (diffDay < 365) {
-        return `${Math.floor(diffDay / 30)}달 전`;
-    }
-    // 1년 이후 : n년 전
-    return `${Math.floor(diffDay / 365)}년 전`;
+
+    // 1년 이후
+    return `${Math.floor(diffDays / 365)}년 전`;
+}
+
+// Format created_at to "2026년 1월 13일 오후 1시 35분"
+export function formatFullDateTime(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    });
 }

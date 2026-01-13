@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
-import { cn, appendJosa, formatRelativeTime } from '@/lib/utils';
+import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
@@ -151,7 +151,7 @@ export const ContentCard = ({
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
-        ? `${appendJosa(shopName, '을/를')} ${formatRelativeTime(content.created_at)} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
+        ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
         : null;
 
     return (
@@ -279,7 +279,7 @@ export const ContentCard = ({
             {/* Footer Stats & Actions (content scrap removed) */}
             <div className="px-5 pt-1">
                 <div className="flex items-center justify-between mb-3">
-                    <span className="text-[12px] text-gray-400">{new Date(content.created_at).toLocaleString()}</span>
+                    <span className="text-[12px] text-gray-400">{formatFullDateTime(content.created_at)}</span>
                     {content.stats.comments > 0 && (
                         <span className="text-[12px] text-gray-400 flex items-center gap-1">
                             <MessageCircle size={12} />
