@@ -127,9 +127,11 @@ export const WriteFlow = () => {
                 />
             )}
 
-            {step === 'RANKING' && selectedShop && (
+            {step === 'RANKING' && selectedShop && basicInfo && (
                 <RankingStep
-                    shopName={selectedShop.name}
+                    userId={currentUserId}
+                    currentShop={selectedShop}
+                    satisfaction={basicInfo.satisfaction}
                     onFinish={() => navigate('/main')}
                 />
             )}
