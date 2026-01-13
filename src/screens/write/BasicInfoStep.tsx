@@ -5,7 +5,7 @@ import { Smile, Meh, Frown, Calendar, Users, ChevronLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface Props {
     shopName: string;
