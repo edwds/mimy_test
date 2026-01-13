@@ -33,7 +33,10 @@ export async function runMigrations() {
             migrationFolder = 'drizzle';
         }
 
-        await migrate(db, { migrationsFolder: migrationFolder });
+        // migrate() from neon-http is not compatible with neon-serverless (Pool) driver.
+        // Since we use `drizzle-kit migrate` command for migrations, this script is redundant.
+        // await migrate(db, { migrationsFolder: migrationFolder });
+        console.log("[Migration] Skipped (using drizzle-kit instead).");
         console.log("[Migration] Completed successfully!");
     } catch (error) {
         console.error("[Migration] Failed:", error);

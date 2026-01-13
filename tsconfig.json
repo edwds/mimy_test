@@ -17,10 +17,9 @@
     "include": [
         "server/**/*",
         "api/**/*",
-        "src/types/**/*"
+        "src/**/*"
     ],
     "exclude": [
-        "node_modules",
-        "src/**/*"
+        "node_modules"
     ]
 }
