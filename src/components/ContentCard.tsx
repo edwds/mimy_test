@@ -151,10 +151,7 @@ export const ContentCard = ({
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
-        ? `Visited ${shopName}${content.review_prop?.visit_date
-            ? ` on ${new Date(content.review_prop.visit_date).toLocaleDateString()}`
-            : ''
-        }${typeof visitCount === 'number' && visitCount >= 2 ? ` • ${visitCount}번째 방문` : ''}`
+        ? `${shopName}을 ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
         : null;
 
     return (
