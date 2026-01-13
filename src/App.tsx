@@ -18,13 +18,15 @@ import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 
 function App() {
-    const [loading, setLoading] = useState(true);
-    const isLoggedIn = false; // Force logged out for dev
+    const isLoggedIn = !!localStorage.getItem("mimy_user_id");
+    const [loading, setLoading] = useState(!isLoggedIn);
 
     useEffect(() => {
-        const timer = setTimeout(() => setLoading(false), 2000);
-        return () => clearTimeout(timer);
-    }, []);
+        if (!isLoggedIn) {
+            const timer = setTimeout(() => setLoading(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [isLoggedIn]);
 
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
