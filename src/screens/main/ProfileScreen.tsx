@@ -354,13 +354,12 @@ export const ProfileScreen = () => {
                                     <span className="font-bold">{user.stats?.content_count || 0}</span>
                                     <span className="text-xs text-muted-foreground">Contents</span>
                                 </div>
-                                <div className="flex items-baseline gap-1">
+                                <div
+                                    className="flex items-baseline gap-1 cursor-pointer active:opacity-70 transition-opacity"
+                                    onClick={() => navigate('/profile/connections?tab=followers')}
+                                >
                                     <span className="font-bold">{user.stats?.follower_count || 0}</span>
                                     <span className="text-xs text-muted-foreground">Followers</span>
-                                </div>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="font-bold">{user.stats?.following_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">Following</span>
                                 </div>
                             </div>
 

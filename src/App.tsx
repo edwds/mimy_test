@@ -15,6 +15,7 @@ import { QuizIntro } from '@/screens/quiz/QuizIntro';
 import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
+import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 
 function App() {
@@ -64,6 +65,7 @@ function App() {
                         <Route path="/write" element={<WriteFlow />} />
                         <Route path="/main" element={<MainTab />} />
                         <Route path="/profile/edit" element={<EditProfileScreen />} />
+                        <Route path="/profile/connections" element={<ConnectionsScreen />} />
                     </Routes>
                 )}
             </BrowserRouter>

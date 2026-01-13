@@ -120,7 +120,7 @@ export const DiscoveryTab = () => {
     return (
         <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
             {/* Header */}
-            <div className="p-5 pb-2">
+            <div className="p-5 pt-6 pb-2">
                 <h1 className="text-2xl font-bold mb-4">Discovery</h1>
                 {/* Search Bar Placeholder */}
                 <div className="relative">

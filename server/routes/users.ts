@@ -154,4 +154,48 @@ router.get("/:id/saved_shops", async (req, res) => {
     }
 });
 
+router.get("/:id/followers", async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const followers = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            bio: users.bio
+        })
+            .from(users_follow)
+            .innerJoin(users, eq(users_follow.follower_id, users.id))
+            .where(eq(users_follow.following_id, id))
+            .orderBy(desc(users_follow.created_at));
+
+        res.json(followers);
+    } catch (error) {
+        console.error("Fetch followers error:", error);
+        res.status(500).json({ error: "Failed to fetch followers" });
+    }
+});
+
+router.get("/:id/following", async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const following = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            bio: users.bio
+        })
+            .from(users_follow)
+            .innerJoin(users, eq(users_follow.following_id, users.id))
+            .where(eq(users_follow.follower_id, id))
+            .orderBy(desc(users_follow.created_at));
+
+        res.json(following);
+    } catch (error) {
+        console.error("Fetch following error:", error);
+        res.status(500).json({ error: "Failed to fetch following" });
+    }
+});
+
 export default router;

@@ -288,7 +288,7 @@ export const ContentCard = ({
                     )}
                 </div>
 
-                <div className="flex items-center gap-4 border-t border-gray-50 pt-3">
+                <div className="flex items-center gap-4 pt-3">
                     <button
                         type="button"
                         onClick={() => onToggleLike?.(content.id)}
