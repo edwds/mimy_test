@@ -18,7 +18,11 @@ const getSessionSeed = () => {
     return seed;
 };
 
-export const DiscoveryTab = () => {
+interface Props {
+    refreshTrigger?: number;
+}
+
+export const DiscoveryTab = ({ refreshTrigger }: Props) => {
     const [shops, setShops] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -59,6 +63,21 @@ export const DiscoveryTab = () => {
         // Initial fetch
         fetchShops(1);
     }, []);
+
+    // Refresh Listener
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            // New Seed for fresh discovery
+            const newSeed = Math.random().toString(36).substring(7);
+            sessionStorage.setItem('discovery_seed', newSeed);
+            seedRef.current = newSeed;
+
+            setShops([]);
+            setPage(1);
+            setHasMore(true);
+            fetchShops(1);
+        }
+    }, [refreshTrigger]);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
         if (loading) return;
