@@ -41,7 +41,8 @@ function App() {
                     <SplashScreen />
                 ) : (
                     <Routes>
-                        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <PublicHome />} />
+                        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
+                        <Route path="/start" element={<StartPage onStart={() => window.location.href = '/onboarding/age-check'} />} />
 
                         {/* Onboarding Flow */}
                         <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
@@ -70,9 +71,10 @@ function App() {
     );
 }
 
-const PublicHome = () => {
-    const navigate = useNavigate();
-    return <StartPage onStart={() => navigate('/onboarding/age-check')} />;
-};
+// PublicHome removed as it's replaced by explicit /start route
+// const PublicHome = () => {
+//     const navigate = useNavigate();
+//     return <StartPage onStart={() => navigate('/onboarding/age-check')} />;
+// };
 
 export default App;
