@@ -123,7 +123,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             {/* Smart Header */}
             <div
                 ref={headerRef}
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-20 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                     }`}
             >
                 <div className="flex items-center justify-between mb-4">

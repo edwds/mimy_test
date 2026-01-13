@@ -162,15 +162,15 @@ export const ProfileScreen = () => {
         const diff = currentScrollY - lastScrollY.current;
 
         // Smart Header Logic
-        // Show floating tabs ONLY if we are past the static tabs AND scrolling up
-        if (currentScrollY > tabsOffset + 50) {
-            if (diff < -5) { // Scrolling Up significanly
+        // Show floating tabs ONLY if we are past the static tabs
+        if (currentScrollY > tabsOffset + 10) {
+            if (diff < 0) { // Scrolling Up (any amount)
                 setShowFloatingTabs(true);
-            } else if (diff > 5) { // Scrolling Down significantly
+            } else if (diff > 5) { // Scrolling Down
                 setShowFloatingTabs(false);
             }
         } else {
-            // If near top, hide floating tabs
+            // If near top, hide floating tabs since static tabs are visible
             setShowFloatingTabs(false);
         }
 
@@ -186,11 +186,24 @@ export const ProfileScreen = () => {
 
         requestAnimationFrame(() => {
             if (containerRef.current) {
-                const savedPos = scrollPositions.current[newTab] || 0;
-                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
+                const savedPos = scrollPositions.current[newTab];
+                let targetPos = savedPos;
 
-                // If we are deep down, ensure the floating header is visible
-                if (savedPos > tabsOffset) {
+                // If no saved position (first visit to tab)
+                if (targetPos === undefined) {
+                    if (scrollPositions.current[activeTab] > tabsOffset) {
+                        // Maintain sticky state
+                        targetPos = tabsOffset;
+                    } else {
+                        // Start at top
+                        targetPos = 0;
+                    }
+                }
+
+                containerRef.current.scrollTo({ top: targetPos, behavior: 'instant' });
+
+                // If we are effectively in sticky mode, show the floating header to ensure seamless visual
+                if (targetPos >= tabsOffset) {
                     setShowFloatingTabs(true);
                 } else {
                     setShowFloatingTabs(false);
@@ -207,7 +220,7 @@ export const ProfileScreen = () => {
 
             {/* Smart Floating Header (Duplicate) */}
             <div
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-30 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
                     }`}
             >
                 <div className="flex gap-2 overflow-x-auto no-scrollbar">
