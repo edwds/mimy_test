@@ -298,7 +298,7 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
                     <div
                         className="w-full h-full flex items-center justify-center cursor-move"
                         style={{
-                            backgroundImage: `url(${item.previewUrl})`,
+                            backgroundImage: originalUrl ? `url(${originalUrl})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
