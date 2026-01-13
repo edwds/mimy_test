@@ -373,7 +373,9 @@ router.get("/user/:userId", async (req, res) => {
         // 3. Fetch Shops and Rankings
         const shopMap = new Map();
         const rankMap = new Map<number, number>();
-        const visitCountMap = new Map<number, number>();
+        const rankMap = new Map<number, number>();
+        // Refactored: visitCountMap removed, using contentVisitRankMap
+        const contentVisitRankMap = new Map<number, number>();
 
         if (shopIds.size > 0) {
             const idsList = Array.from(shopIds);
@@ -408,7 +410,7 @@ router.get("/user/:userId", async (req, res) => {
                 .orderBy(content.created_at);
 
             const shopCounter = new Map<number, number>();
-            const contentVisitRankMap = new Map<number, number>();
+            // contentVisitRankMap is now in outer scope
 
             allUserReviews.forEach(r => {
                 const p = r.prop as any;
