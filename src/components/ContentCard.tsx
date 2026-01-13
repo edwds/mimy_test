@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, appendJosa, formatRelativeTime } from '@/lib/utils';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
@@ -151,7 +151,7 @@ export const ContentCard = ({
     const isPoiBookmarked = !!content.poi?.is_bookmarked;
 
     const contextText = shopName
-        ? `${shopName}을 ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
+        ? `${appendJosa(shopName, '을/를')} ${formatRelativeTime(content.created_at)} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
         : null;
 
     return (
