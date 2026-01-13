@@ -219,7 +219,6 @@ router.post("/ranking/apply", async (req, res) => {
         }
 
         const new_tier = mapSatisfactionToTier(satisfaction);
-        const new_rank = insert_index + 1; // 1-based rank
 
         // 2. Execute Transaction
         await db.transaction(async (tx) => {
@@ -232,70 +231,61 @@ router.post("/ranking/apply", async (req, res) => {
                     )
                 ).limit(1);
 
+            // A. If exists, remove it first to handle "Move" logic cleanly
+            // (Closing the gap from old position)
             if (existing.length > 0) {
-                const old_tier = existing[0].satisfaction_tier;
                 const old_rank = existing[0].rank;
 
-                // Case B: Existing row exists
-                // 1. Remove temporarily (to avoid unique constraint during shift)
                 await tx.delete(users_ranking)
                     .where(eq(users_ranking.id, existing[0].id));
 
-                // 2. Close gap in OLD group
+                // Close gap (Global Shift Up)
                 await tx.update(users_ranking)
                     .set({ rank: sql`${users_ranking.rank} - 1` })
                     .where(
                         and(
                             eq(users_ranking.user_id, user_id),
-                            eq(users_ranking.satisfaction_tier, old_tier),
                             gt(users_ranking.rank, old_rank)
                         )
                     );
-
-                // 3. Open gap in NEW group
-                // Note: If old_tier == new_tier, logic still holds because we deleted the row first.
-                await tx.update(users_ranking)
-                    .set({ rank: sql`${users_ranking.rank} + 1` })
-                    .where(
-                        and(
-                            eq(users_ranking.user_id, user_id),
-                            eq(users_ranking.satisfaction_tier, new_tier),
-                            gte(users_ranking.rank, new_rank)
-                        )
-                    );
-
-                // 4. Insert at new position
-                await tx.insert(users_ranking).values({
-                    user_id,
-                    shop_id,
-                    satisfaction_tier: new_tier,
-                    rank: new_rank
-                });
-
-            } else {
-                // Case A: New shop
-                // 1. Shift down items in target group
-                await tx.update(users_ranking)
-                    .set({ rank: sql`${users_ranking.rank} + 1` })
-                    .where(
-                        and(
-                            eq(users_ranking.user_id, user_id),
-                            eq(users_ranking.satisfaction_tier, new_tier),
-                            gte(users_ranking.rank, new_rank)
-                        )
-                    );
-
-                // 2. Insert new row
-                await tx.insert(users_ranking).values({
-                    user_id,
-                    shop_id,
-                    satisfaction_tier: new_tier,
-                    rank: new_rank
-                });
             }
+
+            // B. Calculate New Global Rank
+            // 1. Count items in HIGHER tiers
+            const higherTierCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(users_ranking)
+                .where(
+                    and(
+                        eq(users_ranking.user_id, user_id),
+                        gt(users_ranking.satisfaction_tier, new_tier)
+                    )
+                );
+            const higherTierCount = Number(higherTierCountRes[0]?.count || 0);
+
+            // 2. Target Rank = (Count of higher tiers) + (Index in current tier) + 1
+            // Note: insert_index is 0-based index WITHIN the tier (from frontend tournament)
+            const new_global_rank = higherTierCount + insert_index + 1;
+
+            // C. Open Gap (Global Shift Down) at new position
+            await tx.update(users_ranking)
+                .set({ rank: sql`${users_ranking.rank} + 1` })
+                .where(
+                    and(
+                        eq(users_ranking.user_id, user_id),
+                        gte(users_ranking.rank, new_global_rank)
+                    )
+                );
+
+            // D. Insert at new global position
+            await tx.insert(users_ranking).values({
+                user_id,
+                shop_id,
+                satisfaction_tier: new_tier,
+                rank: new_global_rank
+            });
         });
 
-        res.json({ success: true, shop_id, satisfaction_tier: new_tier, rank: new_rank });
+        res.json({ success: true, shop_id, satisfaction_tier: new_tier });
 
     } catch (error) {
         console.error("Ranking apply error:", error);
