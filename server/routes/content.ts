@@ -373,7 +373,6 @@ router.get("/user/:userId", async (req, res) => {
         // 3. Fetch Shops and Rankings
         const shopMap = new Map();
         const rankMap = new Map<number, number>();
-        const rankMap = new Map<number, number>();
         // Refactored: visitCountMap removed, using contentVisitRankMap
         const contentVisitRankMap = new Map<number, number>();
 
