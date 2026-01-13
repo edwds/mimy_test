@@ -110,12 +110,12 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                         }}
                     >
                         <div className="relative z-10 flex justify-between items-start">
-                            <div>
-                                <h2 className="text-xl font-bold mb-2 text-foreground">
-                                    오늘의 미식 경험을<br />기록해보세요
+                            <div className="flex-1 pr-4">
+                                <h2 className="text-xl font-bold mb-2 text-foreground leading-tight">
+                                    오늘 {currentUser?.nickname || '회원'}님의<br />미식은 무엇이었나요
                                 </h2>
                                 <p className="text-muted-foreground text-sm leading-relaxed">
-                                    방문한 맛집, 카페에서의 경험을 남겨주세요.
+                                    방문한 곳의 경험을 남겨주세요
                                 </p>
                             </div>
 
