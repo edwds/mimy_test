@@ -102,6 +102,7 @@ router.get("/:id/saved_shops", async (req, res) => {
             address_full: shops.address_full,
             thumbnail_img: shops.thumbnail_img,
             kind: shops.kind,
+            food_kind: shops.food_kind,
             saved_at: users_wantstogo.created_at
         })
             .from(users_wantstogo)

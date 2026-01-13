@@ -33,5 +33,18 @@ export const UserService = {
         // For now, let's keep it simple: return ID wrapped or null.
         const id = localStorage.getItem("mimy_user_id");
         return id ? { id } : null;
+    },
+
+    getSavedShops: async (userId: number | string) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/users/${userId}/saved_shops`);
+            if (response.ok) {
+                return await response.json();
+            }
+            return [];
+        } catch (error) {
+            console.error("Failed to fetch saved shops", error);
+            return [];
+        }
     }
 }
