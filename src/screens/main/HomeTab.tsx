@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { UserService } from '@/services/UserService';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, PencilIcon } from 'lucide-react';
 
 interface Props {
     onWrite: () => void;
@@ -63,9 +63,32 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
             {/* Feed List */}
             <div className="flex-1 overflow-y-auto">
                 <div className="pb-24">
-                    {/* Upload Nudge */}
-                    <div className="mx-4 mt-6 mb-4 p-4 rounded-2xl border border-[var(--color-border)] shadow-sm flex gap-3 bg-[var(--color-surface)]" onClick={onWrite}>
-                        <div className="shrink-0">
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={onWrite}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onWrite()}
+                        className="
+    mx-4 mt-6 mb-4
+    rounded-2xl border border-[var(--color-border)]
+    px-4 py-3
+    flex items-center gap-3
+    cursor-pointer
+    transition hover:shadow-md
+    bg-[var(--color-surface)]
+    relative overflow-hidden
+  "
+                    >
+                        {/* subtle highlight */}
+                        <div
+                            className="absolute inset-0 opacity-60 pointer-events-none"
+                            style={{
+                                background:
+                                    'radial-gradient(600px circle at 20% 0%, rgba(255,255,255,0.9), transparent 40%), radial-gradient(600px circle at 90% 80%, rgba(0,0,0,0.04), transparent 45%)',
+                            }}
+                        />
+
+                        <div className="shrink-0 relative">
                             {currentUser?.profile_image ? (
                                 <img
                                     src={currentUser.profile_image}
@@ -73,17 +96,34 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                                     className="w-10 h-10 rounded-full object-cover border border-[var(--color-border)]"
                                 />
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-[var(--color-gray-100)] flex items-center justify-center text-[var(--color-text-tertiary)]">
-                                    <UserIcon size={20} />
+                                <div className="w-10 h-10 rounded-full bg-[var(--color-gray-100)] flex items-center justify-center text-[var(--color-text-tertiary)] border border-[var(--color-border)]">
+                                    <UserIcon size={18} />
                                 </div>
                             )}
                         </div>
-                        <div className="flex-1">
-                            <button
-                                className="w-full h-10 rounded-full bg-[var(--color-gray-50)] text-left px-4 text-[var(--color-text-tertiary)] text-sm hover:bg-[var(--color-gray-100)] transition-colors flex items-center justify-between group"
+
+                        <div className="flex-1 min-w-0 relative">
+                            <div className="text-sm text-[var(--color-text-primary)] truncate">
+                                오늘의 미식 경험
+                            </div>
+                            <div className="text-xs text-[var(--color-text-tertiary)] mt-0.5 truncate">
+                                남기면 추천이 더 정확해져요
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 relative">
+                            <div
+                                className="
+        h-8 px-3 rounded-full   
+        bg-[var(--color-gray-900)]
+        text-white text-xs font-medium
+        flex items-center gap-2
+      "
+                                aria-hidden
                             >
-                                <span>오늘의 미식 경험을 기록해보세요!</span>
-                            </button>
+                                <PencilIcon size={14} />
+                                기록
+                            </div>
                         </div>
                     </div>
 
