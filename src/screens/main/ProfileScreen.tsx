@@ -23,6 +23,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     // Menu & Sheet State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isIdSheetOpen, setIsIdSheetOpen] = useState(false);
+    const [isFollowersOpen, setIsFollowersOpen] = useState(false);
     const [newId, setNewId] = useState("");
     const [savingId, setSavingId] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
