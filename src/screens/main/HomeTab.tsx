@@ -79,10 +79,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                             key={chip}
                             onClick={() => setActiveChip(chip)}
                             className={`
-                                px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border
+                                px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap
                                 ${activeChip === chip
-                                    ? 'bg-foreground text-background border-transparent'
-                                    : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                                 }
                             `}
                         >
@@ -108,7 +108,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite }) => {
                             onClick={onWrite}
                             className="px-6 py-3 bg-[#4F46E5] text-white rounded-full font-bold text-sm hover:bg-[#4338CA] transition-colors shadow-lg shadow-indigo-500/20"
                         >
-                            기록하기 {'>'}
+                            기록하기
                         </button>
                     </div>
 
