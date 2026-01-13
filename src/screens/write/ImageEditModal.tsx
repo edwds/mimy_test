@@ -218,12 +218,6 @@ const DraggableItem = ({ item, index, onClick }: { item: ProcessingItem, index: 
         setIsDragging(false);
     };
 
-    const handlePointerMove = () => {
-        // If moved significantly before timer, cancel timer (handled by browser usually but good to be safe)
-        // Actually framer motion handles drag start, so if we don't call start, it won't drag.
-        // But we want to allow Scrolling.
-    };
-
     return (
         <Reorder.Item
             value={item}
@@ -330,7 +324,7 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
                         min={minScale}
                         max={maxScale}
                         step={0.01}
-                        onValueChange={(vals) => setScale(vals[0])}
+                        onValueChange={(vals: number[]) => setScale(vals[0])}
                         className="flex-1"
                     />
                     <span className="text-xs text-white/50">확대</span>
