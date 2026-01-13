@@ -207,7 +207,7 @@ export const ProfileScreen = () => {
 
             {/* Smart Floating Header (Duplicate) */}
             <div
-                className={`fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-30 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-30 p-6 py-2 border-b border-border/50 shadow-sm transition-transform duration-300 ${showFloatingTabs ? 'translate-y-0' : '-translate-y-[150%]'
                     }`}
             >
                 <div className="flex gap-2 overflow-x-auto no-scrollbar">
