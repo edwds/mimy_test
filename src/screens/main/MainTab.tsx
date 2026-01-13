@@ -9,7 +9,7 @@ import { HomeTab } from './HomeTab';
 
 export const MainTab = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('profile'); // Default to profile for testing
+    const [activeTab, setActiveTab] = useState('home');
     const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
 
     return (
