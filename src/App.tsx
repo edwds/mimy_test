@@ -66,7 +66,7 @@ function App() {
                             <Route path="/quiz/result" element={<QuizResult />} />
 
                             <Route path="/write" element={<WriteFlow />} />
-                            <Route path="/main" element={<MainTab />} />
+                            <Route path="/main/*" element={<MainTab />} />
                             <Route path="/profile/edit" element={<EditProfileScreen />} />
                             <Route path="/profile/import" element={<ImportScreen />} />
                             <Route path="/profile/connections" element={<ConnectionsScreen />} />
