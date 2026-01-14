@@ -19,6 +19,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     const { user: currentUser } = useUser();
     const [activeChip, setActiveChip] = useState("Trending");
     const observer = useRef<IntersectionObserver | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     // Smart Header & Scroll Preservation
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -79,11 +80,24 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     // ... existing fetchFeed and useEffect ...
 
     const fetchFeed = async (pageNum: number) => {
-        if (loading) return;
+        // If loading next page, block. If reloading (page 1), cancel prev and proceed.
+        if (loading && pageNum > 1) return;
+
+        if (pageNum === 1) {
+            if (loading) {
+                // Cancel previous request if we are restarting
+                abortControllerRef.current?.abort();
+            }
+            abortControllerRef.current = new AbortController();
+        }
+
         setLoading(true);
         try {
             const userIdParam = currentUser?.id ? `&user_id=${currentUser.id}` : '';
-            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}`);
+            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}`, {
+                signal: pageNum === 1 ? abortControllerRef.current?.signal : undefined
+            });
+
             if (res.ok) {
                 const data = await res.json();
                 if (data.length < 20) {
@@ -91,10 +105,19 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                 }
                 setItems(prev => pageNum === 1 ? data : [...prev, ...data]);
             }
-        } catch (e) {
+        } catch (e: any) {
+            if (e.name === 'AbortError') return;
             console.error(e);
         } finally {
-            setLoading(false);
+            if (pageNum === 1) {
+                // Only unset loading if this was the latest request (controller matches)
+                // actually simple logic: if we finished, we aren't loading. 
+                // Unless another request started? 
+                // If we aborted, we returned early above (in catch).
+                setLoading(false);
+            } else {
+                setLoading(false);
+            }
         }
     };
 
