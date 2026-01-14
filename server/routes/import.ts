@@ -35,6 +35,7 @@ async function mapLimit<T, R>(
 
 const normalizeName = (s: string) =>
     (s || '')
+        .normalize('NFC')
         .toLowerCase()
         .replace(/\s+/g, '')
         .replace(/[()\-_.·]/g, '');
@@ -115,7 +116,8 @@ router.post('/naver', async (req, res) => {
                 'Referer': 'https://map.naver.com/',
                 'Accept': 'application/json, text/plain, */*',
                 'Origin': 'https://map.naver.com',
-                'Host': 'pages.map.naver.com'
+                'Host': 'pages.map.naver.com',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
             }
         });
         t2.clear();
@@ -146,8 +148,8 @@ router.post('/naver', async (req, res) => {
 
         // 4) Process Items in Parallel
         const CONCURRENCY = 8;
-        const latRange = 0.0015;
-        const lonRange = 0.0015;
+        const latRange = 0.005; // ~550m
+        const lonRange = 0.005;
 
         // Stats to track
         let candidateHitCount = 0;
@@ -188,7 +190,7 @@ router.post('/naver', async (req, res) => {
                         sql`${shops.lon} BETWEEN ${lon - lonRange} AND ${lon + lonRange}`
                     )
                 )
-                .limit(40);
+                .limit(100);
 
             if (candidates.length > 0) {
                 candidateHitCount++;
@@ -198,8 +200,23 @@ router.post('/naver', async (req, res) => {
                 const matched = candidates.find((s) => {
                     const sn = normalizeName(s.name || '');
                     if (!sn || !n) return false;
-                    return sn.includes(n) || n.includes(sn);
+                    // Exact match or contains
+                    const isMatch = sn.includes(n) || n.includes(sn);
+
+                    if (isMatch) {
+                        console.log(`[Import] MATCHED: "${name}" -> "${s.name}" (ID: ${s.id})`);
+                    }
+                    return isMatch;
                 });
+
+                if (!matched) {
+                    // Log failed candidates for debugging
+                    console.log(`[Import] NO MATCH for "${name}" (Candidates: ${candidates.length})`);
+                    if (candidates.length <= 5) { // Log a few for context
+                        candidates.forEach(c => console.log(`  - Candidate: "${c.name}" (${normalizeName(c.name)})`));
+                        console.log(`  - Target: "${name}" (${n})`);
+                    }
+                }
 
                 if (matched) {
                     matchedCount++;
