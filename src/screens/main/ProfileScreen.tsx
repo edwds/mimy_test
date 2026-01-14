@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
+import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -17,8 +18,16 @@ interface Props {
 
 export const ProfileScreen = ({ refreshTrigger }: Props) => {
     const navigate = useNavigate();
-    const { user, loading, refreshUser } = useUser();
-    const [activeTab, setActiveTab] = useState<ProfileTabType>("content");
+    const { user, loading, refreshUser, logout } = useUser();
+    const [searchParams] = useSearchParams();
+    const initialTab = searchParams.get('tab') as ProfileTabType || "content";
+    const [activeTab, setActiveTab] = useState<ProfileTabType>(initialTab);
+
+    // Sync state if url changes 
+    useEffect(() => {
+        const tab = searchParams.get('tab') as ProfileTabType;
+        if (tab) setActiveTab(tab);
+    }, [searchParams]);
 
     // Menu & Sheet State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,6 +36,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     const [newId, setNewId] = useState("");
     const [savingId, setSavingId] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const [isTasteSheetOpen, setIsTasteSheetOpen] = useState(false);
 
 
     // Content State
@@ -79,7 +89,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     const handleLogout = () => {
         if (window.confirm("Are you sure you want to logout?")) {
-            localStorage.removeItem("mimy_user_id");
+            logout();
             navigate('/login');
         }
     };
@@ -279,7 +289,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                 )}
             >
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-bold">Profile</h1>
+                    <h1 className="text-2xl font-bold">@{user.account_id}</h1>
                     <div className="relative">
                         <Button
                             variant="ghost"
@@ -339,14 +349,11 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                     <div className="flex justify-between items-start mb-6">
                         {/* Left: Info */}
                         <div className="flex-1 pr-4 flex flex-col min-w-0">
-                            {/* Name + Handle */}
+                            {/* Name */}
                             <div className="flex items-baseline gap-2 mb-1 min-w-0">
                                 <h1 className="text-2xl font-bold truncate">
                                     {user.nickname || "No Name"}
                                 </h1>
-                                <span className="text-muted-foreground text-sm shrink-0">
-                                    @{user.account_id}
-                                </span>
                             </div>
 
                             {/* Stats */}
@@ -401,8 +408,8 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                     {/* Taste Cluster Card */}
                     {user.cluster_name && (
                         <div
-                            className="mt-2 mb-2 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer"
-                            onClick={() => navigate('/quiz/result', { state: { result: { clusterData: { cluster_name: user.cluster_name, cluster_tagline: user.cluster_tagline } } } })}
+                            className="mt-2 mb-2 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+                            onClick={() => setIsTasteSheetOpen(true)}
                         >
                             <div className="flex items-center gap-4">
                                 <div>
@@ -415,8 +422,8 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                 </div>
 
                 {/* Tabs Static Header (In Flow) */}
-                <div className="bg-background py-2">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-6">
+                <div className="bg-background border-b border-border/50 sticky top-0 z-10">
+                    <div className="flex w-full px-0">
                         <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
                         <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
                         <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
@@ -432,6 +439,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                                 <ContentCard
                                     key={content.id}
                                     user={{
+                                        id: user.id,
                                         nickname: user.nickname || "User",
                                         account_id: user.account_id,
                                         profile_image: user.profile_image
@@ -542,6 +550,12 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                     </div>
                 </>
             )}
+
+            <TasteProfileSheet
+                isOpen={isTasteSheetOpen}
+                onClose={() => setIsTasteSheetOpen(false)}
+                data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
+            />
         </div>
     );
 };
@@ -549,11 +563,14 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap ${active
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+        className={`flex-1 py-3 text-sm font-medium transition-all relative ${active
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground/80"
             }`}
     >
         {label}
+        {active && (
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />
+        )}
     </button>
 );

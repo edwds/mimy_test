@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { API_BASE_URL } from '@/lib/api';
 
+import { useUser } from '@/context/UserContext';
+
 export const LoginPage = () => {
     const navigate = useNavigate();
+    const { login: contextLogin } = useUser();
 
     // Mock login success
     const login = useGoogleLogin({
@@ -20,7 +23,12 @@ export const LoginPage = () => {
 
                 if (response.ok) {
                     const { user, isNew } = await response.json();
-                    localStorage.setItem("mimy_user_id", user.id.toString());
+                    if (!isNew) {
+                        // Only fully login if not new (if new, we wait for registration?)
+                        // Actually, we store ID either way for registration steps.
+                    }
+
+                    await contextLogin(user.id.toString());
 
                     if (isNew) {
                         navigate('/register/phone');

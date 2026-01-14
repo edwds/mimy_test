@@ -18,6 +18,7 @@ import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
+import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { UserProvider } from '@/context/UserContext';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -79,6 +80,7 @@ function App() {
                             <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
+                            <Route path="/user/:userId" element={<ProtectedRoute><UserProfileScreen /></ProtectedRoute>} />
                         </Routes>
                     )}
                 </BrowserRouter>

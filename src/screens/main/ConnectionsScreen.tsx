@@ -72,8 +72,12 @@ export const ConnectionsScreen = () => {
                 ) : (
                     <div className="space-y-4">
                         {users.map(u => (
-                            <div key={u.id} className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
+                            <div
+                                key={u.id}
+                                className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
+                                onClick={() => navigate(`/user/${u.id}`)}
+                            >
+                                <div className="w-10 h-10 rounded-full bg-muted overflow-hidden border border-border">
                                     {u.profile_image ? (
                                         <img src={u.profile_image} alt={u.nickname} className="w-full h-full object-cover" />
                                     ) : (

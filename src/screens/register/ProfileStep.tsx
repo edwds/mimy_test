@@ -6,8 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { resizeImage } from '@/lib/image';
 import { API_BASE_URL } from '@/lib/api';
 
+import { useUser } from '@/context/UserContext';
+
 export const ProfileStep = () => {
     const navigate = useNavigate();
+    const { refreshUser } = useUser();
     const [step, setStep] = useState(0); // 0: Handle, 1: Nickname, 2: Photo
     const [handle, setHandle] = useState("");
     const [nickname, setNickname] = useState("");
@@ -149,6 +152,7 @@ export const ProfileStep = () => {
 
                 if (response.ok) {
                     localStorage.setItem("mimy_user", "true");
+                    await refreshUser(); // Update context with new profile info
                     // Clear temp reg data
                     localStorage.removeItem("mimy_reg_birthyear");
                     localStorage.removeItem("mimy_reg_phone");

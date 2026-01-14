@@ -24,6 +24,7 @@ router.get("/feed", async (req, res) => {
             review_prop: content.review_prop,
             keyword: content.keyword,
             user: {
+                id: users.id,
                 nickname: users.nickname,
                 account_id: users.account_id,
                 profile_image: users.profile_image
@@ -128,7 +129,7 @@ router.get("/feed", async (req, res) => {
 
             return {
                 id: item.id,
-                user: item.user || { nickname: 'Unknown', account_id: 'unknown', profile_image: null },
+                user: item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null },
                 text: item.text,
                 images: item.img || [],
                 created_at: item.created_at,

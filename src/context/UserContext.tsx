@@ -16,12 +16,15 @@ export interface User {
         follower_count: number;
         following_count: number;
     };
+    taste_result?: any;
 }
 
 interface UserContextType {
     user: User | null;
     loading: boolean;
     refreshUser: () => Promise<void>;
+    login: (userId: string) => Promise<void>;
+    logout: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -53,8 +56,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         await fetchUserData();
     };
 
+    const login = async (userId: string) => {
+        localStorage.setItem("mimy_user_id", userId);
+        await fetchUserData();
+    };
+
+    const logout = () => {
+        localStorage.removeItem("mimy_user_id");
+        setUser(null);
+    };
+
     return (
-        <UserContext.Provider value={{ user, loading, refreshUser }}>
+        <UserContext.Provider value={{ user, loading, refreshUser, login, logout }}>
             {children}
         </UserContext.Provider>
     );

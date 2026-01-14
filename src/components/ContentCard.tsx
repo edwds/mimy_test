@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
 
@@ -76,6 +77,7 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
 
 export interface ContentCardProps {
     user: {
+        id?: number;
         nickname: string;
         account_id: string;
         profile_image: string | null;
@@ -141,6 +143,18 @@ export const ContentCard = ({
     onTogglePoiBookmark,
     onReservePoi
 }: ContentCardProps) => {
+    const navigate = useNavigate();
+
+    const handleUserClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const targetId = user.account_id || (user as any).id;
+        if (targetId) {
+            navigate(`/user/${targetId}`);
+        } else {
+            console.warn("User ID/Account ID missing in ContentCard");
+        }
+    };
+
     // Display shop info (prefer POI, fallback to review_prop)
     const shopName = content.poi?.shop_name ?? content.review_prop?.shop_name;
     const shopAddress = content.poi?.shop_address ?? content.review_prop?.shop_address;
@@ -158,7 +172,10 @@ export const ContentCard = ({
         <div className="bg-white pb-6 mb-6">
             {/* Header */}
             <div className="flex items-center px-5 py-4 gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0">
+                <div
+                    className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0 cursor-pointer active:opacity-80"
+                    onClick={handleUserClick}
+                >
                     {user.profile_image ? (
                         <img src={user.profile_image} alt={user.nickname} className="w-full h-full object-cover" />
                     ) : (
@@ -166,7 +183,7 @@ export const ContentCard = ({
                     )}
                 </div>
 
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col min-w-0 cursor-pointer active:opacity-80" onClick={handleUserClick}>
                     <div className="flex items-center gap-1 min-w-0">
                         <span className="font-bold text-[15px] text-gray-900 leading-tight truncate">
                             {user.nickname}

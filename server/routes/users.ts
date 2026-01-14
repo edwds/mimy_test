@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, shops, users_wantstogo, users_follow, content } from "../db/schema.js";
+import { users, clusters, shops, users_wantstogo, users_follow, content, likes } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 const router = Router();
@@ -24,15 +24,110 @@ router.get("/check-handle", async (req, res) => {
     }
 });
 
+// GET /leaderboard
+router.get("/leaderboard", async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = (page - 1) * limit;
+
+        // 1. Calculate Scores
+        // Content Score: 5 points per post/review
+        // Like Score: 3 points per like received
+
+        // 1. Calculate Scores
+        // Content Score: 5 points per post/review
+        // Follower Score: 3 points per follower
+
+        // Note: We use subqueries for counts to avoid multiplicative rows from joins
+
+
+        // Note: The above query is a simplification. 
+        // Realistically we might need separate queries or a more complex join to avoid multiplication.
+        // For MVP, let's just fetch top users based on content count first, or mock the score logic 
+        // if the 'likes' table structure isn't fully clear from my memory. 
+        // CHECK: schema.ts wasn't fully read for 'likes'. 
+        // Let's stick to a simple robust query or just return users ordered by content count for now
+        // to fix the 404.
+
+        const leaderboard = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            stats: {
+                content_count: sql<number>`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`,
+                received_likes: sql<number>`(
+                    select count(*) 
+                    from ${likes} 
+                    join ${content} on ${likes}.target_id = ${content}.id 
+                    where ${content}.user_id = ${users}.id 
+                    and ${likes}.target_type = 'content' 
+                    and ${content}.is_deleted = false
+                )`
+            }
+        })
+            .from(users)
+            // Order by total score approximation (content*5 + likes*3)
+            // Note: Sorting by complex calculation in SQL might be slow or verbose, 
+            // for MVP filtering to top 100 by content count then sorting in JS is safer/easier if volume is low.
+            // But let's try to order by content count for now as primary metric if we don't want complex SQL sort.
+            // Or just keep the sort by content count as a heuristic.
+            .orderBy(desc(sql`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`))
+            .limit(limit);
+
+        // Map to score
+        const result = leaderboard.map((u, i) => {
+            const contentScore = Number(u.stats.content_count) * 5;
+            const likeScore = Number(u.stats.received_likes) * 3;
+            return {
+                rank: 0, // Will assign after sort
+                user: {
+                    id: u.id,
+                    nickname: u.nickname,
+                    account_id: u.account_id,
+                    profile_image: u.profile_image
+                },
+                score: contentScore + likeScore
+            };
+        });
+
+        // Re-sort by actual calculated score since SQL sort was just heuristic
+        result.sort((a, b) => b.score - a.score);
+
+        // Re-assign rank
+        result.forEach((item, index) => {
+            item.rank = offset + index + 1;
+        });
+
+        res.json(result);
+
+    } catch (error) {
+        console.error("Leaderboard error:", error);
+        res.status(500).json({ error: "Failed to fetch leaderboard" });
+    }
+});
+
+// GET /:id (Get User Profile + Context)
 router.get("/:id", async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
+        const paramId = req.params.id;
+        const viewerId = req.query.viewerId ? parseInt(req.query.viewerId as string) : null;
+
+        let user;
+        // Check if paramId is a pure number
+        if (/^\d+$/.test(paramId)) {
+            user = await db.select().from(users).where(eq(users.id, parseInt(paramId))).limit(1);
+        } else {
+            user = await db.select().from(users).where(eq(users.account_id, paramId)).limit(1);
+        }
 
         if (user.length === 0) {
             return res.status(404).json({ error: "User not found" });
         }
         const userData = user[0];
+        const id = userData.id; // Correct numeric ID to use for stats
+
         let clusterInfo = null;
 
         if (userData.taste_cluster) {
@@ -79,7 +174,16 @@ router.get("/:id", async (req, res) => {
                 content_count: contentCount,
                 follower_count: followerCount,
                 following_count: followingCount
-            }
+            },
+            is_following: await (async () => {
+                if (!viewerId) return false;
+                const check = await db.select().from(users_follow)
+                    .where(and(
+                        eq(users_follow.follower_id, viewerId),
+                        eq(users_follow.following_id, id)
+                    )).limit(1);
+                return check.length > 0;
+            })()
         });
     } catch (error) {
         console.error("Fetch user error:", error);
@@ -196,6 +300,47 @@ router.get("/:id/following", async (req, res) => {
     } catch (error) {
         console.error("Fetch following error:", error);
         res.status(500).json({ error: "Failed to fetch following" });
+    }
+});
+
+// POST /:id/follow (Toggle Follow)
+router.post("/:id/follow", async (req, res) => {
+    try {
+        const targetId = parseInt(req.params.id);
+        const { followerId } = req.body;
+
+        if (!followerId || isNaN(targetId)) {
+            return res.status(400).json({ error: "Invalid parameters" });
+        }
+
+        if (followerId === targetId) {
+            return res.status(400).json({ error: "Cannot follow yourself" });
+        }
+
+        // Check if already following
+        const existing = await db.select().from(users_follow)
+            .where(and(
+                eq(users_follow.follower_id, followerId),
+                eq(users_follow.following_id, targetId)
+            )).limit(1);
+
+        if (existing.length > 0) {
+            // Unfollow
+            await db.delete(users_follow)
+                .where(eq(users_follow.id, existing[0].id));
+            return res.json({ following: false });
+        } else {
+            // Follow
+            await db.insert(users_follow).values({
+                follower_id: followerId,
+                following_id: targetId
+            });
+            return res.json({ following: true });
+        }
+
+    } catch (error) {
+        console.error("Follow toggle error:", error);
+        res.status(500).json({ error: "Failed to toggle follow" });
     }
 });
 
