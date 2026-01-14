@@ -94,8 +94,8 @@ export const ImportScreen = () => {
                             <textarea
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
-                                placeholder="예: https://naver.me/..."
-                                className="w-full pl-10 pr-4 py-3 bg-muted/30 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[100px] text-sm resize-none"
+                                placeholder="복사한 주소를 여기에 붙여넣기 해주세요"
+                                className="w-full pl-10 pr-4 py-3 bg-muted/30 border border-input rounded-xl focus:outline-none focus:ring-primary/20 text-sm resize-none"
                             />
                         </div>
                     </div>

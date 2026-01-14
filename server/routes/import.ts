@@ -5,11 +5,33 @@ import { and, sql } from 'drizzle-orm';
 
 const router = express.Router();
 
-const chunk = <T,>(arr: T[], size: number) => {
-    const out: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-    return out;
-};
+/**
+ * Concurrency utility to process items in parallel with a limit
+ */
+async function mapLimit<T, R>(
+    items: T[],
+    limit: number,
+    iterator: (item: T) => Promise<R>
+): Promise<R[]> {
+    const results: Promise<R>[] = [];
+    const executing: Promise<void>[] = [];
+
+    for (const item of items) {
+        const p = Promise.resolve().then(() => iterator(item));
+        results.push(p);
+
+        const e = p.then(() => {
+            executing.splice(executing.indexOf(e), 1);
+        });
+        executing.push(e);
+
+        if (executing.length >= limit) {
+            await Promise.race(executing);
+        }
+    }
+
+    return Promise.all(results);
+}
 
 const normalizeName = (s: string) =>
     (s || '')
@@ -24,19 +46,35 @@ function withTimeout(ms: number) {
 }
 
 router.post('/naver', async (req, res) => {
+    // Setup SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const sendEvent = (type: string, data: any) => {
+        res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const sendProgress = (step: string, percent: number, message: string) => {
+        sendEvent('progress', { step, percent, message });
+    };
+
     try {
         const { url, userId } = req.body;
 
         if (!url || !userId) {
-            return res.status(400).json({ error: 'URL and userId are required' });
+            sendEvent('error', { message: 'URL and userId are required' });
+            return res.end();
         }
 
         const uid = Number(userId);
         if (!Number.isInteger(uid) || uid <= 0) {
-            return res.status(400).json({ error: 'Invalid userId' });
+            sendEvent('error', { message: 'Invalid userId' });
+            return res.end();
         }
 
         console.log(`[Import] Processing URL: ${url} for User: ${uid}`);
+        sendProgress('resolve', 5, '단축 URL 분석 중...');
 
         // 1) Resolve short URL (naver.me)
         let targetUrl = url;
@@ -52,10 +90,13 @@ router.post('/naver', async (req, res) => {
             }
         }
 
+        sendProgress('fetch', 10, '네이버 지도 데이터 요청 중...');
+
         // 2) Extract share/folder ID
         const match = targetUrl.match(/folder\/([a-zA-Z0-9_-]+)/);
         if (!match) {
-            return res.status(400).json({ error: 'Invalid Naver Map URL format. Could not find folder ID.' });
+            sendEvent('error', { message: '유효하지 않은 네이버 지도 URL입니다. (폴더 ID 미확인)' });
+            return res.end();
         }
         const shareId = match[1];
 
@@ -71,10 +112,11 @@ router.post('/naver', async (req, res) => {
         t2.clear();
 
         if (!apiRes.ok) {
-            return res.status(502).json({ error: 'Failed to fetch data from Naver' });
+            sendEvent('error', { message: '네이버 데이터 가져오기에 실패했습니다. (API Error)' });
+            return res.end();
         }
 
-        const data = await apiRes.json();
+        const data: any = await apiRes.json();
 
         let items: any[] = [];
         if (data.bookmarkList && Array.isArray(data.bookmarkList)) items = data.bookmarkList;
@@ -88,142 +130,103 @@ router.post('/naver', async (req, res) => {
         const totalItems = validItems.length;
 
         console.log(`[Import] Found ${totalItems} valid items (from ${items.length} total)`);
+        sendProgress('count', 15, `${totalItems}개의 장소를 찾았습니다. 분석을 시작합니다...`);
 
-        // ---- DB 좌표 범위(디버그): DB에 좌표가 “정상 위경도 범위”인지 바로 확인
-        try {
-            const bounds = await db
-                .select({
-                    minLat: sql<number>`MIN(${shops.lat})`,
-                    maxLat: sql<number>`MAX(${shops.lat})`,
-                    minLon: sql<number>`MIN(${shops.lon})`,
-                    maxLon: sql<number>`MAX(${shops.lon})`,
-                })
-                .from(shops);
-            console.log('[Import] shops bounds:', bounds?.[0]);
-        } catch (e) {
-            console.log('[Import] bounds query skipped:', e);
-        }
+        // 4) Process Items in Parallel
+        const CONCURRENCY = 8;
+        const latRange = 0.0015;
+        const lonRange = 0.0015;
 
-        // 4) Batch process (50개씩)
-        const BATCH_SIZE = 50;
-        const latRange = 0.002;
-        const lonRange = 0.002;
-
-        let importedCount = 0;
-        let matchedCount = 0;
+        // Stats to track
         let candidateHitCount = 0;
+        let matchedCount = 0;
+        let importedCount = 0;
+        let processedCount = 0;
 
-        const batches = chunk(validItems, BATCH_SIZE);
+        await mapLimit(validItems, CONCURRENCY, async (item: any) => {
+            const name = item?.name || '';
+            const px = item?.px;
+            const py = item?.py;
 
-        for (let b = 0; b < batches.length; b++) {
-            const batch = batches[b];
+            processedCount++;
+            // Update progress every 5 items or so to avoid flooding
+            if (processedCount % 5 === 0 || processedCount === totalItems) {
+                const percent = 15 + Math.floor((processedCount / totalItems) * 80); // 15% -> 95%
+                sendProgress('processing', percent, `장소 분석 및 저장 중... (${processedCount}/${totalItems})`);
+            }
 
-            console.log(`[Import] Batch ${b + 1}/${batches.length} (items: ${batch.length})`);
+            if (px == null || py == null) return;
 
-            // batch는 순차, batch 내부는 직렬(안전) — 필요하면 아래를 Promise.all로 병렬 제한 가능
-            for (let i = 0; i < batch.length; i++) {
-                const item = batch[i];
-                const name = item?.name || '';
-                const px = item?.px;
-                const py = item?.py;
+            const lon = Number(px);
+            const lat = Number(py);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-                if (px == null || py == null) continue;
+            // 4-1) Candidate Search
+            const candidates = await db
+                .select({
+                    id: shops.id,
+                    name: shops.name,
+                    lat: shops.lat,
+                    lon: shops.lon,
+                })
+                .from(shops)
+                .where(
+                    and(
+                        sql`${shops.lat} BETWEEN ${lat - latRange} AND ${lat + latRange}`,
+                        sql`${shops.lon} BETWEEN ${lon - lonRange} AND ${lon + lonRange}`
+                    )
+                )
+                .limit(40);
 
-                // px=lon, py=lat 가정
-                const lon = Number(px);
-                const lat = Number(py);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+            if (candidates.length > 0) {
+                candidateHitCount++;
 
-                // 1) 정상 케이스 후보 탐색
-                let candidates = await db
-                    .select()
-                    .from(shops)
-                    .where(
-                        and(
-                            sql`${shops.lat} BETWEEN ${lat - latRange} AND ${lat + latRange}`,
-                            sql`${shops.lon} BETWEEN ${lon - lonRange} AND ${lon + lonRange}`
-                        )
-                    );
+                // 4-2) Name Matching
+                const n = normalizeName(name);
+                const matched = candidates.find((s) => {
+                    const sn = normalizeName(s.name || '');
+                    if (!sn || !n) return false;
+                    return sn.includes(n) || n.includes(sn);
+                });
 
-                // 2) 후보가 0이면 “DB에 lat/lon이 뒤집혀 저장된 케이스” fallback (매우 흔함)
-                if (candidates.length === 0) {
-                    const swapped = await db
-                        .select()
-                        .from(shops)
-                        .where(
-                            and(
-                                sql`${shops.lat} BETWEEN ${lon - latRange} AND ${lon + latRange}`, // swap
-                                sql`${shops.lon} BETWEEN ${lat - lonRange} AND ${lat + lonRange}`
-                            )
-                        );
-                    candidates = swapped;
-                }
-
-                if (candidates.length > 0) candidateHitCount++;
-
-                // 이름 매칭
-                let matchedShop: any = null;
-                if (candidates.length > 0) {
-                    const n = normalizeName(name);
-
-                    matchedShop = candidates.find((s: any) => {
-                        const sn = normalizeName(s?.name || '');
-                        if (!sn || !n) return false;
-                        return sn.includes(n) || n.includes(sn);
-                    });
-
-                    // (옵션) 이름 매칭 실패가 너무 많으면 “가장 가까운 1개”로 내려가는 fallback도 가능
-                    // 지금은 안전하게 이름 매칭만 유지.
-                }
-
-                // 디버그: 처음 몇 개만 상세 로그
-                if (b === 0 && i < 3) {
-                    console.log('[Import][Sample]', {
-                        name,
-                        lat,
-                        lon,
-                        candidates: candidates.length,
-                        matched: matchedShop ? { id: matchedShop.id, name: matchedShop.name } : null,
-                    });
-                }
-
-                if (!matchedShop) continue;
-                matchedCount++;
-
-                // Insert (중복 방지 전제: users_wantstogo에 (user_id, shop_id) UNIQUE 있어야 의미가 있음)
-                try {
-                    await db
-                        .insert(users_wantstogo)
-                        .values({
-                            user_id: uid,
-                            shop_id: matchedShop.id,
-                            channel: 'NAVER_IMPORT',
-                            visibility: true,
-                        })
-                        .onConflictDoNothing();
-
-                    importedCount++;
-                } catch (e) {
-                    // 중복/제약 등은 무시
+                if (matched) {
+                    matchedCount++;
+                    // 4-3) Insert
+                    try {
+                        await db
+                            .insert(users_wantstogo)
+                            .values({
+                                user_id: uid,
+                                shop_id: matched.id,
+                                channel: 'NAVER_IMPORT',
+                                visibility: true,
+                            })
+                            .onConflictDoNothing();
+                        importedCount++;
+                    } catch (e) {
+                        // ignore
+                    }
                 }
             }
-        }
+        });
 
         console.log('[Import] stats:', { totalItems, candidateHitCount, matchedCount, importedCount });
 
-        return res.json({
+        sendProgress('complete', 100, '완료!');
+        sendEvent('complete', {
             success: true,
             totalFound: totalItems,
             importedCount,
-            debug: {
-                candidateHitCount,
-                matchedCount,
-            },
+            debug: { candidateHitCount, matchedCount },
             message: `${totalItems}개 중 ${importedCount}개를 가져왔습니다.`,
         });
+
+        res.end();
+
     } catch (error) {
         console.error('Import Error:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        sendEvent('error', { message: '알 수 없는 서버 에러가 발생했습니다.' });
+        res.end();
     }
 });
 
