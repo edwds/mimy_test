@@ -20,6 +20,14 @@ import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { UserProvider } from '@/context/UserContext';
 
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+    const isLoggedIn = !!localStorage.getItem("mimy_user_id");
+    if (!isLoggedIn) {
+        return <Navigate to="/start" replace />;
+    }
+    return children;
+};
+
 function App() {
     const isLoggedIn = !!localStorage.getItem("mimy_user_id");
     const [loading, setLoading] = useState(!isLoggedIn);
@@ -61,15 +69,16 @@ function App() {
                             <Route path="/register/profile" element={<ProfileStep />} />
 
                             {/* Quiz Flow */}
-                            <Route path="/quiz/intro" element={<QuizIntro />} />
-                            <Route path="/quiz/test" element={<QuizScreen />} />
-                            <Route path="/quiz/result" element={<QuizResult />} />
+                            {/* Protected Routes */}
+                            <Route path="/quiz/intro" element={<ProtectedRoute><QuizIntro /></ProtectedRoute>} />
+                            <Route path="/quiz/test" element={<ProtectedRoute><QuizScreen /></ProtectedRoute>} />
+                            <Route path="/quiz/result" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
 
-                            <Route path="/write" element={<WriteFlow />} />
-                            <Route path="/main/*" element={<MainTab />} />
-                            <Route path="/profile/edit" element={<EditProfileScreen />} />
-                            <Route path="/profile/import" element={<ImportScreen />} />
-                            <Route path="/profile/connections" element={<ConnectionsScreen />} />
+                            <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
+                            <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
+                            <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
+                            <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
+                            <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
                         </Routes>
                     )}
                 </BrowserRouter>
