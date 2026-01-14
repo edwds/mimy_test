@@ -5,7 +5,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 import { useTranslation } from 'react-i18next';
 
-export default function ImportScreen() {
+export function ImportScreen() {
     const navigate = useNavigate();
     const { user } = useUser();
     const { t } = useTranslation();
