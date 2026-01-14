@@ -1,18 +1,21 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
+import { useTranslation } from 'react-i18next';
 
-export const ImportScreen = () => {
+export default function ImportScreen() {
     const navigate = useNavigate();
     const { user } = useUser();
+    const { t } = useTranslation();
 
     // State
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [result, setResult] = useState<{ total: number; imported: number; message: string } | null>(null);
+    const [progress, setProgress] = useState(0);
+    const [progressStatus, setProgressStatus] = useState({ message: '연결 중...' });
+    const [result, setResult] = useState<{ totalFound: number; importedCount: number; message: string; } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleImport = async () => {
@@ -22,14 +25,20 @@ export const ImportScreen = () => {
             return;
         }
 
-        // Clean URL (remove text prefix if pasted)
-        // e.g. "[Naver Map] ... https://naver.me/..."
+        // Clean URL
         const urlMatch = url.match(/(https?:\/\/[^\s]+)/);
         const cleanUrl = urlMatch ? urlMatch[0] : url;
+
+        if (!cleanUrl.includes('naver.me') && !cleanUrl.includes('map.naver.com')) {
+            setError('네이버 지도 공유 URL을 입력해주세요.');
+            return;
+        }
 
         setIsLoading(true);
         setError(null);
         setResult(null);
+        setProgress(0);
+        setProgressStatus({ message: '서버 연결 중...' });
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/import/naver`, {
@@ -41,30 +50,138 @@ export const ImportScreen = () => {
                 })
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                setResult({
-                    total: data.totalFound,
-                    imported: data.importedCount,
-                    message: data.message
-                });
-            } else {
-                setError(data.error || "가져오기에 실패했습니다.");
+            if (!response.ok && response.status !== 200) {
+                // Try to parse error message
+                const text = await response.text();
+                try {
+                    const json = JSON.parse(text);
+                    throw new Error(json.error || json.message || 'Server Error');
+                } catch (e) {
+                    throw new Error('Server Error: ' + response.status);
+                }
             }
 
-        } catch (e) {
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('No reader available');
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
+                const lines = buffer.split('\n\n');
+                // The last element is either empty or a partial chunk
+                // If it ends with \n\n, the last elem is empty.
+                // If not, we keep the last elem in buffer
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+
+                    // SSE format: "event: ...\ndata: ..."
+                    const eventMatch = line.match(/event: (.*)\ndata: (.*)/s);
+                    if (eventMatch) {
+                        const type = eventMatch[1].trim();
+                        const dataStr = eventMatch[2].trim();
+
+                        try {
+                            const data = JSON.parse(dataStr);
+
+                            if (type === 'progress') {
+                                setProgress(data.percent);
+                                setProgressStatus({ message: data.message });
+                            } else if (type === 'complete') {
+                                setResult({
+                                    totalFound: data.totalFound,
+                                    importedCount: data.importedCount,
+                                    message: data.message
+                                });
+                            } else if (type === 'error') {
+                                setError(data.message);
+                                setIsLoading(false);
+                                return; // Stop processing
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse SSE data', e);
+                        }
+                    }
+                }
+            }
+
+        } catch (e: any) {
             console.error(e);
-            setError("네트워크 오류가 발생했습니다.");
+            setError(e.message || "네트워크 오류가 발생했습니다.");
         } finally {
             setIsLoading(false);
         }
     };
 
+    const handleUrlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const val = e.target.value;
+        const match = val.match(/(https?:\/\/[^\s]+)/);
+        if (match && val.length > match[0].length) {
+            setUrl(match[0]);
+        } else {
+            setUrl(val);
+        }
+    };
+
+    if (result) {
+        return (
+            <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
+                {/* Header */}
+                <div className="flex items-center p-4 border-b border-white/5">
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-foreground">
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <h1 className="text-xl font-bold ml-2">가져오기 완료</h1>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
+                        <CheckCircle2 className="w-8 h-8 text-green-500" />
+                    </div>
+
+                    <h2 className="text-2xl font-bold mb-2">가져오기 성공!</h2>
+                    <p className="text-gray-400 mb-8">
+                        {result.message}
+                    </p>
+
+                    <div className="w-full max-w-sm bg-surface p-4 rounded-xl mb-8">
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">발견된 장소</span>
+                            <span className="font-medium text-foreground">{result.totalFound}개</span>
+                        </div>
+                        <div className="w-full h-[1px] bg-white/10 my-3" />
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">저장된 장소</span>
+                            <span className="font-bold text-primary">{result.importedCount}개</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-4 text-left">
+                            * 이미 저장된 장소나, 미미에 등록되지 않은 장소는 제외되었습니다.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => navigate('/main/profile')}
+                        className="w-full max-w-sm py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
+                    >
+                        확인하러 가기
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center p-4 border-b border-border">
+            <div className="flex items-center p-4 border-b border-white/5">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-foreground">
                     <ArrowLeft className="w-6 h-6" />
                 </button>
@@ -73,7 +190,6 @@ export const ImportScreen = () => {
 
             {/* Content */}
             <div className="flex-1 p-6">
-
                 <div className="space-y-6">
                     {/* Intro */}
                     <div>
@@ -88,17 +204,33 @@ export const ImportScreen = () => {
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-foreground">공유 URL</label>
                         <div className="relative">
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            <div className="absolute left-3 top-3 text-muted-foreground">
                                 <LinkIcon className="w-5 h-5" />
                             </div>
                             <textarea
                                 value={url}
-                                onChange={(e) => setUrl(e.target.value)}
+                                onChange={handleUrlChange}
                                 placeholder="복사한 주소를 여기에 붙여넣기 해주세요"
                                 className="w-full pl-10 pr-4 py-3 bg-muted/30 border border-input rounded-xl focus:outline-none focus:ring-primary/20 text-sm resize-none"
                             />
                         </div>
                     </div>
+
+                    {/* Progress Bar */}
+                    {isLoading && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{progressStatus.message}</span>
+                                <span>{progress}%</span>
+                            </div>
+                            <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="bg-primary h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Action Button */}
                     <button
@@ -116,25 +248,6 @@ export const ImportScreen = () => {
                         )}
                     </button>
 
-                    {/* Result Card */}
-                    {result && (
-                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center animate-in fade-in zoom-in-95">
-                            <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <CheckCircle2 className="w-6 h-6 text-green-600" />
-                            </div>
-                            <h3 className="font-bold text-lg text-green-700 mb-1">완료되었습니다!</h3>
-                            <p className="text-green-600/80 text-sm mb-4">
-                                {result.message}
-                            </p>
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="text-sm font-medium text-green-700 underline"
-                            >
-                                확인하러 가기
-                            </button>
-                        </div>
-                    )}
-
                     {/* Error Card */}
                     {error && (
                         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-start gap-3 animate-in fade-in zoom-in-95">
@@ -149,4 +262,4 @@ export const ImportScreen = () => {
             </div>
         </div>
     );
-};
+}
