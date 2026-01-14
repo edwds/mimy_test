@@ -1,8 +1,8 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { content, users_ranking, shops, users, likes, comments } from "../db/schema.js";
-import { eq, desc, inArray, and, gt, gte, ne, sql } from "drizzle-orm";
+import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters } from "../db/schema.js";
+import { eq, desc, and, sql, not, count, ilike, or, inArray, gt, gte, ne } from "drizzle-orm";
 
 const router = Router();
 
@@ -27,11 +27,17 @@ router.get("/feed", async (req, res) => {
                 id: users.id,
                 nickname: users.nickname,
                 account_id: users.account_id,
-                profile_image: users.profile_image
+                profile_image: users.profile_image,
+                cluster_name: clusters.name
             }
         })
             .from(content)
             .leftJoin(users, eq(content.user_id, users.id))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
+            .where(and(
+                eq(content.is_deleted, false),
+                eq(content.visibility, true)
+            ))
             .orderBy(desc(content.created_at))
             .limit(limit)
             .offset(offset);
@@ -52,7 +58,7 @@ router.get("/feed", async (req, res) => {
 
         // 3. Batch Fetch Shops, Rankings, VisitCounts
         const shopMap = new Map();
-        const rankMap = new Map<string, number>(); // key: `${userId}-${shopId}`
+        const rankMap = new Map<string, number>(); // key: `${ userId } -${ shopId } `
         // Refactored: visitCountMap removed, using contentVisitRankMap
         const contentVisitRankMap = new Map<number, number>(); // contentId -> Nth visit
 
@@ -70,7 +76,7 @@ router.get("/feed", async (req, res) => {
                     inArray(users_ranking.user_id, uIds),
                     inArray(users_ranking.shop_id, sIds)
                 ));
-            rankings.forEach(r => rankMap.set(`${r.user_id}-${r.shop_id}`, r.rank));
+            rankings.forEach(r => rankMap.set(`${r.user_id} -${r.shop_id} `, r.rank));
 
             // Visit Counts (Ordinal Logic: N-th visit)
             // 1. Fetch metadata for ALL reviews
@@ -94,7 +100,7 @@ router.get("/feed", async (req, res) => {
                     const sid = Number(p.shop_id);
                     // Only track if relevant
                     if (sIds.includes(sid)) {
-                        const key = `${r.user_id}-${sid}`;
+                        const key = `${r.user_id} -${sid} `;
                         const current = (userShopCounter.get(key) || 0) + 1;
                         userShopCounter.set(key, current);
                         contentVisitRankMap.set(r.id, current);
@@ -197,7 +203,7 @@ router.get("/feed", async (req, res) => {
             if (item.type === 'review' && enrichedProp?.shop_id) {
                 const sid = Number(enrichedProp.shop_id);
                 const shop = shopMap.get(sid);
-                const rank = rankMap.get(`${item.user_id}-${sid}`);
+                const rank = rankMap.get(`${item.user_id} -${sid} `);
                 // Use ordinal rank specific to this content item
                 const visitCount = contentVisitRankMap.get(item.id) || 1;
 
@@ -295,7 +301,9 @@ router.post("/ranking/apply", async (req, res) => {
                 .where(
                     and(
                         eq(content.user_id, user_id),
-                        eq(content.type, 'review')
+                        eq(content.type, 'review'),
+                        eq(content.is_deleted, false),
+                        eq(content.visibility, true)
                     )
                 )
                 .orderBy(desc(content.created_at))
@@ -439,9 +447,32 @@ router.get("/user/:userId", async (req, res) => {
             return res.status(400).json({ error: "Invalid user ID" });
         }
 
-        // 1. Fetch content
-        const userContent = await db.select().from(content)
-            .where(eq(content.user_id, userId))
+        // 1. Fetch content + User Info (for the content creator)
+        const userContent = await db.select({
+            id: content.id,
+            user_id: content.user_id,
+            type: content.type,
+            text: content.text,
+            img: content.img,
+            created_at: content.created_at,
+            review_prop: content.review_prop,
+            keyword: content.keyword,
+            user: {
+                id: users.id,
+                nickname: users.nickname,
+                account_id: users.account_id,
+                profile_image: users.profile_image,
+                cluster_name: clusters.name
+            }
+        })
+            .from(content)
+            .leftJoin(users, eq(content.user_id, users.id))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
+            .where(and(
+                eq(content.user_id, userId),
+                eq(content.is_deleted, false),
+                eq(content.visibility, true)
+            ))
             .orderBy(desc(content.created_at)) // Latest first
             .limit(20);
 
@@ -616,6 +647,7 @@ router.get("/user/:userId", async (req, res) => {
 
             return {
                 id: item.id,
+                user: item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null },
                 text: item.text,
                 images: item.img || [], // Assuming jsonb stores string[]
                 created_at: item.created_at,
@@ -639,6 +671,40 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // --- Likes & Comments Endpoints ---
+
+// DELETE /api/content/:id (Soft Delete Content)
+router.delete("/:id", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body;
+
+        if (!user_id || isNaN(contentId)) {
+            return res.status(400).json({ error: "Missing user_id or content ID" });
+        }
+
+        // Verify ownership (optional but recommended)
+        const contentItem = await db.select().from(content).where(eq(content.id, contentId)).limit(1);
+        if (contentItem.length === 0) {
+            return res.status(404).json({ error: "Content not found" });
+        }
+        if (contentItem[0].user_id !== user_id) {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        await db.update(content)
+            .set({
+                is_deleted: true,
+                visibility: false,
+                updated_at: new Date()
+            })
+            .where(eq(content.id, contentId));
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Delete content error:", error);
+        res.status(500).json({ error: "Failed to delete content" });
+    }
+});
 
 // POST /api/content/:id/like (Add Like)
 router.post("/:id/like", async (req, res) => {
@@ -705,11 +771,13 @@ router.get("/:id/comments", async (req, res) => {
             user: {
                 id: users.id,
                 nickname: users.nickname,
-                profile_image: users.profile_image
+                profile_image: users.profile_image,
+                cluster_name: clusters.name
             }
         })
             .from(comments)
             .leftJoin(users, eq(comments.user_id, users.id))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
             .where(and(eq(comments.content_id, contentId), eq(comments.is_deleted, false)))
             .orderBy(comments.created_at);
 

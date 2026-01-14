@@ -155,7 +155,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
                                             </button>
                                         )}
                                     </div>
-                                    <p className="text-sm text-foreground/90 leading-relaxed font-light">
+                                    <p className="text-sm text-foreground/90 leading-relaxed font-base">
                                         {comment.text}
                                     </p>
                                 </div>

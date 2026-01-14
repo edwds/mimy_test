@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
+import { Heart, Share, MessageSquare, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -84,6 +84,7 @@ export interface ContentCardProps {
         nickname: string;
         account_id: string;
         profile_image: string | null;
+        cluster_name?: string;
     };
     content: {
         id: number;
@@ -158,6 +159,8 @@ export const ContentCard = ({
     const [likeCount, setLikeCount] = useState(content.stats.likes);
     const [commentCount, setCommentCount] = useState(content.stats.comments);
     const [showComments, setShowComments] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [isDeleted, setIsDeleted] = useState(false);
 
     // Sync if prop changes (e.g. refetch)
     useEffect(() => {
@@ -207,6 +210,29 @@ export const ContentCard = ({
         }
     };
 
+    const handleDelete = async () => {
+        if (!currentUser || !window.confirm("정말 삭제하시겠습니까? (복구할 수 없습니다)")) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/content/${content.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUser.id })
+            });
+
+            if (response.ok) {
+                setIsDeleted(true);
+            } else {
+                alert("삭제 실패");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("오류 발생");
+        }
+    };
+
+    if (isDeleted) return null;
+
     // Display shop info (prefer POI, fallback to review_prop)
     const shopName = content.poi?.shop_name ?? content.review_prop?.shop_name;
     const shopAddress = content.poi?.shop_address ?? content.review_prop?.shop_address;
@@ -218,7 +244,7 @@ export const ContentCard = ({
 
     const contextText = shopName
         ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
-        : (content.type === 'post' ? 'Free Post' : null);
+        : (content.type === 'post' ? '자유 형식 게시물입니다.' : null);
 
     return (
         <div className="bg-white pb-6 mb-6">
@@ -236,13 +262,15 @@ export const ContentCard = ({
                 </div>
 
                 <div className="flex flex-col min-w-0 cursor-pointer active:opacity-80" onClick={handleUserClick}>
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                         <span className="font-bold text-[15px] text-gray-900 leading-tight truncate">
                             {user.nickname}
                         </span>
-                        <span className="text-[13px] text-gray-400 font-normal leading-tight truncate">
-                            @{user.account_id}
-                        </span>
+                        {user.cluster_name && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold">
+                                {user.cluster_name}
+                            </span>
+                        )}
                     </div>
 
                     {contextText && (
@@ -251,99 +279,132 @@ export const ContentCard = ({
                         </div>
                     )}
                 </div>
+
+                {/* More / Menu Button */}
+                {currentUser?.id === user.id && (
+                    <div className="relative ml-auto">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowMenu(!showMenu);
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                        >
+                            <MoreHorizontal size={20} />
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute right-0 top-full mt-1 w-24 bg-white rounded-lg shadow-lg border border-gray-100 z-10 py-1 overflow-hidden">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete();
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                    삭제하기
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Text Body */}
             {content.text && <ContentBody text={content.text} maxLines={10} />}
 
             {/* Image Scroll (Square) */}
-            {content.images && content.images.length > 0 && (
-                <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
-                    {content.images.map((img, idx) => (
-                        <div
-                            key={idx}
-                            className="flex-shrink-0 w-[240px] h-[240px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
-                        >
-                            <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
-                        </div>
-                    ))}
-                </div>
-            )}
+            {
+                content.images && content.images.length > 0 && (
+                    <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
+                        {content.images.map((img, idx) => (
+                            <div
+                                key={idx}
+                                className="flex-shrink-0 w-[240px] h-[240px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
+                            >
+                                <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+                            </div>
+                        ))}
+                    </div>
+                )
+            }
 
             {/* Shop Info Card */}
-            {shopName && (
-                <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative">
-                    {/* Image Wrapper with Badge */}
-                    <div className="relative flex-shrink-0">
-                        {typeof rank === 'number' && (
-                            <div className={cn(
-                                "absolute -top-1.5 -left-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[10px] font-bold border-2 border-white shadow-sm z-10 px-1",
-                                rank <= 3 ? "bg-yellow-400 text-white" : "bg-gray-400 text-white"
-                            )}>
-                                {rank}
+            {
+                shopName && (
+                    <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative">
+                        {/* Image Wrapper with Badge */}
+                        <div className="relative flex-shrink-0">
+                            {typeof rank === 'number' && (
+                                <div className={cn(
+                                    "absolute -top-1.5 -left-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[10px] font-bold border-2 border-white shadow-sm z-10 px-1",
+                                    rank <= 3 ? "bg-yellow-400 text-white" : "bg-gray-400 text-white"
+                                )}>
+                                    {rank}
+                                </div>
+                            )}
+                            <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden">
+                                {shopThumbnail ? (
+                                    <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
+                                )}
                             </div>
-                        )}
-                        <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden">
-                            {shopThumbnail ? (
-                                <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div className="font-bold text-[14px] text-gray-900 truncate">{shopName}</div>
-
-                            {/* Satisfaction after shop name */}
-                            {satisfaction && (
-                                <span
-                                    className={cn(
-                                        'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0',
-                                        satisfactionBadgeClass(satisfaction)
-                                    )}
-                                >
-                                    {satisfaction}
-                                </span>
-                            )}
                         </div>
 
-                        <div className="text-[12px] text-gray-500 truncate mt-0.5">
-                            {shopAddress || 'Location Info'}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="font-bold text-[14px] text-gray-900 truncate">{shopName}</div>
+
+                                {/* Satisfaction after shop name */}
+                                {satisfaction && (
+                                    <span
+                                        className={cn(
+                                            'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0',
+                                            satisfactionBadgeClass(satisfaction)
+                                        )}
+                                    >
+                                        {satisfaction}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="text-[12px] text-gray-500 truncate mt-0.5">
+                                {shopAddress || 'Location Info'}
+                            </div>
+                        </div>
+
+                        {/* Shop actions: Bookmark + Reserve */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onTogglePoiBookmark?.(content.id)}
+                                className={cn(
+                                    'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                                    isPoiBookmarked
+                                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                )}
+                                aria-label="Bookmark shop"
+                            >
+                                <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-white text-white')} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => onReservePoi?.(content.id)}
+                                className={cn(
+                                    'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                                    'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                )}
+                                aria-label="Reserve"
+                            >
+                                <Calendar size={16} />
+                            </button>
                         </div>
                     </div>
-
-                    {/* Shop actions: Bookmark + Reserve */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onTogglePoiBookmark?.(content.id)}
-                            className={cn(
-                                'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
-                                isPoiBookmarked
-                                    ? 'bg-gray-900 text-white hover:bg-gray-800'
-                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                            )}
-                            aria-label="Bookmark shop"
-                        >
-                            <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-white text-white')} />
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => onReservePoi?.(content.id)}
-                            className={cn(
-                                'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
-                                'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                            )}
-                            aria-label="Reserve"
-                        >
-                            <Calendar size={16} />
-                        </button>
-                    </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Free Post Badge (if no shop info) */}
 
@@ -388,7 +449,7 @@ export const ContentCard = ({
             {/* Comment Preview */}
             {
                 content.preview_comments && content.preview_comments.length > 0 && (
-                    <div className="px-5 pb-2 mt-2 space-y-1">
+                    <div className="px-5 pb-2 mt-2 space-y-2">
                         {content.stats.comments > content.preview_comments.length && (
                             <button
                                 onClick={handleOpenComments}
@@ -399,7 +460,7 @@ export const ContentCard = ({
                         )}
 
                         {content.preview_comments.map(comment => (
-                            <div key={comment.id} className="flex gap-2 text-[13px] leading-tight">
+                            <div key={comment.id} className="flex gap-2 text-sm leading-tight">
                                 <span className="font-bold text-gray-900 flex-shrink-0">
                                     {comment.user?.nickname || 'User'}
                                 </span>
