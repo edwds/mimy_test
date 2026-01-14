@@ -108,11 +108,23 @@ router.post('/naver', async (req, res) => {
         console.log(`[Import] Fetching API: ${apiUrl}`);
 
         const t2 = withTimeout(15000);
-        const apiRes = await fetch(apiUrl, { signal: t2.signal });
+        const apiRes = await fetch(apiUrl, {
+            signal: t2.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://map.naver.com/',
+                'Accept': 'application/json, text/plain, */*',
+                'Origin': 'https://map.naver.com',
+                'Host': 'pages.map.naver.com'
+            }
+        });
         t2.clear();
 
         if (!apiRes.ok) {
-            sendEvent('error', { message: '네이버 데이터 가져오기에 실패했습니다. (API Error)' });
+            console.error(`[Import] API Error: ${apiRes.status} ${apiRes.statusText}`);
+            const errBody = await apiRes.text();
+            console.error(`[Import] Error Body: ${errBody.slice(0, 500)}`);
+            sendEvent('error', { message: `네이버 데이터 가져오기에 실패했습니다. (Status: ${apiRes.status})` });
             return res.end();
         }
 
