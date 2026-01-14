@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar, PenLine } from 'lucide-react';
+import { Heart, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -130,8 +130,6 @@ export interface ContentCardProps {
     };
 
     // Optional handlers (wire later)
-    onToggleLike?: (contentId: number) => void;
-    onOpenComments?: (contentId: number) => void;
     onShare?: (contentId: number) => void;
 
     onTogglePoiBookmark?: (contentId: number) => void;
@@ -148,8 +146,6 @@ const satisfactionBadgeClass = (s: Satisfaction) => {
 export const ContentCard = ({
     user,
     content,
-    onToggleLike,
-    onOpenComments,
     onShare,
     onTogglePoiBookmark,
     onReservePoi
