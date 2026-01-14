@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
@@ -12,25 +12,30 @@ const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
 
 export const MainTab = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState('home');
-    const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
-    const [refreshTriggers, setRefreshTriggers] = useState({
-        home: 0,
-        discover: 0,
-        profile: 0,
-        ranking: 0 // placeholder
-    });
-    const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+
+    // Sync URL -> Tab
+    useEffect(() => {
+        const path = location.pathname;
+        if (path.includes('/main/profile')) setActiveTab('profile');
+        else if (path.includes('/main/ranking')) setActiveTab('ranking');
+        else if (path.includes('/main/discover')) setActiveTab('discover');
+        else setActiveTab('home');
+    }, [location.pathname]);
 
     const handleTabClick = (tab: string) => {
         if (activeTab === tab) {
-            // Double tap - trigger refresh
             setRefreshTriggers(prev => ({ ...prev, [tab]: Date.now() }));
         } else {
             const currentIndex = TAB_ORDER.indexOf(activeTab);
             const newIndex = TAB_ORDER.indexOf(tab);
             setSlideDirection(newIndex > currentIndex ? 'right' : 'left');
-            setActiveTab(tab);
+            // setActiveTab(tab); // Handled by useEffect
+
+            // Navigate to URL
+            if (tab === 'home') navigate('/main');
+            else navigate(`/main/${tab}`);
         }
     };
 
