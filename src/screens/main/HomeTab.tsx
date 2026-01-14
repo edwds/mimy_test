@@ -4,6 +4,7 @@ import { ContentCard } from '@/components/ContentCard';
 import { User as UserIcon, Bell, Search, PenLine } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 
+// Force deploy check
 interface Props {
     onWrite: () => void;
     refreshTrigger?: number;
@@ -239,6 +240,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                                             <UserIcon size={20} />
                                         </div>
                                     )}
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                    <PenLine size={14} />
                                 </div>
                             </div>
                         </div>
