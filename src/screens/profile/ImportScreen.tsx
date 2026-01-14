@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
-import { useTranslation } from 'react-i18next';
+
 
 export function ImportScreen() {
     const navigate = useNavigate();
     const { user } = useUser();
-    const { t } = useTranslation();
+
 
     // State
     const [url, setUrl] = useState('');
@@ -168,7 +168,7 @@ export function ImportScreen() {
                     </div>
 
                     <button
-                        onClick={() => navigate('/main/profile')}
+                        onClick={() => navigate('/main/profile?tab=saved')}
                         className="w-full max-w-sm py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
                     >
                         확인하러 가기

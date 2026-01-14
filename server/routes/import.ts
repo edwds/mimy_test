@@ -201,7 +201,13 @@ router.post('/naver', async (req, res) => {
                                 channel: 'NAVER_IMPORT',
                                 visibility: true,
                             })
-                            .onConflictDoNothing();
+                            .onConflictDoUpdate({
+                                target: [users_wantstogo.user_id, users_wantstogo.shop_id],
+                                set: {
+                                    is_deleted: false,
+                                    batch_created: new Date() // force update
+                                }
+                            });
                         importedCount++;
                     } catch (e) {
                         // ignore
