@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { content, users_ranking, shops, users } from "../db/schema.js";
+import { content, users_ranking, shops, users, likes, comments } from "../db/schema.js";
 import { eq, desc, inArray, and, gt, gte, ne, sql } from "drizzle-orm";
 
 const router = Router();
@@ -86,7 +86,6 @@ router.get("/feed", async (req, res) => {
                 ))
                 .orderBy(content.created_at); // ASC order to count 1st, 2nd...
 
-            const contentVisitRankMap = new Map<number, number>(); // contentId -> Nth
             const userShopCounter = new Map<string, number>();
 
             allRelevantReviews.forEach(r => {
@@ -100,6 +99,93 @@ router.get("/feed", async (req, res) => {
                         userShopCounter.set(key, current);
                         contentVisitRankMap.set(r.id, current);
                     }
+                }
+            });
+        }
+
+        // 3.5 Batch Fetch Likes & Comments Counts + IsLiked
+        const contentIds = feedItems.map(i => i.id);
+        const likeCountMap = new Map<number, number>();
+        const commentCountMap = new Map<number, number>();
+        const likedSet = new Set<number>();
+        const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+
+        if (contentIds.length > 0) {
+            // Like Counts
+            const likeCounts = await db.select({
+                target_id: likes.target_id,
+                count: sql<number>`count(*)`
+            })
+                .from(likes)
+                .where(and(
+                    eq(likes.target_type, 'content'),
+                    inArray(likes.target_id, contentIds)
+                ))
+                .groupBy(likes.target_id);
+
+            likeCounts.forEach(l => likeCountMap.set(l.target_id, Number(l.count)));
+
+            // Comment Counts
+            const commentCounts = await db.select({
+                content_id: comments.content_id,
+                count: sql<number>`count(*)`
+            })
+                .from(comments)
+                .where(and(
+                    inArray(comments.content_id, contentIds),
+                    eq(comments.is_deleted, false)
+                ))
+                .groupBy(comments.content_id);
+
+            commentCounts.forEach(c => commentCountMap.set(c.content_id, Number(c.count)));
+
+            // Is Liked
+            if (currentUserId && !isNaN(currentUserId)) {
+                const myLikes = await db.select({
+                    target_id: likes.target_id
+                })
+                    .from(likes)
+                    .where(and(
+                        eq(likes.target_type, 'content'),
+                        eq(likes.user_id, currentUserId),
+                        inArray(likes.target_id, contentIds)
+                    ));
+
+                myLikes.forEach(l => likedSet.add(l.target_id));
+            }
+        }
+
+        // 3.6 Batch Fetch Preview Comments (Latest 2)
+        const previewCommentsMap = new Map<number, any[]>();
+        if (contentIds.length > 0) {
+            // Fetch recent comments for these posts
+            // NOTE: Ideally use a window function, but for small batch size, fetching all recent valid comments is ok
+            // Optimally: we want "latest 2 per post".
+            // Strategy: Fetch all comments for these posts, order by created_at desc, then slice in JS.
+            // Limit total to safe amount (e.g., 100) per post or just fetch all if batch is small (20 posts).
+            const recentComments = await db.select({
+                id: comments.id,
+                content_id: comments.content_id,
+                text: comments.text,
+                created_at: comments.created_at,
+                user: {
+                    nickname: users.nickname,
+                    profile_image: users.profile_image
+                }
+            })
+                .from(comments)
+                .leftJoin(users, eq(comments.user_id, users.id))
+                .where(and(
+                    inArray(comments.content_id, contentIds),
+                    eq(comments.is_deleted, false)
+                ))
+                .orderBy(desc(comments.created_at));
+
+            recentComments.forEach(c => {
+                const list = previewCommentsMap.get(c.content_id) || [];
+                if (list.length < 2) {
+                    list.push(c);
+                    previewCommentsMap.set(c.content_id, list);
                 }
             });
         }
@@ -136,11 +222,12 @@ router.get("/feed", async (req, res) => {
                 type: item.type,
                 review_prop: enrichedProp,
                 stats: {
-                    likes: 0,
-                    comments: 0,
-                    is_liked: false,
-                    is_saved: false
-                }
+                    likes: likeCountMap.get(item.id) || 0,
+                    comments: commentCountMap.get(item.id) || 0,
+                    is_liked: likedSet.has(item.id),
+                    is_saved: false // Existing placeholder
+                },
+                preview_comments: previewCommentsMap.get(item.id) || []
             };
         });
 
@@ -425,6 +512,89 @@ router.get("/user/:userId", async (req, res) => {
             });
         }
 
+        // 3.5 Batch Fetch Likes & Comments Counts + IsLiked
+        const contentIds = userContent.map(i => i.id);
+        const likeCountMap = new Map<number, number>();
+        const commentCountMap = new Map<number, number>();
+        const likedSet = new Set<number>();
+        // Check "viewer_id" or "user_id" from query to see if *I* liked this user's content
+        const viewerId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+
+        if (contentIds.length > 0) {
+            // Like Counts
+            const likeCounts = await db.select({
+                target_id: likes.target_id,
+                count: sql<number>`count(*)`
+            })
+                .from(likes)
+                .where(and(
+                    eq(likes.target_type, 'content'),
+                    inArray(likes.target_id, contentIds)
+                ))
+                .groupBy(likes.target_id);
+
+            likeCounts.forEach(l => likeCountMap.set(l.target_id, Number(l.count)));
+
+            // Comment Counts
+            const commentCounts = await db.select({
+                content_id: comments.content_id,
+                count: sql<number>`count(*)`
+            })
+                .from(comments)
+                .where(and(
+                    inArray(comments.content_id, contentIds),
+                    eq(comments.is_deleted, false)
+                ))
+                .groupBy(comments.content_id);
+
+            commentCounts.forEach(c => commentCountMap.set(c.content_id, Number(c.count)));
+
+            // Is Liked (by viewer)
+            if (viewerId && !isNaN(viewerId)) {
+                const myLikes = await db.select({
+                    target_id: likes.target_id
+                })
+                    .from(likes)
+                    .where(and(
+                        eq(likes.target_type, 'content'),
+                        eq(likes.user_id, viewerId),
+                        inArray(likes.target_id, contentIds)
+                    ));
+
+                myLikes.forEach(l => likedSet.add(l.target_id));
+            }
+        }
+
+        // 3.6 Batch Fetch Preview Comments (Latest 2)
+        const previewCommentsMap = new Map<number, any[]>();
+        if (contentIds.length > 0) {
+            const recentComments = await db.select({
+                id: comments.id,
+                content_id: comments.content_id,
+                text: comments.text,
+                created_at: comments.created_at,
+                user: {
+                    nickname: users.nickname,
+                    profile_image: users.profile_image
+                }
+            })
+                .from(comments)
+                .leftJoin(users, eq(comments.user_id, users.id))
+                .where(and(
+                    inArray(comments.content_id, contentIds),
+                    eq(comments.is_deleted, false)
+                ))
+                .orderBy(desc(comments.created_at));
+
+            recentComments.forEach(c => {
+                const list = previewCommentsMap.get(c.content_id) || [];
+                if (list.length < 2) {
+                    list.push(c);
+                    previewCommentsMap.set(c.content_id, list);
+                }
+            });
+        }
+
         // 4. Transform Data
         const result = userContent.map(item => {
             let enrichedProp = item.review_prop as any;
@@ -452,11 +622,12 @@ router.get("/user/:userId", async (req, res) => {
                 type: item.type,
                 review_prop: enrichedProp,
                 stats: {
-                    likes: 0, // Mock stats for now
-                    comments: 0,
-                    is_liked: false,
+                    likes: likeCountMap.get(item.id) || 0,
+                    comments: commentCountMap.get(item.id) || 0,
+                    is_liked: likedSet.has(item.id),
                     is_saved: false
-                }
+                },
+                preview_comments: previewCommentsMap.get(item.id) || []
             };
         });
 
@@ -464,6 +635,137 @@ router.get("/user/:userId", async (req, res) => {
     } catch (error) {
         console.error("Fetch user content error:", error);
         res.status(500).json({ error: "Failed to fetch content" });
+    }
+});
+
+// --- Likes & Comments Endpoints ---
+
+// POST /api/content/:id/like (Add Like)
+router.post("/:id/like", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body;
+
+        if (!user_id || isNaN(contentId)) {
+            return res.status(400).json({ error: "Missing user_id or content ID" });
+        }
+
+        // Check if already liked
+        await db.insert(likes).values({
+            target_type: 'content',
+            target_id: contentId,
+            user_id: user_id
+        }).onConflictDoNothing();
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Add like error:", error);
+        res.status(500).json({ error: "Failed to add like" });
+    }
+});
+
+// DELETE /api/content/:id/like (Remove Like)
+router.delete("/:id/like", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body; // Usually implicit in session/token, but assumed here
+
+        if (!user_id || isNaN(contentId)) {
+            return res.status(400).json({ error: "Missing user_id or content ID" });
+        }
+
+        await db.delete(likes).where(
+            and(
+                eq(likes.target_type, 'content'),
+                eq(likes.target_id, contentId),
+                eq(likes.user_id, user_id)
+            )
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Remove like error:", error);
+        res.status(500).json({ error: "Failed to remove like" });
+    }
+});
+
+// GET /api/content/:id/comments (List Comments)
+router.get("/:id/comments", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        if (isNaN(contentId)) {
+            return res.status(400).json({ error: "Invalid content ID" });
+        }
+
+        const commentList = await db.select({
+            id: comments.id,
+            text: comments.text,
+            created_at: comments.created_at,
+            user_id: comments.user_id,
+            user: {
+                id: users.id,
+                nickname: users.nickname,
+                profile_image: users.profile_image
+            }
+        })
+            .from(comments)
+            .leftJoin(users, eq(comments.user_id, users.id))
+            .where(and(eq(comments.content_id, contentId), eq(comments.is_deleted, false)))
+            .orderBy(comments.created_at);
+
+        res.json(commentList);
+    } catch (error) {
+        console.error("Fetch comments error:", error);
+        res.status(500).json({ error: "Failed to fetch comments" });
+    }
+});
+
+// POST /api/content/:id/comments (Add Comment)
+router.post("/:id/comments", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id, text } = req.body;
+
+        if (!user_id || !text || isNaN(contentId)) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const result = await db.insert(comments).values({
+            content_id: contentId,
+            user_id,
+            text
+        }).returning();
+
+        // Fetch user info for immediate display
+        const user = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            profile_image: users.profile_image
+        }).from(users).where(eq(users.id, user_id)).limit(1);
+
+        res.json({ ...result[0], user: user[0] });
+    } catch (error) {
+        console.error("Add comment error:", error);
+        res.status(500).json({ error: "Failed to add comment" });
+    }
+});
+
+// DELETE /api/content/comments/:id (Delete Comment) - Note the path difference
+// Moving delete comment to specific route /api/content/comments/:id for clarity if needed, 
+// or keep consistent URL structure. Let's use /api/content/comments/:id as requested indirectly
+router.delete("/comments/:id", async (req, res) => {
+    try {
+        const commentId = parseInt(req.params.id);
+        // In real app, verify user_id ownership
+
+        await db.update(comments)
+            .set({ is_deleted: true })
+            .where(eq(comments.id, commentId));
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Delete comment error:", error);
+        res.status(500).json({ error: "Failed to delete comment" });
     }
 });
 

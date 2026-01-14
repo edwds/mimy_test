@@ -59,7 +59,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
             setLoadingContent(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}`);
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}`);
                 if (response.ok) {
                     const data = await response.json();
                     setContents(data);

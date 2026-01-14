@@ -82,7 +82,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         if (loading) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20`);
+            const userIdParam = currentUser?.id ? `&user_id=${currentUser.id}` : '';
+            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.length < 20) {
@@ -99,7 +100,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
 
     useEffect(() => {
         fetchFeed(1);
-    }, []);
+    }, [currentUser?.id]);
 
     // Double-tap refresh listener
     useEffect(() => {

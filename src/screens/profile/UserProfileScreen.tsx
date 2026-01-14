@@ -172,7 +172,7 @@ export const UserProfileScreen = () => {
             if (!user?.id || activeTab !== 'content') return;
             setLoadingContent(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}`);
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${currentUser?.id || ''}`);
                 if (response.ok) {
                     const data = await response.json();
                     setContents(data);
@@ -184,7 +184,7 @@ export const UserProfileScreen = () => {
             }
         };
         fetchContent();
-    }, [user?.id, activeTab]);
+    }, [user?.id, activeTab, currentUser?.id]);
 
     // Saved (Wants to go) - Overlap Logic
     const [commonShops, setCommonShops] = useState<any[]>([]);

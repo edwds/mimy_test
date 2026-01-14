@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar } from 'lucide-react';
+import { Heart, MessageCircle, Share, MessageSquare, Bookmark, Calendar, PenLine } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
+import { useUser } from '@/context/UserContext';
+import { CommentSheet } from './CommentSheet';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
@@ -87,6 +90,7 @@ export interface ContentCardProps {
         text: string;
         images: string[];
         created_at: string;
+        type?: string;
 
         // REVIEW: visit metadata only
         review_prop?: {
@@ -116,6 +120,13 @@ export interface ContentCardProps {
             comments: number;
             is_liked?: boolean;
         };
+        preview_comments?: Array<{
+            id: number;
+            text: string;
+            user: {
+                nickname: string | null;
+            };
+        }>;
     };
 
     // Optional handlers (wire later)
@@ -144,6 +155,51 @@ export const ContentCard = ({
     onReservePoi
 }: ContentCardProps) => {
     const navigate = useNavigate();
+    const { user: currentUser } = useUser();
+
+    // Local State for Optimistic Updates
+    const [isLiked, setIsLiked] = useState(content.stats.is_liked);
+    const [likeCount, setLikeCount] = useState(content.stats.likes);
+    const [commentCount, setCommentCount] = useState(content.stats.comments);
+    const [showComments, setShowComments] = useState(false);
+
+    // Sync if prop changes (e.g. refetch)
+    useEffect(() => {
+        setIsLiked(content.stats.is_liked);
+        setLikeCount(content.stats.likes);
+        setCommentCount(content.stats.comments);
+    }, [content.stats]);
+
+    const handleLike = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!currentUser) return; // or show login
+
+        // Optimistic Update
+        const prevLiked = isLiked;
+        const prevCount = likeCount;
+
+        setIsLiked(!prevLiked);
+        setLikeCount(prev => prevLiked ? prev - 1 : prev + 1);
+
+        try {
+            const method = prevLiked ? 'DELETE' : 'POST';
+            await fetch(`${API_BASE_URL}/api/content/${content.id}/like`, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUser.id })
+            });
+        } catch (error) {
+            // Revert
+            setIsLiked(prevLiked);
+            setLikeCount(prevCount);
+            console.error("Like failed", error);
+        }
+    };
+
+    const handleOpenComments = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowComments(true);
+    };
 
     const handleUserClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -166,7 +222,7 @@ export const ContentCard = ({
 
     const contextText = shopName
         ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
-        : null;
+        : (content.type === 'post' ? 'Free Post' : null);
 
     return (
         <div className="bg-white pb-6 mb-6">
@@ -293,35 +349,33 @@ export const ContentCard = ({
                 </div>
             )}
 
+            {/* Free Post Badge (if no shop info) */}
+
+
             {/* Footer Stats & Actions (content scrap removed) */}
             <div className="px-5 pt-1">
                 <div className="flex items-center justify-between mb-3">
                     <span className="text-[12px] text-gray-400">{formatFullDateTime(content.created_at)}</span>
-                    {content.stats.comments > 0 && (
-                        <span className="text-[12px] text-gray-400 flex items-center gap-1">
-                            <MessageCircle size={12} />
-                            {content.stats.comments} comments
-                        </span>
-                    )}
                 </div>
 
-                <div className="flex items-center gap-4 pt-3">
+                <div className="flex items-center gap-4">
                     <button
                         type="button"
-                        onClick={() => onToggleLike?.(content.id)}
+                        onClick={handleLike}
                         className="flex items-center gap-1.5 p-1 -ml-1 text-gray-600 hover:text-red-500 transition-colors"
                     >
-                        <Heart size={20} className={cn(content.stats.is_liked && 'fill-red-500 text-red-500')} />
-                        {content.stats.likes > 0 && <span className="text-[13px] font-medium">{content.stats.likes}</span>}
+                        <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
+                        {likeCount > 0 && <span className="text-[13px] font-medium">{likeCount}</span>}
                     </button>
 
                     <button
                         type="button"
-                        onClick={() => onOpenComments?.(content.id)}
+                        onClick={handleOpenComments}
                         className="flex items-center gap-1.5 p-1 text-gray-600 hover:text-blue-500 transition-colors"
                         aria-label="Open comments"
                     >
                         <MessageSquare size={20} />
+                        {commentCount > 0 && <span className="text-[13px] font-medium">{commentCount}</span>}
                     </button>
 
                     <button
@@ -334,6 +388,40 @@ export const ContentCard = ({
                     </button>
                 </div>
             </div>
-        </div>
+
+            {/* Comment Preview */}
+            {
+                content.preview_comments && content.preview_comments.length > 0 && (
+                    <div className="px-5 pb-2 mt-2 space-y-1">
+                        {content.stats.comments > content.preview_comments.length && (
+                            <button
+                                onClick={handleOpenComments}
+                                className="text-gray-500 text-sm font-medium mb-1 hover:text-gray-800"
+                            >
+                                View all {content.stats.comments} comments
+                            </button>
+                        )}
+
+                        {content.preview_comments.map(comment => (
+                            <div key={comment.id} className="flex gap-2 text-[13px] leading-tight">
+                                <span className="font-bold text-gray-900 flex-shrink-0">
+                                    {comment.user?.nickname || 'User'}
+                                </span>
+                                <span className="text-gray-700 line-clamp-1 break-all">
+                                    {comment.text}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )
+            }
+
+            {/* Comment Sheet */}
+            <CommentSheet
+                isOpen={showComments}
+                onClose={() => setShowComments(false)}
+                contentId={content.id}
+            />
+        </div >
     );
 };
