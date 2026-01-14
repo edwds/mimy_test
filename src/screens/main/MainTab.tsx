@@ -48,7 +48,7 @@ export const MainTab = () => {
     };
 
     const getAnimationClass = () => {
-        return `animate-in duration-500 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
+        return `animate-in duration-50 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
     };
 
     return (
@@ -100,25 +100,25 @@ export const MainTab = () => {
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
                         icon={<Home className="w-6 h-6" />}
-                        label="Home"
+                        label="홈"
                         active={activeTab === 'home'}
                         onClick={() => handleTabClick('home')}
                     />
                     <NavIcon
                         icon={<Compass className="w-6 h-6" />}
-                        label="Discover"
+                        label="탐색"
                         active={activeTab === 'discover'}
                         onClick={() => handleTabClick('discover')}
                     />
                     <NavIcon
                         icon={<Trophy className="w-6 h-6" />}
-                        label="Ranking"
+                        label="순위"
                         active={activeTab === 'ranking'}
                         onClick={() => handleTabClick('ranking')}
                     />
                     <NavIcon
                         icon={<User className="w-6 h-6" />}
-                        label="Profile"
+                        label="프로필"
                         active={activeTab === 'profile'}
                         onClick={() => handleTabClick('profile')}
                     />

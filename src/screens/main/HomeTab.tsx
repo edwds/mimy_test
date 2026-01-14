@@ -9,7 +9,7 @@ interface Props {
     refreshTrigger?: number;
 }
 
-const CHIPS = ["Trending", "Following", "Nearby", "Liked"];
+const CHIPS = ["인기", "팔로우", "근처", "좋아요"];
 
 export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     const [_, setPage] = useState(1);
@@ -17,7 +17,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const { user: currentUser } = useUser();
-    const [activeChip, setActiveChip] = useState("Trending");
+    const [activeChip, setActiveChip] = useState("인기");
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -239,9 +239,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                                             <UserIcon size={20} />
                                         </div>
                                     )}
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-                                    <PenLine size={14} />
                                 </div>
                             </div>
                         </div>

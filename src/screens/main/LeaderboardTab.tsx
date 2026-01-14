@@ -87,7 +87,7 @@ export const LeaderboardTab = () => {
             <div
                 ref={headerRef}
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300",
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-7 pb-2 transition-transform duration-300",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
             >

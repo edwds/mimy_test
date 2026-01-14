@@ -313,21 +313,27 @@ export const ContentCard = ({
             {/* Text Body */}
             {content.text && <ContentBody text={content.text} maxLines={10} />}
 
-            {/* Image Scroll (Square) */}
-            {
-                content.images && content.images.length > 0 && (
+            {/* Image Display */}
+            {content.images && content.images.length > 0 && (
+                content.images.length === 1 ? (
+                    <div className="px-5 mb-4">
+                        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative">
+                            <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                ) : (
                     <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
                         {content.images.map((img, idx) => (
                             <div
                                 key={idx}
-                                className="flex-shrink-0 w-[240px] h-[240px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
+                                className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
                             >
                                 <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
                             </div>
                         ))}
                     </div>
                 )
-            }
+            )}
 
             {/* Shop Info Card */}
             {
