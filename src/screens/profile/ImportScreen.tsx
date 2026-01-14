@@ -163,7 +163,7 @@ export function ImportScreen() {
                             <span className="font-bold text-primary">{result.importedCount}개</span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-4 text-left">
-                            * 이미 저장된 장소나, 미미에 등록되지 않은 장소는 제외되었습니다.
+                            * 이미 저장된 장소나, 서비스에 등록되지 않은 장소는 제외되었습니다.
                         </p>
                     </div>
 
@@ -211,7 +211,9 @@ export function ImportScreen() {
                                 value={url}
                                 onChange={handleUrlChange}
                                 placeholder="복사한 주소를 여기에 붙여넣기 해주세요"
-                                className="w-full pl-10 pr-4 py-3 bg-muted/30 border border-input rounded-xl focus:outline-none focus:ring-primary/20 text-sm resize-none"
+                                className="w-full h-10 pl-10 pr-4 py-2 bg-muted/30 border border-input rounded-xl text-sm
+             leading-5 resize-none overflow-hidden
+             focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
                     </div>

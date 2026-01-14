@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProfileScreen } from './ProfileScreen';
@@ -14,6 +14,14 @@ export const MainTab = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('home');
+    const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
+    const [refreshTriggers, setRefreshTriggers] = useState({
+        home: 0,
+        discover: 0,
+        profile: 0,
+        ranking: 0 // placeholder
+    });
+    const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
     // Sync URL -> Tab
     useEffect(() => {
