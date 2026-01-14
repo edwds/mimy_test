@@ -307,8 +307,6 @@ export const ContentCard = ({
                         <MessageSquare size={20} />
                     </button>
 
-                    <div className="flex-1" />
-
                     <button
                         type="button"
                         onClick={() => onShare?.(content.id)}

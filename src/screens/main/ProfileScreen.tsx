@@ -23,7 +23,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
     // Menu & Sheet State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isIdSheetOpen, setIsIdSheetOpen] = useState(false);
-    const [isFollowersOpen, setIsFollowersOpen] = useState(false);
+    // const [isFollowersOpen, setIsFollowersOpen] = useState(false); // Unused
     const [newId, setNewId] = useState("");
     const [savingId, setSavingId] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -129,7 +129,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
     // Scroll & Header Logic
     const containerRef = useRef<HTMLDivElement>(null);
-    const staticTabsRef = useRef<HTMLDivElement>(null);
+    // const staticTabsRef = useRef<HTMLDivElement>(null); // Unused
     const scrollPositions = useRef<{ [key: string]: number }>({});
     const lastScrollY = useRef(0);
 
@@ -274,12 +274,12 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
             {/* Smart Header (Title + Settings) */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50",
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
             >
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-xl font-bold">Profile</h1>
+                    <h1 className="text-2xl font-bold">Profile</h1>
                     <div className="relative">
                         <Button
                             variant="ghost"
@@ -333,7 +333,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                 onScroll={handleScroll}
             >
                 {/* Top Area */}
-                <div className="p-6 pt-20 pb-2 relative">
+                <div className="p-5 pt-20 pb-2 relative">
 
                     {/* Top Area: 2 Columns */}
                     <div className="flex justify-between items-start mb-6">
@@ -398,50 +398,24 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                         </div>
                     </div>
 
-                    {/* Profile Stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                        <div className="text-center cursor-pointer" onClick={() => handleTabChange('content')}>
-                            <div className="font-bold text-lg">{user.stats?.content_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Content</div>
-                        </div>
-                        <div className="text-center cursor-pointer" onClick={() => setIsFollowersOpen(true)}>
-                            <div className="font-bold text-lg">{user.stats?.follower_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Followers</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="font-bold text-lg text-muted-foreground">{user.stats?.following_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Following</div>
-                        </div>
-                    </div>
-
-                    {/* Bio */}
-                    {user.bio && (
-                        <div className="mb-6">
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user.bio}</p>
-                            {(user.links || user.link) && (
-                                <div className="mt-2 flex flex-col gap-1">
-                                    {(user.links || (user.link ? [user.link] : [])).map((link: string, idx: number) => (
-                                        <a
-                                            key={idx}
-                                            href={link.startsWith('http') ? link : `https://${link}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-blue-500 hover:underline flex items-center gap-1"
-                                        >
-                                            <LinkIcon size={10} />
-                                            {link.replace(/^https?:\/\//, '').length > 30
-                                                ? `${link.replace(/^https?:\/\//, '').substring(0, 30)}...`
-                                                : link.replace(/^https?:\/\//, '')}
-                                        </a>
-                                    ))}
+                    {/* Taste Cluster Card */}
+                    {user.cluster_name && (
+                        <div
+                            className="mt-2 mb-2 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer"
+                            onClick={() => navigate('/quiz/result', { state: { result: { clusterData: { cluster_name: user.cluster_name, cluster_tagline: user.cluster_tagline } } } })}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
+                                    <div className="text-xs text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Tabs Static Header (In Flow) */}
-                <div ref={staticTabsRef} className="bg-background py-2 sticky top-0 z-10 border-b border-border/50">
+                <div className="bg-background py-2">
                     <div className="flex gap-2 overflow-x-auto no-scrollbar px-6">
                         <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
                         <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
@@ -491,6 +465,14 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
 
                     {activeTab === "saved" && (
                         <div className="pb-20 px-5 pt-4">
+                            <div className="mb-4">
+                                <button
+                                    className="w-full py-3 px-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-center gap-2 text-primary hover:bg-primary/10 transition-colors"
+                                    onClick={() => navigate('/profile/import')}
+                                >
+                                    <span className="font-semibold text-sm">다른 플랫폼에 저장한 장소도 가져올 수 있어요!</span>
+                                </button>
+                            </div>
                             {savedShops.map((shop: any) => (
                                 <ShopCard
                                     key={shop.id}

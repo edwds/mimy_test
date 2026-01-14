@@ -15,6 +15,7 @@ import { QuizIntro } from '@/screens/quiz/QuizIntro';
 import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
+import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { UserProvider } from '@/context/UserContext';
@@ -67,6 +68,7 @@ function App() {
                             <Route path="/write" element={<WriteFlow />} />
                             <Route path="/main" element={<MainTab />} />
                             <Route path="/profile/edit" element={<EditProfileScreen />} />
+                            <Route path="/profile/import" element={<ImportScreen />} />
                             <Route path="/profile/connections" element={<ConnectionsScreen />} />
                         </Routes>
                     )}

@@ -163,7 +163,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }} // Compensate for fixed header
             >
-                <div className="pb-24 pt-4">
+                <div className="pb-24">
                     {/* Chips */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 px-5">
                         {CHIPS.map(chip => (

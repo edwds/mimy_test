@@ -11,7 +11,7 @@ interface ShopCardProps {
         description?: string | null;
         address_full?: string | null;
         thumbnail_img?: string | null;
-        kind?: string | null; // e.g., "KOREAN", "CAFE"
+        food_kind?: string | null; // e.g., "KOREAN", "CAFE"
         is_saved?: boolean; // From backend enrich
         saved_at?: string; // If saved, when it was saved
     };
@@ -34,10 +34,10 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                     <img
                         src={shop.thumbnail_img}
                         alt={shop.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover border-b border-border border-gray-100"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground border-b">
                         <span className="text-4xl">🍽️</span>
                     </div>
                 )}
@@ -47,7 +47,14 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                     <div>
-                        <h3 className="text-xl font-bold text-foreground mb-1">{shop.name}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-xl font-bold text-foreground">{shop.name}</h3>
+                            {shop.food_kind && (
+                                <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
+                                    {shop.food_kind}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">
                             {shop.description || "맛있는 경험을 제공하는 공간입니다."}
                         </p>

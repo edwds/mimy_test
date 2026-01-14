@@ -39,7 +39,10 @@ router.post("/submit", async (req, res) => {
                 const clusterValue = result.clusterId.toString();
 
                 await db.update(users)
-                    .set({ taste_cluster: clusterValue })
+                    .set({
+                        taste_cluster: clusterValue,
+                        taste_result: result // Save full result json
+                    })
                     .where(eq(users.id, userId));
 
             } catch (dbError) {

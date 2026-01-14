@@ -26,6 +26,9 @@ app.use("/api/quiz", quizRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/content", contentRoutes);
 
+import importRoutes from "./routes/import.js";
+app.use("/api/import", importRoutes);
+
 app.get("/health", (_req, res) => {
     res.send("OK");
 });

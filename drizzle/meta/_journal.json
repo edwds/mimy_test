@@ -43,6 +43,13 @@
       "when": 1768270791082,
       "tag": "0005_reflective_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768349083200,
+      "tag": "0006_sad_talisman",
+      "breakpoints": true
     }
   ]
 }

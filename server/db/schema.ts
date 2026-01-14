@@ -18,7 +18,8 @@ export const users = pgTable('users', {
     birthdate: date('birthdate'),
     gender: char('gender', { length: 1 }), // M, F, N
     // Adding taste_cluster to support existing code in users.ts, though spec prefers users_taste table
-    taste_cluster: varchar('taste_cluster', { length: 10 }),
+    taste_cluster: varchar('taste_cluster', { length: 50 }),
+    taste_result: jsonb('taste_result'), // Storing full quiz result
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
 }, (table) => ({

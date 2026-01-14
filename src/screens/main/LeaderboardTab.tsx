@@ -39,12 +39,12 @@ export const LeaderboardTab = () => {
             <div
                 ref={headerRef}
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50",
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">Ranking</h1>
+                    <h1 className="text-2xl font-bold">Leaderboard</h1>
                     <div className="flex gap-4">
                         <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
                             <Bell className="w-6 h-6 text-foreground" />

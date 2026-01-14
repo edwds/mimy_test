@@ -98,14 +98,6 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
     const lastScrollY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const headerRef = useRef<HTMLDivElement>(null);
-    const [headerHeight, setHeaderHeight] = useState(0);
-
-    useEffect(() => {
-        if (headerRef.current) {
-            setHeaderHeight(headerRef.current.offsetHeight);
-        }
-    }, []);
 
     const handleScroll = () => {
         if (!containerRef.current) return;
@@ -170,8 +162,7 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header */}
             <div
-                ref={headerRef}
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 border-b border-border/50 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
             >
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-2xl font-bold">Discovery</h1>
@@ -186,9 +177,8 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
             {/* List */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-y-auto px-5 pb-24"
+                className="flex-1 overflow-y-auto px-5 pb-24 pt-24"
                 onScroll={handleScroll}
-                style={{ paddingTop: headerHeight + 20 }} // Add some extra padding used in list
             >
                 {shops.map((shop, index) => {
                     const isLast = index === shops.length - 1;
