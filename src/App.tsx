@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SplashScreen } from '@/screens/onboarding/SplashScreen';
 import { StartPage } from '@/screens/onboarding/StartPage';
@@ -20,7 +20,7 @@ import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { UserProvider } from '@/context/UserContext';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const isLoggedIn = !!localStorage.getItem("mimy_user_id");
     if (!isLoggedIn) {
         return <Navigate to="/start" replace />;
