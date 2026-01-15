@@ -46,13 +46,15 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     // Refresh listener
     useEffect(() => {
-        if (refreshTrigger && refreshTrigger > 0) {
+        if (!isEnabled) return;
+        if (refreshTrigger) {
             refreshUser();
+            // Scroll to top?
             // Content fetch will be handled by the dependency below if we include it, 
             // OR we can explicitly fetch here. 
             // Let's modify the dependency array of the content fetcher to include refreshTrigger
         }
-    }, [refreshTrigger]);
+    }, [refreshTrigger, isEnabled]);
 
     useEffect(() => {
         const fetchContent = async () => {

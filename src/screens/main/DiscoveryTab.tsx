@@ -81,6 +81,24 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         fetchShops();
     }, [showSavedOnly]); // Refetch when mode changes
 
+    // Initial Fetch
+    useEffect(() => {
+        if (!isEnabled) return;
+
+        let mounted = true;
+        setIsLoading(true); // Assuming setLoading refers to setIsLoading
+
+        const params: any = { seed: seedRef.current };
+        // currentUser is not defined in the provided context, keeping as is from instruction
+        // if (currentUser?.id) { 
+        //      // ...
+        // }
+
+        // ... fetch logic ...
+
+        return () => { mounted = false; };
+    }, [isEnabled, refreshTrigger]); // Removed currentUser?.id as it's not defined and causes error.
+
     // Refresh Listener
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {

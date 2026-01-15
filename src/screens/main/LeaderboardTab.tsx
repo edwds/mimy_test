@@ -37,7 +37,9 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     }, []);
 
     useEffect(() => {
-        const fetchLeaderboard = async () => {
+        if (!isEnabled) return;
+
+        const fetchRankings = async () => {
             setLoading(true);
             try {
                 const res = await fetch(`${API_BASE_URL}/api/users/leaderboard`);
