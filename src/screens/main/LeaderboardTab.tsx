@@ -137,7 +137,12 @@ export const LeaderboardTab = () => {
                                         "flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer hover:bg-muted/50 border border-transparent",
                                         index < 3 ? "bg-gradient-to-r from-muted/50 to-transparent border-border/30" : "bg-card"
                                     )}
-                                    onClick={() => navigate(`/user/${item.user.account_id || item.user.id}`)}
+                                    onClick={() => {
+                                        const current = new URLSearchParams(window.location.search);
+                                        const targetId = item.user.account_id || item.user.id;
+                                        current.set('viewUser', String(targetId));
+                                        navigate(`${window.location.pathname}?${current.toString()}`);
+                                    }}
                                 >
                                     {/* Rank */}
                                     <div className="flex-shrink-0 w-8 flex justify-center">

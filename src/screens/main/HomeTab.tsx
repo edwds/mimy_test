@@ -19,10 +19,28 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     const [vsItems, setVsItems] = useState<any[]>([]); // New State
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const { user: currentUser } = useUser();
+    const { user: currentUser, loading: isUserLoading } = useUser();
     const [activeChip, setActiveChip] = useState("인기");
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Smart Header & Scroll Preservation
+    // ... (omitted for brevity)
+
+    // ... fetchFeed ...
+
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        // Strict Login Check: Only fetch if we have a valid User ID loaded
+        if (!isUserLoading && currentUser?.id) {
+            timer = setTimeout(() => {
+                fetchFeed(1);
+            }, 300);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [currentUser?.id, isUserLoading]);
 
     // Smart Header & Scroll Preservation
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -86,19 +104,23 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         // If loading next page, block. If reloading (page 1), cancel prev and proceed.
         if (loading && pageNum > 1) return;
 
+        let currentSignal: AbortSignal | undefined;
+
         if (pageNum === 1) {
             if (loading) {
                 // Cancel previous request if we are restarting
                 abortControllerRef.current?.abort();
             }
-            abortControllerRef.current = new AbortController();
+            const ac = new AbortController();
+            abortControllerRef.current = ac;
+            currentSignal = ac.signal;
         }
 
         setLoading(true);
         try {
             const userIdParam = currentUser?.id ? `&user_id=${currentUser.id}` : '';
             const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}`, {
-                signal: pageNum === 1 ? abortControllerRef.current?.signal : undefined
+                signal: currentSignal
             });
 
             if (res.ok) {
@@ -111,22 +133,20 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         } catch (e: any) {
             if (e.name === 'AbortError') return;
             console.error(e);
+            setLoading(false);
         } finally {
             if (pageNum === 1) {
-                // Only unset loading if this was the latest request (controller matches)
-                // actually simple logic: if we finished, we aren't loading. 
-                // Unless another request started? 
-                // If we aborted, we returned early above (in catch).
-                setLoading(false);
+                // Only unset loading if this specific request wasn't aborted
+                if (!currentSignal?.aborted) {
+                    setLoading(false);
+                }
             } else {
                 setLoading(false);
             }
         }
     };
 
-    useEffect(() => {
-        fetchFeed(1);
-    }, [currentUser?.id]);
+
 
     // Double-tap refresh listener
     useEffect(() => {

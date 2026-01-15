@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate, useLocation, matchPath } from 'react-router-dom';
+import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { ProfileScreen } from './ProfileScreen';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
@@ -54,6 +55,22 @@ export const MainTab = () => {
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
+                {/* Stacked Screen: User Profile */}
+                {/* Stacked Screen: User Profile via Query Param */}
+                {(() => {
+                    const searchParams = new URLSearchParams(location.search);
+                    const viewUserId = searchParams.get('viewUser');
+
+                    if (viewUserId) {
+                        return (
+                            <div className="absolute inset-0 z-50 bg-background animate-in slide-in-from-right duration-200">
+                                <UserProfileScreen userId={viewUserId} />
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
+
                 <div className={cn("h-full w-full", activeTab === 'home' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <HomeTab
                         onWrite={() => setIsWriteSheetOpen(true)}

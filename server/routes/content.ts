@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters } from "../db/schema.js";
-import { eq, desc, and, sql, not, count, ilike, or, inArray, gt, gte, ne } from "drizzle-orm";
+import { eq, desc, and, sql, not, count, ilike, or, inArray, gt, gte, ne, lte } from "drizzle-orm";
 
 const router = Router();
 
@@ -78,34 +78,42 @@ router.get("/feed", async (req, res) => {
                 ));
             rankings.forEach(r => rankMap.set(`${r.user_id} -${r.shop_id} `, r.rank));
 
-            // Visit Counts (Ordinal Logic: N-th visit)
-            // 1. Fetch metadata for ALL reviews
-            const allRelevantReviews = await db.select({
-                id: content.id,
-                user_id: content.user_id,
-                prop: content.review_prop,
-                created_at: content.created_at
-            }).from(content)
-                .where(and(
-                    inArray(content.user_id, uIds),
-                    eq(content.type, 'review')
-                ))
-                .orderBy(content.created_at); // ASC order to count 1st, 2nd...
+            // Visit Counts (Ordinal Logic) - Optimized with Parallel Queries (Postgres Compatible)
+            // Reverting from Window Function to 20 parallel COUNT queries for Safety & Stability.
+            // 20 small queries is very fast and avoids complex SQL casting errors.
 
-            const userShopCounter = new Map<string, number>();
+            const visitCountPromises = feedItems.map(async (item) => {
+                if (item.type !== 'review' || !item.review_prop) return null;
+                const prop = item.review_prop as any;
+                if (!prop.shop_id) return null;
 
-            allRelevantReviews.forEach(r => {
-                const p = r.prop as any;
-                if (p && p.shop_id) {
-                    const sid = Number(p.shop_id);
-                    // Only track if relevant
-                    if (sIds.includes(sid)) {
-                        const key = `${r.user_id} -${sid} `;
-                        const current = (userShopCounter.get(key) || 0) + 1;
-                        userShopCounter.set(key, current);
-                        contentVisitRankMap.set(r.id, current);
-                    }
+                const sid = Number(prop.shop_id);
+                // Safe Date
+                const targetDate = item.created_at ? new Date(item.created_at) : new Date();
+
+                try {
+                    // Postgres JSON syntax: ->> returns text, cast to int
+                    const countRes = await db.select({ count: count(content.id) })
+                        .from(content)
+                        .where(and(
+                            eq(content.user_id, item.user_id),
+                            eq(content.type, 'review'),
+                            eq(content.is_deleted, false),
+                            // Safe JSON check for Postgres
+                            sql`(${content.review_prop}->>'shop_id')::int = ${sid}`,
+                            lte(content.created_at, targetDate)
+                        ));
+
+                    return { id: item.id, count: countRes[0].count };
+                } catch (err) {
+                    console.error("Error counting visits for item", item.id, err);
+                    return null;
                 }
+            });
+
+            const visitCounts = await Promise.all(visitCountPromises);
+            visitCounts.forEach(vc => {
+                if (vc) contentVisitRankMap.set(vc.id, vc.count);
             });
         }
 
@@ -442,9 +450,20 @@ router.get("/ranking/candidates", async (req, res) => {
 // GET /api/content/user/:userId
 router.get("/user/:userId", async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId);
+        let userId = parseInt(req.params.userId);
+
+        // If not numeric, try looking up by account_id
         if (isNaN(userId)) {
-            return res.status(400).json({ error: "Invalid user ID" });
+            const user = await db.select({ id: users.id })
+                .from(users)
+                .where(eq(users.account_id, req.params.userId))
+                .limit(1);
+
+            if (user.length > 0) {
+                userId = user[0].id;
+            } else {
+                return res.status(404).json({ error: "User not found" });
+            }
         }
 
         // 1. Fetch content + User Info (for the content creator)

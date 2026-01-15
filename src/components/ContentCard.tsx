@@ -204,7 +204,9 @@ export const ContentCard = ({
         e.stopPropagation();
         const targetId = user.account_id || (user as any).id;
         if (targetId) {
-            navigate(`/user/${targetId}`);
+            const current = new URLSearchParams(window.location.search);
+            current.set('viewUser', String(targetId));
+            navigate(`${window.location.pathname}?${current.toString()}`);
         } else {
             console.warn("User ID/Account ID missing in ContentCard");
         }

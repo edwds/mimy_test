@@ -13,9 +13,15 @@ import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 
 type ProfileTabType = "content" | "list" | "saved";
 
-export const UserProfileScreen = () => {
+interface Props {
+    userId?: string;
+    refreshTrigger?: number;
+}
+
+export const UserProfileScreen = ({ userId: propUserId, refreshTrigger }: Props) => {
     const navigate = useNavigate();
-    const { userId } = useParams();
+    const params = useParams();
+    const userId = propUserId || params.userId;
     const { user: currentUser } = useUser(); // Me
     const [searchParams] = useSearchParams();
 
@@ -169,10 +175,13 @@ export const UserProfileScreen = () => {
 
     useEffect(() => {
         const fetchContent = async () => {
-            if (!user?.id || activeTab !== 'content') return;
+            if (!userId || activeTab !== 'content') return;
             setLoadingContent(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${currentUser?.id || ''}`);
+                // If userId is string (account_id), API might need numeric ID.
+                // Assuming API supports account_id or userId is already numeric if passed from some sources.
+                // Best effort: pass userId directly.
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${userId}?user_id=${currentUser?.id || ''}`);
                 if (response.ok) {
                     const data = await response.json();
                     setContents(data);
@@ -184,7 +193,7 @@ export const UserProfileScreen = () => {
             }
         };
         fetchContent();
-    }, [user?.id, activeTab, currentUser?.id]);
+    }, [userId, activeTab, currentUser?.id]);
 
     // Saved (Wants to go) - Overlap Logic
     const [commonShops, setCommonShops] = useState<any[]>([]);
@@ -259,21 +268,9 @@ export const UserProfileScreen = () => {
         });
     };
 
-    if (loadingUser) {
-        return (
-            <div className="flex flex-col h-full bg-background relative">
-                <div className="p-4 flex items-center">
-                    <Skeleton className="w-8 h-8 rounded-full" />
-                </div>
-                <div className="p-6">
-                    <Skeleton className="h-8 w-40 mb-4" />
-                    <Skeleton className="h-64 w-full rounded-xl" />
-                </div>
-            </div>
-        );
-    }
 
-    if (!user) return <div>User not found</div>;
+
+    if (!user && !loadingUser) return <div>User not found</div>;
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -288,7 +285,13 @@ export const UserProfileScreen = () => {
                 <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate(-1)}>
                     <ArrowLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold truncate">@{user.account_id}</h1>
+                {loadingUser ? (
+                    <div className="flex flex-col">
+                        <Skeleton className="h-4 w-24" />
+                    </div>
+                ) : (
+                    <h1 className="text-lg font-bold truncate">@{user?.account_id}</h1>
+                )}
                 <div className="ml-auto">
                     <Button
                         size="sm"
@@ -318,48 +321,71 @@ export const UserProfileScreen = () => {
                         {/* Info */}
                         <div className="flex-1 pr-4 flex flex-col min-w-0">
                             <div className="flex items-baseline gap-2 mb-1 min-w-0">
-                                <h1 className="text-2xl font-bold truncate">{user.nickname || "No Name"}</h1>
+                                {loadingUser ? (
+                                    <Skeleton className="h-8 w-32" />
+                                ) : (
+                                    <h1 className="text-2xl font-bold truncate">{user?.nickname || "No Name"}</h1>
+                                )}
                             </div>
 
                             {/* Stats */}
                             <div className="flex gap-4 mb-4">
-                                <div className="flex items-baseline gap-1">
-                                    <span className="font-bold">{user.stats?.content_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">Contents</span>
-                                </div>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="font-bold">{user.stats?.follower_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">Followers</span>
-                                </div>
+                                {loadingUser ? (
+                                    <Skeleton className="h-4 w-32" />
+                                ) : (
+                                    <>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-bold">{user?.stats?.content_count || 0}</span>
+                                            <span className="text-xs text-muted-foreground">Contents</span>
+                                        </div>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-bold">{user?.stats?.follower_count || 0}</span>
+                                            <span className="text-xs text-muted-foreground">Followers</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
-                            {user.bio ? (
-                                <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
+                            {loadingUser ? (
+                                <div className="space-y-1">
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-2/3" />
+                                </div>
                             ) : (
-                                <p className="text-sm text-gray-400 mb-2">No bio to show.</p>
-                            )}
-                            {user.link && (
-                                <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
-                                    <LinkIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                                    <span className="truncate max-w-[200px]">{user.link.replace(/^(https?:\/\/)?(www\.)?/, '')}</span>
-                                </a>
+                                <>
+                                    {user?.bio ? (
+                                        <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
+                                    ) : (
+                                        <p className="text-sm text-gray-400 mb-2">No bio to show.</p>
+                                    )}
+                                    {user?.link && (
+                                        <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
+                                            <LinkIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                            <span className="truncate max-w-[200px]">{user.link.replace(/^(https?:\/\/)?(www\.)?/, '')}</span>
+                                        </a>
+                                    )}
+                                </>
                             )}
                         </div>
 
                         {/* Image */}
                         <div className="relative group flex-shrink-0 ml-4">
                             <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
-                                {user.profile_image ? (
-                                    <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
+                                {loadingUser ? (
+                                    <Skeleton className="w-full h-full" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-2xl">😊</div>
+                                    user?.profile_image ? (
+                                        <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-2xl">😊</div>
+                                    )
                                 )}
                             </div>
                         </div>
                     </div>
 
                     {/* Taste Cluster & Matching Score */}
-                    {user.cluster_name && (
+                    {user?.cluster_name && (
                         <div className="flex gap-2">
                             <div
                                 className="flex-1 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
@@ -399,10 +425,10 @@ export const UserProfileScreen = () => {
                                 <ContentCard
                                     key={content.id}
                                     user={{
-                                        id: user.id,
-                                        nickname: user.nickname || "User",
-                                        account_id: user.account_id,
-                                        profile_image: user.profile_image
+                                        id: user?.id || 0,
+                                        nickname: user?.nickname || "User",
+                                        account_id: user?.account_id || "",
+                                        profile_image: user?.profile_image || null
                                     }}
                                     content={content}
                                 />

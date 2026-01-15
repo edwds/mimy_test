@@ -114,12 +114,27 @@ router.get("/:id", async (req, res) => {
         const paramId = req.params.id;
         const viewerId = req.query.viewerId ? parseInt(req.query.viewerId as string) : null;
 
+        // Define columns to select
+        const userFields = {
+            id: users.id,
+            account_id: users.account_id,
+            nickname: users.nickname,
+            bio: users.bio,
+            link: users.link,
+            profile_image: users.profile_image,
+            visible_rank: users.visible_rank,
+            taste_cluster: users.taste_cluster,
+            taste_result: users.taste_result,
+            created_at: users.created_at,
+            updated_at: users.updated_at
+        };
+
         let user;
         // Check if paramId is a pure number
         if (/^\d+$/.test(paramId)) {
-            user = await db.select().from(users).where(eq(users.id, parseInt(paramId))).limit(1);
+            user = await db.select(userFields).from(users).where(eq(users.id, parseInt(paramId))).limit(1);
         } else {
-            user = await db.select().from(users).where(eq(users.account_id, paramId)).limit(1);
+            user = await db.select(userFields).from(users).where(eq(users.account_id, paramId)).limit(1);
         }
 
         if (user.length === 0) {
@@ -145,26 +160,37 @@ router.get("/:id", async (req, res) => {
         }
 
         // Stats Counts
-        // 1. Content Count
-        const contentCountRes = await db.select({ count: sql<number>`count(*)` })
-            .from(content)
-            .where(and(
-                eq(content.user_id, id),
-                eq(content.is_deleted, false)
-                // Optional: Create simple posts vs reviews split if needed, effectively "Content" implies both
-            ));
+        // Stats Counts & Is Following (Parallel)
+        const [contentCountRes, followerCountRes, followingCountRes, isFollowingRes] = await Promise.all([
+            // 1. Content Count
+            db.select({ count: sql<number>`count(*)` })
+                .from(content)
+                .where(and(eq(content.user_id, id), eq(content.is_deleted, false))),
+
+            // 2. Follower Count
+            db.select({ count: sql<number>`count(*)` })
+                .from(users_follow)
+                .where(eq(users_follow.following_id, id)),
+
+            // 3. Following Count
+            db.select({ count: sql<number>`count(*)` })
+                .from(users_follow)
+                .where(eq(users_follow.follower_id, id)),
+
+            // 4. Is Following Check
+            (async () => {
+                if (!viewerId) return false;
+                const check = await db.select().from(users_follow)
+                    .where(and(
+                        eq(users_follow.follower_id, viewerId),
+                        eq(users_follow.following_id, id)
+                    )).limit(1);
+                return check.length > 0;
+            })()
+        ]);
+
         const contentCount = Number(contentCountRes[0]?.count || 0);
-
-        // 2. Follower Count (People following this user)
-        const followerCountRes = await db.select({ count: sql<number>`count(*)` })
-            .from(users_follow)
-            .where(eq(users_follow.following_id, id));
         const followerCount = Number(followerCountRes[0]?.count || 0);
-
-        // 3. Following Count (People this user follows)
-        const followingCountRes = await db.select({ count: sql<number>`count(*)` })
-            .from(users_follow)
-            .where(eq(users_follow.follower_id, id));
         const followingCount = Number(followingCountRes[0]?.count || 0);
 
         res.json({
@@ -175,15 +201,7 @@ router.get("/:id", async (req, res) => {
                 follower_count: followerCount,
                 following_count: followingCount
             },
-            is_following: await (async () => {
-                if (!viewerId) return false;
-                const check = await db.select().from(users_follow)
-                    .where(and(
-                        eq(users_follow.follower_id, viewerId),
-                        eq(users_follow.following_id, id)
-                    )).limit(1);
-                return check.length > 0;
-            })()
+            is_following: isFollowingRes
         });
     } catch (error) {
         console.error("Fetch user error:", error);

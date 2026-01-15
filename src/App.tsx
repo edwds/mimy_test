@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SplashScreen } from '@/screens/onboarding/SplashScreen';
@@ -80,7 +80,9 @@ function App() {
                             <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
-                            <Route path="/user/:userId" element={<ProtectedRoute><UserProfileScreen /></ProtectedRoute>} />
+
+                            {/* Redirect old user profile link to new one */}
+                            <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />
                         </Routes>
                     )}
                 </BrowserRouter>
@@ -88,6 +90,11 @@ function App() {
         </GoogleOAuthProvider>
     );
 }
+
+const RedirectToMainUser = () => {
+    const { userId } = useParams();
+    return <Navigate to={`/main/user/${userId}`} replace />;
+};
 
 // PublicHome removed as it's replaced by explicit /start route
 // const PublicHome = () => {

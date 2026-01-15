@@ -75,7 +75,11 @@ export const ConnectionsScreen = () => {
                             <div
                                 key={u.id}
                                 className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
-                                onClick={() => navigate(`/user/${u.id}`)}
+                                onClick={() => {
+                                    const current = new URLSearchParams(window.location.search);
+                                    current.set('viewUser', String(u.id));
+                                    navigate(`${window.location.pathname}?${current.toString()}`);
+                                }}
                             >
                                 <div className="w-10 h-10 rounded-full bg-muted overflow-hidden border border-border">
                                     {u.profile_image ? (
