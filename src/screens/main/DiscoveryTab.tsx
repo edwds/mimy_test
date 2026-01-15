@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search } from 'lucide-react';
-import { ShopCard } from '@/components/ShopCard';
+import { useState, useEffect, useRef } from 'react';
+// import { Search } from 'lucide-react'; 
+import { Locate, Heart } from 'lucide-react'; // Icons
+// Let's keep the Search button overlay if possible, or just the map.
+// The Plan said: "Replace current list view with... MapContainer + ShopBottomSheet".
+// I will keep the header overlay logic but adapt it.
 import { API_BASE_URL } from '@/lib/api';
+import { MapContainer } from '@/components/MapContainer';
+import { ShopBottomSheet } from '@/components/ShopBottomSheet';
+import { cn } from '@/lib/utils';
 
-// Generate a random seed once per session (or component mount)
-// To keep it persistent across tab switches, we might want to store it in session storage or parent state.
-// User requested: "Maintain in current session (refresh resets)".
-// Component state is enough if we don't unmount? But Tab switching usually unmounts/remounts or hides.
-// If MainTab conditionally renders, state is lost.
-// Better to store in sessionStorage to survive tab switch but reset on refresh.
 const getSessionSeed = () => {
     let seed = sessionStorage.getItem('discovery_seed');
     if (!seed) {
@@ -19,102 +19,78 @@ const getSessionSeed = () => {
 };
 
 interface Props {
+    isActive: boolean;
     refreshTrigger?: number;
 }
 
-export const DiscoveryTab = ({ refreshTrigger }: Props) => {
+export const DiscoveryTab = ({ isActive, refreshTrigger }: Props) => {
     const [shops, setShops] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const [, setPage] = useState(1);
-    const observer = useRef<IntersectionObserver | null>(null);
     const seedRef = useRef(getSessionSeed());
 
-    const fetchShops = async (pageNum: number) => {
-        if (loading) return;
-        setLoading(true);
+    // Map & Sheet State
+    const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+    const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
+
+    // Bound Search State
+    const [bounds, setBounds] = useState<{ minLat: number, maxLat: number, minLon: number, maxLon: number } | null>(null);
+    const [showSearchHere, setShowSearchHere] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Filter State
+    const [showSavedOnly, setShowSavedOnly] = useState(false);
+
+    const fetchShops = async (useBounds = false) => {
+        setIsLoading(true);
         try {
             const userId = localStorage.getItem('mimy_user_id');
             const headers: any = {};
-            if (userId) {
-                headers['x-user-id'] = userId;
+            if (userId) headers['x-user-id'] = userId;
+
+            let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
+
+            if (showSavedOnly && userId) {
+                url = `${API_BASE_URL}/api/users/${userId}/saved_shops`;
+            } else if (useBounds && bounds) {
+                url += `&minLat=${bounds.minLat}&maxLat=${bounds.maxLat}&minLon=${bounds.minLon}&maxLon=${bounds.maxLon}`;
             }
 
-            const res = await fetch(
-                `${API_BASE_URL}/api/shops/discovery?page=${pageNum}&limit=20&seed=${seedRef.current}`,
-                { headers }
-            );
+            const res = await fetch(url, { headers });
 
             if (res.ok) {
                 const data = await res.json();
-                if (data.length < 20) {
-                    setHasMore(false);
+                setShops(data);
+
+                // If switching to saved and we have data, maybe center on the first one?
+                // data is sorted by created_at desc.
+                if (showSavedOnly && data.length > 0 && data[0].lat && data[0].lon) {
+                    setMapCenter([data[0].lat, data[0].lon]);
                 }
-                setShops(prev => pageNum === 1 ? data : [...prev, ...data]);
             }
         } catch (e) {
             console.error(e);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
+            if (useBounds) setShowSearchHere(false);
         }
     };
 
     useEffect(() => {
-        // Initial fetch
-        fetchShops(1);
-    }, []);
+        // Reset when switching to saved mode
+        if (showSavedOnly) setShowSearchHere(false);
+        fetchShops();
+    }, [showSavedOnly]); // Refetch when mode changes
 
     // Refresh Listener
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {
-            // New Seed for fresh discovery
             const newSeed = Math.random().toString(36).substring(7);
             sessionStorage.setItem('discovery_seed', newSeed);
             seedRef.current = newSeed;
-
-            setShops([]);
-            setPage(1);
-            setHasMore(true);
-            fetchShops(1);
+            // Also reset filter?
+            // setShowSavedOnly(false); // Maybe? Let's keep filter if user wants.
+            fetchShops();
         }
     }, [refreshTrigger]);
-
-    const lastElementRef = useCallback((node: HTMLDivElement) => {
-        if (loading) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                setPage(prev => {
-                    const nextPage = prev + 1;
-                    fetchShops(nextPage);
-                    return nextPage;
-                });
-            }
-        });
-        if (node) observer.current.observe(node);
-    }, [loading, hasMore]);
-
-    // Smart Header State
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const lastScrollY = useRef(0);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const handleScroll = () => {
-        if (!containerRef.current) return;
-        const currentScrollY = containerRef.current.scrollTop;
-        const diff = currentScrollY - lastScrollY.current;
-
-        if (currentScrollY < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) {
-            if (diff > 0) {
-                setIsHeaderVisible(false);
-            } else {
-                setIsHeaderVisible(true);
-            }
-        }
-        lastScrollY.current = currentScrollY;
-    };
 
     const handleSave = async (shopId: number) => {
         const userId = localStorage.getItem('mimy_user_id');
@@ -124,86 +100,135 @@ export const DiscoveryTab = ({ refreshTrigger }: Props) => {
         }
 
         // Optimistic Update
-        setShops(prev => prev.map(shop => {
-            if (shop.id === shopId) {
-                return {
-                    ...shop,
-                    is_saved: !shop.is_saved,
-                    saved_at: !shop.is_saved ? new Date().toISOString() : null
-                };
+        setShops(prev => {
+            if (showSavedOnly) {
+                // If looking at saved list and untoggle, remove it?
+                // Or just mark as unsaved but keep visible for context?
+                // Let's keep visible but update status.
+                return prev.map(shop =>
+                    shop.id === shopId ? { ...shop, is_saved: !shop.is_saved } : shop
+                );
             }
-            return shop;
-        }));
+            return prev.map(shop => {
+                if (shop.id === shopId) {
+                    return {
+                        ...shop,
+                        is_saved: !shop.is_saved,
+                        saved_at: !shop.is_saved ? new Date().toISOString() : null
+                    };
+                }
+                return shop;
+            });
+        });
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+            await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: parseInt(userId) })
             });
-            if (!res.ok) {
-                // Revert on error
-                throw new Error("Save failed");
-            }
         } catch (e) {
             console.error(e);
             alert("저장에 실패했습니다.");
-            // Revert state
-            setShops(prev => prev.map(shop => {
-                if (shop.id === shopId) {
-                    return { ...shop, is_saved: !shop.is_saved };
+            // Revert
+            setShops(prev => prev.map(shop =>
+                shop.id === shopId ? { ...shop, is_saved: !shop.is_saved } : shop
+            ));
+        }
+    };
+
+    const handleCurrentLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setMapCenter([position.coords.latitude, position.coords.longitude]);
+                },
+                (error) => {
+                    console.error(error);
+                    alert("위치 정보를 가져올 수 없습니다.");
                 }
-                return shop;
-            }));
+            );
+        } else {
+            alert("GPS를 지원하지 않는 브라우저입니다.");
+        }
+    };
+
+    const handleMoveEnd = (newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
+        // Only show button if we are NOT in saved mode
+        if (!showSavedOnly) {
+            setBounds(newBounds);
+            setShowSearchHere(true);
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden">
-            {/* Smart Header */}
-            <div
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">Discovery</h1>
-                    <div className="flex gap-4">
-                        <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
-                            <Search className="w-6 h-6 text-foreground" />
-                        </button>
-                    </div>
-                </div>
+        <div className="relative h-full w-full overflow-hidden">
+            {/* Map Background */}
+            <div className="absolute inset-0 z-0">
+                <MapContainer
+                    shops={shops}
+                    onMarkerClick={setSelectedShopId}
+                    onMapClick={() => setSelectedShopId(null)}
+                    center={
+                        (selectedShopId && shops.find(s => s.id === selectedShopId))
+                            ? [shops.find(s => s.id === selectedShopId).lat!, shops.find(s => s.id === selectedShopId).lon!]
+                            : mapCenter
+                    }
+                    isActive={isActive}
+                    selectedShopId={selectedShopId}
+                    bottomSheetOffset={selectedShopId ? window.innerHeight * 0.1 : 0}
+                    onMoveEnd={handleMoveEnd}
+                />
             </div>
 
-            {/* List */}
-            <div
-                ref={containerRef}
-                className="flex-1 overflow-y-auto px-5 pb-24 pt-24"
-                onScroll={handleScroll}
-            >
-                {shops.map((shop, index) => {
-                    const isLast = index === shops.length - 1;
-                    return (
-                        <div key={`${shop.id}-${index}`} ref={isLast ? lastElementRef : undefined}>
-                            <ShopCard
-                                shop={shop}
-                                onSave={handleSave}
-                                onReserve={() => alert("캐치테이블 예약 연동 준비중입니다.")}
-                            />
-                        </div>
-                    );
-                })}
+            {/* Bottom Sheet Overlay */}
+            <ShopBottomSheet
+                shops={shops}
+                selectedShopId={selectedShopId}
+                onSave={handleSave}
+            />
 
-                {loading && (
-                    <div className="py-8 flex justify-center">
-                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    </div>
-                )}
+            {/* Top Search Overlay */}
+            <div className="absolute top-6 left-6 right-6 z-10 flex flex-col gap-2 items-center">
+                <div className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50">
+                    <span className="text-muted-foreground text-sm flex-1">이름, 지역, 메뉴로 원하는 곳을 찾아보세요</span>
+                </div>
 
-                {!hasMore && shops.length > 0 && (
-                    <div className="py-8 text-center text-muted-foreground text-xs">
-                        더 이상 추천할 매장이 없습니다.
-                    </div>
+                {/* Search Here Button */}
+                {showSearchHere && !showSavedOnly && (
+                    <button
+                        onClick={() => fetchShops(true)}
+                        className="animate-in fade-in slide-in-from-top-2 bg-white text-primary font-bold px-4 py-2 rounded-full shadow-lg text-sm border border-primary/20 flex items-center gap-2 active:scale-95 transition-transform"
+                    >
+                        {isLoading ? '검색중...' : '이 지역에서 다시 찾기'}
+                    </button>
                 )}
+            </div>
+
+            {/* Map Controls */}
+            <div className="absolute top-32 right-4 z-10 flex flex-col gap-3">
+                <button
+                    onClick={handleCurrentLocation}
+                    className="p-3 bg-white rounded-full shadow-lg border border-gray-100 active:scale-95 transition-transform"
+                >
+                    <Locate className="w-6 h-6 text-gray-700" />
+                </button>
+
+                <button
+                    onClick={() => {
+                        const userId = localStorage.getItem('mimy_user_id');
+                        if (!userId) return alert("로그인이 필요합니다.");
+                        setShowSavedOnly(!showSavedOnly);
+                        setSelectedShopId(null);
+                        setMapCenter(undefined); // Reset center
+                    }}
+                    className={cn(
+                        "p-3 rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
+                        showSavedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
+                    )}
+                >
+                    <Heart className={cn("w-6 h-6", showSavedOnly ? "fill-current text-white" : "")} />
+                </button>
             </div>
         </div>
     );

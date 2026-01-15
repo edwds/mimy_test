@@ -14,20 +14,34 @@ router.get("/discovery", async (req, res) => {
         const limit = parseInt(req.query.limit as string) || 20;
         const seed = req.query.seed || 'default_seed';
 
-        // Use MD5 hash of (id || seed) for consistent random sort
-        const results = await db.select({
+        // Bounding Box Params
+        const minLat = req.query.minLat ? parseFloat(req.query.minLat as string) : null;
+        const maxLat = req.query.maxLat ? parseFloat(req.query.maxLat as string) : null;
+        const minLon = req.query.minLon ? parseFloat(req.query.minLon as string) : null;
+        const maxLon = req.query.maxLon ? parseFloat(req.query.maxLon as string) : null;
+
+        let query = db.select({
             id: shops.id,
             name: shops.name,
             description: shops.description,
             address_full: shops.address_full,
             thumbnail_img: shops.thumbnail_img,
             kind: shops.kind,
-            // Check if saved by current user if userId provided
-            // For now, simpler to just return shop data and let caching handle it, 
-            // OR join. Let's do a left join approach if possible, but keep it simple first:
-            // Fetch shops first.
-        })
-            .from(shops)
+            lat: shops.lat,
+            lon: shops.lon,
+        }).from(shops).$dynamic();
+
+        if (minLat && maxLat && minLon && maxLon) {
+            query = query.where(and(
+                sql`${shops.lat} >= ${minLat}`,
+                sql`${shops.lat} <= ${maxLat}`,
+                sql`${shops.lon} >= ${minLon}`,
+                sql`${shops.lon} <= ${maxLon}`
+            ));
+        }
+
+        // Use MD5 hash of (id || seed) for consistent random sort
+        const results = await query
             .orderBy(sql`md5(${shops.id}::text || ${seed})`)
             .limit(limit)
             .offset((page - 1) * limit);

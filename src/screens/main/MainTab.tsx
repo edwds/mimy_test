@@ -62,6 +62,7 @@ export const MainTab = () => {
                 </div>
                 <div className={cn("h-full w-full", activeTab === 'discover' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <DiscoveryTab
+                        isActive={activeTab === 'discover'}
                         refreshTrigger={refreshTriggers.discover}
                     />
                 </div>
@@ -136,6 +137,6 @@ const NavIcon = ({ icon, label, active = false, onClick }: { icon: React.ReactNo
             active ? "text-primary scale-105" : "text-muted-foreground hover:text-foreground"
         )}>
         {icon}
-        <span className={cn("text-[10px] font-medium transition-all", active ? "font-bold" : "")}>{label}</span>
+        <span className={cn("text-xs font-base transition-all", active ? "font-bold" : "")}>{label}</span>
     </button>
 );
