@@ -54,8 +54,8 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             }
         };
 
-        fetchLeaderboard();
-    }, []);
+        fetchRankings();
+    }, [isEnabled]);
 
     const handleScroll = () => {
         if (!containerRef.current) return;
