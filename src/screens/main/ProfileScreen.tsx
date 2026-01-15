@@ -10,6 +10,8 @@ import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 
+import { useTranslation } from 'react-i18next';
+
 type ProfileTabType = "content" | "list" | "saved";
 
 interface ProfileScreenProps {
@@ -18,6 +20,7 @@ interface ProfileScreenProps {
 }
 
 export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { user, loading, refreshUser, logout } = useUser();
     const [searchParams] = useSearchParams();
@@ -91,20 +94,20 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     }, [isMenuOpen]);
 
     const handleLogout = () => {
-        if (window.confirm("Are you sure you want to logout?")) {
+        if (window.confirm(t('profile.menu.logout_confirm'))) {
             logout();
             navigate('/login');
         }
     };
 
     const handleRetakeQuiz = () => {
-        if (window.confirm("Retaking the quiz will update your taste profile. Continue?")) {
+        if (window.confirm(t('profile.menu.quiz_confirm'))) {
             navigate('/quiz/intro');
         }
     };
 
     const handleReport = () => {
-        alert("Coming soon!");
+        alert(t('profile.menu.coming_soon'));
         setIsMenuOpen(false);
     };
 
@@ -127,14 +130,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             if (response.ok) {
                 await refreshUser();
                 setIsIdSheetOpen(false);
-                alert("ID updated successfully");
+                alert(t('profile.id_sheet.success'));
             } else {
                 const err = await response.json();
-                alert(err.error || "Failed to update ID");
+                alert(err.error || t('profile.id_sheet.fail'));
             }
         } catch (e) {
             console.error(e);
-            alert("Error updating ID");
+            alert(t('profile.id_sheet.error'));
         } finally {
             setSavingId(false);
         }
@@ -223,7 +226,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             if (!res.ok) throw new Error("Unsave failed");
         } catch (e) {
             console.error(e);
-            alert("저장 취소 실패");
+            alert(t('profile.unsave_fail'));
             // Revert logic would need to re-fetch or keep deleted item in memory hidden
         }
     };
@@ -279,7 +282,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         );
     }
 
-    if (!user) return <div className="flex-1 flex items-center justify-center">User not found</div>;
+    if (!user) return <div className="flex-1 flex items-center justify-center">{t('profile.user_not_found')}</div>;
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -313,26 +316,26 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={openIdSheet}
                                 >
-                                    ID 변경하기
+                                    {t('profile.menu.change_id')}
                                 </button>
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={handleRetakeQuiz}
                                 >
-                                    입맛 퀴즈 다시하기
+                                    {t('profile.menu.retake_quiz')}
                                 </button>
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={handleReport}
                                 >
-                                    오류 제보하기
+                                    {t('profile.menu.report')}
                                 </button>
                                 <div className="h-px bg-border my-1" />
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
                                     onClick={handleLogout}
                                 >
-                                    로그아웃하기
+                                    {t('profile.menu.logout')}
                                 </button>
                             </div>
                         )}
@@ -363,14 +366,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             <div className="flex gap-4 mb-4">
                                 <div className="flex items-baseline gap-1">
                                     <span className="font-bold">{user.stats?.content_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">Contents</span>
+                                    <span className="text-xs text-muted-foreground">{t('profile.stats.contents')}</span>
                                 </div>
                                 <div
                                     className="flex items-baseline gap-1 cursor-pointer active:opacity-70 transition-opacity"
                                     onClick={() => navigate('/profile/connections?tab=followers')}
                                 >
                                     <span className="font-bold">{user.stats?.follower_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">Followers</span>
+                                    <span className="text-xs text-muted-foreground">{t('profile.stats.followers')}</span>
                                 </div>
                             </div>
 
@@ -427,9 +430,9 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 {/* Tabs Static Header (In Flow) */}
                 <div className="bg-background border-b border-border/50 sticky top-0 z-10 mb-2">
                     <div className="flex w-full px-0">
-                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
-                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
-                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Want to go" />
+                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label={t('profile.tabs.content')} />
+                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label={t('profile.tabs.list')} />
+                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label={t('profile.tabs.saved')} />
                     </div>
                 </div>
 
@@ -439,23 +442,24 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <div className="pb-20">
                             {/* Real Data Render */}
                             {contents.map((content: any) => (
-                                <ContentCard
-                                    key={content.id}
-                                    user={{
-                                        id: user.id,
-                                        nickname: user.nickname || "User",
-                                        account_id: user.account_id,
-                                        profile_image: user.profile_image
-                                    }}
-                                    content={content}
-                                />
+                                <div key={content.id} className="mb-8">
+                                    <ContentCard
+                                        user={{
+                                            id: user.id,
+                                            nickname: user.nickname || "User",
+                                            account_id: user.account_id,
+                                            profile_image: user.profile_image
+                                        }}
+                                        content={content}
+                                    />
+                                </div>
                             ))}
 
                             {/* If empty */}
                             {!loadingContent && contents.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                     <Grid className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">No contents yet</p>
+                                    <p className="text-sm">{t('profile.empty.content')}</p>
                                 </div>
                             )}
 
@@ -470,7 +474,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     {activeTab === "list" && (
                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                             <List className="w-10 h-10 mb-2 opacity-20" />
-                            <p className="text-sm">No lists created</p>
+                            <p className="text-sm">{t('profile.empty.lists')}</p>
                         </div>
                     )}
 
@@ -481,7 +485,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     className="w-full py-3 px-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-center gap-2 text-primary hover:bg-primary/10 transition-colors"
                                     onClick={() => navigate('/profile/import')}
                                 >
-                                    <span className="font-semibold text-sm">다른 플랫폼에 저장한 장소도 가져올 수 있어요!</span>
+                                    <span className="font-semibold text-sm">{t('profile.import_btn')}</span>
                                 </button>
                             </div>
                             {savedShops.map((shop: any) => (
@@ -496,7 +500,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             {!loadingSaved && savedShops.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                     <MapPin className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">No saved places</p>
+                                    <p className="text-sm">{t('profile.empty.saved')}</p>
                                 </div>
                             )}
 
@@ -511,48 +515,50 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             </main>
 
             {/* Bottom Sheet for ID Change */}
-            {isIdSheetOpen && (
-                <>
-                    {/* Backdrop */}
-                    <div
-                        className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200"
-                        onClick={() => setIsIdSheetOpen(false)}
-                    />
+            {
+                isIdSheetOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200"
+                            onClick={() => setIsIdSheetOpen(false)}
+                        />
 
-                    {/* Sheet */}
-                    <div className="fixed bottom-0 left-0 right-0 bg-background rounded-t-xl z-50 p-6 animate-in slide-in-from-bottom duration-300 shadow-lg">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold">Change ID</h3>
-                            <button onClick={() => setIsIdSheetOpen(false)} className="p-2 -mr-2 text-muted-foreground">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">New ID</label>
-                                <input
-                                    type="text"
-                                    value={newId}
-                                    onChange={(e) => setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
-                                    className="w-full border-b border-border py-2 text-xl bg-transparent focus:outline-none focus:border-primary font-mono"
-                                    autoFocus
-                                    placeholder="your_id"
-                                />
-                                <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, dots, and underscores.</p>
+                        {/* Sheet */}
+                        <div className="fixed bottom-0 left-0 right-0 bg-background rounded-t-xl z-50 p-6 animate-in slide-in-from-bottom duration-300 shadow-lg">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold">{t('profile.id_sheet.title')}</h3>
+                                <button onClick={() => setIsIdSheetOpen(false)} className="p-2 -mr-2 text-muted-foreground">
+                                    <X className="w-6 h-6" />
+                                </button>
                             </div>
 
-                            <Button
-                                className="w-full h-12 text-lg mt-4"
-                                onClick={handleSaveId}
-                                disabled={savingId || !newId || newId === user.account_id}
-                            >
-                                {savingId ? <Loader2 className="animate-spin" /> : "Save Changes"}
-                            </Button>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-muted-foreground">{t('profile.id_sheet.label')}</label>
+                                    <input
+                                        type="text"
+                                        value={newId}
+                                        onChange={(e) => setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                                        className="w-full border-b border-border py-2 text-xl bg-transparent focus:outline-none focus:border-primary font-mono"
+                                        autoFocus
+                                        placeholder={t('profile.id_sheet.placeholder')}
+                                    />
+                                    <p className="text-xs text-muted-foreground">{t('profile.id_sheet.helper')}</p>
+                                </div>
+
+                                <Button
+                                    className="w-full h-12 text-lg mt-4"
+                                    onClick={handleSaveId}
+                                    disabled={savingId || !newId || newId === user.account_id}
+                                >
+                                    {savingId ? <Loader2 className="animate-spin" /> : t('profile.id_sheet.save')}
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </>
-            )}
+                    </>
+                )
+            }
 
             <TasteProfileSheet
                 isOpen={isTasteSheetOpen}
@@ -560,7 +566,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
                 userId={user?.id}
             />
-        </div>
+        </div >
     );
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Utensils, PenLine, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     isOpen: boolean;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
+    const { t } = useTranslation();
     if (!isOpen) return null;
 
     return (
@@ -36,7 +38,7 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 px-1">
                     <h2 className="text-2xl font-bold tracking-tight">
-                        Create Content
+                        {t('write.select.title')}
                     </h2>
                     {/* PC Close Button */}
                     <button
@@ -60,10 +62,10 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                         {/* Text */}
                         <div className="flex-1 text-left">
                             <h3 className="text-[17px] font-bold mb-0.5 group-hover:text-primary transition-colors">
-                                Review Place
+                                {t('write.select.review.title')}
                             </h3>
                             <p className="text-[15px] text-[var(--color-text-secondary)] font-medium">
-                                Rank and review restaurants
+                                {t('write.select.review.desc')}
                             </p>
                         </div>
                     </button>
@@ -79,10 +81,10 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                         {/* Text */}
                         <div className="flex-1 text-left">
                             <h3 className="text-[17px] font-bold mb-0.5 group-hover:text-blue-500 transition-colors">
-                                Free Post
+                                {t('write.select.post.title')}
                             </h3>
                             <p className="text-[15px] text-[var(--color-text-secondary)] font-medium">
-                                Share your food stories
+                                {t('write.select.post.desc')}
                             </p>
                         </div>
                     </button>

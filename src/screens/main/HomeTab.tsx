@@ -4,6 +4,7 @@ import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { User as UserIcon, Bell, Search, PenLine } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
+import { useTranslation, Trans } from 'react-i18next';
 
 // Force deploy check
 interface Props {
@@ -12,9 +13,10 @@ interface Props {
     isEnabled?: boolean;
 }
 
-const CHIPS = ["인기", "팔로우", "근처", "좋아요"];
+const CHIPS = ["popular", "follow", "near", "like"];
 
 export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = true }) => {
+    const { t } = useTranslation();
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
     const [vsItems, setVsItems] = useState<any[]>([]); // New State
@@ -22,7 +24,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const [hasMore, setHasMore] = useState(true);
     const [hasInitialFetch, setHasInitialFetch] = useState(false);
     const { user: currentUser, loading: isUserLoading } = useUser();
-    const [activeChip, setActiveChip] = useState("인기");
+    const [activeChip, setActiveChip] = useState("popular");
+    const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -61,26 +64,47 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     };
 
     const handleChipChange = (newChip: string) => {
+        if (newChip === activeChip) return;
+
+        if (newChip === 'near') {
+            alert(t('home.coming_soon')); // "Coming soon..."
+            return;
+        }
+
+        performChipSwitch(newChip);
+    };
+
+    const performChipSwitch = (newChip: string, locOverride?: { lat: number, lon: number }) => {
         if (containerRef.current) {
-            // Save current scroll
             scrollPositions.current[activeChip] = containerRef.current.scrollTop;
         }
 
         setActiveChip(newChip);
 
-        // Restore scroll for new chip (after render)
+        // Reset list for new filter
+        setItems([]);
+        setPage(1);
+        setHasMore(true);
+        setHasInitialFetch(false);
+
+        // Fetch will be triggered by useEffect OR we call it explicitly? 
+        // Existing code didn't use chip in useEffect dependency for fetchFeed, 
+        // it only called fetchFeed in initial mount or scroll.
+        // We need to trigger fetch when chip changes.
+
+        // Let's rely on an effect to catch chip change? 
+        // Or just call fetchFeed(1, newChip) directly?
+        // To be safe with state, let's use an effect on [activeChip].
+
         requestAnimationFrame(() => {
             if (containerRef.current) {
                 const savedPos = scrollPositions.current[newChip] || 0;
                 containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
-                // Ensure header is visible if we want "chip list to top" style upon switch or just nice UX
-                // But user requirement says: "Clicking chip moves list to top... content remembers scroll".
-                // If we restore deep scroll, we might want to show header? 
-                // Let's ensure header is visible on switch.
                 setIsHeaderVisible(true);
             }
         });
     };
+
 
     const fetchFeed = async (pageNum: number) => {
         // If loading next page, block. If reloading (page 1), cancel prev and proceed.
@@ -101,7 +125,21 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         setLoading(true);
         try {
             const userIdParam = currentUser?.id ? `&user_id=${currentUser.id}` : '';
-            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}`, {
+
+            // Add Filter Params
+            let filterParams = `&filter=${activeChip}`;
+            if (activeChip === 'near') {
+                if (userLocation || (activeChip === 'near' && userLocation)) {
+                    // logic redundancy but safe
+                    // If we are calling fetchFeed(1) inside geolocation callback we might pass it explicitly?
+                    // Relying on state is fine if we wait for state update.
+                    if (userLocation) {
+                        filterParams += `&lat=${userLocation.lat}&lon=${userLocation.lon}`;
+                    }
+                }
+            }
+
+            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}${filterParams}`, {
                 signal: currentSignal
             });
 
@@ -132,20 +170,18 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     useEffect(() => {
         if (!isEnabled) return;
 
-        let timer: NodeJS.Timeout;
+        // If we have items and the chip hasn't changed (implied by dependency array logic in a real app, but here simple), 
+        // we might skip. But if activeChip changed, we cleared items in performChipSwitch, so items.length is 0.
+        // So this single check covers both Initial Mount (items=0) and Chip Switch (items=0).
+
         // Strict Login Check: Only fetch if we have a valid User ID loaded
         if (!isUserLoading && currentUser?.id) {
-            // Show loading immediately if empty
-            if (items.length === 0) setLoading(true);
-
-            timer = setTimeout(() => {
+            if (items.length === 0 && !loading && hasInitialFetch === false) {
                 fetchFeed(1);
-            }, 100);
+            }
         }
-        return () => {
-            if (timer) clearTimeout(timer);
-        };
-    }, [currentUser?.id, isUserLoading, isEnabled]);
+    }, [currentUser?.id, isUserLoading, isEnabled, activeChip, items.length, hasInitialFetch]);
+
 
     // Double-tap refresh listener
     useEffect(() => {
@@ -195,6 +231,20 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         }
     };
 
+    const [hiddenVsIndices, setHiddenVsIndices] = useState<Set<number>>(new Set());
+
+    const handleCloseVs = (index: number) => {
+        setHiddenVsIndices(prev => {
+            const next = new Set(prev);
+            next.add(index);
+            return next;
+        });
+    };
+
+    const handleNextVs = (id: number) => {
+        setVsItems(prev => prev.filter(item => item.id !== id));
+    };
+
     const lastElementRef = useCallback((node: HTMLDivElement) => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -219,7 +269,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                     }`}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">Today</h1>
+                    <h1 className="text-2xl font-bold">{t('home.today')}</h1>
                     <div className="flex gap-4">
                         <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
                             <Bell className="w-6 h-6 text-foreground" />
@@ -240,7 +290,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }} // Compensate for fixed header
             >
-                <div className="pb-24">
+                <div className="pb-8">
                     {/* Chips */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 px-5">
                         {CHIPS.map(chip => (
@@ -255,7 +305,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                     }
                                 `}
                             >
-                                {chip}
+                                {t(`home.chips.${chip}`)}
                             </button>
                         ))}
                     </div>
@@ -271,10 +321,14 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         <div className="relative z-10 flex justify-between items-start">
                             <div className="flex-1 pr-4">
                                 <h2 className="text-xl font-bold mb-2 text-foreground leading-tight">
-                                    오늘 {currentUser?.nickname || '회원'}님의<br />미식은 무엇이었나요
+                                    <Trans
+                                        i18nKey="home.write_nudge.title"
+                                        values={{ name: currentUser?.nickname || '회원' }}
+                                        components={{ br: <br /> }}
+                                    />
                                 </h2>
                                 <p className="text-muted-foreground text-sm leading-relaxed">
-                                    방문한 곳의 경험을 남겨주세요
+                                    {t('home.write_nudge.desc')}
                                 </p>
                             </div>
 
@@ -311,21 +365,25 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         const vsItem = vsItems[vsCardIndex]; // Use state vsItems
 
                         return (
-                            <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined}>
+                            <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined} className="mb-8">
                                 <ContentCard
                                     user={item.user}
                                     content={item}
                                 />
                                 <div className="bg-muted" />
 
-                                {showVsCard && vsItem && vsCardIndex < 3 && (
-                                    <VsCard
-                                        id={vsItem.id}
-                                        itemA={vsItem.item_a}
-                                        itemB={vsItem.item_b}
-                                        index={vsCardIndex}
-                                        onVote={handleVote}
-                                    />
+                                {showVsCard && vsItem && vsCardIndex < 3 && !hiddenVsIndices.has(vsCardIndex) && (
+                                    <div className="mt-8">
+                                        <VsCard
+                                            id={vsItem.id}
+                                            itemA={vsItem.item_a}
+                                            itemB={vsItem.item_b}
+                                            index={vsCardIndex}
+                                            onVote={handleVote}
+                                            onClose={() => handleCloseVs(vsCardIndex)}
+                                            onNext={() => handleNextVs(vsItem.id)}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         );
@@ -339,13 +397,13 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
                     {!loading && hasInitialFetch && items.length === 0 && (
                         <div className="py-20 text-center text-muted-foreground">
-                            등록된 콘텐츠가 없습니다.
+                            {t('home.empty')}
                         </div>
                     )}
 
                     {!loading && !hasMore && items.length > 0 && (
                         <div className="py-8 text-center text-muted-foreground text-sm">
-                            모든 콘텐츠를 확인했습니다.
+                            {t('home.end')}
                         </div>
                     )}
                 </div>

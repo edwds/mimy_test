@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from 'react-i18next';
 
 interface LeaderboardItem {
     rank: number;
@@ -18,6 +19,7 @@ interface LeaderboardItem {
 }
 
 export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     // Smart Header State
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -94,7 +96,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                 )}
             >
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-bold">Leaderboard</h1>
+                    <h1 className="text-2xl font-bold">{t('leaderboard.title')}</h1>
                     <div className="flex gap-4">
                         {/* 
                         <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
@@ -195,7 +197,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                             {item.score}
                                         </span>
                                         <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                                            Points
+                                            {t('leaderboard.points')}
                                         </span>
                                     </div>
                                 </div>
@@ -204,8 +206,8 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                             {/* Empty State */}
                             {items.length === 0 && (
                                 <div className="text-center py-20 text-muted-foreground">
-                                    <p>No rankings yet.</p>
-                                    <p className="text-sm opacity-70">Be the first to post!</p>
+                                    <p>{t('leaderboard.empty_title')}</p>
+                                    <p className="text-sm opacity-70">{t('leaderboard.empty_desc')}</p>
                                 </div>
                             )}
                         </div>

@@ -10,6 +10,7 @@ import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
 import { User } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
+import { useTranslation } from 'react-i18next';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const UserProfileScreen = ({ userId: propUserId }: Props) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const params = useParams();
     const userId = propUserId || params.userId;
@@ -63,7 +65,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     setIsFollowing(data.is_following);
                 } else {
                     // Handle error (e.g. 404)
-                    alert("User not found");
+                    alert(t('profile.user_not_found'));
                     navigate(-1);
                 }
             } catch (e) {
@@ -175,13 +177,14 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
     useEffect(() => {
         const fetchContent = async () => {
-            if (!userId || activeTab !== 'content') return;
+            const targetId = user?.id || userId;
+            if (!targetId || activeTab !== 'content') return;
+
             setLoadingContent(true);
             try {
                 // If userId is string (account_id), API might need numeric ID.
-                // Assuming API supports account_id or userId is already numeric if passed from some sources.
-                // Best effort: pass userId directly.
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${userId}?user_id=${currentUser?.id || ''}`);
+                // We prefer user.id if available (from fetchUser).
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${targetId}?user_id=${currentUser?.id || ''}`);
                 if (response.ok) {
                     const data = await response.json();
                     setContents(data);
@@ -193,7 +196,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             }
         };
         fetchContent();
-    }, [userId, activeTab, currentUser?.id]);
+    }, [userId, activeTab, currentUser?.id, user]);
 
     // Saved (Wants to go) - Overlap Logic
     const [commonShops, setCommonShops] = useState<any[]>([]);
@@ -262,7 +265,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
 
 
-    if (!user && !loadingUser) return <div>User not found</div>;
+    if (!user && !loadingUser) return <div>{t('profile.user_not_found')}</div>;
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -295,7 +298,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                         onClick={handleFollow}
                         disabled={followLoading}
                     >
-                        {isFollowing ? "Following" : "Follow"}
+                        {isFollowing ? t('profile.following') : t('profile.follow')}
                     </Button>
                 </div>
             </div>
@@ -326,11 +329,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     <>
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold">{user?.stats?.content_count || 0}</span>
-                                            <span className="text-xs text-muted-foreground">Contents</span>
+                                            <span className="text-xs text-muted-foreground">{t('profile.stats.contents')}</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold">{user?.stats?.follower_count || 0}</span>
-                                            <span className="text-xs text-muted-foreground">Followers</span>
+                                            <span className="text-xs text-muted-foreground">{t('profile.stats.followers')}</span>
                                         </div>
                                     </>
                                 )}
@@ -346,7 +349,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     {user?.bio ? (
                                         <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
                                     ) : (
-                                        <p className="text-sm text-gray-400 mb-2">No bio to show.</p>
+                                        <p className="text-sm text-gray-400 mb-2">{t('profile.no_bio')}</p>
                                     )}
                                     {user?.link && (
                                         <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
@@ -391,7 +394,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                             {/* Matching Score Badge */}
                             {matchingScore !== null && (
                                 <div className="flex flex-col items-center justify-center p-2 bg-pink-50 rounded-xl min-w-[80px]">
-                                    <span className="text-[10px] text-pink-500 font-bold uppercase">Match</span>
+                                    <span className="text-[10px] text-pink-500 font-bold uppercase">{t('profile.match')}</span>
                                     <span className="text-xl font-black text-pink-600">{matchingScore}%</span>
                                 </div>
                             )}
@@ -402,9 +405,9 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 {/* Tabs */}
                 <div className="bg-background sticky top-0 z-10 border-b border-border/50 mb-2">
                     <div className="flex w-full px-0">
-                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
-                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
-                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label="Shared Picks" />
+                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label={t('profile.tabs.content')} />
+                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label={t('profile.tabs.list')} />
+                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label={t('profile.tabs.shared')} />
                     </div>
                 </div>
 
@@ -412,21 +415,22 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     {activeTab === "content" && (
                         <div className="pb-20">
                             {contents.map((content: any) => (
-                                <ContentCard
-                                    key={content.id}
-                                    user={{
-                                        id: user?.id || 0,
-                                        nickname: user?.nickname || "User",
-                                        account_id: user?.account_id || "",
-                                        profile_image: user?.profile_image || null
-                                    }}
-                                    content={content}
-                                />
+                                <div key={content.id} className="mb-8">
+                                    <ContentCard
+                                        user={{
+                                            id: user?.id || 0,
+                                            nickname: user?.nickname || "User",
+                                            account_id: user?.account_id || "",
+                                            profile_image: user?.profile_image || null
+                                        }}
+                                        content={content}
+                                    />
+                                </div>
                             ))}
                             {!loadingContent && contents.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                     <Grid className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">No contents yet</p>
+                                    <p className="text-sm">{t('profile.empty.content')}</p>
                                 </div>
                             )}
                         </div>
@@ -435,7 +439,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     {activeTab === "list" && (
                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                             <List className="w-10 h-10 mb-2 opacity-20" />
-                            <p className="text-sm">No public lists</p>
+                            <p className="text-sm">{t('profile.empty.lists')}</p>
                         </div>
                     )}
 
@@ -449,9 +453,12 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                 <>
                                     {commonShops.length > 0 ? (
                                         <>
-                                            <div className="mb-4 text-sm text-muted-foreground">
-                                                You both saved <strong>{commonShops.length}</strong> places!
-                                            </div>
+                                            <div
+                                                className="mb-4 text-sm text-muted-foreground"
+                                                dangerouslySetInnerHTML={{
+                                                    __html: t('profile.shared_count', { count: commonShops.length })
+                                                }}
+                                            />
                                             {commonShops.map((shop: any) => (
                                                 <ShopCard
                                                     key={shop.id}
@@ -463,7 +470,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                             <MapPin className="w-10 h-10 mb-2 opacity-20" />
-                                            <p className="text-sm">No shared saved places found.</p>
+                                            <p className="text-sm">{t('profile.empty.shared')}</p>
                                         </div>
                                     )}
                                 </>
@@ -478,6 +485,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 isOpen={isTasteSheetOpen}
                 onClose={() => setIsTasteSheetOpen(false)}
                 data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
+                userId={user?.id}
             />
         </div>
     );

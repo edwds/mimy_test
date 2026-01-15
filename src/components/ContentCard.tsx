@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Share, MessageSquare, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -152,6 +153,7 @@ export const ContentCard = ({
     onShare
 }: ContentCardProps) => {
     const navigate = useNavigate();
+    const { t, i18n } = useTranslation();
     const { user: currentUser } = useUser();
 
     // Local State for Optimistic Updates
@@ -247,11 +249,11 @@ export const ContentCard = ({
     // const isPoiBookmarked used state above
 
     const contextText = shopName
-        ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
+        ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
         : (content.type === 'post' ? '자유 형식 게시물입니다.' : null);
 
     return (
-        <div className="bg-white pb-6 mb-6">
+        <div className="bg-white">
             {/* Header */}
             <div className="flex items-center px-5 py-4 gap-3">
                 <div
@@ -278,7 +280,7 @@ export const ContentCard = ({
                     </div>
 
                     {contextText && (
-                        <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                        <div className="flex items-center gap-2 mt-1 min-w-0">
                             <span className="text-[13px] text-gray-500 leading-tight truncate">{contextText}</span>
                         </div>
                     )}
@@ -458,38 +460,38 @@ export const ContentCard = ({
 
 
             {/* Footer Stats & Actions (content scrap removed) */}
-            <div className="px-5 pt-1">
-                <div className="flex items-center justify-between mb-3">
-                    <span className="text-[12px] text-gray-400">{formatFullDateTime(content.created_at)}</span>
+            <div className="px-5 mb-2">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-[12px] text-gray-400">{formatFullDateTime(content.created_at, i18n.language)}</span>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
                     <button
                         type="button"
                         onClick={handleLike}
-                        className="flex items-center gap-1.5 p-1 -ml-1 text-gray-600 hover:text-red-500 transition-colors"
+                        className="flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-full text-gray-600 active:text-red-500 active:bg-red-50 transition-colors"
                     >
-                        <Heart size={24} className={cn(isLiked && 'fill-red-500 text-red-500')} />
+                        <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
                         {likeCount > 0 && <span className="text-sm font-medium">{likeCount}</span>}
                     </button>
 
                     <button
                         type="button"
                         onClick={handleOpenComments}
-                        className="flex items-center gap-1.5 p-1 text-gray-600 hover:text-blue-500 transition-colors"
+                        className="flex items-center gap-1.5 h-9 px-2 rounded-full text-gray-600 active:text-blue-500 active:bg-blue-50 transition-colors"
                         aria-label="Open comments"
                     >
-                        <MessageSquare size={24} />
+                        <MessageCircle size={20} />
                         {commentCount > 0 && <span className="text-sm font-medium">{commentCount}</span>}
                     </button>
 
                     <button
                         type="button"
                         onClick={() => onShare?.(content.id)}
-                        className="flex items-center gap-1.5 p-1 text-gray-600 hover:text-gray-900 transition-colors"
+                        className="flex items-center justify-center gap-1.5 h-9 w-9 rounded-full text-gray-600 active:text-gray-900 active:bg-gray-100 transition-colors"
                         aria-label="Share"
                     >
-                        <Share size={24} />
+                        <Send size={20} />
                     </button>
                 </div>
             </div>
@@ -497,13 +499,13 @@ export const ContentCard = ({
             {/* Comment Preview */}
             {
                 content.preview_comments && content.preview_comments.length > 0 && (
-                    <div className="px-5 pb-2 mt-2 space-y-2">
+                    <div className="px-5 pb-2 mb-4 space-y-2">
                         {content.stats.comments > content.preview_comments.length && (
                             <button
                                 onClick={handleOpenComments}
-                                className="text-gray-500 text-sm font-medium mb-1 hover:text-gray-800"
+                                className="text-gray-500 text-xs font-medium mb-1 hover:text-gray-800"
                             >
-                                View all {content.stats.comments} comments
+                                {t('content.view_all_comments', { count: content.stats.comments })}
                             </button>
                         )}
 

@@ -5,6 +5,7 @@ import { Smile, Meh, Frown, Calendar, Users, ChevronLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useTranslation, Trans } from 'react-i18next';
 
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => {
+    const { t } = useTranslation();
     const [satisfaction, setSatisfaction] = useState<'good' | 'ok' | 'bad' | null>(null);
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -42,18 +44,21 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
 
             <div className={cn("flex-1 overflow-y-auto pb-24 p-6 transition-opacity duration-500", isLoaded ? "opacity-100" : "opacity-0")}>
                 <h1 className="text-2xl font-bold mb-8 text-foreground leading-tight">
-                    <span className="text-primary">{shopName}</span>에서의<br />
-                    경험은 어떠셨나요?
+                    <Trans
+                        i18nKey="write.basic.title"
+                        values={{ name: shopName }}
+                        components={{ 1: <span className="text-primary" />, br: <br /> }}
+                    />
                 </h1>
 
                 {/* Satisfaction */}
                 <div className="space-y-3 mb-8">
-                    <Label className="text-base">만족도</Label>
+                    <Label className="text-base">{t('write.basic.satisfaction')}</Label>
                     <div className="grid grid-cols-3 gap-3">
                         {[
-                            { value: 'good', icon: Smile, label: '맛있어요', color: 'text-orange-600', activeBg: 'bg-orange-50 border-orange-200 ring-2 ring-orange-100' },
-                            { value: 'ok', icon: Meh, label: '괜찮아요', color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-200 ring-2 ring-yellow-100' },
-                            { value: 'bad', icon: Frown, label: '별로예요', color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-200 ring-2 ring-gray-100' },
+                            { value: 'good', icon: Smile, label: t('write.basic.good'), color: 'text-orange-600', activeBg: 'bg-orange-50 border-orange-200 ring-2 ring-orange-100' },
+                            { value: 'ok', icon: Meh, label: t('write.basic.ok'), color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-200 ring-2 ring-yellow-100' },
+                            { value: 'bad', icon: Frown, label: t('write.basic.bad'), color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-200 ring-2 ring-gray-100' },
                         ].map((item) => (
                             <button
                                 key={item.value}
@@ -80,7 +85,7 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                 {/* Form Fields */}
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <Label>방문일</Label>
+                        <Label>{t('write.basic.date')}</Label>
                         <div className="relative">
                             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                             <Input
@@ -93,11 +98,11 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                     </div>
 
                     <div className="space-y-2">
-                        <Label>함께한 사람</Label>
+                        <Label>{t('write.basic.companions')}</Label>
                         <div className="relative">
                             <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                             <button className="w-full flex items-center h-10 rounded-md border border-input bg-muted/30 px-10 text-base text-muted-foreground hover:bg-muted transition-colors text-left text-sm">
-                                친구 태그하기 (준비중)
+                                {t('write.basic.tag_placeholder')}
                             </button>
                         </div>
                     </div>
@@ -116,7 +121,7 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                     disabled={!satisfaction}
                     onClick={handleNext}
                 >
-                    다음으로
+                    {t('write.basic.next')}
                 </Button>
             </div>
         </div>

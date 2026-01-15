@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     id: number;
@@ -6,10 +8,34 @@ interface Props {
     itemB: string;
     index?: number;
     onVote?: (id: number, selection: 'A' | 'B') => void;
+    onClose?: () => void;
+    onNext?: () => void;
 }
 
-export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote }) => {
+export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote, onClose, onNext }) => {
+    const { t } = useTranslation();
     const [selected, setSelected] = useState<'A' | 'B' | null>(null);
+    const [countdown, setCountdown] = useState<number>(0);
+
+    // Countdown effect
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (selected) {
+            setCountdown(3);
+            timer = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            setCountdown(0);
+        }
+        return () => clearInterval(timer);
+    }, [selected]);
 
     const handleSelect = (selection: 'A' | 'B') => {
         if (selected === selection) return; // Same selection, do nothing
@@ -21,6 +47,12 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
     const handleRetry = (e: React.MouseEvent) => {
         e.stopPropagation();
         setSelected(null);
+    };
+
+    const handleNext = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelected(null); // Reset internal state
+        if (onNext) onNext();
     };
 
     // Dynamic gradient backgrounds based on index to add variety
@@ -40,11 +72,18 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
                 <div className="p-5">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-lg text-foreground">
-                            더 선호하는 맛은?
+                            {t('vs_card.title')}
                         </h3>
-                        <span className="text-xs font-medium text-muted-foreground bg-white/50 px-2 py-1 rounded-full">
-                            VS 밸런스 게임
-                        </span>
+                        {/* Close Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onClose) onClose();
+                            }}
+                            className="text-muted-foreground hover:bg-black/5 p-1 rounded-full transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
                     </div>
 
                     <div className="flex gap-4 relative min-h-[140px]">
@@ -64,7 +103,7 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
                                     : 'bg-white text-foreground'
                                 }
                             `}
-                            disabled={selected === 'B'}
+                            disabled={!!selected} // Disable change during countdown? Or allow retry. Button allows retry.
                             style={{
                                 transform: selected === 'B' ? 'translateX(-30%)' : 'none'
                             }}
@@ -82,8 +121,8 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
                             absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none transition-opacity duration-300
                             ${selected ? 'opacity-0' : 'opacity-100'}
                         `}>
-                            <div className="bg-foreground text-background font-black text-xs px-2 py-1 rounded-full shadow-lg border-2 border-white transform rotate-12">
-                                VS
+                            <div className="bg-foreground text-background font-black text-sm px-2 py-1 rounded-full shadow-lg border-2 border-white transform rotate-12">
+                                {t('common.vs')}
                             </div>
                         </div>
 
@@ -103,7 +142,7 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
                                     : 'bg-white text-foreground'
                                 }
                             `}
-                            disabled={selected === 'A'}
+                            disabled={!!selected}
                             style={{
                                 transform: selected === 'A' ? 'translateX(30%)' : 'none'
                             }}
@@ -117,16 +156,25 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote })
                         </button>
                     </div>
 
-                    {/* Retry Button (Replaces Progress Bar) */}
+                    {/* Action Button (Retry or Next) */}
                     {selected && (
                         <div className="mt-4 flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <button
-                                onClick={handleRetry}
-                                className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full hover:bg-white/80 transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" /><path d="M3 3v9h9" /></svg>
-                                다시하기
-                            </button>
+                            {countdown > 0 ? (
+                                <button
+                                    onClick={handleRetry}
+                                    className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full hover:bg-white/80 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" /><path d="M3 3v9h9" /></svg>
+                                    {t('vs_card.retry', { count: countdown })}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleNext}
+                                    className="text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-sm hover:shadow-md transition-all"
+                                >
+                                    {t('vs_card.next_question')}
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

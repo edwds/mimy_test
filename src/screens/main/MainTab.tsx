@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Home, Compass, Trophy, User, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
@@ -88,6 +89,8 @@ export const MainTab = () => {
         return () => timeoutIds.forEach(clearTimeout);
     }, []);
 
+    const { t } = useTranslation();
+
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
@@ -98,7 +101,7 @@ export const MainTab = () => {
 
                     if (viewUserId) {
                         return (
-                            <div className="absolute inset-0 z-50 bg-background animate-in slide-in-from-right duration-200">
+                            <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
                                 <UserProfileScreen userId={viewUserId} />
                             </div>
                         );
@@ -133,14 +136,7 @@ export const MainTab = () => {
                 </div>
             </main>
 
-            {/* Floating Action Button */}
-            <button
-                onClick={() => setIsWriteSheetOpen(true)}
-                className="absolute bottom-24 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform z-50 focus:outline-none"
-                aria-label="Write Review"
-            >
-                <Plus className="w-8 h-8" />
-            </button>
+            {/* Write Sheet */}
 
             <SelectTypeStep
                 isOpen={isWriteSheetOpen}
@@ -156,25 +152,33 @@ export const MainTab = () => {
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
                         icon={<Home className="w-6 h-6" />}
-                        label="홈"
+                        label={t('nav.home')}
                         active={activeTab === 'home'}
                         onClick={() => handleTabClick('home')}
                     />
                     <NavIcon
                         icon={<Compass className="w-6 h-6" />}
-                        label="탐색"
+                        label={t('nav.discover')}
                         active={activeTab === 'discover'}
                         onClick={() => handleTabClick('discover')}
                     />
+
+                    {/* Write Button (Center) */}
+                    <NavIcon
+                        icon={<PlusCircle className="w-6 h-6" />}
+                        label={t('common.write')}
+                        onClick={() => setIsWriteSheetOpen(true)}
+                    />
+
                     <NavIcon
                         icon={<Trophy className="w-6 h-6" />}
-                        label="순위"
+                        label={t('nav.ranking')}
                         active={activeTab === 'ranking'}
                         onClick={() => handleTabClick('ranking')}
                     />
                     <NavIcon
                         icon={<User className="w-6 h-6" />}
-                        label="프로필"
+                        label={t('nav.profile')}
                         active={activeTab === 'profile'}
                         onClick={() => handleTabClick('profile')}
                     />

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SplashScreen } from '@/screens/onboarding/SplashScreen';
@@ -11,6 +11,7 @@ import { OtpStep } from '@/screens/register/OtpStep';
 import { ProfileStep } from '@/screens/register/ProfileStep';
 import { MainTab } from '@/screens/main/MainTab';
 import './i18n';
+import DebugLocaleSwitcher from '@/components/DebugLocaleSwitcher';
 import { QuizIntro } from '@/screens/quiz/QuizIntro';
 import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
@@ -47,6 +48,7 @@ function App() {
 
     return (
         <GoogleOAuthProvider clientId={googleClientId || ""}>
+            <DebugLocaleSwitcher />
             <UserProvider>
                 <BrowserRouter>
                     {loading ? (
@@ -54,7 +56,7 @@ function App() {
                     ) : (
                         <Routes>
                             <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
-                            <Route path="/start" element={<StartPage onStart={() => window.location.href = '/onboarding/age-check'} />} />
+                            <Route path="/start" element={<StartRoute />} />
 
                             {/* Onboarding Flow */}
                             <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
@@ -89,6 +91,11 @@ function App() {
         </GoogleOAuthProvider>
     );
 }
+
+const StartRoute = () => {
+    const navigate = useNavigate();
+    return <StartPage onStart={() => navigate('/onboarding/age-check')} />;
+};
 
 const RedirectToMainUser = () => {
     const { userId } = useParams();

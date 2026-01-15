@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters } from "../db/schema.js";
+import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters, users_follow } from "../db/schema.js";
 import { eq, desc, and, sql, not, count, ilike, or, inArray, gt, gte, ne, lte } from "drizzle-orm";
 
 const router = Router();
@@ -12,9 +12,13 @@ router.get("/feed", async (req, res) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
         const offset = (page - 1) * limit;
+        const filter = (req.query.filter as string) || 'popular';
+        const userLat = parseFloat(req.query.lat as string);
+        const userLon = parseFloat(req.query.lon as string);
+        const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
 
         // 1. Fetch Content + User Info
-        const feedItems = await db.select({
+        let query = db.select({
             id: content.id,
             user_id: content.user_id,
             type: content.type,
@@ -29,15 +33,85 @@ router.get("/feed", async (req, res) => {
                 account_id: users.account_id,
                 profile_image: users.profile_image,
                 cluster_name: clusters.name
-            }
+            },
+            // For 'near' sort, we might want distance, but let's just filter for now
         })
             .from(content)
             .leftJoin(users, eq(content.user_id, users.id))
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
-            .where(and(
-                eq(content.is_deleted, false),
-                eq(content.visibility, true)
-            ))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
+
+        // Apply Filters
+        const whereConditions = [
+            eq(content.is_deleted, false),
+            eq(content.visibility, true)
+        ];
+
+        if (filter === 'follow') {
+            if (!currentUserId) {
+                return res.json([]); // Login required
+            }
+            // Join users_follow to only get people I follow
+            query.innerJoin(users_follow,
+                and(
+                    eq(users_follow.follower_id, currentUserId),
+                    eq(users_follow.following_id, content.user_id)
+                )
+            );
+        } else if (filter === 'like') {
+            if (!currentUserId) {
+                return res.json([]); // Login required
+            }
+            // Join likes to get content I liked
+            query.innerJoin(likes,
+                and(
+                    eq(likes.target_type, 'content'),
+                    eq(likes.target_id, content.id),
+                    eq(likes.user_id, currentUserId)
+                )
+            );
+        } else if (filter === 'near') {
+            if (!userLat || !userLon) {
+                // If location missing, fallback to popular or empty? 
+                // Let's return empty or normal feed? Spec implies "near 10km".
+                // If no loc, probably empty or error.
+            } else {
+                // Approximate 10km filter using Haversine
+                // We need to join local shops to get lat/lon
+                // Limitation: We have to extract shop_id from jsonb review_prop
+                // JOIN shops ON shops.id = (content.review_prop->>'shop_id')::int
+
+                query.innerJoin(shops,
+                    sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shops.id}`
+                );
+
+                // Haversine Formula for 10km (approx)
+                // 6371 * acos(...)
+                // SQL in SQLite/Postgres compatibility is tricky for math functions if using pure sqlite, 
+                // but Drizzle `sql` tag passes raw string.
+                // Assuming Postgres (based on pg-core imports) or SQLite with Math functions enabled?
+                // The project uses `drizzle-orm/pg-core` so it IS Postgres.
+                // Postgres has earth_distance or we can use raw math.
+
+                const R = 6371; // Radius of Earth in km
+
+                // Using raw SQL for distance filter
+                whereConditions.push(sql`
+                    (
+                        ${R} * acos(
+                            least(1.0, greatest(-1.0, 
+                                cos(radians(${userLat})) * cos(radians(${shops.lat})) * 
+                                cos(radians(${shops.lon}) - radians(${userLon})) + 
+                                sin(radians(${userLat})) * sin(radians(${shops.lat}))
+                            ))
+                        )
+                    ) <= 10
+                `);
+            }
+        }
+
+        // Apply Where
+        const feedItems = await query
+            .where(and(...whereConditions))
             .orderBy(desc(content.created_at))
             .limit(limit)
             .offset(offset);
@@ -122,7 +196,7 @@ router.get("/feed", async (req, res) => {
         const likeCountMap = new Map<number, number>();
         const commentCountMap = new Map<number, number>();
         const likedSet = new Set<number>();
-        const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+
 
         if (contentIds.length > 0) {
             // Like Counts

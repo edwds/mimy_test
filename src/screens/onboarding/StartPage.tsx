@@ -4,27 +4,31 @@ import { ChevronRight, ChefHat, Search, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const slides = [
+import { useTranslation } from 'react-i18next';
+
+const getSlides = (t: any) => [
     {
         icon: <Search className="w-12 h-12 text-primary" />,
-        title: "Discover Your Taste",
-        desc: "Find out your unique taste profile with our 1-minute quiz."
+        title: t('intro.slides.0.title'),
+        desc: t('intro.slides.0.desc')
     },
     {
         icon: <Heart className="w-12 h-12 text-primary" />,
-        title: "Connect with Taste-Alikes",
-        desc: "Follow creators who share your exact palate preference."
+        title: t('intro.slides.1.title'),
+        desc: t('intro.slides.1.desc')
     },
     {
         icon: <ChefHat className="w-12 h-12 text-primary" />,
-        title: "My Michelin Guide",
-        desc: "Build your personal dining ranking, not just star ratings."
+        title: t('intro.slides.2.title'),
+        desc: t('intro.slides.2.desc')
     }
 ];
 
 export const StartPage = ({ onStart }: { onStart: () => void }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [currentSlide, setCurrentSlide] = useState(0);
+    const slides = getSlides(t);
 
     const handleDragEnd = (_event: any, info: any) => {
         const threshold = 50; // Drag distance required to trigger swipe
@@ -100,12 +104,12 @@ export const StartPage = ({ onStart }: { onStart: () => void }) => {
                     className="w-full group relative inline-flex h-14 items-center justify-center overflow-hidden rounded-xl bg-primary px-8 font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95"
                     onClick={onStart}
                 >
-                    <span className="mr-2 text-lg">Get Started</span>
+                    <span className="mr-2 text-lg">{t('intro.get_started')}</span>
                     <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
 
                 <p className="text-center text-sm text-muted-foreground">
-                    Already have an account? <span onClick={() => navigate('/login')} className="text-primary font-semibold cursor-pointer hover:underline">Log in</span>
+                    {t('intro.have_account')} <span onClick={() => navigate('/login')} className="text-primary font-semibold cursor-pointer hover:underline">{t('intro.login')}</span>
                 </p>
             </footer>
         </div>

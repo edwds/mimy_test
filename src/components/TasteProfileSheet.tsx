@@ -26,22 +26,27 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
     const [history, setHistory] = useState<VsHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Visibility Animation
     useEffect(() => {
         if (isOpen) {
             setIsVisible(true);
-            if (userId) {
-                setLoading(true);
-                fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/vs/history?user_id=${userId}`)
-                    .then(res => res.json())
-                    .then(data => setHistory(Array.isArray(data) ? data : []))
-                    .catch(err => console.error(err))
-                    .finally(() => setLoading(false));
-            }
         } else {
             const timer = setTimeout(() => setIsVisible(false), 300);
             return () => clearTimeout(timer);
         }
-    }, [isOpen, userId]);
+    }, [isOpen]);
+
+    // Data Fetching (Prefetch)
+    useEffect(() => {
+        if (userId) {
+            setLoading(true);
+            fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/vs/history?user_id=${userId}`)
+                .then(res => res.json())
+                .then(data => setHistory(Array.isArray(data) ? data : []))
+                .catch(err => console.error(err))
+                .finally(() => setLoading(false));
+        }
+    }, [userId]);
 
     if (!isVisible) return null;
 

@@ -8,7 +8,10 @@ import { API_BASE_URL } from '@/lib/api';
 
 import { useUser } from '@/context/UserContext';
 
+import { useTranslation } from 'react-i18next';
+
 export const ProfileStep = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { refreshUser } = useUser();
     const [step, setStep] = useState(0); // 0: Handle, 1: Nickname, 2: Photo
@@ -65,7 +68,7 @@ export const ProfileStep = () => {
                 setHandleStatus('available');
             } else {
                 setHandleStatus('taken');
-                setErrorMessage("This ID is already taken.");
+                setErrorMessage(t('register.profile.id.taken'));
             }
         } catch (error) {
             console.error("Check failed", error);
@@ -205,8 +208,8 @@ export const ProfileStep = () => {
                         {step === 0 && (
                             <>
                                 <div className="space-y-2">
-                                    <h1 className="text-2xl font-bold">Create your ID</h1>
-                                    <p className="text-muted-foreground">This will be your unique handle.</p>
+                                    <h1 className="text-2xl font-bold">{t('register.profile.id.title')}</h1>
+                                    <p className="text-muted-foreground">{t('register.profile.id.desc')}</p>
                                 </div>
 
                                 <div className="pt-4">
@@ -226,7 +229,7 @@ export const ProfileStep = () => {
                                         <input
                                             ref={handleInputRef}
                                             type="text"
-                                            placeholder="username"
+                                            placeholder={t('register.profile.id.placeholder')}
                                             value={handle}
                                             onChange={(e) => {
                                                 const val = e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
@@ -260,7 +263,7 @@ export const ProfileStep = () => {
                                     )}
                                     {!errorMessage && (
                                         <p className="mt-2 text-sm text-muted-foreground/60">
-                                            Lowercase, numbers, (-), (_), (.) allowed.
+                                            {t('register.profile.id.rules')}
                                         </p>
                                     )}
                                 </div>                            </>
@@ -269,13 +272,13 @@ export const ProfileStep = () => {
                         {step === 1 && (
                             <>
                                 <div className="space-y-2">
-                                    <h1 className="text-2xl font-bold">What is your nickname?</h1>
-                                    <p className="text-muted-foreground">This is how you appear to others.</p>
+                                    <h1 className="text-2xl font-bold">{t('register.profile.nickname.title')}</h1>
+                                    <p className="text-muted-foreground">{t('register.profile.nickname.desc')}</p>
                                 </div>
                                 <div className="pt-4">
                                     <input
                                         type="text"
-                                        placeholder="Nickname"
+                                        placeholder={t('register.profile.nickname.placeholder')}
                                         value={nickname}
                                         onChange={(e) => {
                                             const val = e.target.value
@@ -286,7 +289,7 @@ export const ProfileStep = () => {
                                         autoFocus
                                     />
                                     <p className="mt-4 text-sm text-muted-foreground">
-                                        ID: <span className="font-semibold text-primary">@{handle}</span>
+                                        {t('register.profile.nickname.id_label')} <span className="font-semibold text-primary">@{handle}</span>
                                     </p>
                                 </div>
                             </>
@@ -295,8 +298,8 @@ export const ProfileStep = () => {
                         {step === 2 && (
                             <>
                                 <div className="space-y-2">
-                                    <h1 className="text-2xl font-bold">Add a profile photo</h1>
-                                    <p className="text-muted-foreground">Make it recognizable.</p>
+                                    <h1 className="text-2xl font-bold">{t('register.profile.photo.title')}</h1>
+                                    <p className="text-muted-foreground">{t('register.profile.photo.desc')}</p>
                                 </div>
                                 <div className="flex-1 flex flex-col items-center justify-center -mt-20">
                                     {/* OUTER: overflow-visible */}
@@ -323,7 +326,7 @@ export const ProfileStep = () => {
                                                 ) : (
                                                     <div className="flex flex-col items-center gap-2">
                                                         <Camera className="w-10 h-10 text-muted-foreground" />
-                                                        <span className="text-sm text-muted-foreground">Upload</span>
+                                                        <span className="text-sm text-muted-foreground">{t('register.profile.photo.upload')}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -382,7 +385,7 @@ export const ProfileStep = () => {
                     onClick={handleNext}
                     disabled={isNextDisabled()}
                 >
-                    {checking ? <Loader2 className="w-5 h-5 animate-spin" /> : step === 2 ? "Complete" : "Next"}
+                    {checking ? <Loader2 className="w-5 h-5 animate-spin" /> : step === 2 ? t('register.profile.complete') : t('register.profile.next')}
                 </Button>
             </footer>
         </div>

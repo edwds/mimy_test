@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Calendar, Bookmark } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { formatVisitDate } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ interface ShopCardProps {
 }
 
 export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve }) => {
+    const { t } = useTranslation();
     return (
         <div className="bg-background border border-border rounded-xl overflow-hidden shadow-sm mb-4">
             {/* Image Area */}
@@ -52,14 +54,14 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                             )}
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                            {shop.description || "맛있는 경험을 제공하는 공간입니다."}
+                            {shop.description || t('discovery.shop_card.default_desc')}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center text-xs text-muted-foreground mb-4">
                     <MapPin className="w-3 h-3 mr-1" />
-                    <span className="truncate">{shop.address_full || "주소 정보 없음"}</span>
+                    <span className="truncate">{shop.address_full || t('discovery.shop_card.no_address')}</span>
                 </div>
 
                 {/* Actions */}
@@ -75,7 +77,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                         className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
                     >
                         <Calendar className="w-4 h-4 mr-2" />
-                        캐치테이블 예약
+                        {t('discovery.shop_card.reserve_btn')}
                     </button>
                     <button
                         onClick={() => onSave?.(shop.id)}
@@ -87,7 +89,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                         )}
                     >
                         <Bookmark className={cn("w-4 h-4 mr-2", shop.is_saved && "fill-current")} />
-                        {shop.is_saved ? "저장됨" : "저장"}
+                        {shop.is_saved ? t('discovery.shop_card.saved') : t('discovery.shop_card.save')}
                     </button>
                 </div>
             </div>
@@ -96,13 +98,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             {shop.is_saved && shop.saved_at && (
                 <div className="bg-muted/30 px-4 py-3 border-t border-border flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                        저장: {formatVisitDate(shop.saved_at)}
+                        {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}
                         <span className="mx-1">·</span>
                         <button
                             onClick={() => onWrite?.(shop.id)}
                             className="text-primary hover:underline font-medium inline-flex items-center"
                         >
-                            기록 남기기
+                            {t('discovery.shop_card.record')}
                         </button>
                     </span>
                 </div>

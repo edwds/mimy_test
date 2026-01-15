@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, X, ChevronLeft } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 
 import { ImageEditModal } from './ImageEditModal';
 
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
+    const { t } = useTranslation();
     const [text, setText] = useState('');
     const [images, setImages] = useState<string[]>([]);
 
@@ -63,7 +65,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                     <ChevronLeft size={24} />
                 </button>
                 <div className="font-bold text-lg text-foreground">
-                    {mode === 'review' ? '후기 작성' : '새 게시글'}
+                    {mode === 'review' ? t('write.content.title_review') : t('write.content.title_post')}
                 </div>
                 <Button
                     variant="ghost"
@@ -71,7 +73,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                     onClick={handleSubmit}
                     disabled={text.trim().length === 0}
                 >
-                    완료
+                    {t('write.content.done')}
                 </Button>
             </div>
 
@@ -82,8 +84,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                         <Textarea
                             className="min-h-[200px] text-lg bg-transparent border-none p-0 focus-visible:ring-0 placeholder:text-[var(--color-text-tertiary)] resize-none leading-relaxed"
                             placeholder={mode === 'review'
-                                ? "이곳에서의 경험은 어떠셨나요?\n맛, 서비스, 분위기 등 솔직한 후기를 남겨주세요."
-                                : "자유롭게 이야기를 나눠보세요."}
+                                ? t('write.content.placeholder_review')
+                                : t('write.content.placeholder_post')}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             autoFocus
@@ -93,7 +95,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                     {/* Image Grid */}
                     <div className="space-y-3">
                         <Label className="text-base font-semibold flex items-center gap-2">
-                            사진 <span className="text-[var(--color-text-tertiary)] font-normal text-sm">{images.length}/10</span>
+                            {t('write.content.photo_label')} <span className="text-[var(--color-text-tertiary)] font-normal text-sm">{images.length}/10</span>
                         </Label>
                         <div className="grid grid-cols-4 gap-3">
                             {images.map((src, idx) => (
@@ -111,7 +113,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode }) => {
                             {images.length < 10 && (
                                 <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20">
                                     <ImageIcon className="w-6 h-6 mb-1" />
-                                    <span className="text-xs font-medium">추가</span>
+                                    <span className="text-xs font-medium">{t('write.content.add')}</span>
                                     <input
                                         type="file"
                                         multiple

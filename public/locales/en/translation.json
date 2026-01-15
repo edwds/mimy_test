@@ -1,0 +1,255 @@
+{
+    "common": {
+        "next": "Next",
+        "start": "Start",
+        "confirm": "Confirm",
+        "vs": "VS",
+        "write": "Write"
+    },
+    "nav": {
+        "home": "Home",
+        "discover": "Discover",
+        "ranking": "Ranking",
+        "profile": "Profile"
+    },
+    "intro": {
+        "slogan": "Rank what you ate",
+        "slides": {
+            "0": {
+                "title": "Discover Your Taste",
+                "desc": "Find out your unique taste profile with our 1-minute quiz."
+            },
+            "1": {
+                "title": "Connect with Taste-Alikes",
+                "desc": "Follow creators who share your exact palate preference."
+            },
+            "2": {
+                "title": "My Michelin Guide",
+                "desc": "Build your personal dining ranking, not just star ratings."
+            }
+        },
+        "get_started": "Get Started",
+        "have_account": "Already have an account?",
+        "login": "Log in"
+    },
+    "auth": {
+        "login": {
+            "title": "Login to mimy",
+            "desc": "Rank what you ate.",
+            "google": "Continue with Google",
+            "apple": "Continue with Apple",
+            "email": "Continue with Email",
+            "or": "Or",
+            "subtitle": "Tap to see history"
+        },
+        "edit": {
+            "title": "Edit Profile",
+            "done": "Done",
+            "change_photo": "Change Photo",
+            "nickname_label": "Nickname",
+            "bio_label": "Bio",
+            "link_label": "Link",
+            "nickname_placeholder": "Display Name",
+            "bio_placeholder": "Introduce yourself...",
+            "link_placeholder": "https://website.com",
+            "uploading": "Uploading...",
+            "save_failed": "Failed to save changes",
+            "upload_failed": "Image upload failed"
+        }
+    },
+    "write": {
+        "select": {
+            "title": "Create Content",
+            "review": {
+                "title": "Review Place",
+                "desc": "Rank and review restaurants"
+            },
+            "post": {
+                "title": "Free Post",
+                "desc": "Share your food stories"
+            }
+        },
+        "search": {
+            "placeholder": "Search store or address",
+            "no_results": "No results found",
+            "no_results_desc": "Check your spelling or try including part of the address.",
+            "saved_title": "Saved Places",
+            "empty_saved": "Please search for places you visited"
+        },
+        "basic": {
+            "title": "How was your experience at <br /><1>{{name}}</1>?",
+            "satisfaction": "Satisfaction",
+            "date": "Visit Date",
+            "companions": "Companions",
+            "tag_placeholder": "Tag friends (Coming soon)",
+            "next": "Next",
+            "good": "Delicious",
+            "ok": "Okay",
+            "bad": "Not Good"
+        },
+        "content": {
+            "title_review": "Write Review",
+            "title_post": "New Post",
+            "placeholder_review": "How was your experience here?\nShare your honest review about taste, service, and atmosphere.",
+            "placeholder_post": "Share your stories freely.",
+            "photo_label": "Photos",
+            "add": "Add",
+            "done": "Done"
+        },
+        "ranking": {
+            "title": "Which place was better?",
+            "new_label": "New!",
+            "vs": "VS",
+            "tip": "(Tip: Choose the place that was more memorable)",
+            "success_title": "Ranking Updated!",
+            "success_desc": "Your experience at <1>{{name}}</1><br />has been added to your ranking.",
+            "confirm": "Confirm"
+        }
+    },
+    "register": {
+        "phone": {
+            "title": "What is your number?",
+            "desc": "We need it to verify your account.",
+            "placeholder": "Phone Number",
+            "send": "Send Code"
+        },
+        "otp": {
+            "title": "Enter the code",
+            "desc": "Sent to your phone number.",
+            "resend": "Resend Code",
+            "verify": "Verify"
+        },
+        "profile": {
+            "id": {
+                "title": "Create your ID",
+                "desc": "This will be your unique handle.",
+                "placeholder": "username",
+                "rules": "Lowercase, numbers, (-), (_), (.) allowed.",
+                "taken": "This ID is already taken."
+            },
+            "nickname": {
+                "title": "What is your nickname?",
+                "desc": "This is how you appear to others.",
+                "placeholder": "Nickname",
+                "id_label": "ID:"
+            },
+            "photo": {
+                "title": "Add a profile photo",
+                "desc": "Make it recognizable.",
+                "upload": "Upload",
+                "nickname": "Nickname"
+            },
+            "next": "Next",
+            "complete": "Complete"
+        }
+    },
+    "home": {
+        "today": "Today",
+        "chips": {
+            "popular": "Popular",
+            "follow": "Following",
+            "near": "Nearby",
+            "like": "Likes"
+        },
+        "write_nudge": {
+            "title": "What was your <br/>gourmet experience today, {{name}}?",
+            "desc": "Share your dining experience"
+        },
+        "empty": "No contents yet.",
+        "coming_soon": "Coming soon",
+        "end": "You've seen it all."
+    },
+    "discovery": {
+        "search_placeholder": "Search by name, area, or menu",
+        "search_here": "Search here",
+        "searching": "Searching...",
+        "alerts": {
+            "login_required": "Login is required.",
+            "save_failed": "Failed to save.",
+            "location_error": "Could not get location.",
+            "no_gps": "GPS not supported."
+        },
+        "bottom_sheet": {
+            "selected_shop": "Selected Shop",
+            "nearby_shops": "Nearby Shops {{count}}",
+            "no_shop_info": "Shop info not found.",
+            "no_nearby": "No shops nearby.",
+            "reserve_alert": "CatchTable reservation coming soon"
+        },
+        "shop_card": {
+            "default_desc": "A space providing delicious experiences.",
+            "no_address": "No address info",
+            "reserve_btn": "Reserve",
+            "saved": "Saved",
+            "save": "Save",
+            "saved_date": "Saved:",
+            "record": "Record"
+        }
+    },
+    "vs_card": {
+        "title": "Which taste do you prefer?",
+        "retry": "Retry ({{count}})",
+        "next_question": "Next Question"
+    },
+    "leaderboard": {
+        "title": "Leaderboard",
+        "points": "Points",
+        "empty_title": "No rankings yet.",
+        "empty_desc": "Be the first to post!"
+    },
+    "profile": {
+        "user_not_found": "User not found",
+        "follow": "Follow",
+        "following": "Following",
+        "stats": {
+            "contents": "Contents",
+            "followers": "Followers"
+        },
+        "no_bio": "No bio to show.",
+        "match": "Match",
+        "tabs": {
+            "content": "Content",
+            "list": "List",
+            "shared": "Shared Picks",
+            "saved": "Want to go"
+        },
+        "empty": {
+            "content": "No contents yet",
+            "lists": "No public lists",
+            "shared": "No shared saved places found.",
+            "saved": "No saved places"
+        },
+        "shared_count": "You both saved <strong>{{count}}</strong> places!",
+        "menu": {
+            "change_id": "Change ID",
+            "retake_quiz": "Retake Taste Quiz",
+            "report": "Report Issue",
+            "logout": "Log out",
+            "logout_confirm": "Are you sure you want to logout?",
+            "quiz_confirm": "Retaking the quiz will update your taste profile. Continue?",
+            "coming_soon": "Coming soon!"
+        },
+        "id_sheet": {
+            "title": "Change ID",
+            "label": "New ID",
+            "placeholder": "your_id",
+            "helper": "Only lowercase letters, numbers, dots, and underscores.",
+            "save": "Save Changes",
+            "success": "ID updated successfully",
+            "fail": "Failed to update ID",
+            "error": "Error updating ID"
+        },
+        "import_btn": "Import from other platforms",
+        "unsave_fail": "Failed to unsave"
+    },
+    "date": {
+        "today": "Today",
+        "days_ago": "{{count}}d ago",
+        "weeks_ago": "{{count}}w ago",
+        "months_ago": "{{count}}mo ago",
+        "years_ago": "{{count}}y ago"
+    },
+    "content": {
+        "view_all_comments": "View all {{count}} comments"
+    }
+}

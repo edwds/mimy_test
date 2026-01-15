@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 export const OtpStep = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [code, setCode] = useState("");
     const [timer, setTimer] = useState(180); // 3 minutes
@@ -46,8 +48,8 @@ export const OtpStep = () => {
 
             <main className="flex-1 space-y-8">
                 <div className="space-y-2">
-                    <h1 className="text-2xl font-bold">Enter the code</h1>
-                    <p className="text-muted-foreground">Sent to your phone number.</p>
+                    <h1 className="text-2xl font-bold">{t('register.otp.title')}</h1>
+                    <p className="text-muted-foreground">{t('register.otp.desc')}</p>
                 </div>
 
                 <div className="space-y-8">
@@ -94,7 +96,7 @@ export const OtpStep = () => {
 
                     <div className="flex justify-between text-sm px-2">
                         <span className="text-destructive font-medium">{formatTime(timer)}</span>
-                        <button className="text-primary hover:underline font-medium">Resend Code</button>
+                        <button className="text-primary hover:underline font-medium">{t('register.otp.resend')}</button>
                     </div>
                 </div>
             </main>
@@ -106,7 +108,7 @@ export const OtpStep = () => {
                     onClick={handleNext}
                     disabled={code.length !== 6}
                 >
-                    Verify
+                    {t('register.otp.verify')}
                 </Button>
             </footer>
         </div>

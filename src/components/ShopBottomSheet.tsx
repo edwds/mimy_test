@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ShopCard } from './ShopCard';
 import { motion, PanInfo, useAnimation } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     shops: any[];
@@ -15,6 +16,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     const [snapState, setSnapState] = useState<'peek' | 'half' | 'full'>('half');
     const controls = useAnimation();
     const sheetRef = useRef<HTMLDivElement>(null);
+    const { t } = useTranslation();
 
     // If a shop is selected, show only that shop.
     const displayedShops = selectedShopId
@@ -73,7 +75,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             {/* Header (Draggable) */}
             <div className="flex justify-between items-center mb-0 px-5 pb-4">
                 <h2 className="text-lg font-bold">
-                    {selectedShopId ? '선택된 매장' : `주변 맛집 ${shops.length}곳`}
+                    {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
                 </h2>
                 <button
                     onClick={() => setSnapState('peek')}
@@ -90,7 +92,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             >
                 {displayedShops.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
-                        {selectedShopId ? '매장 정보를 찾을 수 없습니다.' : '주변에 맛집이 없습니다.'}
+                        {selectedShopId ? t('discovery.bottom_sheet.no_shop_info') : t('discovery.bottom_sheet.no_nearby')}
                     </div>
                 ) : (
                     displayedShops.map((shop) => (
@@ -98,7 +100,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                             <ShopCard
                                 shop={shop}
                                 onSave={onSave}
-                                onReserve={() => alert('캐치테이블 예약 준비중')}
+                                onReserve={() => alert(t('discovery.bottom_sheet.reserve_alert'))}
                             />
                         </div>
                     ))

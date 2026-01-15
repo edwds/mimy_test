@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const PhoneStep = () => {
-    useTranslation();
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [phone, setPhone] = useState("");
     const [countryCode, setCountryCode] = useState("82");
@@ -51,8 +51,8 @@ export const PhoneStep = () => {
 
             <main className="flex-1 space-y-8">
                 <div className="space-y-2">
-                    <h1 className="text-2xl font-bold">What is your number?</h1>
-                    <p className="text-muted-foreground">We need it to verify your account.</p>
+                    <h1 className="text-2xl font-bold">{t('register.phone.title')}</h1>
+                    <p className="text-muted-foreground">{t('register.phone.desc')}</p>
                 </div>
 
                 <div className="flex space-x-4">
@@ -76,7 +76,7 @@ export const PhoneStep = () => {
                     <input
                         ref={inputRef}
                         type="tel"
-                        placeholder="Phone Number"
+                        placeholder={t('register.phone.placeholder')}
                         value={phone}
                         onChange={handlePhoneChange}
                         className={cn(
@@ -94,7 +94,7 @@ export const PhoneStep = () => {
                     onClick={handleNext}
                     disabled={phone.replace(/-/g, "").length < 10}
                 >
-                    Send Code
+                    {t('register.phone.send')}
                 </Button>
             </footer>
         </div>

@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SelectTypeStep } from './SelectTypeStep';
 import { SearchShopStep } from './SearchShopStep';
 import { BasicInfoStep } from './BasicInfoStep';
@@ -9,6 +10,7 @@ import { RankingStep } from './RankingStep';
 import { ContentService } from '@/services/ContentService';
 
 export const WriteFlow = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const initialType = searchParams.get('type') as 'review' | 'post' | null;
@@ -82,7 +84,7 @@ export const WriteFlow = () => {
             }
         } catch (error) {
             console.error(error);
-            alert('저장에 실패했습니다.');
+            alert(t('discovery.alerts.save_failed'));
         }
     };
 

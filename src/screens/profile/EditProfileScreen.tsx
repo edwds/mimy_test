@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { resizeImage } from '@/lib/image';
 import { API_BASE_URL } from '@/lib/api';
 
+import { useTranslation } from 'react-i18next';
+
 export const EditProfileScreen = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -79,11 +82,11 @@ export const EditProfileScreen = () => {
                 const data = await response.json();
                 setPhotoUrl(data.url);
             } else {
-                alert("Image upload failed");
+                alert(t('auth.edit.upload_failed'));
             }
         } catch (err) {
             console.error(err);
-            alert("Error uploading image");
+            alert(t('auth.edit.upload_failed'));
         } finally {
             setUploading(false);
         }
@@ -109,11 +112,11 @@ export const EditProfileScreen = () => {
             if (response.ok) {
                 navigate(-1); // Go back to profile
             } else {
-                alert("Failed to save changes");
+                alert(t('auth.edit.save_failed'));
             }
         } catch (error) {
             console.error("Save failed", error);
-            alert("Network error");
+            alert(t('auth.edit.save_failed'));
         } finally {
             setSaving(false);
         }
@@ -128,14 +131,14 @@ export const EditProfileScreen = () => {
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted">
                     <ChevronLeft className="w-6 h-6" />
                 </button>
-                <h1 className="font-bold text-lg">Edit Profile</h1>
+                <h1 className="font-bold text-lg">{t('auth.edit.title')}</h1>
                 <Button
                     variant="ghost"
                     className="text-primary font-semibold hover:bg-primary/10 hover:text-primary"
                     onClick={handleSave}
                     disabled={saving || uploading}
                 >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Done"}
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('auth.edit.done')}
                 </Button>
             </header>
 
@@ -176,7 +179,7 @@ export const EditProfileScreen = () => {
                         className="mt-3 text-sm text-primary font-medium"
                         onClick={() => fileInputRef.current?.click()}
                     >
-                        Change Photo
+                        {t('auth.edit.change_photo')}
                     </button>
                     <input
                         type="file"
@@ -190,37 +193,37 @@ export const EditProfileScreen = () => {
                 {/* Form Fields */}
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Nickname</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('auth.edit.nickname_label')}</label>
                         <input
                             type="text"
                             className="w-full border-b border-border py-2 text-lg bg-transparent focus:outline-none focus:border-primary transition-colors"
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
-                            placeholder="Display Name"
+                            placeholder={t('auth.edit.nickname_placeholder')}
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Bio</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('auth.edit.bio_label')}</label>
                         <textarea
                             ref={bioRef}
                             className="w-full border-b border-border py-2 text-base bg-transparent focus:outline-none focus:border-primary transition-colors resize-none overflow-hidden"
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            placeholder="Introduce yourself..."
+                            placeholder={t('auth.edit.bio_placeholder')}
                             rows={1}
                             style={{ minHeight: '40px' }}
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Link</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('auth.edit.link_label')}</label>
                         <input
                             type="url"
                             className="w-full border-b border-border py-2 text-base bg-transparent focus:outline-none focus:border-primary transition-colors"
                             value={link}
                             onChange={(e) => setLink(e.target.value)}
-                            placeholder="https://website.com"
+                            placeholder={t('auth.edit.link_placeholder')}
                         />
                     </div>
                 </div>

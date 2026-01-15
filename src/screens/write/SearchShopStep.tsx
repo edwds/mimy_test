@@ -4,6 +4,7 @@ import { Search, MapPin, ChevronLeft, Utensils } from 'lucide-react';
 import { ShopService } from '@/services/ShopService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     onSelect: (shop: any) => void;
@@ -13,6 +14,7 @@ interface Props {
 import { UserService } from '@/services/UserService';
 
 export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
+    const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
@@ -63,7 +65,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                         className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
-                        placeholder="매장명 또는 주소 검색"
+                        placeholder={t('write.search.placeholder')}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         autoFocus
@@ -126,10 +128,8 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
                                 <Search className="w-8 h-8 text-gray-300" />
                             </div>
-                            <h3 className="text-lg font-bold text-foreground mb-2">검색 결과가 없습니다</h3>
-                            <p className="text-muted-foreground text-sm">
-                                철자를 확인하거나 주소의 일부를 포함해서<br />다시 검색해보세요.
-                            </p>
+                            <h3 className="text-lg font-bold text-foreground mb-2">{t('write.search.no_results')}</h3>
+                            <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: t('write.search.no_results_desc') }} />
                         </div>
                     )
                 ) : (
@@ -137,7 +137,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     <div className="space-y-6">
                         {savedShops.length > 0 && (
                             <div>
-                                <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">가고싶어요 저장 목록</h3>
+                                <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">{t('write.search.saved_title')}</h3>
                                 <ul className="space-y-3">
                                     {savedShops.map((shop) => (
                                         <li key={shop.id}>
@@ -178,7 +178,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                         {savedShops.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 opacity-40">
                                 <Utensils className="w-12 h-12 text-gray-300 mb-4" />
-                                <p className="text-sm font-medium">방문하신 매장을 검색해주세요</p>
+                                <p className="text-sm font-medium">{t('write.search.empty_saved')}</p>
                             </div>
                         )}
                     </div>

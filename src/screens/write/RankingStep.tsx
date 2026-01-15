@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Check } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentService } from '@/services/ContentService';
+import { useTranslation, Trans } from 'react-i18next';
 
 interface Props {
     userId: number;
@@ -19,6 +20,7 @@ interface Candidate {
 }
 
 export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction, onFinish }) => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [mode, setMode] = useState<'COMPARING' | 'SUCCESS'>('COMPARING');
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -82,7 +84,7 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
             });
         } catch (error) {
             console.error(error);
-            alert("랭킹 저장 중 오류가 발생했습니다.");
+            alert(t('discovery.alerts.save_failed')); // Reuse or create ranking-specific error
             // We still set SUCCESS to avoid trapping the user, or we could keep them here.
             // But usually safe to proceed.
         }
@@ -118,7 +120,7 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
         const opponent = candidates[compareIdx];
         return (
             <div className="flex flex-col h-full bg-[var(--color-surface)] p-6">
-                <h2 className="text-xl font-bold text-center mb-8 mt-4 text-[var(--color-text-primary)]">어떤 곳이 더 만족스러웠나요?</h2>
+                <h2 className="text-xl font-bold text-center mb-8 mt-4 text-[var(--color-text-primary)]">{t('write.ranking.title')}</h2>
 
                 <div className="flex-1 flex flex-col gap-4 justify-center">
                     {/* New Shop */}
@@ -126,12 +128,12 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
                         onClick={() => handleChoice('NEW')}
                         className="flex flex-col items-center p-6 bg-[var(--color-surface)] border-2 border-[var(--color-primary)] rounded-2xl shadow-sm active:scale-95 transition-transform"
                     >
-                        <span className="text-lg font-bold text-[var(--color-primary)] mb-1">New!</span>
+                        <span className="text-lg font-bold text-[var(--color-primary)] mb-1">{t('write.ranking.new_label')}</span>
                         <span className="text-2xl font-bold text-[var(--color-text-primary)]">{currentShop.name}</span>
                         <span className="text-sm text-[var(--color-text-secondary)] mt-2">{currentShop.food_kind}</span>
                     </button>
 
-                    <div className="text-center font-bold text-[var(--color-text-tertiary)]">VS</div>
+                    <div className="text-center font-bold text-[var(--color-text-tertiary)]">{t('write.ranking.vs')}</div>
 
                     {/* Opponent */}
                     <button
@@ -145,7 +147,7 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
 
                     {/* Priority Hint */}
                     <p className="text-xs text-center text-[var(--color-text-tertiary)] mt-4">
-                        (Tip: 같은 종류의 음식점이거나, 더 인상 깊었던 곳을 선택해주세요)
+                        {t('write.ranking.tip')}
                     </p>
                 </div>
             </div>
@@ -165,12 +167,15 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
                 </div>
 
                 <h2 className="text-3xl font-bold mb-4 text-[var(--color-text-primary)]">
-                    랭킹 등록 완료!
+                    {t('write.ranking.success_title')}
                 </h2>
 
                 <p className="text-[var(--color-text-tertiary)] text-lg leading-relaxed mb-12">
-                    <strong className="text-[var(--color-text-primary)]">{currentShop.name}</strong>에서의<br />
-                    경험이 랭킹에 반영되었습니다.
+                    <Trans
+                        i18nKey="write.ranking.success_desc"
+                        values={{ name: currentShop.name }}
+                        components={{ 1: <strong className="text-[var(--color-text-primary)]" />, br: <br /> }}
+                    />
                 </p>
             </div>
 
@@ -179,7 +184,7 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
                     onClick={onFinish}
                     className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-[var(--color-primary)]/30 transition-all active:scale-[0.98]"
                 >
-                    확인
+                    {t('write.ranking.confirm')}
                 </Button>
             </div>
         </div>

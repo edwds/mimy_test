@@ -20,7 +20,9 @@ export function appendJosa(word: string, josa: '을/를' | '이/가' | '은/는'
 }
 
 // Format YYYY-MM-DD visit date
-export function formatVisitDate(dateString: string): string {
+// Format YYYY-MM-DD visit date
+// Needs to receive 't' function from i18next to support switching languages dynamically
+export function formatVisitDate(dateString: string, t: (key: string, options?: any) => string): string {
     const now = new Date();
     const date = new Date(dateString);
 
@@ -32,35 +34,37 @@ export function formatVisitDate(dateString: string): string {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     // Same day
+    // Same day
     if (diffDays === 0) {
-        return '오늘';
+        return t('date.today');
     }
 
     // ~7일 미만
     if (diffDays < 7) {
-        return `${diffDays}일 전`;
+        return t('date.days_ago', { count: diffDays });
     }
 
     // 7일~1개월 미만 (Use 30 days as approx)
     if (diffDays < 30) {
-        return `${Math.floor(diffDays / 7)}주 전`;
+        return t('date.weeks_ago', { count: Math.floor(diffDays / 7) });
     }
 
     // 1개월~12개월 미만
     if (diffDays < 365) {
-        return `${Math.floor(diffDays / 30)}달 전`;
+        return t('date.months_ago', { count: Math.floor(diffDays / 30) });
     }
 
     // 1년 이후
-    return `${Math.floor(diffDays / 365)}년 전`;
+    return t('date.years_ago', { count: Math.floor(diffDays / 365) });
 }
 
 // Format created_at to "2026년 1월 13일 오후 1시 35분"
-export function formatFullDateTime(dateString: string): string {
+// Accepts locale string (e.g., 'ko', 'en')
+export function formatFullDateTime(dateString: string, locale: string = 'ko'): string {
     const date = new Date(dateString);
-    return date.toLocaleString('ko-KR', {
+    return date.toLocaleString(locale, {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         hour: 'numeric',
         minute: 'numeric',

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 // import { Search } from 'lucide-react'; 
 import { Locate, Heart } from 'lucide-react'; // Icons
+import { useTranslation } from 'react-i18next';
 // Let's keep the Search button overlay if possible, or just the map.
 // The Plan said: "Replace current list view with... MapContainer + ShopBottomSheet".
 // I will keep the header overlay logic but adapt it.
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnabled = true }) => {
+    const { t } = useTranslation();
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
 
@@ -102,7 +104,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const handleSave = async (shopId: number) => {
         const userId = localStorage.getItem('mimy_user_id');
         if (!userId) {
-            alert("로그인이 필요합니다.");
+            alert(t('discovery.alerts.login_required'));
             return;
         }
 
@@ -136,7 +138,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             });
         } catch (e) {
             console.error(e);
-            alert("저장에 실패했습니다.");
+            alert(t('discovery.alerts.save_failed'));
             // Revert
             setShops(prev => prev.map(shop =>
                 shop.id === shopId ? { ...shop, is_saved: !shop.is_saved } : shop
@@ -152,11 +154,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 },
                 (error) => {
                     console.error(error);
-                    alert("위치 정보를 가져올 수 없습니다.");
+                    alert(t('discovery.alerts.location_error'));
                 }
             );
         } else {
-            alert("GPS를 지원하지 않는 브라우저입니다.");
+            alert(t('discovery.alerts.no_gps'));
         }
     };
 
@@ -198,7 +200,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             {/* Top Search Overlay */}
             <div className="absolute top-6 left-6 right-6 z-10 flex flex-col gap-2 items-center">
                 <div className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50">
-                    <span className="text-muted-foreground text-sm flex-1">이름, 지역, 메뉴로 원하는 곳을 찾아보세요</span>
+                    <span className="text-muted-foreground text-sm flex-1">{t('discovery.search_placeholder')}</span>
                 </div>
 
                 {/* Search Here Button */}
@@ -207,7 +209,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                         onClick={() => fetchShops(true)}
                         className="animate-in fade-in slide-in-from-top-2 bg-white text-primary font-bold px-4 py-2 rounded-full shadow-lg text-sm border border-primary/20 flex items-center gap-2 active:scale-95 transition-transform"
                     >
-                        {isLoading ? '검색중...' : '이 지역에서 다시 찾기'}
+                        {isLoading ? t('discovery.searching') : t('discovery.search_here')}
                     </button>
                 )}
             </div>
@@ -224,7 +226,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <button
                     onClick={() => {
                         const userId = localStorage.getItem('mimy_user_id');
-                        if (!userId) return alert("로그인이 필요합니다.");
+                        if (!userId) return alert(t('discovery.alerts.login_required'));
                         setShowSavedOnly(!showSavedOnly);
                         setSelectedShopId(null);
                         setMapCenter(undefined); // Reset center
