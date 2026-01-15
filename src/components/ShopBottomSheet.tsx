@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShopCard } from './ShopCard';
 import { motion, PanInfo, useAnimation } from 'framer-motion';
+import { X } from 'lucide-react';
 
 interface Props {
     shops: any[];
@@ -69,17 +70,24 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
             </div>
 
-            {/* Content */}
+            {/* Header (Draggable) */}
+            <div className="flex justify-between items-center mb-0 px-5 pb-4">
+                <h2 className="text-lg font-bold">
+                    {selectedShopId ? '선택된 매장' : `주변 맛집 ${shops.length}곳`}
+                </h2>
+                <button
+                    onClick={() => setSnapState('peek')}
+                    className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                >
+                    <X size={20} />
+                </button>
+            </div>
+
+            {/* Content (Scrollable, Stops Drag) */}
             <div
-                className="flex-1 overflow-y-auto px-4 pb-48"
+                className="flex-1 overflow-y-auto px-4 pb-24"
                 onPointerDown={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-between items-center mb-4 px-1">
-                    <h2 className="text-lg font-bold">
-                        {selectedShopId ? '선택된 매장' : `주변 맛집 ${shops.length}곳`}
-                    </h2>
-                </div>
-
                 {displayedShops.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
                         {selectedShopId ? '매장 정보를 찾을 수 없습니다.' : '주변에 맛집이 없습니다.'}
