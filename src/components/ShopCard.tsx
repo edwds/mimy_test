@@ -14,6 +14,7 @@ interface ShopCardProps {
         food_kind?: string | null; // e.g., "KOREAN", "CAFE"
         is_saved?: boolean; // From backend enrich
         saved_at?: string; // If saved, when it was saved
+        catchtable_ref?: string;
     };
     onSave?: (shopId: number) => void;
     onWrite?: (shopId: number) => void;
@@ -21,11 +22,6 @@ interface ShopCardProps {
 }
 
 export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve }) => {
-    // Local state for optimistic update, though parent should handle logic usually
-    // We can just rely on props if parent manages list state. 
-    // But for "Save" toggle, optimistic UI is nice. 
-    // Let's assume parent passes `is_saved`. 
-
     return (
         <div className="bg-background border border-border rounded-xl overflow-hidden shadow-sm mb-4">
             {/* Image Area */}
@@ -69,7 +65,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                 {/* Actions */}
                 <div className="flex gap-2">
                     <button
-                        onClick={() => onReserve?.(shop.id)}
+                        onClick={() => {
+                            if (shop.catchtable_ref) {
+                                window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
+                            } else {
+                                onReserve?.(shop.id);
+                            }
+                        }}
                         className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
                     >
                         <Calendar className="w-4 h-4 mr-2" />

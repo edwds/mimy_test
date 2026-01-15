@@ -237,21 +237,13 @@ export const UserProfileScreen = ({ userId: propUserId, refreshTrigger }: Props)
     // Scroll & Header Logic
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
-    const lastScrollY = useRef(0);
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+
+    // Header is always visible now to prevent issues
+    // const [isHeaderVisible, setIsHeaderVisible] = useState(true);
 
     const handleScroll = () => {
-        if (!containerRef.current) return;
-        const currentScrollY = containerRef.current.scrollTop;
-        const diff = currentScrollY - lastScrollY.current;
-
-        if (currentScrollY < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) {
-            if (diff > 0) setIsHeaderVisible(false); // Down
-            else setIsHeaderVisible(true); // Up
-        }
-        lastScrollY.current = currentScrollY;
+        // Keep scroll position tracking for tab switching if needed, 
+        // but removed auto-hide header logic.
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -259,7 +251,7 @@ export const UserProfileScreen = ({ userId: propUserId, refreshTrigger }: Props)
             scrollPositions.current[activeTab] = containerRef.current.scrollTop;
         }
         setActiveTab(newTab);
-        setIsHeaderVisible(true);
+        // setIsHeaderVisible(true); // Removed
         requestAnimationFrame(() => {
             if (containerRef.current) {
                 const savedPos = scrollPositions.current[newTab] || 0;
@@ -278,9 +270,7 @@ export const UserProfileScreen = ({ userId: propUserId, refreshTrigger }: Props)
             {/* Header */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-4 pt-6 pb-2 transition-transform duration-300 flex items-center gap-2",
-                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-                )}
+                    "absolute top-0 left-0 right-2 bg-background/95 backdrop-blur-sm z-50 px-4 pt-6 pb-2 transition-transform duration-300 flex items-center gap-2")}
             >
                 <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate(-1)}>
                     <ArrowLeft className="w-6 h-6" />

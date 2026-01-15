@@ -4,6 +4,8 @@ import { ArrowLeft, User as UserIcon } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
+import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
+
 export const ConnectionsScreen = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -13,6 +15,9 @@ export const ConnectionsScreen = () => {
     const [activeTab, setActiveTab] = useState<'followers' | 'following'>(initialTab);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // Overlay Logic
+    const viewUserId = searchParams.get('viewUser');
 
     useEffect(() => {
         if (!userId) return;
@@ -38,11 +43,18 @@ export const ConnectionsScreen = () => {
     }, [userId, activeTab]);
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300">
+        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300 relative">
+            {/* Overlay */}
+            {viewUserId && (
+                <div className="absolute inset-0 z-50 bg-background animate-in slide-in-from-right duration-200">
+                    <UserProfileScreen userId={viewUserId} />
+                </div>
+            )}
+
             {/* Header */}
-            <div className="flex items-center p-4 border-b border-border">
+            <div className="flex items-center px-4 pt-6 pb-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="-ml-2 mr-2">
-                    <ArrowLeft className="w-5 h-5" />
+                    <ArrowLeft className="w-6 h-6" />
                 </Button>
                 <h1 className="text-lg font-bold">{localStorage.getItem('mimy_nickname') || 'Profile'}</h1>
             </div>
@@ -76,8 +88,10 @@ export const ConnectionsScreen = () => {
                                 key={u.id}
                                 className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
                                 onClick={() => {
+                                    // Use search params for overlay
                                     const current = new URLSearchParams(window.location.search);
                                     current.set('viewUser', String(u.id));
+                                    // Keep existing params (like tab)
                                     navigate(`${window.location.pathname}?${current.toString()}`);
                                 }}
                             >

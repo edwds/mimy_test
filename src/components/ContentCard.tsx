@@ -107,6 +107,7 @@ export interface ContentCardProps {
 
         // POI: move rank/satisfaction here (or keep under review_prop if you want, but per request: POI side)
         poi?: {
+            shop_id?: number;
             shop_name?: string;
             shop_address?: string;
             thumbnail_img?: string;
@@ -114,6 +115,7 @@ export interface ContentCardProps {
             satisfaction?: Satisfaction;
             visit_count?: number;
             is_bookmarked?: boolean;
+            catchtable_ref?: string;
         };
 
         stats: {
@@ -158,6 +160,7 @@ export const ContentCard = ({
     const [isLiked, setIsLiked] = useState(content.stats.is_liked);
     const [likeCount, setLikeCount] = useState(content.stats.likes);
     const [commentCount, setCommentCount] = useState(content.stats.comments);
+    const [isPoiBookmarked, setIsPoiBookmarked] = useState(!!content.poi?.is_bookmarked); // Add local state
     const [showComments, setShowComments] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isDeleted, setIsDeleted] = useState(false);
@@ -167,7 +170,8 @@ export const ContentCard = ({
         setIsLiked(content.stats.is_liked);
         setLikeCount(content.stats.likes);
         setCommentCount(content.stats.comments);
-    }, [content.stats]);
+        setIsPoiBookmarked(!!content.poi?.is_bookmarked); // Sync prop
+    }, [content.stats, content.poi?.is_bookmarked]);
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -242,7 +246,7 @@ export const ContentCard = ({
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
     const visitCount = content.poi?.visit_count ?? content.review_prop?.visit_count;
-    const isPoiBookmarked = !!content.poi?.is_bookmarked;
+    // const isPoiBookmarked used state above
 
     const contextText = shopName
         ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
@@ -386,21 +390,62 @@ export const ContentCard = ({
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => onTogglePoiBookmark?.(content.id)}
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!currentUser) return;
+
+                                    // Optimistic Update
+                                    const prevBookmarked = isPoiBookmarked;
+                                    setIsPoiBookmarked(!prevBookmarked);
+
+                                    try {
+                                        // Use standardized endpoint: POST /api/shops/:id/save
+                                        const shopId = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
+                                        const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: currentUser.id })
+                                        });
+
+                                        if (res.ok) {
+                                            const data = await res.json();
+                                            // Sync with true server state to avoid 'opposite' issues
+                                            if (typeof data.is_saved === 'boolean') {
+                                                setIsPoiBookmarked(data.is_saved);
+                                            }
+                                        } else {
+                                            // Revert if request failed
+                                            setIsPoiBookmarked(prevBookmarked);
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                        // Revert on error
+                                        setIsPoiBookmarked(prevBookmarked);
+                                    }
+                                }}
                                 className={cn(
                                     'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
                                     isPoiBookmarked
-                                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                                        ? 'bg-white border border-orange-200 text-orange-600'
                                         : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                                 )}
                                 aria-label="Bookmark shop"
                             >
-                                <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-white text-white')} />
+                                <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-orange-600 text-orange-600')} />
                             </button>
 
                             <button
                                 type="button"
-                                onClick={() => onReservePoi?.(content.id)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const ref = content.poi?.catchtable_ref;
+                                    if (ref) {
+                                        window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
+                                    } else {
+                                        // Fallback or alert
+                                        alert("예약 링크가 없습니다.");
+                                    }
+                                }}
                                 className={cn(
                                     'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
                                     'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'

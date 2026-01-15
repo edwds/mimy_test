@@ -9,38 +9,22 @@ import { useUser } from '@/context/UserContext';
 interface Props {
     onWrite: () => void;
     refreshTrigger?: number;
+    isEnabled?: boolean;
 }
 
 const CHIPS = ["인기", "팔로우", "근처", "좋아요"];
 
-export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
+export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = true }) => {
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
     const [vsItems, setVsItems] = useState<any[]>([]); // New State
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [hasInitialFetch, setHasInitialFetch] = useState(false);
     const { user: currentUser, loading: isUserLoading } = useUser();
     const [activeChip, setActiveChip] = useState("인기");
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
-
-    // Smart Header & Scroll Preservation
-    // ... (omitted for brevity)
-
-    // ... fetchFeed ...
-
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        // Strict Login Check: Only fetch if we have a valid User ID loaded
-        if (!isUserLoading && currentUser?.id) {
-            timer = setTimeout(() => {
-                fetchFeed(1);
-            }, 300);
-        }
-        return () => {
-            if (timer) clearTimeout(timer);
-        };
-    }, [currentUser?.id, isUserLoading]);
 
     // Smart Header & Scroll Preservation
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -98,8 +82,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         });
     };
 
-    // ... existing fetchFeed and useEffect ...
-
     const fetchFeed = async (pageNum: number) => {
         // If loading next page, block. If reloading (page 1), cancel prev and proceed.
         if (loading && pageNum > 1) return;
@@ -129,6 +111,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                     setHasMore(false);
                 }
                 setItems(prev => pageNum === 1 ? data : [...prev, ...data]);
+                setHasInitialFetch(true);
             }
         } catch (e: any) {
             if (e.name === 'AbortError') return;
@@ -146,7 +129,23 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         }
     };
 
+    useEffect(() => {
+        if (!isEnabled) return;
 
+        let timer: NodeJS.Timeout;
+        // Strict Login Check: Only fetch if we have a valid User ID loaded
+        if (!isUserLoading && currentUser?.id) {
+            // Show loading immediately if empty
+            if (items.length === 0) setLoading(true);
+
+            timer = setTimeout(() => {
+                fetchFeed(1);
+            }, 100);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [currentUser?.id, isUserLoading, isEnabled]);
 
     // Double-tap refresh listener
     useEffect(() => {
@@ -338,15 +337,15 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                         </div>
                     )}
 
-                    {!hasMore && items.length > 0 && (
-                        <div className="py-8 text-center text-muted-foreground text-sm">
-                            모든 콘텐츠를 확인했습니다.
+                    {!loading && hasInitialFetch && items.length === 0 && (
+                        <div className="py-20 text-center text-muted-foreground">
+                            등록된 콘텐츠가 없습니다.
                         </div>
                     )}
 
-                    {!loading && items.length === 0 && (
-                        <div className="py-20 text-center text-muted-foreground">
-                            등록된 콘텐츠가 없습니다.
+                    {!loading && !hasMore && items.length > 0 && (
+                        <div className="py-8 text-center text-muted-foreground text-sm">
+                            모든 콘텐츠를 확인했습니다.
                         </div>
                     )}
                 </div>

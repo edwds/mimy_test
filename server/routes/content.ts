@@ -204,15 +204,27 @@ router.get("/feed", async (req, res) => {
             });
         }
 
+        // 3.7 OPTIONAL: Fetch "Saved" Status for Current User
+        const savedShopSet = new Set<number>();
+        if (currentUserId && shopIds.size > 0) {
+            const saved = await db.select({ shop_id: users_wantstogo.shop_id })
+                .from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, currentUserId),
+                    inArray(users_wantstogo.shop_id, Array.from(shopIds))
+                ));
+            saved.forEach(s => savedShopSet.add(s.shop_id));
+        }
+
         // 4. Enrich
         const result = feedItems.map(item => {
             let enrichedProp = item.review_prop as any;
+            let poi = undefined;
 
             if (item.type === 'review' && enrichedProp?.shop_id) {
                 const sid = Number(enrichedProp.shop_id);
                 const shop = shopMap.get(sid);
                 const rank = rankMap.get(`${item.user_id} -${sid} `);
-                // Use ordinal rank specific to this content item
                 const visitCount = contentVisitRankMap.get(item.id) || 1;
 
                 if (shop) {
@@ -223,6 +235,19 @@ router.get("/feed", async (req, res) => {
                         thumbnail_img: shop.thumbnail_img,
                         rank: rank || null,
                         visit_count: visitCount
+                    };
+
+                    // Construct POI object for modern frontend
+                    poi = {
+                        shop_id: sid,
+                        shop_name: shop.name,
+                        shop_address: shop.address_region || shop.address_full,
+                        thumbnail_img: shop.thumbnail_img,
+                        rank: rank || null,
+                        satisfaction: enrichedProp.satisfaction,
+                        visit_count: visitCount,
+                        is_bookmarked: savedShopSet.has(sid),
+                        catchtable_ref: shop.catchtable_ref // Pass ref directly
                     };
                 }
             }
@@ -235,11 +260,12 @@ router.get("/feed", async (req, res) => {
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
+                poi, // Add POI field
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
                     is_liked: likedSet.has(item.id),
-                    is_saved: false // Existing placeholder
+                    is_saved: false
                 },
                 preview_comments: previewCommentsMap.get(item.id) || []
             };

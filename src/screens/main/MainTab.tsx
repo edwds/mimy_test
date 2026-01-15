@@ -52,10 +52,45 @@ export const MainTab = () => {
         return `animate-in duration-50 ${slideDirection === 'right' ? 'slide-in-from-right-2' : 'slide-in-from-left-2'}`;
     };
 
+    // Loading Optimization
+    const [allowedTabs, setAllowedTabs] = useState<Set<string>>(() => new Set([activeTab]));
+
+    useEffect(() => {
+        // Ensure active tab is always allowed immediately
+        setAllowedTabs(prev => {
+            if (prev.has(activeTab)) return prev;
+            const next = new Set(prev);
+            next.add(activeTab);
+            return next;
+        });
+    }, [activeTab]);
+
+    useEffect(() => {
+        // Staggered loading sequence: Feed -> Profile -> Discovery -> Leaderboard
+        // Only load if not already allowed (which activeTab handles)
+        const sequence = ['home', 'profile', 'discover', 'ranking'];
+        let timeoutIds: NodeJS.Timeout[] = [];
+        let cumDelay = 500; // Start bg loading after 500ms
+
+        sequence.forEach(tab => {
+            const id = setTimeout(() => {
+                setAllowedTabs(prev => {
+                    if (prev.has(tab)) return prev;
+                    const next = new Set(prev);
+                    next.add(tab);
+                    return next;
+                });
+            }, cumDelay);
+            timeoutIds.push(id);
+            cumDelay += 800; // 800ms spacing
+        });
+
+        return () => timeoutIds.forEach(clearTimeout);
+    }, []);
+
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
-                {/* Stacked Screen: User Profile */}
                 {/* Stacked Screen: User Profile via Query Param */}
                 {(() => {
                     const searchParams = new URLSearchParams(location.search);
@@ -75,23 +110,26 @@ export const MainTab = () => {
                     <HomeTab
                         onWrite={() => setIsWriteSheetOpen(true)}
                         refreshTrigger={refreshTriggers.home}
+                        isEnabled={allowedTabs.has('home')}
                     />
                 </div>
                 <div className={cn("h-full w-full", activeTab === 'discover' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <DiscoveryTab
                         isActive={activeTab === 'discover'}
                         refreshTrigger={refreshTriggers.discover}
+                        isEnabled={allowedTabs.has('discover')}
                     />
                 </div>
                 <div className={cn("h-full w-full", activeTab === 'profile' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <ProfileScreen
                         refreshTrigger={refreshTriggers.profile}
+                        isEnabled={allowedTabs.has('profile')}
                     />
                 </div>
 
                 {/* Placeholder for other tabs */}
                 <div className={cn("h-full w-full", activeTab === 'ranking' ? `block ${getAnimationClass()}` : 'hidden')}>
-                    <LeaderboardTab />
+                    <LeaderboardTab isEnabled={allowedTabs.has('ranking')} />
                 </div>
             </main>
 

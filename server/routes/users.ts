@@ -256,7 +256,8 @@ router.get("/:id/saved_shops", async (req, res) => {
             food_kind: shops.food_kind,
             lat: shops.lat,
             lon: shops.lon,
-            saved_at: users_wantstogo.created_at
+            saved_at: users_wantstogo.created_at,
+            catchtable_ref: shops.catchtable_ref
         })
             .from(users_wantstogo)
             .innerJoin(shops, eq(users_wantstogo.shop_id, shops.id))
@@ -278,6 +279,8 @@ router.get("/:id/saved_shops", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch saved shops" });
     }
 });
+
+// POST /:id/saved_shops removed (Use /api/shops/:id/save)
 
 router.get("/:id/followers", async (req, res) => {
     try {
