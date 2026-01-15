@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Utensils } from 'lucide-react';
+import { Search, ChevronLeft, Utensils } from 'lucide-react';
 import { ShopService } from '@/services/ShopService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';

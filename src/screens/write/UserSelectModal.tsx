@@ -3,7 +3,7 @@ import { X, Search, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
+
 
 interface User {
     id: number;
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, initialSelected, currentUserId }) => {
-    const { t } = useTranslation();
+    // const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [followers, setFollowers] = useState<User[]>([]);
     const [selected, setSelected] = useState<User[]>(initialSelected);

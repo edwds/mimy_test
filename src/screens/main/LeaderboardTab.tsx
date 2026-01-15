@@ -27,7 +27,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const lastScrollY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
-    const [headerHeight, setHeaderHeight] = useState(0);
+
 
     // Filter State (Mock)
     const [filter, setFilter] = useState<'company' | 'neighborhood'>('company');
@@ -36,11 +36,11 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const [items, setItems] = useState<LeaderboardItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (headerRef.current) {
-            setHeaderHeight(headerRef.current.offsetHeight);
-        }
-    }, []);
+    // useEffect(() => {
+    //     if (headerRef.current) {
+    //         setHeaderHeight(headerRef.current.offsetHeight);
+    //     }
+    // }, []);
 
     useEffect(() => {
         if (!isEnabled) return;
