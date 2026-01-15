@@ -25,7 +25,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const [hasInitialFetch, setHasInitialFetch] = useState(false);
     const { user: currentUser, loading: isUserLoading } = useUser();
     const [activeChip, setActiveChip] = useState("popular");
-    const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
+    const [userLocation] = useState<{ lat: number, lon: number } | null>(null);
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -74,7 +74,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         performChipSwitch(newChip);
     };
 
-    const performChipSwitch = (newChip: string, locOverride?: { lat: number, lon: number }) => {
+    const performChipSwitch = (newChip: string) => {
         if (containerRef.current) {
             scrollPositions.current[activeChip] = containerRef.current.scrollTop;
         }
