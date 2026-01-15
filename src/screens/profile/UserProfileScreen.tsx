@@ -367,7 +367,7 @@ export const UserProfileScreen = () => {
                             >
                                 <div>
                                     <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-1">{user.cluster_tagline}</div>
+                                    <div className="text-xs text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
                                 </div>
                             </div>
 
@@ -384,7 +384,7 @@ export const UserProfileScreen = () => {
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-background sticky top-0 z-10 border-b border-border/50">
+                <div className="bg-background sticky top-0 z-10 border-b border-border/50 mb-2">
                     <div className="flex w-full px-0">
                         <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
                         <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />

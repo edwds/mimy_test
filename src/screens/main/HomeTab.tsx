@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
+import { VsCard } from '@/components/VsCard';
 import { User as UserIcon, Bell, Search, PenLine } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 
@@ -15,6 +16,7 @@ const CHIPS = ["인기", "팔로우", "근처", "좋아요"];
 export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
+    const [vsItems, setVsItems] = useState<any[]>([]); // New State
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const { user: currentUser } = useUser();
@@ -143,6 +145,37 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
         }
     }, [refreshTrigger]);
 
+    // Fetch VS candidates
+    useEffect(() => {
+        if (currentUser?.id) {
+            fetch(`${API_BASE_URL}/api/vs/candidates?user_id=${currentUser.id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setVsItems(data);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch VS", err));
+        }
+    }, [currentUser?.id, refreshTrigger]);
+
+    const handleVote = async (id: number, selection: 'A' | 'B') => {
+        // Optimistic update: Do NOT remove from list immediately. User wants to see the result.
+        // setVsItems(prev => prev.filter(item => item.id !== id));
+
+        try {
+            if (currentUser?.id) {
+                await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser.id, selection })
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const lastElementRef = useCallback((node: HTMLDivElement) => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -250,6 +283,14 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
 
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
+
+                        // Calculate injection index (0-based index of VS card to show)
+                        // Show after 3rd (index 2), 6th (index 5), 9th (index 8) item.
+                        // (index + 1) % 3 === 0
+                        const showVsCard = (index + 1) % 3 === 0;
+                        const vsCardIndex = ((index + 1) / 3) - 1;
+                        const vsItem = vsItems[vsCardIndex]; // Use state vsItems
+
                         return (
                             <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined}>
                                 <ContentCard
@@ -257,6 +298,16 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger }) => {
                                     content={item}
                                 />
                                 <div className="bg-muted" />
+
+                                {showVsCard && vsItem && vsCardIndex < 3 && (
+                                    <VsCard
+                                        id={vsItem.id}
+                                        itemA={vsItem.item_a}
+                                        itemB={vsItem.item_b}
+                                        index={vsCardIndex}
+                                        onVote={handleVote}
+                                    />
+                                )}
                             </div>
                         );
                     })}

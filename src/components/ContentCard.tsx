@@ -263,7 +263,7 @@ export const ContentCard = ({
 
                 <div className="flex flex-col min-w-0 cursor-pointer active:opacity-80" onClick={handleUserClick}>
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-bold text-[15px] text-gray-900 leading-tight truncate">
+                        <span className="font-bold text-base text-gray-900 leading-tight truncate">
                             {user.nickname}
                         </span>
                         {user.cluster_name && (
@@ -427,8 +427,8 @@ export const ContentCard = ({
                         onClick={handleLike}
                         className="flex items-center gap-1.5 p-1 -ml-1 text-gray-600 hover:text-red-500 transition-colors"
                     >
-                        <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
-                        {likeCount > 0 && <span className="text-[13px] font-medium">{likeCount}</span>}
+                        <Heart size={24} className={cn(isLiked && 'fill-red-500 text-red-500')} />
+                        {likeCount > 0 && <span className="text-sm font-medium">{likeCount}</span>}
                     </button>
 
                     <button
@@ -437,8 +437,8 @@ export const ContentCard = ({
                         className="flex items-center gap-1.5 p-1 text-gray-600 hover:text-blue-500 transition-colors"
                         aria-label="Open comments"
                     >
-                        <MessageSquare size={20} />
-                        {commentCount > 0 && <span className="text-[13px] font-medium">{commentCount}</span>}
+                        <MessageSquare size={24} />
+                        {commentCount > 0 && <span className="text-sm font-medium">{commentCount}</span>}
                     </button>
 
                     <button
@@ -447,7 +447,7 @@ export const ContentCard = ({
                         className="flex items-center gap-1.5 p-1 text-gray-600 hover:text-gray-900 transition-colors"
                         aria-label="Share"
                     >
-                        <Share size={20} />
+                        <Share size={24} />
                     </button>
                 </div>
             </div>

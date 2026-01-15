@@ -274,3 +274,23 @@ export const quiz_matches = pgTable('quiz_matches', {
 }, (table) => ({
     unique_vector: unique().on(table.vector),
 }));
+
+// --- VS Module Domain ---
+export const vs_prop = pgTable('vs_prop', {
+    id: serial('id').primaryKey(),
+    item_a: text('item_a').notNull(),
+    item_b: text('item_b').notNull(),
+    category: text('category'), // Optional: for future filtering
+    created_at: timestamp('created_at').defaultNow(),
+});
+
+export const vs_result = pgTable('vs_result', {
+    id: serial('id').primaryKey(),
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    prop_id: integer('prop_id').notNull().references(() => vs_prop.id, { onDelete: 'cascade' }),
+    selected_value: varchar('selected_value', { length: 1 }).notNull(), // 'A' or 'B'
+    created_at: timestamp('created_at').defaultNow(),
+}, (table) => ({
+    unique_vote: unique().on(table.user_id, table.prop_id),
+    prop_idx: index('idx_vs_result_prop').on(table.prop_id),
+}));

@@ -310,26 +310,26 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={openIdSheet}
                                 >
-                                    Change ID
+                                    ID 변경하기
                                 </button>
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={handleRetakeQuiz}
                                 >
-                                    Retake Taste Quiz
+                                    입맛 퀴즈 다시하기
                                 </button>
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
                                     onClick={handleReport}
                                 >
-                                    Report Issue
+                                    오류 제보하기
                                 </button>
                                 <div className="h-px bg-border my-1" />
                                 <button
                                     className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
                                     onClick={handleLogout}
                                 >
-                                    Logout
+                                    로그아웃하기
                                 </button>
                             </div>
                         )}
@@ -422,7 +422,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                 </div>
 
                 {/* Tabs Static Header (In Flow) */}
-                <div className="bg-background border-b border-border/50 sticky top-0 z-10">
+                <div className="bg-background border-b border-border/50 sticky top-0 z-10 mb-2">
                     <div className="flex w-full px-0">
                         <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label="Content" />
                         <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label="List" />
@@ -555,6 +555,7 @@ export const ProfileScreen = ({ refreshTrigger }: Props) => {
                 isOpen={isTasteSheetOpen}
                 onClose={() => setIsTasteSheetOpen(false)}
                 data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
+                userId={user?.id}
             />
         </div>
     );

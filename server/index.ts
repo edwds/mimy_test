@@ -9,6 +9,7 @@ import { QuizManager } from "./utils/quiz.js";
 
 import shopRoutes from "./routes/shops.js";
 import contentRoutes from "./routes/content.js";
+import vsRoutes from "./routes/vs.js";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/vs", vsRoutes);
 
 import importRoutes from "./routes/import.js";
 app.use("/api/import", importRoutes);
