@@ -55,6 +55,7 @@ router.get("/leaderboard", async (req, res) => {
             nickname: users.nickname,
             account_id: users.account_id,
             profile_image: users.profile_image,
+            cluster_name: clusters.name, // Add cluster_name
             stats: {
                 content_count: sql<number>`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`,
                 received_likes: sql<number>`(
@@ -68,11 +69,7 @@ router.get("/leaderboard", async (req, res) => {
             }
         })
             .from(users)
-            // Order by total score approximation (content*5 + likes*3)
-            // Note: Sorting by complex calculation in SQL might be slow or verbose, 
-            // for MVP filtering to top 100 by content count then sorting in JS is safer/easier if volume is low.
-            // But let's try to order by content count for now as primary metric if we don't want complex SQL sort.
-            // Or just keep the sort by content count as a heuristic.
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `) // Join clusters
             .orderBy(desc(sql`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`))
             .limit(limit);
 
@@ -86,7 +83,8 @@ router.get("/leaderboard", async (req, res) => {
                     id: u.id,
                     nickname: u.nickname,
                     account_id: u.account_id,
-                    profile_image: u.profile_image
+                    profile_image: u.profile_image,
+                    cluster_name: u.cluster_name
                 },
                 score: contentScore + likeScore
             };

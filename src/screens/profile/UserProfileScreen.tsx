@@ -329,11 +329,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     <>
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold">{user?.stats?.content_count || 0}</span>
-                                            <span className="text-xs text-muted-foreground">{t('profile.stats.contents')}</span>
+                                            <span className="text-sm text-muted-foreground">{t('profile.stats.contents')}</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold">{user?.stats?.follower_count || 0}</span>
-                                            <span className="text-xs text-muted-foreground">{t('profile.stats.followers')}</span>
+                                            <span className="text-sm text-muted-foreground">{t('profile.stats.followers')}</span>
                                         </div>
                                     </>
                                 )}
@@ -347,12 +347,12 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                             ) : (
                                 <>
                                     {user?.bio ? (
-                                        <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
+                                        <p className="text-base whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
                                     ) : (
-                                        <p className="text-sm text-gray-400 mb-2">{t('profile.no_bio')}</p>
+                                        <p className="text-base text-gray-400 mb-2">{t('profile.no_bio')}</p>
                                     )}
                                     {user?.link && (
-                                        <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
+                                        <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-sm text-primary hover:underline">
                                             <LinkIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                                             <span className="truncate max-w-[200px]">{user.link.replace(/^(https?:\/\/)?(www\.)?/, '')}</span>
                                         </a>
@@ -363,7 +363,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
                         {/* Image */}
                         <div className="relative group flex-shrink-0 ml-4">
-                            <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
+                            <div className="w-24 h-24 rounded-full bg-muted overflow-hidden flex items-center justify-center">
                                 {loadingUser ? (
                                     <Skeleton className="w-full h-full" />
                                 ) : (
@@ -381,12 +381,12 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     {user?.cluster_name && (
                         <div className="flex gap-2">
                             <div
-                                className="flex-1 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+                                className="flex-1 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
                                 onClick={() => setIsTasteSheetOpen(true)}
                             >
                                 <div>
                                     <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                    <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
                                 </div>
                             </div>
 
@@ -394,7 +394,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                             {/* Matching Score Badge */}
                             {matchingScore !== null && (
                                 <div className="flex flex-col items-center justify-center p-2 bg-pink-50 rounded-xl min-w-[80px]">
-                                    <span className="text-[10px] text-pink-500 font-bold uppercase">{t('profile.match')}</span>
+                                    <span className="text-xs text-pink-500 font-bold uppercase">{t('profile.match')}</span>
                                     <span className="text-xl font-black text-pink-600">{matchingScore}%</span>
                                 </div>
                             )}

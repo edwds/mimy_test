@@ -366,21 +366,21 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             <div className="flex gap-4 mb-4">
                                 <div className="flex items-baseline gap-1">
                                     <span className="font-bold">{user.stats?.content_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">{t('profile.stats.contents')}</span>
+                                    <span className="text-sm text-muted-foreground">{t('profile.stats.contents')}</span>
                                 </div>
                                 <div
                                     className="flex items-baseline gap-1 cursor-pointer active:opacity-70 transition-opacity"
                                     onClick={() => navigate('/profile/connections?tab=followers')}
                                 >
                                     <span className="font-bold">{user.stats?.follower_count || 0}</span>
-                                    <span className="text-xs text-muted-foreground">{t('profile.stats.followers')}</span>
+                                    <span className="text-sm text-muted-foreground">{t('profile.stats.followers')}</span>
                                 </div>
                             </div>
 
                             {/* Bio & Link */}
-                            {user.bio && <p className="text-sm whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>}
+                            {user.bio && <p className="text-base whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>}
                             {user.link && (
-                                <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-xs text-primary hover:underline">
+                                <a href={user.link} target="_blank" rel="noreferrer" className="flex items-center text-sm text-primary hover:underline">
                                     <LinkIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                                     <span className="truncate max-w-[200px]">
                                         {user.link.replace(/^(https?:\/\/)?(www\.)?/, '')}
@@ -394,7 +394,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             className="relative group cursor-pointer flex-shrink-0 ml-4"
                             onClick={() => navigate('/profile/edit')}
                         >
-                            <div className="w-20 h-20 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden flex items-center justify-center">
+                            <div className="w-24 h-24 rounded-full bg-muted overflow-hidden flex items-center justify-center">
                                 {user.profile_image ? (
                                     <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
@@ -414,13 +414,13 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     {/* Taste Cluster Card */}
                     {user.cluster_name && (
                         <div
-                            className="mt-2 mb-2 p-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+                            className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
                             onClick={() => setIsTasteSheetOpen(true)}
                         >
                             <div className="flex items-center gap-4">
                                 <div>
                                     <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                    <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
                                 </div>
                             </div>
                         </div>

@@ -100,7 +100,8 @@ export interface ContentCardProps {
             shop_address?: string;
             thumbnail_img?: string;
             visit_date?: string;
-            companions?: string[];
+            companions?: string[]; // IDs
+            companions_info?: Array<{ id: number; nickname: string; profile_image: string | null }>; // Enriched Data
             rank?: number;
             satisfaction?: Satisfaction;
             visit_count?: number;
@@ -131,6 +132,7 @@ export interface ContentCardProps {
                 nickname: string | null;
             };
         }>;
+        keyword?: string[]; // Add keyword prop
     };
 
     // Optional handlers (wire later)
@@ -248,9 +250,20 @@ export const ContentCard = ({
     const visitCount = content.poi?.visit_count ?? content.review_prop?.visit_count;
     // const isPoiBookmarked used state above
 
-    const contextText = shopName
-        ? `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`
-        : (content.type === 'post' ? '자유 형식 게시물입니다.' : null);
+    // Logic for context text (Shop visit info OR Keywords OR Default Post text)
+    let contextText: string | null = null;
+
+    if (shopName) {
+        contextText = `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`;
+    } else if (content.type === 'post') {
+        if (content.keyword && content.keyword.length > 0) {
+            contextText = content.keyword.map(k => `${k}`).join(' ');
+        } else {
+            contextText = '자유 형식 게시물입니다.';
+        }
+    }
+
+    const companionUsers = content.review_prop?.companions_info; // Enriched companions
 
     return (
         <div className="bg-white">
@@ -273,7 +286,7 @@ export const ContentCard = ({
                             {user.nickname}
                         </span>
                         {user.cluster_name && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold">
+                            <span className="px-1.5 py-0.5 rounded-full bg-gray-100 text-[10px] font-medium">
                                 {user.cluster_name}
                             </span>
                         )}
@@ -315,6 +328,25 @@ export const ContentCard = ({
                     </div>
                 )}
             </div>
+
+            {/* Companions Display */}
+            {companionUsers && companionUsers.length > 0 && (
+                <div className="px-5 mb-2 -mt-1 flex flex-wrap gap-1 items-center">
+                    <span className="text-xs text-gray-500">With</span>
+                    {companionUsers.map((u, i) => (
+                        <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
+                            <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
+                                {u.profile_image ? (
+                                    <img src={u.profile_image} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                )}
+                            </div>
+                            <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Text Body */}
             {content.text && <ContentBody text={content.text} maxLines={10} />}

@@ -14,6 +14,7 @@ interface LeaderboardItem {
         nickname: string | null;
         account_id: string;
         profile_image: string | null;
+        cluster_name?: string; // Add cluster_name
     };
     score: number;
 }
@@ -27,6 +28,9 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
     const [headerHeight, setHeaderHeight] = useState(0);
+
+    // Filter State (Mock)
+    const [filter, setFilter] = useState<'company' | 'neighborhood'>('company');
 
     // Data State
     const [items, setItems] = useState<LeaderboardItem[]>([]);
@@ -98,14 +102,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                 <div className="flex items-center justify-between mb-2">
                     <h1 className="text-2xl font-bold">{t('leaderboard.title')}</h1>
                     <div className="flex gap-4">
-                        {/* 
-                        <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
-                            <Bell className="w-6 h-6 text-foreground" />
-                        </button>
-                        <button className="p-2 rounded-full hover:bg-muted transition-colors">
-                            <Search className="w-6 h-6 text-foreground" />
-                        </button>
-                         */}
+                        {/* Icons */}
                     </div>
                 </div>
             </div>
@@ -115,9 +112,36 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                 ref={containerRef}
                 className="flex-1 overflow-y-auto"
                 onScroll={handleScroll}
-                style={{ paddingTop: headerHeight }}
+            // style={{ paddingTop: headerHeight }} // Removed unreliable JS padding
             >
-                <div className="p-4 pt-24 pb-20">
+                <div className="p-4 pt-20 mb-4 pb-20"> {/* Adjusted pt-28 -> pt-20 */}
+
+                    {/* Mock Filter Chips */}
+                    <div className="flex gap-2 mb-6">
+                        <button
+                            onClick={() => setFilter('company')}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                                filter === 'company'
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                            )}
+                        >
+                            Mock Company
+                        </button>
+                        <button
+                            onClick={() => setFilter('neighborhood')}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                                filter === 'neighborhood'
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                            )}
+                        >
+                            Mock Neighborhood
+                        </button>
+                    </div>
+
                     {loading ? (
                         <div className="space-y-4">
                             {[...Array(5)].map((_, i) => (
@@ -178,16 +202,23 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
 
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-base truncate">
-                                            {item.user.nickname || "User"}
-                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-base truncate">
+                                                {item.user.nickname || "User"}
+                                            </h3>
+                                            {item.user.cluster_name && (
+                                                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 text-[10px] font-medium text-gray-600 truncate flex-shrink-0">
+                                                    {item.user.cluster_name}
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-muted-foreground truncate">
                                             @{item.user.account_id}
                                         </p>
                                     </div>
 
                                     {/* Score */}
-                                    <div className="flex flex-col items-end">
+                                    <div className="flex flex-col items-end flex-shrink-0">
                                         <span className={cn(
                                             "text-lg font-black",
                                             index === 0 ? "text-yellow-600" :

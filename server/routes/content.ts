@@ -119,6 +119,7 @@ router.get("/feed", async (req, res) => {
         // 2. Collect IDs for enrichment
         const shopIds = new Set<number>();
         const userIds = new Set<number>();
+        const companionIds = new Set<number>(); // New: Collect companion IDs
 
         feedItems.forEach(item => {
             if (item.type === 'review' && item.review_prop) {
@@ -127,68 +128,77 @@ router.get("/feed", async (req, res) => {
                     shopIds.add(Number(prop.shop_id));
                     userIds.add(item.user_id);
                 }
+                // New: Check for companions
+                if (prop.companions && Array.isArray(prop.companions)) {
+                    prop.companions.forEach((cid: number) => companionIds.add(cid));
+                }
             }
         });
 
-        // 3. Batch Fetch Shops, Rankings, VisitCounts
+        // 3. Batch Fetch Shops, Rankings, VisitCounts, Companions
         const shopMap = new Map();
-        const rankMap = new Map<string, number>(); // key: `${ userId } -${ shopId } `
-        // Refactored: visitCountMap removed, using contentVisitRankMap
-        const contentVisitRankMap = new Map<number, number>(); // contentId -> Nth visit
+        const rankMap = new Map<string, number>();
+        const contentVisitRankMap = new Map<number, number>();
+        const companionMap = new Map<number, any>(); // New: Map ID to User info
 
-        if (shopIds.size > 0) {
+        if (shopIds.size > 0 || companionIds.size > 0) {
             const sIds = Array.from(shopIds);
             const uIds = Array.from(userIds);
+            const cIds = Array.from(companionIds);
 
-            // Shops
-            const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
-            shopList.forEach(s => shopMap.set(s.id, s));
+            // Fetch Shops
+            if (sIds.length > 0) {
+                const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
+                shopList.forEach(s => shopMap.set(s.id, s));
 
-            // Rankings (Current rank for each user-shop pair)
-            const rankings = await db.select().from(users_ranking)
-                .where(and(
-                    inArray(users_ranking.user_id, uIds),
-                    inArray(users_ranking.shop_id, sIds)
-                ));
-            rankings.forEach(r => rankMap.set(`${r.user_id} -${r.shop_id} `, r.rank));
+                // Rankings
+                const rankings = await db.select().from(users_ranking)
+                    .where(and(
+                        inArray(users_ranking.user_id, uIds),
+                        inArray(users_ranking.shop_id, sIds)
+                    ));
+                rankings.forEach(r => rankMap.set(`${r.user_id} -${r.shop_id} `, r.rank));
 
-            // Visit Counts (Ordinal Logic) - Optimized with Parallel Queries (Postgres Compatible)
-            // Reverting from Window Function to 20 parallel COUNT queries for Safety & Stability.
-            // 20 small queries is very fast and avoids complex SQL casting errors.
+                // Visit Counts
+                const visitCountPromises = feedItems.map(async (item) => {
+                    if (item.type !== 'review' || !item.review_prop) return null;
+                    const prop = item.review_prop as any;
+                    if (!prop.shop_id) return null;
+                    const sid = Number(prop.shop_id);
+                    const targetDate = item.created_at ? new Date(item.created_at) : new Date();
 
-            const visitCountPromises = feedItems.map(async (item) => {
-                if (item.type !== 'review' || !item.review_prop) return null;
-                const prop = item.review_prop as any;
-                if (!prop.shop_id) return null;
+                    try {
+                        const countRes = await db.select({ count: count(content.id) })
+                            .from(content)
+                            .where(and(
+                                eq(content.user_id, item.user_id),
+                                eq(content.type, 'review'),
+                                eq(content.is_deleted, false),
+                                sql`(${content.review_prop}->>'shop_id')::int = ${sid}`,
+                                lte(content.created_at, targetDate)
+                            ));
+                        return { id: item.id, count: countRes[0].count };
+                    } catch (err) {
+                        return null;
+                    }
+                });
+                const visitCounts = await Promise.all(visitCountPromises);
+                visitCounts.forEach(vc => {
+                    if (vc) contentVisitRankMap.set(vc.id, vc.count);
+                });
+            }
 
-                const sid = Number(prop.shop_id);
-                // Safe Date
-                const targetDate = item.created_at ? new Date(item.created_at) : new Date();
-
-                try {
-                    // Postgres JSON syntax: ->> returns text, cast to int
-                    const countRes = await db.select({ count: count(content.id) })
-                        .from(content)
-                        .where(and(
-                            eq(content.user_id, item.user_id),
-                            eq(content.type, 'review'),
-                            eq(content.is_deleted, false),
-                            // Safe JSON check for Postgres
-                            sql`(${content.review_prop}->>'shop_id')::int = ${sid}`,
-                            lte(content.created_at, targetDate)
-                        ));
-
-                    return { id: item.id, count: countRes[0].count };
-                } catch (err) {
-                    console.error("Error counting visits for item", item.id, err);
-                    return null;
-                }
-            });
-
-            const visitCounts = await Promise.all(visitCountPromises);
-            visitCounts.forEach(vc => {
-                if (vc) contentVisitRankMap.set(vc.id, vc.count);
-            });
+            // Fetch Companions
+            if (cIds.length > 0) {
+                const companionsList = await db.select({
+                    id: users.id,
+                    nickname: users.nickname,
+                    profile_image: users.profile_image
+                })
+                    .from(users)
+                    .where(inArray(users.id, cIds));
+                companionsList.forEach(c => companionMap.set(c.id, c));
+            }
         }
 
         // 3.5 Batch Fetch Likes & Comments Counts + IsLiked
@@ -246,11 +256,6 @@ router.get("/feed", async (req, res) => {
         // 3.6 Batch Fetch Preview Comments (Latest 2)
         const previewCommentsMap = new Map<number, any[]>();
         if (contentIds.length > 0) {
-            // Fetch recent comments for these posts
-            // NOTE: Ideally use a window function, but for small batch size, fetching all recent valid comments is ok
-            // Optimally: we want "latest 2 per post".
-            // Strategy: Fetch all comments for these posts, order by created_at desc, then slice in JS.
-            // Limit total to safe amount (e.g., 100) per post or just fetch all if batch is small (20 posts).
             const recentComments = await db.select({
                 id: comments.id,
                 content_id: comments.content_id,
@@ -301,6 +306,14 @@ router.get("/feed", async (req, res) => {
                 const rank = rankMap.get(`${item.user_id} -${sid} `);
                 const visitCount = contentVisitRankMap.get(item.id) || 1;
 
+                // New: Enrich Companions
+                let displayCompanions = [];
+                if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
+                    displayCompanions = enrichedProp.companions
+                        .map((cid: number) => companionMap.get(cid))
+                        .filter(Boolean);
+                }
+
                 if (shop) {
                     enrichedProp = {
                         ...enrichedProp,
@@ -308,7 +321,8 @@ router.get("/feed", async (req, res) => {
                         shop_address: shop.address_region || shop.address_full,
                         thumbnail_img: shop.thumbnail_img,
                         rank: rank || null,
-                        visit_count: visitCount
+                        visit_count: visitCount,
+                        companions_info: displayCompanions // Pass Enriched Info
                     };
 
                     // Construct POI object for modern frontend
@@ -321,7 +335,7 @@ router.get("/feed", async (req, res) => {
                         satisfaction: enrichedProp.satisfaction,
                         visit_count: visitCount,
                         is_bookmarked: savedShopSet.has(sid),
-                        catchtable_ref: shop.catchtable_ref // Pass ref directly
+                        catchtable_ref: shop.catchtable_ref
                     };
                 }
             }
@@ -334,7 +348,8 @@ router.get("/feed", async (req, res) => {
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
-                poi, // Add POI field
+                keyword: item.keyword || [], // Add keyword here
+                poi,
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
@@ -772,6 +787,7 @@ router.get("/user/:userId", async (req, res) => {
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
+                keyword: item.keyword || [],
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
@@ -810,13 +826,51 @@ router.delete("/:id", async (req, res) => {
             return res.status(403).json({ error: "Unauthorized" });
         }
 
-        await db.update(content)
-            .set({
-                is_deleted: true,
-                visibility: false,
-                updated_at: new Date()
-            })
-            .where(eq(content.id, contentId));
+        await db.transaction(async (tx) => {
+            // 1. Soft Delete Content
+            await tx.update(content)
+                .set({
+                    is_deleted: true,
+                    visibility: false,
+                    updated_at: new Date()
+                })
+                .where(eq(content.id, contentId));
+
+            // 2. If it's a review, remove from Ranking
+            if (contentItem[0].type === 'review' && contentItem[0].review_prop) {
+                const prop = contentItem[0].review_prop as any;
+                if (prop.shop_id) {
+                    const shopId = Number(prop.shop_id);
+
+                    // Check if ranking exists
+                    const existingRank = await tx.select().from(users_ranking)
+                        .where(
+                            and(
+                                eq(users_ranking.user_id, user_id),
+                                eq(users_ranking.shop_id, shopId)
+                            )
+                        ).limit(1);
+
+                    if (existingRank.length > 0) {
+                        const oldRank = existingRank[0].rank;
+
+                        // Delete ranking
+                        await tx.delete(users_ranking)
+                            .where(eq(users_ranking.id, existingRank[0].id));
+
+                        // Shift ranks up (Close the gap)
+                        await tx.update(users_ranking)
+                            .set({ rank: sql`${users_ranking.rank} - 1` })
+                            .where(
+                                and(
+                                    eq(users_ranking.user_id, user_id),
+                                    gt(users_ranking.rank, oldRank)
+                                )
+                            );
+                    }
+                }
+            }
+        });
 
         res.json({ success: true });
     } catch (error) {

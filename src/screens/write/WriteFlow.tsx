@@ -48,7 +48,7 @@ export const WriteFlow = () => {
         setStep('WRITE_CONTENT');
     };
 
-    const handleContentNext = async (contentData: { text: string; images: string[] }) => {
+    const handleContentNext = async (contentData: { text: string; images: string[]; companions?: number[]; keywords?: string[] }) => {
         try {
             if (!currentUserId) {
                 alert("Login required");
@@ -64,11 +64,11 @@ export const WriteFlow = () => {
                 video: [],
                 review_prop: type === 'review' ? {
                     shop_id: selectedShop.id,
-                    visit_date: basicInfo?.visitDate,
-                    companions: basicInfo?.companions,
+                    visit_date: basicInfo?.visitDate || new Date().toISOString().split('T')[0], // Default date if missing
+                    companions: contentData.companions || [], // Use from content step
                     satisfaction: basicInfo?.satisfaction
                 } : undefined,
-                keyword: [] // extract hashtags if needed
+                keyword: contentData.keywords || []
             };
 
             await ContentService.create(payload);
@@ -114,6 +114,8 @@ export const WriteFlow = () => {
             {step === 'WRITE_CONTENT' && (
                 <WriteContentStep
                     mode={type}
+                    shop={selectedShop}
+                    satisfaction={basicInfo?.satisfaction}
                     onNext={handleContentNext}
                     onBack={() => {
                         if (type === 'review') {

@@ -54,7 +54,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
             {/* Header */}
-            <div className="px-4 py-3 flex items-center gap-3 bg-background/80 backdrop-blur-md border-b sticky top-0 z-10 transition-colors">
+            <div className="pl-4 pr-8 py-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
@@ -64,7 +64,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                 <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                        className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
+                        className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl text-foreground placeholder:text-muted-foreground"
                         placeholder={t('write.search.placeholder')}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -94,9 +94,9 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 <li key={shop.id}>
                                     <button
                                         onClick={() => onSelect(shop)}
-                                        className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all flex items-start gap-4 border border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.99]"
+                                        className="items-center group w-full text-left p-3 rounded-2xl flex items-start gap-4"
                                     >
-                                        <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center border border-border overflow-hidden"
+                                        <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
                                             style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
                                         >
                                             {!shop.thumbnail_img && (
@@ -107,7 +107,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                         </div>
                                         <div className="flex-1 min-w-0 py-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-foreground text-lg truncate leading-tight group-hover:text-primary transition-colors">
+                                                <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                     {shop.name}
                                                 </span>
                                                 <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -115,7 +115,6 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                                <MapPin className="w-3.5 h-3.5 flex-shrink-0 opacity-70" />
                                                 <span className="truncate">{shop.address_region || shop.address_full}</span>
                                             </div>
                                         </div>
@@ -143,9 +142,9 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                         <li key={shop.id}>
                                             <button
                                                 onClick={() => onSelect(shop)}
-                                                className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all flex items-start gap-4 border border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.99]"
+                                                className="items-center group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all flex items-start gap-4"
                                             >
-                                                <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center border border-border overflow-hidden"
+                                                <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
                                                     style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
                                                 >
                                                     {!shop.thumbnail_img && (
@@ -156,7 +155,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                 </div>
                                                 <div className="flex-1 min-w-0 py-1">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-bold text-foreground text-lg truncate leading-tight group-hover:text-primary transition-colors">
+                                                        <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                             {shop.name}
                                                         </span>
                                                         <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -164,7 +163,6 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 opacity-70" />
                                                         <span className="truncate">{shop.address_region || shop.address_full}</span>
                                                     </div>
                                                 </div>
