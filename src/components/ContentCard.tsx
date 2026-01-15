@@ -149,9 +149,7 @@ const satisfactionBadgeClass = (s: Satisfaction) => {
 export const ContentCard = ({
     user,
     content,
-    onShare,
-    onTogglePoiBookmark,
-    onReservePoi
+    onShare
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
@@ -386,8 +384,28 @@ export const ContentCard = ({
                             </div>
                         </div>
 
-                        {/* Shop actions: Bookmark + Reserve */}
-                        <div className="flex items-center gap-2">
+                        {/* Shop actions: Reserve + Bookmark */}
+                        <div className="flex items-center gap-4 mr-2">
+                            {/* Reserve Button */}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const ref = content.poi?.catchtable_ref;
+                                    if (ref) {
+                                        window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
+                                    } else {
+                                        // Fallback or alert
+                                        alert("예약 링크가 없습니다.");
+                                    }
+                                }}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                aria-label="Reserve"
+                            >
+                                <Calendar size={22} />
+                            </button>
+
+                            {/* Bookmark Button */}
                             <button
                                 type="button"
                                 onClick={async (e) => {
@@ -424,35 +442,12 @@ export const ContentCard = ({
                                     }
                                 }}
                                 className={cn(
-                                    'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
-                                    isPoiBookmarked
-                                        ? 'bg-white border border-orange-200 text-orange-600'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                    'transition-colors p-1',
+                                    isPoiBookmarked ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'
                                 )}
                                 aria-label="Bookmark shop"
                             >
-                                <Bookmark size={16} className={cn(isPoiBookmarked && 'fill-orange-600 text-orange-600')} />
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const ref = content.poi?.catchtable_ref;
-                                    if (ref) {
-                                        window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
-                                    } else {
-                                        // Fallback or alert
-                                        alert("예약 링크가 없습니다.");
-                                    }
-                                }}
-                                className={cn(
-                                    'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
-                                    'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                                )}
-                                aria-label="Reserve"
-                            >
-                                <Calendar size={16} />
+                                <Bookmark size={22} className={cn(isPoiBookmarked && 'fill-orange-600')} />
                             </button>
                         </div>
                     </div>

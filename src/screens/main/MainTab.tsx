@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Compass, Trophy, User, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNavigate, useLocation, matchPath } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { SelectTypeStep } from '@/screens/write/SelectTypeStep';

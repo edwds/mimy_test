@@ -12,11 +12,12 @@ import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 
 type ProfileTabType = "content" | "list" | "saved";
 
-interface Props {
+interface ProfileScreenProps {
     refreshTrigger?: number;
+    isEnabled?: boolean;
 }
 
-export const ProfileScreen = ({ refreshTrigger }: Props) => {
+export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
     const navigate = useNavigate();
     const { user, loading, refreshUser, logout } = useUser();
     const [searchParams] = useSearchParams();

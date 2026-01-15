@@ -17,7 +17,7 @@ interface LeaderboardItem {
     score: number;
 }
 
-export const LeaderboardTab = () => {
+export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const navigate = useNavigate();
     // Smart Header State
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);

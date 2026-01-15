@@ -18,7 +18,7 @@ interface Props {
     refreshTrigger?: number;
 }
 
-export const UserProfileScreen = ({ userId: propUserId, refreshTrigger }: Props) => {
+export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const navigate = useNavigate();
     const params = useParams();
     const userId = propUserId || params.userId;

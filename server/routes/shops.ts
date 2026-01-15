@@ -29,6 +29,7 @@ router.get("/discovery", async (req, res) => {
             kind: shops.kind,
             lat: shops.lat,
             lon: shops.lon,
+            catchtable_ref: shops.catchtable_ref
         }).from(shops).$dynamic();
 
         if (minLat && maxLat && minLon && maxLon) {

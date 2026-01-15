@@ -21,9 +21,10 @@ const getSessionSeed = () => {
 interface Props {
     isActive: boolean;
     refreshTrigger?: number;
+    isEnabled?: boolean;
 }
 
-export const DiscoveryTab = ({ isActive, refreshTrigger }: Props) => {
+export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnabled = true }) => {
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
 

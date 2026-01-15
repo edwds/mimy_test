@@ -18,7 +18,6 @@ import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
-import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { UserProvider } from '@/context/UserContext';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
