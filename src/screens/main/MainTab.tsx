@@ -152,7 +152,7 @@ export const MainTab = () => {
             />
 
             {/* Bottom Navigation */}
-            <nav className="border-t border-border bg-card/80 backdrop-blur-lg pb-4 shrink-0">
+            <nav className="border-t border-border bg-card/80 backdrop-blur-lg pb-6 shrink-0">
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
                         icon={<Home className="w-6 h-6" />}

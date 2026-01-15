@@ -30,7 +30,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     // Handle Snap State Changes
     useEffect(() => {
         const variants = {
-            peek: { y: "85%" },
+            peek: { y: "80%" }, // Raise peek height slightly
             half: { y: "50%" },
             full: { y: "10%" }
         };
@@ -71,7 +71,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
 
             {/* Content */}
             <div
-                className="flex-1 overflow-y-auto px-4 pb-24"
+                className="flex-1 overflow-y-auto px-4 pb-48"
                 onPointerDown={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4 px-1">
