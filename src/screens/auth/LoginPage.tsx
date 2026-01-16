@@ -26,16 +26,14 @@ export const LoginPage = () => {
 
                 if (response.ok) {
                     const { user, isNew } = await response.json();
-                    if (!isNew) {
-                        // Only fully login if not new (if new, we wait for registration?)
-                        // Actually, we store ID either way for registration steps.
-                    }
-
-                    await contextLogin(user.id.toString());
 
                     if (isNew) {
+                        // New User: Don't login yet, just go to register
+                        localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
                         navigate('/register/phone');
                     } else {
+                        // Existing User: Login normally
+                        await contextLogin(user.id.toString());
                         navigate('/main');
                     }
                 } else {

@@ -132,33 +132,70 @@ export const ProfileStep = () => {
             // Final submit
             setChecking(true);
             const userId = localStorage.getItem("mimy_user_id");
-            if (!userId) {
-                navigate('/login');
-                return;
-            }
 
             try {
                 const birthDate = localStorage.getItem("mimy_reg_birthyear");
                 const phone = localStorage.getItem("mimy_reg_phone");
 
-                const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        account_id: handle,
-                        nickname: nickname,
-                        phone: phone,
-                        birthdate: birthDate,
-                        profile_image: photoUrl
-                    })
-                });
+                let response;
+
+                if (userId) {
+                    // Update existing user
+                    response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            account_id: handle,
+                            nickname: nickname,
+                            phone: phone,
+                            birthdate: birthDate,
+                            profile_image: photoUrl
+                        })
+                    });
+                } else {
+                    // Create new user (Registration)
+                    const googleInfoStr = localStorage.getItem("mimy_reg_google_info");
+                    if (!googleInfoStr) {
+                        alert("Session expired. Please login again.");
+                        navigate('/login');
+                        return;
+                    }
+                    const googleInfo = JSON.parse(googleInfoStr);
+
+                    response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            email: googleInfo.email,
+                            account_id: handle,
+                            nickname: nickname,
+                            phone: phone,
+                            birthdate: birthDate,
+                            profile_image: photoUrl || googleInfo.profile_image,
+                            gender: null, // Removed gender step or it's implicitly M/F? Assuming null for now
+                            taste_cluster: null
+                        })
+                    });
+                }
 
                 if (response.ok) {
+                    const savedUser = await response.json();
+
+                    if (!userId) {
+                        // If we just created, we need to login locally
+                        localStorage.setItem("mimy_user_id", savedUser.id.toString());
+                        // contextLogin might not be available if not wrapped properly or we reload?
+                        // But refreshUser works off localStorage
+                    }
+
                     localStorage.setItem("mimy_user", "true");
                     await refreshUser(); // Update context with new profile info
+
                     // Clear temp reg data
                     localStorage.removeItem("mimy_reg_birthyear");
                     localStorage.removeItem("mimy_reg_phone");
+                    localStorage.removeItem("mimy_reg_google_info");
+
                     navigate('/quiz/intro');
                 } else {
                     const errorData = await response.json();

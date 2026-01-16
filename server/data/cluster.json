@@ -1,770 +1,770 @@
 [
-{
-"cluster_id": "1",
-"cluster_medoid_value": "0,0,0,0,0,0,0",
-"cluster_name": "침착한 중용자",
-"cluster_tagline": "어느 한 가지 맛에 치우치지 않고 모든 지표가 균형을 이루는 무난하고 조화로운 맛을 선호합니다."
-},
-{
-"cluster_id": "65",
-"cluster_medoid_value": "1,-2,1,0,-1,0,0",
-"cluster_name": "신맛 뺀 곰탕",
-"cluster_tagline": "산미와 매운맛은 피하고, 입안에 꽉 차는 묵직한 질감과 강한 풍미를 즐기는 타입입니다."
-},
-{
-"cluster_id": "21",
-"cluster_medoid_value": "-1,0,-2,-1,1,-1,0",
-"cluster_name": "가벼운 스파이시",
-"cluster_tagline": "기름지거나 무거운 질감은 거부하며, 산뜻한 베이스에 적당한 매운맛으로 포인트를 주는 것을 좋아합니다."
-},
-{
-"cluster_id": "66",
-"cluster_medoid_value": "-1,-1,-1,-1,-1,0,1",
-"cluster_name": "순수한 감칠맛",
-"cluster_tagline": "자극적인 맛 요소를 모두 배제하고, 재료 본연의 은은한 감칠맛과 담백함을 최우선으로 여깁니다."
-},
-{
-"cluster_id": "33",
-"cluster_medoid_value": "2,0,-1,0,-1,-1,-1",
-"cluster_name": "직설적인 타격감",
-"cluster_tagline": "복잡한 뒷맛보다는 첫입에 느껴지는 강렬한 인상을 선호하며, 단맛이나 무게감 없이 깔끔하게 떨어지는 맛을 찾습니다."
-},
-{
-"cluster_id": "72",
-"cluster_medoid_value": "-1,1,0,1,0,-1,1",
-"cluster_name": "상큼한 탐험가",
-"cluster_tagline": "단맛과 강한 자극은 피하되, 산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다."
-},
-{
-"cluster_id": "55",
-"cluster_medoid_value": "0,1,-2,1,2,0,0",
-"cluster_name": "가벼운 불장난",
-"cluster_tagline": "묵직한 포만감보다는 가벼운 식감 속에서 느껴지는 산미와 강렬한 매운맛의 조화를 선호합니다."
-},
-{
-"cluster_id": "99",
-"cluster_medoid_value": "2,0,-1,-1,1,-2,1",
-"cluster_name": "단맛 없는 독설가",
-"cluster_tagline": "달콤함은 철저히 배제하고, 강한 임팩트와 매콤한 감칠맛이 확실한 검증된 메뉴를 고집합니다."
-},
-{
-"cluster_id": "31",
-"cluster_medoid_value": "1,-1,2,1,0,-1,-1",
-"cluster_name": "꾸덕한 도전자",
-"cluster_tagline": "신맛과 단맛은 줄이고, 밀도 높은 질감과 강한 풍미를 가진 새로운 음식에 도전하는 것을 즐깁니다."
-},
-{
-"cluster_id": "42",
-"cluster_medoid_value": "-1,1,1,-2,-1,1,-2",
-"cluster_name": "보수적인 요거트",
-"cluster_tagline": "새로운 시도보다는 익숙한 맛을 찾으며, 자극적이지 않고 새콤달콤하면서 부드러운 질감을 선호합니다."
-},
-{
-"cluster_id": "93",
-"cluster_medoid_value": "1,-1,-1,0,1,0,-2",
-"cluster_name": "건조한 매운맛",
-"cluster_tagline": "감칠맛이나 질척이는 식감 없이, 깔끔하고 강하게 치고 들어오는 매콤함을 즐깁니다."
-},
-{
-"cluster_id": "120",
-"cluster_medoid_value": "1,1,1,2,-2,-1,0",
-"cluster_name": "기묘한 묵직함",
-"cluster_tagline": "매운맛은 전혀 없지만, 산미와 무게감이 동시에 느껴지는 독특하고 실험적인 미식 경험을 추구합니다."
-},
-{
-"cluster_id": "70",
-"cluster_medoid_value": "1,1,-2,1,0,-2,1",
-"cluster_name": "날카로운 미식가",
-"cluster_tagline": "단맛과 무거운 질감을 싫어하며, 혀를 자극하는 산미와 강한 풍미가 돋보이는 개성 있는 음식을 선호합니다."
-},
-{
-"cluster_id": "28",
-"cluster_medoid_value": "1,0,-2,2,0,1,1",
-"cluster_name": "가벼운 팝업스토어",
-"cluster_tagline": "무거운 식사는 피하고, 가볍고 달콤하며 트렌디한 실험적인 메뉴를 찾아다니는 성향입니다."
-},
-{
-"cluster_id": "90",
-"cluster_medoid_value": "0,-1,-1,2,-2,1,-1",
-"cluster_name": "순한맛 얼리어답터",
-"cluster_tagline": "자극적인 매운맛이나 신맛은 피하고, 부드럽고 달콤한 맛 위주의 신메뉴 도전을 즐깁니다."
-},
-{
-"cluster_id": "36",
-"cluster_medoid_value": "0,-1,-1,2,2,1,1",
-"cluster_name": "호기심 많은 맵찔이탈출",
-"cluster_tagline": "신맛과 무거운 느낌은 싫어하지만, 매콤달콤한 맛과 감칠맛이 조화된 새로운 메뉴에는 적극적입니다."
-},
-{
-"cluster_id": "87",
-"cluster_medoid_value": "0,2,-1,-1,0,1,0",
-"cluster_name": "새콤한 보수파",
-"cluster_tagline": "파격적인 시도보다는 익숙한 맛을 선호하며, 가벼운 식감에 뚜렷한 산미와 은은한 단맛을 즐깁니다."
-},
-{
-"cluster_id": "49",
-"cluster_medoid_value": "0,-2,-2,-1,1,-1,1",
-"cluster_name": "담백한 칼칼함",
-"cluster_tagline": "신맛과 기름진 느낌을 극도로 싫어하며, 깔끔한 베이스에 적당한 매운맛과 감칠맛이 도는 음식을 찾습니다."
-},
-{
-"cluster_id": "124",
-"cluster_medoid_value": "-1,0,2,0,1,2,0",
-"cluster_name": "달콤한 헤비급",
-"cluster_tagline": "자극적인 짠맛보다는, 입안 가득 차는 묵직한 질감과 매콤달콤한 소스의 조화를 선호합니다."
-},
-{
-"cluster_id": "86",
-"cluster_medoid_value": "-1,1,2,1,-2,1,1",
-"cluster_name": "부드러운 치즈케이크",
-"cluster_tagline": "매운맛과 강한 자극은 피하고, 산미와 단맛이 감도는 꾸덕하고 묵직한 식감을 즐깁니다."
-},
-{
-"cluster_id": "101",
-"cluster_medoid_value": "2,1,2,-1,-1,2,-1",
-"cluster_name": "진한 달콤함",
-"cluster_tagline": "매운맛과 모험은 싫어하지만, 강렬한 풍미와 묵직한 바디감, 그리고 확실한 단맛을 추구합니다."
-},
-{
-"cluster_id": "50",
-"cluster_medoid_value": "0,0,-1,-1,-2,-2,0",
-"cluster_name": "순수한 자연인",
-"cluster_tagline": "맵고 단 인위적인 자극을 모두 거부하며, 가볍고 담백하며 균형 잡힌 자연스러운 맛을 선호합니다."
-},
-{
-"cluster_id": "9",
-"cluster_medoid_value": "1,2,-1,1,-2,1,1",
-"cluster_name": "상큼한 펀치",
-"cluster_tagline": "매운맛 대신 강렬한 산미와 단맛의 조화를 즐기며, 가벼운 식감 속에서 톡 쏘는 자극을 찾습니다."
-},
-{
-"cluster_id": "48",
-"cluster_medoid_value": "-1,0,0,-2,2,-2,-1",
-"cluster_name": "보수적인 불맛",
-"cluster_tagline": "단맛과 감칠맛을 배제한 순수한 매운맛을 고집하며, 검증되지 않은 메뉴는 절대 시도하지 않습니다."
-},
-{
-"cluster_id": "44",
-"cluster_medoid_value": "0,1,0,-1,-1,2,1",
-"cluster_name": "안전한 탕후루",
-"cluster_tagline": "실패 없는 익숙한 메뉴 중에서, 매운맛 없이 새콤달콤하고 감칠맛 있는 스타일을 선호합니다."
-},
-{
-"cluster_id": "84",
-"cluster_medoid_value": "0,0,1,1,1,1,-2",
-"cluster_name": "이색적인 로제",
-"cluster_tagline": "감칠맛보다는 묵직한 크림소스에 맵고 단맛을 더한 트렌디하고 실험적인 퓨전 요리를 즐깁니다."
-},
-{
-"cluster_id": "52",
-"cluster_medoid_value": "1,-1,2,1,0,-1,1",
-"cluster_name": "진지한 미식가",
-"cluster_tagline": "가벼운 신맛이나 단맛은 피하고, 깊은 풍미와 묵직한 질감, 그리고 감칠맛이 어우러진 요리를 선호합니다."
-},
-{
-"cluster_id": "63",
-"cluster_medoid_value": "-1,0,1,1,0,-2,-1",
-"cluster_name": "담백한 탐구생활",
-"cluster_tagline": "단맛과 감칠맛을 뺀 슴슴하고 묵직한 재료 본연의 맛을 탐구하며 새로운 시도를 즐깁니다."
-},
-{
-"cluster_id": "108",
-"cluster_medoid_value": "-1,2,-1,0,1,0,-1",
-"cluster_name": "시큼한 핫소스",
-"cluster_tagline": "무거운 맛과 감칠맛은 덜어내고, 혀를 찌르는 강한 산미와 적당한 매운맛의 조화를 찾습니다."
-},
-{
-"cluster_id": "106",
-"cluster_medoid_value": "-2,-1,2,-1,-1,-1,0",
-"cluster_name": "심심한 뚝배기",
-"cluster_tagline": "강한 맛, 매운맛, 단맛 등 자극적인 요소를 모두 피하고 오직 묵직하고 구수한 식감에 집중합니다."
-},
-{
-"cluster_id": "81",
-"cluster_medoid_value": "2,0,0,0,0,1,1",
-"cluster_name": "강렬한 스위트",
-"cluster_tagline": "어느 한쪽으로 치우치지 않는 밸런스 속에서, 확실하게 치고 나오는 강한 풍미와 단맛을 중요시합니다."
-},
-{
-"cluster_id": "25",
-"cluster_medoid_value": "-2,-1,1,2,-2,-1,0",
-"cluster_name": "순한맛 연구원",
-"cluster_tagline": "자극적인 맛은 극도로 싫어하지만, 묵직한 질감을 가진 독특하고 실험적인 메뉴에는 호기심을 보입니다."
-},
-{
-"cluster_id": "46",
-"cluster_medoid_value": "-1,-2,-1,2,0,1,-1",
-"cluster_name": "신맛 뺀 별미",
-"cluster_tagline": "익숙한 맛을 거부하고 산미 없는 달콤한 맛을 찾아다니며, 가벼운 식감의 이색 메뉴를 즐깁니다."
-},
-{
-"cluster_id": "51",
-"cluster_medoid_value": "2,0,-1,1,1,2,0",
-"cluster_name": "짜릿한 자극제",
-"cluster_tagline": "무거운 느낌 없이 맵고 달고 강렬한 자극을 주는 실험적인 메뉴에 열광합니다."
-},
-{
-"cluster_id": "18",
-"cluster_medoid_value": "0,-2,-1,-2,0,1,1",
-"cluster_name": "전통적인 단맛",
-"cluster_tagline": "새로운 도전이나 신맛은 꺼리며, 검증된 메뉴 중에서 달콤하고 감칠맛 나는 가벼운 음식을 고릅니다."
-},
-{
-"cluster_id": "34",
-"cluster_medoid_value": "2,0,2,-1,-1,0,2",
-"cluster_name": "깊은맛의 정석",
-"cluster_tagline": "매운맛이나 실험적인 요소 없이, 재료의 밀도와 강한 풍미, 풍부한 감칠맛으로 승부하는 정통파입니다."
-},
-{
-"cluster_id": "14",
-"cluster_medoid_value": "1,-1,-2,-1,-1,2,2",
-"cluster_name": "달콤한 농축액",
-"cluster_tagline": "매운맛과 무거운 식감은 싫어하지만, 가볍고 강렬하게 다가오는 단맛과 감칠맛의 조화를 선호합니다."
-},
-{
-"cluster_id": "75",
-"cluster_medoid_value": "1,1,0,2,1,-2,-1",
-"cluster_name": "매콤한 레몬즙",
-"cluster_tagline": "단맛과 감칠맛은 배제하고, 산미와 매운맛이 톡 쏘는 강렬하고 실험적인 맛을 찾아다닙니다."
-},
-{
-"cluster_id": "15",
-"cluster_medoid_value": "2,-2,1,0,1,-2,-1",
-"cluster_name": "묵직한 불맛",
-"cluster_tagline": "신맛과 단맛을 제거한 상태에서, 묵직한 바디감과 함께 강렬하게 치고 올라오는 매운맛을 즐깁니다."
-},
-{
-"cluster_id": "39",
-"cluster_medoid_value": "-2,1,-1,0,-2,-1,2",
-"cluster_name": "산뜻한 육수파",
-"cluster_tagline": "강하거나 매운 자극 없이, 가볍고 산뜻한 베이스에 깊은 감칠맛이 우러나는 맛을 선호합니다."
-},
-{
-"cluster_id": "126",
-"cluster_medoid_value": "-2,0,-1,0,-1,-1,-2",
-"cluster_name": "무미의 철학자",
-"cluster_tagline": "강한 맛, 단맛, 감칠맛 등 인위적인 맛을 모두 덜어낸 아주 슴슴하고 담백한 맛을 추구합니다."
-},
-{
-"cluster_id": "12",
-"cluster_medoid_value": "-2,1,0,-1,1,-2,2",
-"cluster_name": "전통의 감칠맛",
-"cluster_tagline": "강한 양념이나 단맛은 싫어하지만, 은은한 산미와 매운맛이 감칠맛과 어우러지는 검증된 맛을 좋아합니다."
-},
-{
-"cluster_id": "100",
-"cluster_medoid_value": "1,1,2,0,2,1,-1",
-"cluster_name": "화려한 만찬",
-"cluster_tagline": "감칠맛보다는 맵고 시고 달고 묵직한, 입안 가득 채우는 강렬하고 복합적인 맛의 향연을 즐깁니다."
-},
-{
-"cluster_id": "125",
-"cluster_medoid_value": "-2,0,0,2,1,0,1",
-"cluster_name": "숨겨진 맛집탐방",
-"cluster_tagline": "강렬한 간판 메뉴보다는, 적당한 매운맛과 감칠맛이 있는 독특하고 실험적인 숨은 메뉴를 발굴합니다."
-},
-{
-"cluster_id": "71",
-"cluster_medoid_value": "1,0,2,-2,1,-1,1",
-"cluster_name": "진국 매니아",
-"cluster_tagline": "새로운 시도는 꺼리지만, 묵직하고 진한 국물처럼 강렬한 풍미와 적당한 매운맛을 선호합니다."
-},
-{
-"cluster_id": "32",
-"cluster_medoid_value": "1,2,1,-1,2,1,1",
-"cluster_name": "자극의 종합선물",
-"cluster_tagline": "실험적인 요소만 빼고, 맵고 시고 달고 묵직한 모든 강렬한 자극을 한꺼번에 즐기는 타입입니다."
-},
-{
-"cluster_id": "73",
-"cluster_medoid_value": "-2,2,1,-1,0,-1,0",
-"cluster_name": "새콤한 샐러드",
-"cluster_tagline": "강한 맛이나 단맛 없이, 재료 본연의 무게감에 강한 산미를 더한 신선하고 익숙한 맛을 찾습니다."
-},
-{
-"cluster_id": "43",
-"cluster_medoid_value": "-1,2,1,0,-1,-2,2",
-"cluster_name": "시큼한 감칠맛",
-"cluster_tagline": "매운맛과 단맛은 철저히 배제하고, 묵직한 질감 속에 산미와 깊은 감칠맛이 어우러진 맛을 선호합니다."
-},
-{
-"cluster_id": "37",
-"cluster_medoid_value": "1,-2,1,1,1,2,-1",
-"cluster_name": "매콤달콤 기름떡볶이",
-"cluster_tagline": "신맛은 싫어하지만, 묵직하고 강렬한 양념에 맵고 단맛이 확실한 실험적인 분식 스타일을 좋아합니다."
-},
-{
-"cluster_id": "19",
-"cluster_medoid_value": "-2,-2,0,-1,-1,1,0",
-"cluster_name": "순한 어린이입맛",
-"cluster_tagline": "강한 향신료, 산미, 매운맛을 모두 기피하며, 튀지 않는 식감에 적당히 달콤하고 순한 맛을 고집합니다."
-},
-{
-"cluster_id": "57",
-"cluster_medoid_value": "0,-1,-1,0,-1,-2,-2",
-"cluster_name": "무심한 소식가",
-"cluster_tagline": "특별히 선호하는 맛 없이 단맛, 매운맛, 감칠맛 등 자극적인 요소를 전반적으로 멀리하는 담백한 성향입니다."
-},
-{
-"cluster_id": "117",
-"cluster_medoid_value": "2,-2,1,1,0,0,2",
-"cluster_name": "진한 사골국물",
-"cluster_tagline": "산미는 전혀 없지만, 묵직하고 강렬한 맛과 깊은 감칠맛이 우러나는 진국 스타일의 새로운 메뉴를 찾습니다."
-},
-{
-"cluster_id": "24",
-"cluster_medoid_value": "-1,2,-1,2,-1,1,1",
-"cluster_name": "새콤달콤 발명가",
-"cluster_tagline": "무겁거나 매운 음식보다는, 가볍고 산미와 단맛이 톡톡 튀는 개성 넘치는 실험작을 즐깁니다."
-},
-{
-"cluster_id": "116",
-"cluster_medoid_value": "-1,-1,1,1,-2,2,1",
-"cluster_name": "달콤한 크림소스",
-"cluster_tagline": "매운맛과 신맛은 피하고, 부드럽고 묵직한 질감에 달콤함과 감칠맛을 더한 퓨전 요리를 선호합니다."
-},
-{
-"cluster_id": "62",
-"cluster_medoid_value": "-2,0,-1,0,-1,2,-1",
-"cluster_name": "심플한 설탕",
-"cluster_tagline": "강한 맛이나 복잡한 감칠맛 없이, 가볍고 단순하게 느껴지는 확실한 단맛 하나에 집중합니다."
-},
-{
-"cluster_id": "98",
-"cluster_medoid_value": "2,1,-2,0,-2,0,1",
-"cluster_name": "가벼운 칵테일",
-"cluster_tagline": "매운맛이나 무거운 안주는 싫어하지만, 산미와 감칠맛이 감도는 강렬하고 가벼운 한 잔을 즐깁니다."
-},
-{
-"cluster_id": "89",
-"cluster_medoid_value": "-1,2,-2,-2,1,-1,1",
-"cluster_name": "전통의 냉면",
-"cluster_tagline": "기름지거나 실험적인 요소는 싫어하며, 가볍고 시원한 육수에 산미와 적당한 매운맛이 섞인 검증된 맛을 찾습니다."
-},
-{
-"cluster_id": "109",
-"cluster_medoid_value": "1,2,0,1,1,0,-2",
-"cluster_name": "짜릿한 향신료",
-"cluster_tagline": "감칠맛보다는 코를 찌르는 강한 산미와 매콤함, 그리고 독특한 향이 어우러진 이색적인 맛을 즐깁니다."
-},
-{
-"cluster_id": "22",
-"cluster_medoid_value": "-1,0,0,-2,-1,-2,-1",
-"cluster_name": "안전제일주의자",
-"cluster_tagline": "맵거나 달거나 튀는 맛을 모두 경계하며, 지극히 평범하고 익숙한 맛의 범위를 벗어나지 않습니다."
-},
-{
-"cluster_id": "23",
-"cluster_medoid_value": "1,0,2,0,2,0,2",
-"cluster_name": "꽉 찬 육각형",
-"cluster_tagline": "단맛을 제외한 매운맛, 감칠맛, 무게감 등 모든 미각 지표가 높고 강렬하게 채워진 풍성한 맛을 선호합니다."
-},
-{
-"cluster_id": "60",
-"cluster_medoid_value": "-2,-2,-1,1,1,-2,0",
-"cluster_name": "가벼운 매콤함",
-"cluster_tagline": "강한 맛이나 단맛, 신맛은 배제하고 가벼운 식감 속에서 은은하게 느껴지는 매운맛의 실험을 즐깁니다."
-},
-{
-"cluster_id": "35",
-"cluster_medoid_value": "2,1,-2,-1,-2,1,-2",
-"cluster_name": "강렬한 에이드",
-"cluster_tagline": "무겁거나 매운맛은 싫어하지만, 혀를 깨우는 강한 산미와 단맛의 익숙한 조화를 선호합니다."
-},
-{
-"cluster_id": "97",
-"cluster_medoid_value": "1,-1,-1,-2,2,1,-2",
-"cluster_name": "검증된 불닭",
-"cluster_tagline": "신맛이나 감칠맛, 새로운 시도는 필요 없고, 가볍고 강렬하게 매콤달콤한 아는 맛을 고집합니다."
-},
-{
-"cluster_id": "104",
-"cluster_medoid_value": "2,2,1,-1,-1,-1,-1",
-"cluster_name": "강한 신맛애호가",
-"cluster_tagline": "매운맛과 단맛이 없는 상태에서, 묵직한 바디감과 함께 혀를 강타하는 강력한 산미를 즐깁니다."
-},
-{
-"cluster_id": "13",
-"cluster_medoid_value": "-2,1,-1,1,-2,2,-1",
-"cluster_name": "상큼달콤 푸딩",
-"cluster_tagline": "강한 맛과 매운맛은 피하고, 가볍고 산뜻한 질감에 새콤달콤함이 가미된 디저트 같은 메뉴를 찾습니다."
-},
-{
-"cluster_id": "103",
-"cluster_medoid_value": "2,2,-1,1,-1,-1,-1",
-"cluster_name": "짜릿한 비니거",
-"cluster_tagline": "무겁거나 달지 않고, 톡 쏘는 강렬한 산미와 자극적인 가벼움을 즐기는 실험적인 취향입니다."
-},
-{
-"cluster_id": "79",
-"cluster_medoid_value": "-1,-2,1,-2,-1,-1,-2",
-"cluster_name": "투박한 빵",
-"cluster_tagline": "산미, 단맛, 감칠맛 등 화려한 기교 없이 묵직하고 담백한 식감 그 자체를 즐기며 보수적인 입맛을 가졌습니다."
-},
-{
-"cluster_id": "67",
-"cluster_medoid_value": "0,-1,2,-2,-1,0,2",
-"cluster_name": "진득한 보양식",
-"cluster_tagline": "신맛이나 매운맛 같은 자극보다는, 깊고 묵직한 국물처럼 밀도 높은 질감과 풍부한 감칠맛을 중시합니다."
-},
-{
-"cluster_id": "53",
-"cluster_medoid_value": "-2,2,1,1,-1,0,-1",
-"cluster_name": "시큼한 요거트볼",
-"cluster_tagline": "강한 자극은 없지만, 묵직한 질감 속에 두드러지는 산미를 즐기며 새로운 맛을 찾아다닙니다."
-},
-{
-"cluster_id": "61",
-"cluster_medoid_value": "0,1,1,2,0,1,-2",
-"cluster_name": "괴짜 파티시에",
-"cluster_tagline": "감칠맛보다는 묵직한 베이스에 산미와 단맛을 섞은 독특하고 창의적인 디저트 스타일을 좋아합니다."
-},
-{
-"cluster_id": "121",
-"cluster_medoid_value": "-2,0,-1,2,-1,0,2",
-"cluster_name": "별난 미식가",
-"cluster_tagline": "강한 맛보다는 가볍고 은은한 맛을 선호하며, 독특한 재료 조합에서 오는 감칠맛의 발견을 즐깁니다."
-},
-{
-"cluster_id": "118",
-"cluster_medoid_value": "1,1,1,2,0,2,1",
-"cluster_name": "호기심 대장",
-"cluster_tagline": "모든 맛이 조화롭게 강한 편이지만, 특히 산미와 단맛이 돋보이는 묵직하고 실험적인 메뉴에 열광합니다."
-},
-{
-"cluster_id": "122",
-"cluster_medoid_value": "-2,-1,2,-1,2,-1,1",
-"cluster_name": "얼큰한 곰탕",
-"cluster_tagline": "자극적인 첫맛보다는 묵직한 국물에 매운맛과 감칠맛이 은은하게 배어있는 검증된 보양식을 찾습니다."
-},
-{
-"cluster_id": "76",
-"cluster_medoid_value": "0,-2,-1,1,1,1,2",
-"cluster_name": "감칠맛 떡볶이",
-"cluster_tagline": "신맛과 무거운 식감은 싫어하지만, 매콤달콤한 양념에 감칠맛이 폭발하는 새로운 분식 메뉴를 선호합니다."
-},
-{
-"cluster_id": "80",
-"cluster_medoid_value": "2,-2,-1,1,-2,-2,-1",
-"cluster_name": "건조한 임팩트",
-"cluster_tagline": "단맛, 신맛, 매운맛 등 대중적인 맛은 모두 거부하고, 가볍지만 뇌리에 박히는 강렬하고 독특한 향미를 추구합니다."
-},
-{
-"cluster_id": "85",
-"cluster_medoid_value": "-1,0,-2,-2,-2,0,-1",
-"cluster_name": "소박한 집밥",
-"cluster_tagline": "기름지거나 맵고 짠 자극적인 맛을 피하고, 가볍고 편안하며 늘 먹던 익숙한 맛을 고집합니다."
-},
-{
-"cluster_id": "29",
-"cluster_medoid_value": "0,0,0,2,1,2,-2",
-"cluster_name": "달콤한 불장난",
-"cluster_tagline": "감칠맛은 신경 쓰지 않고, 맵고 단 '맵단'의 조화를 실험적으로 풀어낸 트렌디한 메뉴를 즐깁니다."
-},
-{
-"cluster_id": "59",
-"cluster_medoid_value": "-2,1,0,1,1,2,2",
-"cluster_name": "복합적인 별미",
-"cluster_tagline": "강하게 쏘는 맛은 없지만, 맵고 시고 단 맛들이 감칠맛과 함께 복합적으로 어우러지는 이색 메뉴를 찾습니다."
-},
-{
-"cluster_id": "115",
-"cluster_medoid_value": "1,-2,-1,-1,-2,0,-2",
-"cluster_name": "강렬한 심플함",
-"cluster_tagline": "산미, 매운맛, 감칠맛 등 복잡한 맛은 모두 덜어내고, 가벼운 식감 속에서 단일한 강한 풍미만을 즐깁니다."
-},
-{
-"cluster_id": "26",
-"cluster_medoid_value": "0,2,-1,-2,-2,1,-1",
-"cluster_name": "새콤한 캔디",
-"cluster_tagline": "매운맛과 무거운 느낌은 싫어하며, 익숙한 과일처럼 산미와 단맛이 톡톡 터지는 가벼운 맛을 좋아합니다."
-},
-{
-"cluster_id": "38",
-"cluster_medoid_value": "2,2,1,0,1,-2,-1",
-"cluster_name": "화끈한 똠얌꿍",
-"cluster_tagline": "단맛은 배제하고, 묵직한 베이스에 강렬한 산미와 매운맛이 더해진 자극적인 동남아풍 요리를 즐깁니다."
-},
-{
-"cluster_id": "74",
-"cluster_medoid_value": "1,-2,2,-2,1,-1,0",
-"cluster_name": "진한 고기국물",
-"cluster_tagline": "신맛이나 새로운 시도는 질색하며, 묵직하고 기름진 질감에 얼큰한 맛이 더해진 전통적인 맛을 고집합니다."
-},
-{
-"cluster_id": "27",
-"cluster_medoid_value": "-1,2,2,1,-1,1,-2",
-"cluster_name": "상큼한 치즈",
-"cluster_tagline": "매운맛과 감칠맛은 없지만, 꾸덕하고 무거운 질감 속에 산미와 단맛이 어우러진 독특한 디저트를 선호합니다."
-},
-{
-"cluster_id": "58",
-"cluster_medoid_value": "2,0,2,1,2,-1,-1",
-"cluster_name": "화끈한 마라샹궈",
-"cluster_tagline": "단맛과 감칠맛보다는, 입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다."
-},
-{
-"cluster_id": "102",
-"cluster_medoid_value": "2,-1,0,1,2,1,2",
-"cluster_name": "강렬한 찜요리",
-"cluster_tagline": "신맛은 피하고, 맵고 달고 감칠맛이 넘치는 강한 양념의 실험적인 요리를 선호합니다."
-},
-{
-"cluster_id": "91",
-"cluster_medoid_value": "0,1,2,1,-1,-2,-2",
-"cluster_name": "시큼한 크림",
-"cluster_tagline": "단맛, 매운맛, 감칠맛을 모두 뺀 상태에서 묵직한 질감과 산미만이 강조된 독특한 맛을 탐구합니다."
-},
-{
-"cluster_id": "56",
-"cluster_medoid_value": "-1,1,1,-2,2,0,2",
-"cluster_name": "얼큰한 김치찌개",
-"cluster_tagline": "새로운 도전보다는 익숙한 맛을 선호하며, 묵직한 국물에 산미와 매운맛, 감칠맛이 조화된 한식을 즐깁니다."
-},
-{
-"cluster_id": "47",
-"cluster_medoid_value": "-2,-1,0,-2,1,2,1",
-"cluster_name": "달짝지근한 조림",
-"cluster_tagline": "강한 맛이나 신맛은 싫어하지만, 적당한 매운맛과 달콤함, 그리고 감칠맛이 밴 익숙한 반찬 스타일을 좋아합니다."
-},
-{
-"cluster_id": "68",
-"cluster_medoid_value": "0,-2,1,1,2,-1,-2",
-"cluster_name": "매콤한 크림파스타",
-"cluster_tagline": "신맛과 단맛, 감칠맛은 줄이고, 꾸덕한 질감에 매운맛을 더한 퓨전 스타일의 느끼함을 잡은 맛을 찾습니다."
-},
-{
-"cluster_id": "119",
-"cluster_medoid_value": "2,2,-1,0,2,0,0",
-"cluster_name": "짜릿한 매운맛",
-"cluster_tagline": "무거운 느낌은 없지만, 혀를 찌르는 강한 산미와 매운맛이 결합된 자극적인 맛을 즐깁니다."
-},
-{
-"cluster_id": "40",
-"cluster_medoid_value": "-1,-1,0,2,0,2,1",
-"cluster_name": "달콤한 모험가",
-"cluster_tagline": "자극적인 신맛이나 강한 맛보다는, 부드러운 질감에 단맛과 감칠맛이 돋보이는 창의적인 메뉴를 선호합니다."
-},
-{
-"cluster_id": "64",
-"cluster_medoid_value": "0,-1,1,-2,-1,2,-2",
-"cluster_name": "달콤한 버터",
-"cluster_tagline": "신맛, 매운맛, 감칠맛 등 자극은 피하고, 묵직하고 부드러운 질감에 단맛이 강한 익숙한 디저트를 찾습니다."
-},
-{
-"cluster_id": "95",
-"cluster_medoid_value": "0,0,-1,-2,1,2,0",
-"cluster_name": "익숙한 떡볶이",
-"cluster_tagline": "무겁거나 튀는 맛보다는 가볍고 매콤달콤한, 누구나 아는 그 맛을 가장 좋아합니다."
-},
-{
-"cluster_id": "94",
-"cluster_medoid_value": "0,0,-1,2,1,-2,-2",
-"cluster_name": "가벼운 매운맛탐구",
-"cluster_tagline": "단맛과 감칠맛을 뺀 깔끔하고 가벼운 매운맛을 선호하며, 흔치 않은 독특한 메뉴에 도전합니다."
-},
-{
-"cluster_id": "7",
-"cluster_medoid_value": "1,-2,0,2,-1,2,-2",
-"cluster_name": "달콤한 탕후루",
-"cluster_tagline": "신맛과 매운맛은 싫어하지만, 강렬한 단맛과 독특한 식감을 가진 트렌디한 간식을 찾아다닙니다."
-},
-{
-"cluster_id": "77",
-"cluster_medoid_value": "0,2,1,-2,-2,0,0",
-"cluster_name": "새콤한 그릭요거트",
-"cluster_tagline": "매운맛과 새로운 시도는 피하고, 묵직한 질감에 강한 산미가 느껴지는 건강하고 익숙한 맛을 즐깁니다."
-},
-{
-"cluster_id": "54",
-"cluster_medoid_value": "-2,1,-2,-2,0,-1,-1",
-"cluster_name": "가벼운 레몬수",
-"cluster_tagline": "강한 맛이나 무거운 식감을 모두 거부하며, 아주 가볍고 산뜻하게 스치는 약간의 산미만을 선호합니다."
-},
-{
-"cluster_id": "5",
-"cluster_medoid_value": "-2,2,2,2,2,-1,-1",
-"cluster_name": "괴짜 마라탕",
-"cluster_tagline": "일반적인 강한 맛은 싫어하지만, 맵고 시고 묵직한 극단의 자극이 섞인 실험적인 맛에는 열광합니다."
-},
-{
-"cluster_id": "6",
-"cluster_medoid_value": "1,-2,1,-2,2,0,2",
-"cluster_name": "진한 육개장",
-"cluster_tagline": "신맛과 낯선 음식은 피하고, 묵직하고 강렬하며 얼큰한 감칠맛이 있는 전통적인 보양식을 고집합니다."
-},
-{
-"cluster_id": "105",
-"cluster_medoid_value": "2,2,0,2,0,0,1",
-"cluster_name": "강렬한 칵테일",
-"cluster_tagline": "매운맛 없이도 강한 산미와 풍미, 그리고 감칠맛으로 혀를 자극하는 독창적인 메뉴를 즐깁니다."
-},
-{
-"cluster_id": "92",
-"cluster_medoid_value": "-1,2,2,2,0,1,2",
-"cluster_name": "풍요로운 퓨전",
-"cluster_tagline": "강한 자극보다는 묵직한 재료에 산미와 단맛, 감칠맛을 조화롭게 쌓아 올린 실험적인 요리를 선호합니다."
-},
-{
-"cluster_id": "96",
-"cluster_medoid_value": "-1,2,-2,0,1,2,-2",
-"cluster_name": "새콤달콤 비빔면",
-"cluster_tagline": "무겁거나 감칠맛 나는 음식보다는, 가볍고 산뜻한 면 요리처럼 맵고 시고 단 맛의 조화를 찾습니다."
-},
-{
-"cluster_id": "78",
-"cluster_medoid_value": "-1,1,0,-2,2,2,-1",
-"cluster_name": "대중적인 쫄면",
-"cluster_tagline": "실험적인 맛이나 감칠맛은 중요치 않으며, 적당한 산미에 맵고 단맛이 확실한 분식 스타일을 좋아합니다."
-},
-{
-"cluster_id": "11",
-"cluster_medoid_value": "-1,-2,2,-1,-2,-2,2",
-"cluster_name": "담백한 사골",
-"cluster_tagline": "맵고 시고 단 자극은 일절 배제하고, 오직 묵직한 국물과 깊은 감칠맛으로 승부하는 전통 음식을 고집합니다."
-},
-{
-"cluster_id": "20",
-"cluster_medoid_value": "-2,-2,1,0,2,-2,-1",
-"cluster_name": "매콤한 묵",
-"cluster_tagline": "강한 풍미나 산미, 단맛 없이 묵직한 식감에 오직 매운맛 하나로 포인트를 준 담백한 맛을 찾습니다."
-},
-{
-"cluster_id": "30",
-"cluster_medoid_value": "1,2,0,-1,1,2,2",
-"cluster_name": "화려한 팟타이",
-"cluster_tagline": "새로운 도전보다는 검증된 맛집에서, 맵고 시고 달고 감칠맛까지 풍부한 강렬한 요리를 즐깁니다."
-},
-{
-"cluster_id": "83",
-"cluster_medoid_value": "0,-2,0,-1,2,2,0",
-"cluster_name": "달콤한 닭강정",
-"cluster_tagline": "신맛을 싫어하며, 적당한 무게감에 매콤달콤한 양념이 어우러진 누구나 좋아하는 맛을 선호합니다."
-},
-{
-"cluster_id": "69",
-"cluster_medoid_value": "0,-2,-2,0,0,-2,0",
-"cluster_name": "깔끔한 중도파",
-"cluster_tagline": "신맛, 단맛, 무거운 식감을 모두 배제하고, 가볍고 깔끔하며 자극이 적은 맛을 추구합니다."
-},
-{
-"cluster_id": "3",
-"cluster_medoid_value": "-1,-1,-1,1,2,2,2",
-"cluster_name": "감칠맛 떡볶이연구가",
-"cluster_tagline": "무겁거나 시지 않고 가벼운 식감에, 맵고 달고 감칠맛이 꽉 찬 새로운 스타일의 분식을 찾아다닙니다."
-},
-{
-"cluster_id": "45",
-"cluster_medoid_value": "2,1,1,-2,0,2,2",
-"cluster_name": "진한 갈비찜",
-"cluster_tagline": "모험은 싫어하지만, 묵직하고 강렬한 양념에 단맛과 산미, 감칠맛이 어우러진 풍성한 고기 요리를 즐깁니다."
-},
-{
-"cluster_id": "110",
-"cluster_medoid_value": "0,-2,2,1,-1,-1,-2",
-"cluster_name": "느끼한 실험가",
-"cluster_tagline": "신맛, 매운맛, 단맛은 없지만, 아주 묵직하고 기름진 질감 그 자체를 즐기며 새로운 느끼함을 탐구합니다."
-},
-{
-"cluster_id": "107",
-"cluster_medoid_value": "0,2,-2,2,1,-2,2",
-"cluster_name": "가벼운 똠얌",
-"cluster_tagline": "단맛과 무거운 식감은 피하고, 가볍고 톡 쏘는 산미와 매운맛, 감칠맛이 조화된 이색 요리를 즐깁니다."
-},
-{
-"cluster_id": "2",
-"cluster_medoid_value": "-2,-2,-1,-1,-2,-2,1",
-"cluster_name": "고독한 평양냉면",
-"cluster_tagline": "모든 자극적인 맛과 무거운 식감을 거부하고, 슴슴함 속에 은은하게 느껴지는 감칠맛만을 즐기는 미식가입니다."
-},
-{
-"cluster_id": "82",
-"cluster_medoid_value": "-2,-2,-2,-1,0,1,-1",
-"cluster_name": "가벼운 솜사탕",
-"cluster_tagline": "어떠한 강한 맛이나 무게감도 싫어하며, 입안에서 가볍게 사라지는 은은한 단맛을 선호합니다."
-},
-{
-"cluster_id": "88",
-"cluster_medoid_value": "-1,2,1,-1,-2,-2,-1",
-"cluster_name": "시큼한 요거트",
-"cluster_tagline": "자극적인 맵고 단맛은 피하고, 묵직한 질감에 강한 산미가 느껴지는 건강하고 익숙한 맛을 찾습니다."
-},
-{
-"cluster_id": "127",
-"cluster_medoid_value": "-1,-2,-2,0,1,0,-2",
-"cluster_name": "가벼운 고추기름",
-"cluster_tagline": "신맛이나 깊은 맛보다는, 아주 가볍고 산뜻한 베이스에 약간의 매운맛으로 포인트를 준 맛을 즐깁니다."
-},
-{
-"cluster_id": "111",
-"cluster_medoid_value": "0,-2,2,2,2,-2,2",
-"cluster_name": "묵직한 마라탕",
-"cluster_tagline": "신맛과 단맛은 싫지만, 묵직한 국물에 얼큰함과 감칠맛이 폭발하는 자극적인 신메뉴를 찾아다닙니다."
-},
-{
-"cluster_id": "4",
-"cluster_medoid_value": "0,2,1,-2,0,2,2",
-"cluster_name": "새콤달콤 탕수육",
-"cluster_tagline": "매운맛이나 모험은 꺼리지만, 묵직한 소스에 강한 산미와 단맛, 감칠맛이 어우러진 대중적인 맛을 좋아합니다."
-},
-{
-"cluster_id": "123",
-"cluster_medoid_value": "-2,-1,-1,0,-1,-2,0",
-"cluster_name": "무난한 소식가",
-"cluster_tagline": "특별히 강한 맛을 선호하지 않으며, 전반적으로 자극이 적고 가벼운 음식을 적당히 즐기는 편입니다."
-},
-{
-"cluster_id": "17",
-"cluster_medoid_value": "2,2,2,2,2,1,0",
-"cluster_name": "극한의 도전자",
-"cluster_tagline": "감칠맛을 제외한 맵고 시고 무거운 모든 강렬한 자극을 동시에 즐기며, 가장 실험적인 메뉴에 도전합니다."
-},
-{
-"cluster_id": "128",
-"cluster_medoid_value": "0,-2,-1,-1,1,2,-1",
-"cluster_name": "달콤한 닭꼬치",
-"cluster_tagline": "신맛과 무거운 식감은 싫어하며, 가볍게 즐길 수 있는 매콤달콤한 아는 맛을 선호합니다."
-},
-{
-"cluster_id": "10",
-"cluster_medoid_value": "-2,-2,2,-2,-1,2,-1",
-"cluster_name": "달콤한 버터케익",
-"cluster_tagline": "자극적이거나 신맛은 피하고, 묵직하고 부드러운 질감에 확실한 단맛이 있는 디저트류를 좋아합니다."
-},
-{
-"cluster_id": "16",
-"cluster_medoid_value": "1,2,0,-2,-2,-2,-2",
-"cluster_name": "강렬한 레몬",
-"cluster_tagline": "단맛, 매운맛, 감칠맛 등 다른 맛은 모두 배제하고, 오직 강렬하게 톡 쏘는 산미 하나에 집중합니다."
-},
-{
-"cluster_id": "114",
-"cluster_medoid_value": "-1,2,2,-2,1,-2,1",
-"cluster_name": "얼큰한 김치찜",
-"cluster_tagline": "단맛이나 새로운 시도는 싫어하지만, 묵직하게 푹 익은 질감에 산미와 매운맛, 감칠맛이 우러난 맛을 찾습니다."
-},
-{
-"cluster_id": "112",
-"cluster_medoid_value": "0,-1,-2,1,1,2,2",
-"cluster_name": "가벼운 떡볶이",
-"cluster_tagline": "무거운 느낌 없이 가볍고 산뜻하며, 맵고 달고 감칠맛 나는 새로운 스타일의 분식을 즐깁니다."
-},
-{
-"cluster_id": "113",
-"cluster_medoid_value": "0,-1,-1,0,0,2,2",
-"cluster_name": "단짠의 정석",
-"cluster_tagline": "특별히 튀는 맛은 없지만, 가벼운 식감에 단맛과 감칠맛이 조화로운 호불호 없는 맛을 선호합니다."
-},
-{
-"cluster_id": "41",
-"cluster_medoid_value": "-1,-2,-1,-2,-1,2,-1",
-"cluster_name": "달콤한 솜사탕",
-"cluster_tagline": "다른 복잡한 맛이나 자극은 필요 없고, 익숙하고 가벼운 식감에 단순하고 명확한 단맛만을 즐깁니다."
-},
-{
-"cluster_id": "8",
-"cluster_medoid_value": "-1,1,-2,-2,2,2,-2",
-"cluster_name": "자극적인 젤리",
-"cluster_tagline": "무거운 맛이나 감칠맛, 새로운 시도는 피하고, 가볍고 쫀득한 식감에 맵고 시고 단 자극적인 맛을 좋아합니다."
-}
+  {
+    "cluster_id": "1",
+    "cluster_medoid_value": "0,0,0,0,0,0,0",
+    "cluster_name": "침착한 중용자",
+    "cluster_tagline": "어느 한 가지 맛에 치우치지 않고 모든 지표가 균형을 이루는 무난하고 조화로운 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "65",
+    "cluster_medoid_value": "1,-2,1,0,-1,0,0",
+    "cluster_name": "신맛 뺀 곰탕",
+    "cluster_tagline": "산미와 매운맛은 피하고, 입안에 꽉 차는 묵직한 질감과 강한 풍미를 즐기는 타입입니다."
+  },
+  {
+    "cluster_id": "21",
+    "cluster_medoid_value": "-1,0,-2,-1,1,-1,0",
+    "cluster_name": "가벼운 스파이시",
+    "cluster_tagline": "기름지거나 무거운 질감은 거부하며, 산뜻한 베이스에 적당한 매운맛으로 포인트를 주는 것을 좋아합니다."
+  },
+  {
+    "cluster_id": "66",
+    "cluster_medoid_value": "-1,-1,-1,-1,-1,0,1",
+    "cluster_name": "순수한 감칠맛",
+    "cluster_tagline": "자극적인 맛 요소를 모두 배제하고, 재료 본연의 은은한 감칠맛과 담백함을 최우선으로 여깁니다."
+  },
+  {
+    "cluster_id": "33",
+    "cluster_medoid_value": "2,0,-1,0,-1,-1,-1",
+    "cluster_name": "직설적인 타격감",
+    "cluster_tagline": "복잡한 뒷맛보다는 첫입에 느껴지는 강렬한 인상을 선호하며, 단맛이나 무게감 없이 깔끔하게 떨어지는 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "72",
+    "cluster_medoid_value": "-1,1,0,1,0,-1,1",
+    "cluster_name": "상큼한 탐험가",
+    "cluster_tagline": "단맛과 강한 자극은 피하되, 산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다."
+  },
+  {
+    "cluster_id": "55",
+    "cluster_medoid_value": "0,1,-2,1,2,0,0",
+    "cluster_name": "가벼운 불장난",
+    "cluster_tagline": "묵직한 포만감보다는 가벼운 식감 속에서 느껴지는 산미와 강렬한 매운맛의 조화를 선호합니다."
+  },
+  {
+    "cluster_id": "99",
+    "cluster_medoid_value": "2,0,-1,-1,1,-2,1",
+    "cluster_name": "단맛 없는 독설가",
+    "cluster_tagline": "달콤함은 철저히 배제하고, 강한 임팩트와 매콤한 감칠맛이 확실한 검증된 메뉴를 고집합니다."
+  },
+  {
+    "cluster_id": "31",
+    "cluster_medoid_value": "1,-1,2,1,0,-1,-1",
+    "cluster_name": "꾸덕한 도전자",
+    "cluster_tagline": "신맛과 단맛은 줄이고, 밀도 높은 질감과 강한 풍미를 가진 새로운 음식에 도전하는 것을 즐깁니다."
+  },
+  {
+    "cluster_id": "42",
+    "cluster_medoid_value": "-1,1,1,-2,-1,1,-2",
+    "cluster_name": "보수적인 요거트",
+    "cluster_tagline": "새로운 시도보다는 익숙한 맛을 찾으며, 자극적이지 않고 새콤달콤하면서 부드러운 질감을 선호합니다."
+  },
+  {
+    "cluster_id": "93",
+    "cluster_medoid_value": "1,-1,-1,0,1,0,-2",
+    "cluster_name": "건조한 매운맛",
+    "cluster_tagline": "감칠맛이나 질척이는 식감 없이, 깔끔하고 강하게 치고 들어오는 매콤함을 즐깁니다."
+  },
+  {
+    "cluster_id": "120",
+    "cluster_medoid_value": "1,1,1,2,-2,-1,0",
+    "cluster_name": "기묘한 묵직함",
+    "cluster_tagline": "매운맛은 전혀 없지만, 산미와 무게감이 동시에 느껴지는 독특하고 실험적인 미식 경험을 추구합니다."
+  },
+  {
+    "cluster_id": "70",
+    "cluster_medoid_value": "1,1,-2,1,0,-2,1",
+    "cluster_name": "날카로운 미식가",
+    "cluster_tagline": "단맛과 무거운 질감을 싫어하며, 혀를 자극하는 산미와 강한 풍미가 돋보이는 개성 있는 음식을 선호합니다."
+  },
+  {
+    "cluster_id": "28",
+    "cluster_medoid_value": "1,0,-2,2,0,1,1",
+    "cluster_name": "가벼운 팝업스토어",
+    "cluster_tagline": "무거운 식사는 피하고, 가볍고 달콤하며 트렌디한 실험적인 메뉴를 찾아다니는 성향입니다."
+  },
+  {
+    "cluster_id": "90",
+    "cluster_medoid_value": "0,-1,-1,2,-2,1,-1",
+    "cluster_name": "순한맛 얼리어답터",
+    "cluster_tagline": "자극적인 매운맛이나 신맛은 피하고, 부드럽고 달콤한 맛 위주의 신메뉴 도전을 즐깁니다."
+  },
+  {
+    "cluster_id": "36",
+    "cluster_medoid_value": "0,-1,-1,2,2,1,1",
+    "cluster_name": "호기심 많은 맵찔이탈출",
+    "cluster_tagline": "신맛과 무거운 느낌은 싫어하지만, 매콤달콤한 맛과 감칠맛이 조화된 새로운 메뉴에는 적극적입니다."
+  },
+  {
+    "cluster_id": "87",
+    "cluster_medoid_value": "0,2,-1,-1,0,1,0",
+    "cluster_name": "새콤한 보수파",
+    "cluster_tagline": "파격적인 시도보다는 익숙한 맛을 선호하며, 가벼운 식감에 뚜렷한 산미와 은은한 단맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "49",
+    "cluster_medoid_value": "0,-2,-2,-1,1,-1,1",
+    "cluster_name": "담백한 칼칼함",
+    "cluster_tagline": "신맛과 기름진 느낌을 극도로 싫어하며, 깔끔한 베이스에 적당한 매운맛과 감칠맛이 도는 음식을 찾습니다."
+  },
+  {
+    "cluster_id": "124",
+    "cluster_medoid_value": "-1,0,2,0,1,2,0",
+    "cluster_name": "달콤한 헤비급",
+    "cluster_tagline": "자극적인 짠맛보다는, 입안 가득 차는 묵직한 질감과 매콤달콤한 소스의 조화를 선호합니다."
+  },
+  {
+    "cluster_id": "86",
+    "cluster_medoid_value": "-1,1,2,1,-2,1,1",
+    "cluster_name": "부드러운 치즈케이크",
+    "cluster_tagline": "매운맛과 강한 자극은 피하고, 산미와 단맛이 감도는 꾸덕하고 묵직한 식감을 즐깁니다."
+  },
+  {
+    "cluster_id": "101",
+    "cluster_medoid_value": "2,1,2,-1,-1,2,-1",
+    "cluster_name": "진한 달콤함",
+    "cluster_tagline": "매운맛과 모험은 싫어하지만, 강렬한 풍미와 묵직한 바디감, 그리고 확실한 단맛을 추구합니다."
+  },
+  {
+    "cluster_id": "50",
+    "cluster_medoid_value": "0,0,-1,-1,-2,-2,0",
+    "cluster_name": "순수한 자연인",
+    "cluster_tagline": "맵고 단 인위적인 자극을 모두 거부하며, 가볍고 담백하며 균형 잡힌 자연스러운 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "9",
+    "cluster_medoid_value": "1,2,-1,1,-2,1,1",
+    "cluster_name": "상큼한 펀치",
+    "cluster_tagline": "매운맛 대신 강렬한 산미와 단맛의 조화를 즐기며, 가벼운 식감 속에서 톡 쏘는 자극을 찾습니다."
+  },
+  {
+    "cluster_id": "48",
+    "cluster_medoid_value": "-1,0,0,-2,2,-2,-1",
+    "cluster_name": "보수적인 불맛",
+    "cluster_tagline": "단맛과 감칠맛을 배제한 순수한 매운맛을 고집하며, 검증되지 않은 메뉴는 절대 시도하지 않습니다."
+  },
+  {
+    "cluster_id": "44",
+    "cluster_medoid_value": "0,1,0,-1,-1,2,1",
+    "cluster_name": "안전한 탕후루",
+    "cluster_tagline": "실패 없는 익숙한 메뉴 중에서, 매운맛 없이 새콤달콤하고 감칠맛 있는 스타일을 선호합니다."
+  },
+  {
+    "cluster_id": "84",
+    "cluster_medoid_value": "0,0,1,1,1,1,-2",
+    "cluster_name": "이색적인 로제",
+    "cluster_tagline": "감칠맛보다는 묵직한 크림소스에 맵고 단맛을 더한 트렌디하고 실험적인 퓨전 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "52",
+    "cluster_medoid_value": "1,-1,2,1,0,-1,1",
+    "cluster_name": "진지한 미식가",
+    "cluster_tagline": "가벼운 신맛이나 단맛은 피하고, 깊은 풍미와 묵직한 질감, 그리고 감칠맛이 어우러진 요리를 선호합니다."
+  },
+  {
+    "cluster_id": "63",
+    "cluster_medoid_value": "-1,0,1,1,0,-2,-1",
+    "cluster_name": "담백한 탐구생활",
+    "cluster_tagline": "단맛과 감칠맛을 뺀 슴슴하고 묵직한 재료 본연의 맛을 탐구하며 새로운 시도를 즐깁니다."
+  },
+  {
+    "cluster_id": "108",
+    "cluster_medoid_value": "-1,2,-1,0,1,0,-1",
+    "cluster_name": "시큼한 핫소스",
+    "cluster_tagline": "무거운 맛과 감칠맛은 덜어내고, 혀를 찌르는 강한 산미와 적당한 매운맛의 조화를 찾습니다."
+  },
+  {
+    "cluster_id": "106",
+    "cluster_medoid_value": "-2,-1,2,-1,-1,-1,0",
+    "cluster_name": "심심한 뚝배기",
+    "cluster_tagline": "강한 맛, 매운맛, 단맛 등 자극적인 요소를 모두 피하고 오직 묵직하고 구수한 식감에 집중합니다."
+  },
+  {
+    "cluster_id": "81",
+    "cluster_medoid_value": "2,0,0,0,0,1,1",
+    "cluster_name": "강렬한 스위트",
+    "cluster_tagline": "어느 한쪽으로 치우치지 않는 밸런스 속에서, 확실하게 치고 나오는 강한 풍미와 단맛을 중요시합니다."
+  },
+  {
+    "cluster_id": "25",
+    "cluster_medoid_value": "-2,-1,1,2,-2,-1,0",
+    "cluster_name": "순한맛 연구원",
+    "cluster_tagline": "자극적인 맛은 극도로 싫어하지만, 묵직한 질감을 가진 독특하고 실험적인 메뉴에는 호기심을 보입니다."
+  },
+  {
+    "cluster_id": "46",
+    "cluster_medoid_value": "-1,-2,-1,2,0,1,-1",
+    "cluster_name": "신맛 뺀 별미",
+    "cluster_tagline": "익숙한 맛을 거부하고 산미 없는 달콤한 맛을 찾아다니며, 가벼운 식감의 이색 메뉴를 즐깁니다."
+  },
+  {
+    "cluster_id": "51",
+    "cluster_medoid_value": "2,0,-1,1,1,2,0",
+    "cluster_name": "짜릿한 자극제",
+    "cluster_tagline": "무거운 느낌 없이 맵고 달고 강렬한 자극을 주는 실험적인 메뉴에 열광합니다."
+  },
+  {
+    "cluster_id": "18",
+    "cluster_medoid_value": "0,-2,-1,-2,0,1,1",
+    "cluster_name": "전통적인 단맛",
+    "cluster_tagline": "새로운 도전이나 신맛은 꺼리며, 검증된 메뉴 중에서 달콤하고 감칠맛 나는 가벼운 음식을 고릅니다."
+  },
+  {
+    "cluster_id": "34",
+    "cluster_medoid_value": "2,0,2,-1,-1,0,2",
+    "cluster_name": "깊은맛의 정석",
+    "cluster_tagline": "매운맛이나 실험적인 요소 없이, 재료의 밀도와 강한 풍미, 풍부한 감칠맛으로 승부하는 정통파입니다."
+  },
+  {
+    "cluster_id": "14",
+    "cluster_medoid_value": "1,-1,-2,-1,-1,2,2",
+    "cluster_name": "달콤한 농축액",
+    "cluster_tagline": "매운맛과 무거운 식감은 싫어하지만, 가볍고 강렬하게 다가오는 단맛과 감칠맛의 조화를 선호합니다."
+  },
+  {
+    "cluster_id": "75",
+    "cluster_medoid_value": "1,1,0,2,1,-2,-1",
+    "cluster_name": "매콤한 레몬즙",
+    "cluster_tagline": "단맛과 감칠맛은 배제하고, 산미와 매운맛이 톡 쏘는 강렬하고 실험적인 맛을 찾아다닙니다."
+  },
+  {
+    "cluster_id": "15",
+    "cluster_medoid_value": "2,-2,1,0,1,-2,-1",
+    "cluster_name": "묵직한 불맛",
+    "cluster_tagline": "신맛과 단맛을 제거한 상태에서, 묵직한 바디감과 함께 강렬하게 치고 올라오는 매운맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "39",
+    "cluster_medoid_value": "-2,1,-1,0,-2,-1,2",
+    "cluster_name": "산뜻한 육수파",
+    "cluster_tagline": "강하거나 매운 자극 없이, 가볍고 산뜻한 베이스에 깊은 감칠맛이 우러나는 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "126",
+    "cluster_medoid_value": "-2,0,-1,0,-1,-1,-2",
+    "cluster_name": "무미의 철학자",
+    "cluster_tagline": "강한 맛, 단맛, 감칠맛 등 인위적인 맛을 모두 덜어낸 아주 슴슴하고 담백한 맛을 추구합니다."
+  },
+  {
+    "cluster_id": "12",
+    "cluster_medoid_value": "-2,1,0,-1,1,-2,2",
+    "cluster_name": "전통의 감칠맛",
+    "cluster_tagline": "강한 양념이나 단맛은 싫어하지만, 은은한 산미와 매운맛이 감칠맛과 어우러지는 검증된 맛을 좋아합니다."
+  },
+  {
+    "cluster_id": "100",
+    "cluster_medoid_value": "1,1,2,0,2,1,-1",
+    "cluster_name": "화려한 만찬",
+    "cluster_tagline": "감칠맛보다는 맵고 시고 달고 묵직한, 입안 가득 채우는 강렬하고 복합적인 맛의 향연을 즐깁니다."
+  },
+  {
+    "cluster_id": "125",
+    "cluster_medoid_value": "-2,0,0,2,1,0,1",
+    "cluster_name": "숨겨진 맛집탐방",
+    "cluster_tagline": "강렬한 간판 메뉴보다는, 적당한 매운맛과 감칠맛이 있는 독특하고 실험적인 숨은 메뉴를 발굴합니다."
+  },
+  {
+    "cluster_id": "71",
+    "cluster_medoid_value": "1,0,2,-2,1,-1,1",
+    "cluster_name": "진국 매니아",
+    "cluster_tagline": "새로운 시도는 꺼리지만, 묵직하고 진한 국물처럼 강렬한 풍미와 적당한 매운맛을 선호합니다."
+  },
+  {
+    "cluster_id": "32",
+    "cluster_medoid_value": "1,2,1,-1,2,1,1",
+    "cluster_name": "자극의 종합선물",
+    "cluster_tagline": "실험적인 요소만 빼고, 맵고 시고 달고 묵직한 모든 강렬한 자극을 한꺼번에 즐기는 타입입니다."
+  },
+  {
+    "cluster_id": "73",
+    "cluster_medoid_value": "-2,2,1,-1,0,-1,0",
+    "cluster_name": "새콤한 샐러드",
+    "cluster_tagline": "강한 맛이나 단맛 없이, 재료 본연의 무게감에 강한 산미를 더한 신선하고 익숙한 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "43",
+    "cluster_medoid_value": "-1,2,1,0,-1,-2,2",
+    "cluster_name": "시큼한 감칠맛",
+    "cluster_tagline": "매운맛과 단맛은 철저히 배제하고, 묵직한 질감 속에 산미와 깊은 감칠맛이 어우러진 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "37",
+    "cluster_medoid_value": "1,-2,1,1,1,2,-1",
+    "cluster_name": "매콤달콤 기름떡볶이",
+    "cluster_tagline": "신맛은 싫어하지만, 묵직하고 강렬한 양념에 맵고 단맛이 확실한 실험적인 분식 스타일을 좋아합니다."
+  },
+  {
+    "cluster_id": "19",
+    "cluster_medoid_value": "-2,-2,0,-1,-1,1,0",
+    "cluster_name": "순한 어린이입맛",
+    "cluster_tagline": "강한 향신료, 산미, 매운맛을 모두 기피하며, 튀지 않는 식감에 적당히 달콤하고 순한 맛을 고집합니다."
+  },
+  {
+    "cluster_id": "57",
+    "cluster_medoid_value": "0,-1,-1,0,-1,-2,-2",
+    "cluster_name": "무심한 소식가",
+    "cluster_tagline": "특별히 선호하는 맛 없이 단맛, 매운맛, 감칠맛 등 자극적인 요소를 전반적으로 멀리하는 담백한 성향입니다."
+  },
+  {
+    "cluster_id": "117",
+    "cluster_medoid_value": "2,-2,1,1,0,0,2",
+    "cluster_name": "진한 사골국물",
+    "cluster_tagline": "산미는 전혀 없지만, 묵직하고 강렬한 맛과 깊은 감칠맛이 우러나는 진국 스타일의 새로운 메뉴를 찾습니다."
+  },
+  {
+    "cluster_id": "24",
+    "cluster_medoid_value": "-1,2,-1,2,-1,1,1",
+    "cluster_name": "새콤달콤 발명가",
+    "cluster_tagline": "무겁거나 매운 음식보다는, 가볍고 산미와 단맛이 톡톡 튀는 개성 넘치는 실험작을 즐깁니다."
+  },
+  {
+    "cluster_id": "116",
+    "cluster_medoid_value": "-1,-1,1,1,-2,2,1",
+    "cluster_name": "달콤한 크림소스",
+    "cluster_tagline": "매운맛과 신맛은 피하고, 부드럽고 묵직한 질감에 달콤함과 감칠맛을 더한 퓨전 요리를 선호합니다."
+  },
+  {
+    "cluster_id": "62",
+    "cluster_medoid_value": "-2,0,-1,0,-1,2,-1",
+    "cluster_name": "심플한 설탕",
+    "cluster_tagline": "강한 맛이나 복잡한 감칠맛 없이, 가볍고 단순하게 느껴지는 확실한 단맛 하나에 집중합니다."
+  },
+  {
+    "cluster_id": "98",
+    "cluster_medoid_value": "2,1,-2,0,-2,0,1",
+    "cluster_name": "가벼운 칵테일",
+    "cluster_tagline": "매운맛이나 무거운 안주는 싫어하지만, 산미와 감칠맛이 감도는 강렬하고 가벼운 한 잔을 즐깁니다."
+  },
+  {
+    "cluster_id": "89",
+    "cluster_medoid_value": "-1,2,-2,-2,1,-1,1",
+    "cluster_name": "전통의 냉면",
+    "cluster_tagline": "기름지거나 실험적인 요소는 싫어하며, 가볍고 시원한 육수에 산미와 적당한 매운맛이 섞인 검증된 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "109",
+    "cluster_medoid_value": "1,2,0,1,1,0,-2",
+    "cluster_name": "짜릿한 향신료",
+    "cluster_tagline": "감칠맛보다는 코를 찌르는 강한 산미와 매콤함, 그리고 독특한 향이 어우러진 이색적인 맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "22",
+    "cluster_medoid_value": "-1,0,0,-2,-1,-2,-1",
+    "cluster_name": "안전제일주의자",
+    "cluster_tagline": "맵거나 달거나 튀는 맛을 모두 경계하며, 지극히 평범하고 익숙한 맛의 범위를 벗어나지 않습니다."
+  },
+  {
+    "cluster_id": "23",
+    "cluster_medoid_value": "1,0,2,0,2,0,2",
+    "cluster_name": "꽉 찬 육각형",
+    "cluster_tagline": "단맛을 제외한 매운맛, 감칠맛, 무게감 등 모든 미각 지표가 높고 강렬하게 채워진 풍성한 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "60",
+    "cluster_medoid_value": "-2,-2,-1,1,1,-2,0",
+    "cluster_name": "가벼운 매콤함",
+    "cluster_tagline": "강한 맛이나 단맛, 신맛은 배제하고 가벼운 식감 속에서 은은하게 느껴지는 매운맛의 실험을 즐깁니다."
+  },
+  {
+    "cluster_id": "35",
+    "cluster_medoid_value": "2,1,-2,-1,-2,1,-2",
+    "cluster_name": "강렬한 에이드",
+    "cluster_tagline": "무겁거나 매운맛은 싫어하지만, 혀를 깨우는 강한 산미와 단맛의 익숙한 조화를 선호합니다."
+  },
+  {
+    "cluster_id": "97",
+    "cluster_medoid_value": "1,-1,-1,-2,2,1,-2",
+    "cluster_name": "검증된 불닭",
+    "cluster_tagline": "신맛이나 감칠맛, 새로운 시도는 필요 없고, 가볍고 강렬하게 매콤달콤한 아는 맛을 고집합니다."
+  },
+  {
+    "cluster_id": "104",
+    "cluster_medoid_value": "2,2,1,-1,-1,-1,-1",
+    "cluster_name": "강한 신맛애호가",
+    "cluster_tagline": "매운맛과 단맛이 없는 상태에서, 묵직한 바디감과 함께 혀를 강타하는 강력한 산미를 즐깁니다."
+  },
+  {
+    "cluster_id": "13",
+    "cluster_medoid_value": "-2,1,-1,1,-2,2,-1",
+    "cluster_name": "상큼달콤 푸딩",
+    "cluster_tagline": "강한 맛과 매운맛은 피하고, 가볍고 산뜻한 질감에 새콤달콤함이 가미된 디저트 같은 메뉴를 찾습니다."
+  },
+  {
+    "cluster_id": "103",
+    "cluster_medoid_value": "2,2,-1,1,-1,-1,-1",
+    "cluster_name": "짜릿한 비니거",
+    "cluster_tagline": "무겁거나 달지 않고, 톡 쏘는 강렬한 산미와 자극적인 가벼움을 즐기는 실험적인 취향입니다."
+  },
+  {
+    "cluster_id": "79",
+    "cluster_medoid_value": "-1,-2,1,-2,-1,-1,-2",
+    "cluster_name": "투박한 빵",
+    "cluster_tagline": "산미, 단맛, 감칠맛 등 화려한 기교 없이 묵직하고 담백한 식감 그 자체를 즐기며 보수적인 입맛을 가졌습니다."
+  },
+  {
+    "cluster_id": "67",
+    "cluster_medoid_value": "0,-1,2,-2,-1,0,2",
+    "cluster_name": "진득한 보양식",
+    "cluster_tagline": "신맛이나 매운맛 같은 자극보다는, 깊고 묵직한 국물처럼 밀도 높은 질감과 풍부한 감칠맛을 중시합니다."
+  },
+  {
+    "cluster_id": "53",
+    "cluster_medoid_value": "-2,2,1,1,-1,0,-1",
+    "cluster_name": "시큼한 요거트볼",
+    "cluster_tagline": "강한 자극은 없지만, 묵직한 질감 속에 두드러지는 산미를 즐기며 새로운 맛을 찾아다닙니다."
+  },
+  {
+    "cluster_id": "61",
+    "cluster_medoid_value": "0,1,1,2,0,1,-2",
+    "cluster_name": "괴짜 파티시에",
+    "cluster_tagline": "감칠맛보다는 묵직한 베이스에 산미와 단맛을 섞은 독특하고 창의적인 디저트 스타일을 좋아합니다."
+  },
+  {
+    "cluster_id": "121",
+    "cluster_medoid_value": "-2,0,-1,2,-1,0,2",
+    "cluster_name": "별난 미식가",
+    "cluster_tagline": "강한 맛보다는 가볍고 은은한 맛을 선호하며, 독특한 재료 조합에서 오는 감칠맛의 발견을 즐깁니다."
+  },
+  {
+    "cluster_id": "118",
+    "cluster_medoid_value": "1,1,1,2,0,2,1",
+    "cluster_name": "호기심 대장",
+    "cluster_tagline": "모든 맛이 조화롭게 강한 편이지만, 특히 산미와 단맛이 돋보이는 묵직하고 실험적인 메뉴에 열광합니다."
+  },
+  {
+    "cluster_id": "122",
+    "cluster_medoid_value": "-2,-1,2,-1,2,-1,1",
+    "cluster_name": "얼큰한 곰탕",
+    "cluster_tagline": "자극적인 첫맛보다는 묵직한 국물에 매운맛과 감칠맛이 은은하게 배어있는 검증된 보양식을 찾습니다."
+  },
+  {
+    "cluster_id": "76",
+    "cluster_medoid_value": "0,-2,-1,1,1,1,2",
+    "cluster_name": "감칠맛 떡볶이",
+    "cluster_tagline": "신맛과 무거운 식감은 싫어하지만, 매콤달콤한 양념에 감칠맛이 폭발하는 새로운 분식 메뉴를 선호합니다."
+  },
+  {
+    "cluster_id": "80",
+    "cluster_medoid_value": "2,-2,-1,1,-2,-2,-1",
+    "cluster_name": "건조한 임팩트",
+    "cluster_tagline": "단맛, 신맛, 매운맛 등 대중적인 맛은 모두 거부하고, 가볍지만 뇌리에 박히는 강렬하고 독특한 향미를 추구합니다."
+  },
+  {
+    "cluster_id": "85",
+    "cluster_medoid_value": "-1,0,-2,-2,-2,0,-1",
+    "cluster_name": "소박한 집밥",
+    "cluster_tagline": "기름지거나 맵고 짠 자극적인 맛을 피하고, 가볍고 편안하며 늘 먹던 익숙한 맛을 고집합니다."
+  },
+  {
+    "cluster_id": "29",
+    "cluster_medoid_value": "0,0,0,2,1,2,-2",
+    "cluster_name": "달콤한 불장난",
+    "cluster_tagline": "감칠맛은 신경 쓰지 않고, 맵고 단 '맵단'의 조화를 실험적으로 풀어낸 트렌디한 메뉴를 즐깁니다."
+  },
+  {
+    "cluster_id": "59",
+    "cluster_medoid_value": "-2,1,0,1,1,2,2",
+    "cluster_name": "복합적인 별미",
+    "cluster_tagline": "강하게 쏘는 맛은 없지만, 맵고 시고 단 맛들이 감칠맛과 함께 복합적으로 어우러지는 이색 메뉴를 찾습니다."
+  },
+  {
+    "cluster_id": "115",
+    "cluster_medoid_value": "1,-2,-1,-1,-2,0,-2",
+    "cluster_name": "강렬한 심플함",
+    "cluster_tagline": "산미, 매운맛, 감칠맛 등 복잡한 맛은 모두 덜어내고, 가벼운 식감 속에서 단일한 강한 풍미만을 즐깁니다."
+  },
+  {
+    "cluster_id": "26",
+    "cluster_medoid_value": "0,2,-1,-2,-2,1,-1",
+    "cluster_name": "새콤한 캔디",
+    "cluster_tagline": "매운맛과 무거운 느낌은 싫어하며, 익숙한 과일처럼 산미와 단맛이 톡톡 터지는 가벼운 맛을 좋아합니다."
+  },
+  {
+    "cluster_id": "38",
+    "cluster_medoid_value": "2,2,1,0,1,-2,-1",
+    "cluster_name": "화끈한 똠얌꿍",
+    "cluster_tagline": "단맛은 배제하고, 묵직한 베이스에 강렬한 산미와 매운맛이 더해진 자극적인 동남아풍 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "74",
+    "cluster_medoid_value": "1,-2,2,-2,1,-1,0",
+    "cluster_name": "진한 고기국물",
+    "cluster_tagline": "신맛이나 새로운 시도는 질색하며, 묵직하고 기름진 질감에 얼큰한 맛이 더해진 전통적인 맛을 고집합니다."
+  },
+  {
+    "cluster_id": "27",
+    "cluster_medoid_value": "-1,2,2,1,-1,1,-2",
+    "cluster_name": "상큼한 치즈",
+    "cluster_tagline": "매운맛과 감칠맛은 없지만, 꾸덕하고 무거운 질감 속에 산미와 단맛이 어우러진 독특한 디저트를 선호합니다."
+  },
+  {
+    "cluster_id": "58",
+    "cluster_medoid_value": "2,0,2,1,2,-1,-1",
+    "cluster_name": "화끈한 마라샹궈",
+    "cluster_tagline": "단맛과 감칠맛보다는, 입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "102",
+    "cluster_medoid_value": "2,-1,0,1,2,1,2",
+    "cluster_name": "강렬한 찜요리",
+    "cluster_tagline": "신맛은 피하고, 맵고 달고 감칠맛이 넘치는 강한 양념의 실험적인 요리를 선호합니다."
+  },
+  {
+    "cluster_id": "91",
+    "cluster_medoid_value": "0,1,2,1,-1,-2,-2",
+    "cluster_name": "시큼한 크림",
+    "cluster_tagline": "단맛, 매운맛, 감칠맛을 모두 뺀 상태에서 묵직한 질감과 산미만이 강조된 독특한 맛을 탐구합니다."
+  },
+  {
+    "cluster_id": "56",
+    "cluster_medoid_value": "-1,1,1,-2,2,0,2",
+    "cluster_name": "얼큰한 김치찌개",
+    "cluster_tagline": "새로운 도전보다는 익숙한 맛을 선호하며, 묵직한 국물에 산미와 매운맛, 감칠맛이 조화된 한식을 즐깁니다."
+  },
+  {
+    "cluster_id": "47",
+    "cluster_medoid_value": "-2,-1,0,-2,1,2,1",
+    "cluster_name": "달짝지근한 조림",
+    "cluster_tagline": "강한 맛이나 신맛은 싫어하지만, 적당한 매운맛과 달콤함, 그리고 감칠맛이 밴 익숙한 반찬 스타일을 좋아합니다."
+  },
+  {
+    "cluster_id": "68",
+    "cluster_medoid_value": "0,-2,1,1,2,-1,-2",
+    "cluster_name": "매콤한 크림파스타",
+    "cluster_tagline": "신맛과 단맛, 감칠맛은 줄이고, 꾸덕한 질감에 매운맛을 더한 퓨전 스타일의 느끼함을 잡은 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "119",
+    "cluster_medoid_value": "2,2,-1,0,2,0,0",
+    "cluster_name": "짜릿한 매운맛",
+    "cluster_tagline": "무거운 느낌은 없지만, 혀를 찌르는 강한 산미와 매운맛이 결합된 자극적인 맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "40",
+    "cluster_medoid_value": "-1,-1,0,2,0,2,1",
+    "cluster_name": "달콤한 모험가",
+    "cluster_tagline": "자극적인 신맛이나 강한 맛보다는, 부드러운 질감에 단맛과 감칠맛이 돋보이는 창의적인 메뉴를 선호합니다."
+  },
+  {
+    "cluster_id": "64",
+    "cluster_medoid_value": "0,-1,1,-2,-1,2,-2",
+    "cluster_name": "달콤한 버터",
+    "cluster_tagline": "신맛, 매운맛, 감칠맛 등 자극은 피하고, 묵직하고 부드러운 질감에 단맛이 강한 익숙한 디저트를 찾습니다."
+  },
+  {
+    "cluster_id": "95",
+    "cluster_medoid_value": "0,0,-1,-2,1,2,0",
+    "cluster_name": "익숙한 떡볶이",
+    "cluster_tagline": "무겁거나 튀는 맛보다는 가볍고 매콤달콤한, 누구나 아는 그 맛을 가장 좋아합니다."
+  },
+  {
+    "cluster_id": "94",
+    "cluster_medoid_value": "0,0,-1,2,1,-2,-2",
+    "cluster_name": "가벼운 매운맛탐구",
+    "cluster_tagline": "단맛과 감칠맛을 뺀 깔끔하고 가벼운 매운맛을 선호하며, 흔치 않은 독특한 메뉴에 도전합니다."
+  },
+  {
+    "cluster_id": "7",
+    "cluster_medoid_value": "1,-2,0,2,-1,2,-2",
+    "cluster_name": "달콤한 탕후루",
+    "cluster_tagline": "신맛과 매운맛은 싫어하지만, 강렬한 단맛과 독특한 식감을 가진 트렌디한 간식을 찾아다닙니다."
+  },
+  {
+    "cluster_id": "77",
+    "cluster_medoid_value": "0,2,1,-2,-2,0,0",
+    "cluster_name": "새콤한 그릭요거트",
+    "cluster_tagline": "매운맛과 새로운 시도는 피하고, 묵직한 질감에 강한 산미가 느껴지는 건강하고 익숙한 맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "54",
+    "cluster_medoid_value": "-2,1,-2,-2,0,-1,-1",
+    "cluster_name": "가벼운 레몬수",
+    "cluster_tagline": "강한 맛이나 무거운 식감을 모두 거부하며, 아주 가볍고 산뜻하게 스치는 약간의 산미만을 선호합니다."
+  },
+  {
+    "cluster_id": "5",
+    "cluster_medoid_value": "-2,2,2,2,2,-1,-1",
+    "cluster_name": "괴짜 마라탕",
+    "cluster_tagline": "일반적인 강한 맛은 싫어하지만, 맵고 시고 묵직한 극단의 자극이 섞인 실험적인 맛에는 열광합니다."
+  },
+  {
+    "cluster_id": "6",
+    "cluster_medoid_value": "1,-2,1,-2,2,0,2",
+    "cluster_name": "진한 육개장",
+    "cluster_tagline": "신맛과 낯선 음식은 피하고, 묵직하고 강렬하며 얼큰한 감칠맛이 있는 전통적인 보양식을 고집합니다."
+  },
+  {
+    "cluster_id": "105",
+    "cluster_medoid_value": "2,2,0,2,0,0,1",
+    "cluster_name": "강렬한 칵테일",
+    "cluster_tagline": "매운맛 없이도 강한 산미와 풍미, 그리고 감칠맛으로 혀를 자극하는 독창적인 메뉴를 즐깁니다."
+  },
+  {
+    "cluster_id": "92",
+    "cluster_medoid_value": "-1,2,2,2,0,1,2",
+    "cluster_name": "풍요로운 퓨전",
+    "cluster_tagline": "강한 자극보다는 묵직한 재료에 산미와 단맛, 감칠맛을 조화롭게 쌓아 올린 실험적인 요리를 선호합니다."
+  },
+  {
+    "cluster_id": "96",
+    "cluster_medoid_value": "-1,2,-2,0,1,2,-2",
+    "cluster_name": "새콤달콤 비빔면",
+    "cluster_tagline": "무겁거나 감칠맛 나는 음식보다는, 가볍고 산뜻한 면 요리처럼 맵고 시고 단 맛의 조화를 찾습니다."
+  },
+  {
+    "cluster_id": "78",
+    "cluster_medoid_value": "-1,1,0,-2,2,2,-1",
+    "cluster_name": "대중적인 쫄면",
+    "cluster_tagline": "실험적인 맛이나 감칠맛은 중요치 않으며, 적당한 산미에 맵고 단맛이 확실한 분식 스타일을 좋아합니다."
+  },
+  {
+    "cluster_id": "11",
+    "cluster_medoid_value": "-1,-2,2,-1,-2,-2,2",
+    "cluster_name": "담백한 사골",
+    "cluster_tagline": "맵고 시고 단 자극은 일절 배제하고, 오직 묵직한 국물과 깊은 감칠맛으로 승부하는 전통 음식을 고집합니다."
+  },
+  {
+    "cluster_id": "20",
+    "cluster_medoid_value": "-2,-2,1,0,2,-2,-1",
+    "cluster_name": "매콤한 묵",
+    "cluster_tagline": "강한 풍미나 산미, 단맛 없이 묵직한 식감에 오직 매운맛 하나로 포인트를 준 담백한 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "30",
+    "cluster_medoid_value": "1,2,0,-1,1,2,2",
+    "cluster_name": "화려한 팟타이",
+    "cluster_tagline": "새로운 도전보다는 검증된 맛집에서, 맵고 시고 달고 감칠맛까지 풍부한 강렬한 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "83",
+    "cluster_medoid_value": "0,-2,0,-1,2,2,0",
+    "cluster_name": "달콤한 닭강정",
+    "cluster_tagline": "신맛을 싫어하며, 적당한 무게감에 매콤달콤한 양념이 어우러진 누구나 좋아하는 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "69",
+    "cluster_medoid_value": "0,-2,-2,0,0,-2,0",
+    "cluster_name": "깔끔한 중도파",
+    "cluster_tagline": "신맛, 단맛, 무거운 식감을 모두 배제하고, 가볍고 깔끔하며 자극이 적은 맛을 추구합니다."
+  },
+  {
+    "cluster_id": "3",
+    "cluster_medoid_value": "-1,-1,-1,1,2,2,2",
+    "cluster_name": "감칠맛 떡볶이연구가",
+    "cluster_tagline": "무겁거나 시지 않고 가벼운 식감에, 맵고 달고 감칠맛이 꽉 찬 새로운 스타일의 분식을 찾아다닙니다."
+  },
+  {
+    "cluster_id": "45",
+    "cluster_medoid_value": "2,1,1,-2,0,2,2",
+    "cluster_name": "진한 갈비찜",
+    "cluster_tagline": "모험은 싫어하지만, 묵직하고 강렬한 양념에 단맛과 산미, 감칠맛이 어우러진 풍성한 고기 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "110",
+    "cluster_medoid_value": "0,-2,2,1,-1,-1,-2",
+    "cluster_name": "느끼한 실험가",
+    "cluster_tagline": "신맛, 매운맛, 단맛은 없지만, 아주 묵직하고 기름진 질감 그 자체를 즐기며 새로운 느끼함을 탐구합니다."
+  },
+  {
+    "cluster_id": "107",
+    "cluster_medoid_value": "0,2,-2,2,1,-2,2",
+    "cluster_name": "가벼운 똠얌",
+    "cluster_tagline": "단맛과 무거운 식감은 피하고, 가볍고 톡 쏘는 산미와 매운맛, 감칠맛이 조화된 이색 요리를 즐깁니다."
+  },
+  {
+    "cluster_id": "2",
+    "cluster_medoid_value": "-2,-2,-1,-1,-2,-2,1",
+    "cluster_name": "고독한 평양냉면",
+    "cluster_tagline": "모든 자극적인 맛과 무거운 식감을 거부하고, 슴슴함 속에 은은하게 느껴지는 감칠맛만을 즐기는 미식가입니다."
+  },
+  {
+    "cluster_id": "82",
+    "cluster_medoid_value": "-2,-2,-2,-1,0,1,-1",
+    "cluster_name": "가벼운 솜사탕",
+    "cluster_tagline": "어떠한 강한 맛이나 무게감도 싫어하며, 입안에서 가볍게 사라지는 은은한 단맛을 선호합니다."
+  },
+  {
+    "cluster_id": "88",
+    "cluster_medoid_value": "-1,2,1,-1,-2,-2,-1",
+    "cluster_name": "시큼한 요거트",
+    "cluster_tagline": "자극적인 맵고 단맛은 피하고, 묵직한 질감에 강한 산미가 느껴지는 건강하고 익숙한 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "127",
+    "cluster_medoid_value": "-1,-2,-2,0,1,0,-2",
+    "cluster_name": "가벼운 고추기름",
+    "cluster_tagline": "신맛이나 깊은 맛보다는, 아주 가볍고 산뜻한 베이스에 약간의 매운맛으로 포인트를 준 맛을 즐깁니다."
+  },
+  {
+    "cluster_id": "111",
+    "cluster_medoid_value": "0,-2,2,2,2,-2,2",
+    "cluster_name": "묵직한 마라탕",
+    "cluster_tagline": "신맛과 단맛은 싫지만, 묵직한 국물에 얼큰함과 감칠맛이 폭발하는 자극적인 신메뉴를 찾아다닙니다."
+  },
+  {
+    "cluster_id": "4",
+    "cluster_medoid_value": "0,2,1,-2,0,2,2",
+    "cluster_name": "새콤달콤 탕수육",
+    "cluster_tagline": "매운맛이나 모험은 꺼리지만, 묵직한 소스에 강한 산미와 단맛, 감칠맛이 어우러진 대중적인 맛을 좋아합니다."
+  },
+  {
+    "cluster_id": "123",
+    "cluster_medoid_value": "-2,-1,-1,0,-1,-2,0",
+    "cluster_name": "무난한 소식가",
+    "cluster_tagline": "특별히 강한 맛을 선호하지 않으며, 전반적으로 자극이 적고 가벼운 음식을 적당히 즐기는 편입니다."
+  },
+  {
+    "cluster_id": "17",
+    "cluster_medoid_value": "2,2,2,2,2,1,0",
+    "cluster_name": "극한의 도전자",
+    "cluster_tagline": "감칠맛을 제외한 맵고 시고 무거운 모든 강렬한 자극을 동시에 즐기며, 가장 실험적인 메뉴에 도전합니다."
+  },
+  {
+    "cluster_id": "128",
+    "cluster_medoid_value": "0,-2,-1,-1,1,2,-1",
+    "cluster_name": "달콤한 닭꼬치",
+    "cluster_tagline": "신맛과 무거운 식감은 싫어하며, 가볍게 즐길 수 있는 매콤달콤한 아는 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "10",
+    "cluster_medoid_value": "-2,-2,2,-2,-1,2,-1",
+    "cluster_name": "달콤한 버터케익",
+    "cluster_tagline": "자극적이거나 신맛은 피하고, 묵직하고 부드러운 질감에 확실한 단맛이 있는 디저트류를 좋아합니다."
+  },
+  {
+    "cluster_id": "16",
+    "cluster_medoid_value": "1,2,0,-2,-2,-2,-2",
+    "cluster_name": "강렬한 레몬",
+    "cluster_tagline": "단맛, 매운맛, 감칠맛 등 다른 맛은 모두 배제하고, 오직 강렬하게 톡 쏘는 산미 하나에 집중합니다."
+  },
+  {
+    "cluster_id": "114",
+    "cluster_medoid_value": "-1,2,2,-2,1,-2,1",
+    "cluster_name": "얼큰한 김치찜",
+    "cluster_tagline": "단맛이나 새로운 시도는 싫어하지만, 묵직하게 푹 익은 질감에 산미와 매운맛, 감칠맛이 우러난 맛을 찾습니다."
+  },
+  {
+    "cluster_id": "112",
+    "cluster_medoid_value": "0,-1,-2,1,1,2,2",
+    "cluster_name": "가벼운 떡볶이",
+    "cluster_tagline": "무거운 느낌 없이 가볍고 산뜻하며, 맵고 달고 감칠맛 나는 새로운 스타일의 분식을 즐깁니다."
+  },
+  {
+    "cluster_id": "113",
+    "cluster_medoid_value": "0,-1,-1,0,0,2,2",
+    "cluster_name": "단짠의 정석",
+    "cluster_tagline": "특별히 튀는 맛은 없지만, 가벼운 식감에 단맛과 감칠맛이 조화로운 호불호 없는 맛을 선호합니다."
+  },
+  {
+    "cluster_id": "41",
+    "cluster_medoid_value": "-1,-2,-1,-2,-1,2,-1",
+    "cluster_name": "달콤한 솜사탕",
+    "cluster_tagline": "다른 복잡한 맛이나 자극은 필요 없고, 익숙하고 가벼운 식감에 단순하고 명확한 단맛만을 즐깁니다."
+  },
+  {
+    "cluster_id": "8",
+    "cluster_medoid_value": "-1,1,-2,-2,2,2,-2",
+    "cluster_name": "자극적인 젤리",
+    "cluster_tagline": "무거운 맛이나 감칠맛, 새로운 시도는 피하고, 가볍고 쫀득한 식감에 맵고 시고 단 자극적인 맛을 좋아합니다."
+  }
 ]

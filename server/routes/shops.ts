@@ -1,8 +1,10 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { shops, users_wantstogo } from "../db/schema.js";
-import { ilike, or, eq, sql, and } from "drizzle-orm";
+import { shops, users_wantstogo, content, users } from "../db/schema.js";
+import { ilike, or, eq, sql, and, desc, asc, not } from "drizzle-orm";
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -180,6 +182,117 @@ router.get("/:id", async (req, res) => {
     } catch (error) {
         console.error("Shop details error:", error);
         res.status(500).json({ error: "Failed to fetch shop details" });
+    }
+});
+
+
+// GET /api/shops/:id/reviews
+router.get("/:id/reviews", async (req, res) => {
+    try {
+        const shopId = parseInt(req.params.id);
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const sort = (req.query.sort as string) || 'popular'; // 'popular' | 'similar'
+        const userId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+        const offset = (page - 1) * limit;
+
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: "Invalid Shop ID" });
+        }
+
+        // 1. Base Query
+        let query = db.select({
+            id: content.id,
+            user_id: content.user_id,
+            text: content.text,
+            img: content.img,
+            created_at: content.created_at,
+            review_prop: content.review_prop,
+            keyword: content.keyword,
+            user: {
+                id: users.id,
+                nickname: users.nickname,
+                profile_image: users.profile_image,
+                taste_cluster: users.taste_cluster,
+                cluster_name: users.taste_cluster, // Map for ContentCard
+                taste_result: users.taste_result
+            }
+        })
+            .from(content)
+            .innerJoin(users, eq(content.user_id, users.id))
+            .where(and(
+                eq(content.type, 'review'),
+                eq(content.is_deleted, false),
+                eq(content.visibility, true),
+                sql`(${content.review_prop}::jsonb)->>'shop_id' = ${shopId.toString()}::text`
+            )).$dynamic();
+
+        // 2. Sorting Logic
+        if (sort === 'similar' && userId) {
+            // Fetch Requesting User's Cluster
+            const requestingUser = await db.select({ taste_cluster: users.taste_cluster })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+            const userCluster = requestingUser[0]?.taste_cluster;
+
+            if (userCluster) {
+                // Sort by: (user.taste_cluster == userCluster) DESC, created_at DESC
+                query = query.orderBy(
+                    sql`CASE WHEN ${users.taste_cluster} = ${userCluster}::text THEN 1 ELSE 0 END DESC`,
+                    desc(content.created_at)
+                );
+            } else {
+                // Fallback if no cluster
+                query = query.orderBy(desc(content.created_at));
+            }
+        } else {
+            // Default: Popular (Newest for now per spec "Inki is newest")
+            query = query.orderBy(desc(content.created_at));
+        }
+
+        // 3. Execute & Pagination
+        const reviews = await query.limit(limit).offset(offset);
+
+        // 4. Enrich (Optional: Like counts, etc. if needed later, keeping it simple for now)
+        // Similar to feed, we might want stats. adhering to "Review List" requirements.
+
+        // Read cluster data for name mapping
+        // Note: In a real app key-value cache or DB table is better.
+        // Assuming we can read it once or cache it.
+        // For now, let's just map it if we have the ID.
+        // Since we can't easily import JSON with strict TS settings sometimes, we'll try reading or use a helper if available.
+        // But to keep it simple within this file scope without top-level quirks:
+
+        // Actually, let's just do it in the map loop if we can load the data.
+        // Or better, let's assume the ID is what we have and we need to fetch the name.
+        // Let's rely on `users` table potentially having it? No, schema says `taste_cluster` is varchar(50) and user usually only stores ID or Name?
+        // Memory says users.taste_cluster stores ID.
+
+        // Let's load the file at the top or here.
+        const clusterPath = path.join(process.cwd(), 'server/data/cluster.json');
+        const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
+        const clusterMap = new Map(clusterData.map(c => [c.cluster_id, c.cluster_name]));
+
+        const result = reviews.map(r => ({
+            id: r.id,
+            user: {
+                ...r.user,
+                cluster_name: r.user.taste_cluster ? (clusterMap.get(r.user.taste_cluster) || r.user.taste_cluster) : undefined
+            },
+            text: r.text,
+            images: r.img,
+            created_at: r.created_at,
+            review_prop: r.review_prop,
+            keyword: r.keyword,
+        }));
+
+        res.json(result);
+
+    } catch (error) {
+        console.error("Shop reviews error:", error);
+        res.status(500).json({ error: "Failed to fetch shop reviews" });
     }
 });
 

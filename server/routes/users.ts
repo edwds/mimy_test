@@ -56,6 +56,7 @@ router.get("/leaderboard", async (req, res) => {
             account_id: users.account_id,
             profile_image: users.profile_image,
             cluster_name: clusters.name, // Add cluster_name
+            taste_result: users.taste_result, // Add taste_result for matching
             stats: {
                 content_count: sql<number>`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`,
                 received_likes: sql<number>`(
@@ -84,7 +85,8 @@ router.get("/leaderboard", async (req, res) => {
                     nickname: u.nickname,
                     account_id: u.account_id,
                     profile_image: u.profile_image,
-                    cluster_name: u.cluster_name
+                    cluster_name: u.cluster_name,
+                    taste_result: u.taste_result
                 },
                 score: contentScore + likeScore
             };

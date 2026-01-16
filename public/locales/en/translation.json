@@ -12,6 +12,21 @@
         "ranking": "Ranking",
         "profile": "Profile"
     },
+    "onboarding": {
+        "age_check": {
+            "title": "When were you born?",
+            "desc": "Please select your birthdate for verification.",
+            "error_underage": "You must be 14 or older to join."
+        },
+        "agreement": {
+            "title": "Terms of Service",
+            "desc": "Please agree to the terms to continue.",
+            "all": "Agree to all",
+            "service": "Terms of Service (Required)",
+            "privacy": "Privacy Policy (Required)",
+            "marketing": "Marketing Consent (Optional)"
+        }
+    },
     "intro": {
         "slogan": "Rank what you ate",
         "slides": {

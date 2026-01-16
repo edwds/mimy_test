@@ -8,7 +8,7 @@ Mimy는 사용자 개인의 취향을 분석하여 딱 맞는 미식 경험을 �
 - **Framework**: [React 19](https://react.dev/)
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + `tailwindcss-animate`
+- **Styling**: Vanilla CSS + Custom Design System (CSS Variables & Utility Classes)
 - **UI Components**: 
   - [Lucide React](https://lucide.dev/) (Icons)
   - [Framer Motion](https://www.framer.com/motion/) (Animations)
@@ -110,14 +110,16 @@ npm run server
 ## 🔑 **주요 기능 (Key Features)**
 
 ### **1. 회원가입 및 온보딩**
-- **Phone Auth**: 휴대폰 번호 인증 및 OTP 검증 (`PhoneStep`, `OtpStep`)
-- **Profile Setup**: 닉네임, 프로필 이미지, ID 설정
-- **Age/Terms**: 나이 확인 및 약관 동의 절차
+- **Deferred Registration**: 구글 로그인 시 즉시 가입되지 않고, 온보딩 완료 후 계정 생성 (`/api/auth/register`)
+- **Phone Auth**: 국가별 자동 포맷팅 지원 (placeholder) 및 OTP 검증
+- **Profile Setup**: 닉네임, 프로필 이미지, ID 설정 (ID 중복 확인)
+- **Localization**: 온보딩 전 과정 다국어(ko, en) 지원
 
 ### **2. 미식 성향 분석 (Quiz)**
 - 12개의 문항을 통해 사용자의 식성향을 분석
-- **Cluster System**: 분석 결과에 따라 사용자에게 '미식 캐릭터(Cluster)' 부여
-- `users_taste` 테이블 및 `clusters` 테이블 활용
+- **128 Taste Clusters**: 128가지의 정교한 미식 캐릭터(Cluster) 분류
+- **Euclidean Matching**: 유저 간 미식 성향 일치도 분석 및 매칭
+- **Text-only Badges**: 리더보드 및 피드에서 성향 일치도에 따른 색상 텍스트 뱃지 표시
 
 ### **3. 메인 피드 (HomeTab)**
 - 사용자 맞춤형 콘텐츠 추천
@@ -201,3 +203,8 @@ const MyComponent = () => {
 - **Shop BottomSheet**: 지도 핀 클릭시 나타나는 바텀 시트의 제스처 경험(Peek/Half/Full State) 개선
 - **Map Interaction**: 상점 선택 시 지도 카메라 이동 및 줌 레벨 최적화
 - **Saved Places**: 저장한 장소에 대한 지도 핀 시각적 차별화 (빨간색 하트 핀)
+
+### **4. 데이터 및 로직 고도화**
+- **Deferred User Creation**: 소셜 로그인 이탈 시 불완전한 데이터 생성을 방지하기 위한 가입 지연 로직 적용
+- **Reseeded Clusters**: 128개의 고유 식별자를 가진 클러스터 데이터 재구축 및 샘플 유저 생성
+- **Match Scoring**: 리더보드 등에서 유기적인 취향 매칭 점수 계산 로직 적용

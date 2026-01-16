@@ -2,3 +2,9 @@ node_modules
 .env
 dist
 .DS_Store
+
+# Local DB
+server/db/mimy.db
+
+# Mock Data Dumps
+server/data/*_dump.*

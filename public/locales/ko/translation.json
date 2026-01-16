@@ -12,6 +12,21 @@
         "ranking": "순위",
         "profile": "프로필"
     },
+    "onboarding": {
+        "age_check": {
+            "title": "몇 년생이신가요?",
+            "desc": "본인 확인을 위해 생년월일을 선택해주세요.",
+            "error_underage": "만 14세 이상만 가입할 수 있습니다."
+        },
+        "agreement": {
+            "title": "약관 동의",
+            "desc": "서비스 이용을 위해 약관에 동의해주세요.",
+            "all": "전체 동의",
+            "service": "서비스 이용약관 동의 (필수)",
+            "privacy": "개인정보 수집 및 이용 동의 (필수)",
+            "marketing": "이벤트 및 혜택 알림 수신 동의 (선택)"
+        }
+    },
     "intro": {
         "slogan": "Rank what you ate",
         "slides": {

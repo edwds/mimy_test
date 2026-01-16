@@ -20,12 +20,28 @@ interface ShopCardProps {
     onSave?: (shopId: number) => void;
     onWrite?: (shopId: number) => void;
     onReserve?: (shopId: number) => void; // Optional catchtable link
+    onClick?: (shopId: number) => void; // Optional click handler for entire card
 }
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve }) => {
+import { useNavigate } from 'react-router-dom';
+
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+
+    const handleCardClick = () => {
+        if (onClick) {
+            onClick(shop.id);
+        } else {
+            navigate(`/shop/${shop.id}`);
+        }
+    };
+
     return (
-        <div className="bg-background border border-border rounded-xl overflow-hidden shadow-sm mb-4">
+        <div
+            className="bg-background border border-border rounded-xl overflow-hidden shadow-sm mb-4 cursor-pointer active:opacity-95 transition-opacity"
+            onClick={handleCardClick}
+        >
             {/* Image Area */}
             <div className="relative h-48 bg-muted">
                 {shop.thumbnail_img ? (
@@ -67,7 +83,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                 {/* Actions */}
                 <div className="flex gap-2">
                     <button
-                        onClick={() => {
+                        onClick={(e) => {
+                            e.stopPropagation();
                             if (shop.catchtable_ref) {
                                 window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
                             } else {
@@ -80,7 +97,10 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                         {t('discovery.shop_card.reserve_btn')}
                     </button>
                     <button
-                        onClick={() => onSave?.(shop.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSave?.(shop.id);
+                        }}
                         className={cn(
                             "flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors flex items-center justify-center",
                             shop.is_saved
@@ -101,7 +121,10 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                         {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}
                         <span className="mx-1">·</span>
                         <button
-                            onClick={() => onWrite?.(shop.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onWrite?.(shop.id);
+                            }}
                             className="text-primary hover:underline font-medium inline-flex items-center"
                         >
                             {t('discovery.shop_card.record')}

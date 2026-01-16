@@ -18,6 +18,7 @@ import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
+import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { UserProvider } from '@/context/UserContext';
 
@@ -81,6 +82,7 @@ function App() {
                             <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
+                            <Route path="/shop/:shopId" element={<ProtectedRoute><ShopDetailScreen /></ProtectedRoute>} />
 
                             {/* Redirect old user profile link to new one */}
                             <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />

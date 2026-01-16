@@ -1,7 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Trophy, Medal, User as UserIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,10 +14,13 @@ interface LeaderboardItem {
         nickname: string | null;
         account_id: string;
         profile_image: string | null;
-        cluster_name?: string; // Add cluster_name
+        cluster_name?: string;
+        taste_result?: { scores: Record<string, number> };
     };
     score: number;
 }
+
+import { UserService } from '@/services/UserService';
 
 export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const { t } = useTranslation();
@@ -35,6 +38,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     // Data State
     const [items, setItems] = useState<LeaderboardItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
     // useEffect(() => {
     //     if (headerRef.current) {
@@ -45,22 +49,27 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     useEffect(() => {
         if (!isEnabled) return;
 
-        const fetchRankings = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/api/users/leaderboard`);
-                if (res.ok) {
-                    const data = await res.json();
+                const [leaderboardRes, user] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/users/leaderboard`),
+                    UserService.getCurrentUser()
+                ]);
+
+                if (leaderboardRes.ok) {
+                    const data = await leaderboardRes.json();
                     setItems(data);
                 }
+                setCurrentUser(user);
             } catch (error) {
-                console.error("Failed to load leaderboard", error);
+                console.error("Failed to load data", error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchRankings();
+        fetchData();
     }, [isEnabled]);
 
     const handleScroll = () => {
@@ -207,9 +216,21 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                                 {item.user.nickname || "User"}
                                             </h3>
                                             {item.user.cluster_name && (
-                                                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 text-[10px] font-medium text-gray-600 truncate flex-shrink-0">
-                                                    {item.user.cluster_name}
-                                                </span>
+                                                (() => {
+                                                    const matchScore = (currentUser?.taste_result?.scores && item.user.taste_result?.scores)
+                                                        ? calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores)
+                                                        : null;
+
+                                                    return (
+                                                        <span className={cn(
+                                                            "text-[10px] truncate flex-shrink-0 transition-colors",
+                                                            getTasteBadgeStyle(matchScore)
+                                                        )}>
+                                                            {item.user.cluster_name}
+                                                            {/* Percentage removed per request */}
+                                                        </span>
+                                                    );
+                                                })()
                                             )}
                                         </div>
                                         <p className="text-xs text-muted-foreground truncate">

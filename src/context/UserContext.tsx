@@ -38,9 +38,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (userId) {
             try {
                 const userData = await UserService.fetchUser(userId);
-                setUser(userData);
+                if (userData) {
+                    setUser(userData);
+                } else {
+                    // Failed to load user (e.g. 404 or persistent error)
+                    // Force logout to prevent stuck state
+                    console.warn("Failed to load user data, logging out.");
+                    localStorage.removeItem("mimy_user_id");
+                    setUser(null);
+                    window.location.href = '/start';
+                }
             } catch (error) {
                 console.error("Failed to fetch user in context", error);
+                // On exception, we might want to retry or just let loading finish. 
+                // But for safety if it's a critical error:
+                // For now, let's assume transient errors shouldn't logout, 
+                // but null result (from Service) is typically a hard fail in current logic.
             }
         } else {
             setUser(null);

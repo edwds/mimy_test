@@ -76,11 +76,21 @@ export const PhoneStep = () => {
                     <input
                         ref={inputRef}
                         type="tel"
-                        placeholder={t('register.phone.placeholder')}
+                        placeholder={
+                            countryCode === "82" ? "010-0000-0000" :
+                                countryCode === "81" ? "090-1234-5678" :
+                                    countryCode === "1" ? "202-555-0123" :
+                                        countryCode === "886" ? "0900-000-000" :
+                                            countryCode === "852" ? "1234 5678" :
+                                                countryCode === "65" ? "8123 4567" :
+                                                    countryCode === "66" ? "081-234-5678" :
+                                                        countryCode === "61" ? "0400 000 000" :
+                                                            t('register.phone.placeholder')
+                        }
                         value={phone}
                         onChange={handlePhoneChange}
                         className={cn(
-                            "flex-1 text-xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted/20"
+                            "flex-1 text-xl font-bold bg-transparent border-b-2 border-border py-4 focus:outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/30"
                         )}
                         autoFocus
                     />

@@ -32,7 +32,8 @@ router.get("/feed", async (req, res) => {
                 nickname: users.nickname,
                 account_id: users.account_id,
                 profile_image: users.profile_image,
-                cluster_name: clusters.name
+                cluster_name: clusters.name,
+                taste_result: users.taste_result
             },
             // For 'near' sort, we might want distance, but let's just filter for now
         })
@@ -596,7 +597,8 @@ router.get("/user/:userId", async (req, res) => {
                 nickname: users.nickname,
                 account_id: users.account_id,
                 profile_image: users.profile_image,
-                cluster_name: clusters.name
+                cluster_name: clusters.name,
+                taste_result: users.taste_result
             }
         })
             .from(content)

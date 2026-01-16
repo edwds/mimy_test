@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
-import { cn, appendJosa, formatVisitDate, formatFullDateTime } from '@/lib/utils';
+import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 import { CommentSheet } from './CommentSheet';
@@ -86,6 +86,7 @@ export interface ContentCardProps {
         account_id: string;
         profile_image: string | null;
         cluster_name?: string;
+        taste_result?: { scores: Record<string, number> };
     };
     content: {
         id: number;
@@ -212,7 +213,13 @@ export const ContentCard = ({
         if (targetId) {
             const current = new URLSearchParams(window.location.search);
             current.set('viewUser', String(targetId));
-            navigate(`${window.location.pathname}?${current.toString()}`);
+
+            // If we are not in main tab (e.g. ShopDetail), navigate to main
+            if (!window.location.pathname.startsWith('/main')) {
+                navigate(`/main?${current.toString()}`);
+            } else {
+                navigate(`${window.location.pathname}?${current.toString()}`);
+            }
         } else {
             console.warn("User ID/Account ID missing in ContentCard");
         }
@@ -286,9 +293,20 @@ export const ContentCard = ({
                             {user.nickname}
                         </span>
                         {user.cluster_name && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-gray-100 text-[10px] font-medium">
-                                {user.cluster_name}
-                            </span>
+                            (() => {
+                                const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
+                                    ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
+                                    : null;
+
+                                return (
+                                    <span className={cn(
+                                        "text-[10px] font-medium transition-colors",
+                                        getTasteBadgeStyle(matchScore)
+                                    )}>
+                                        {user.cluster_name}
+                                    </span>
+                                );
+                            })()
                         )}
                     </div>
 
@@ -376,7 +394,16 @@ export const ContentCard = ({
             {/* Shop Info Card */}
             {
                 shopName && (
-                    <div className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative">
+                    <div
+                        className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const sid = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
+                            if (sid) {
+                                navigate(`/shop/${sid}`);
+                            }
+                        }}
+                    >
                         {/* Image Wrapper with Badge */}
                         <div className="relative flex-shrink-0">
                             {typeof rank === 'number' && (

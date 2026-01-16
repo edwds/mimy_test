@@ -71,3 +71,38 @@ export function formatFullDateTime(dateString: string, locale: string = 'ko'): s
         hour12: true
     });
 }
+
+// Taste Match Logic
+export interface TasteScores {
+    [key: string]: number;
+}
+
+export const calculateTasteMatch = (myScores: TasteScores, targetScores: TasteScores): number => {
+    const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+
+    let sumSqDiff = 0;
+    axes.forEach(axis => {
+        const v1 = myScores[axis] || 0;
+        const v2 = targetScores[axis] || 0;
+        sumSqDiff += Math.pow(v1 - v2, 2);
+    });
+
+    // Gaussian (RBF) Kernel: exp(-distance^2 / (2 * sigma^2))
+    // Sigma determines the width of the "bell curve".
+    // A sigma of ~5 means a distance of 5 drops similarity to ~60%.
+    const sigma = 5;
+    const similarity = Math.exp(-sumSqDiff / (2 * sigma * sigma)) * 100;
+
+    return Math.round(similarity);
+};
+
+export const getTasteBadgeStyle = (score: number | null) => {
+    if (score === null) return "text-gray-400";
+
+    // Text-only Orange Scale
+    if (score >= 90) return "text-orange-600 font-bold";
+    if (score >= 80) return "text-orange-500 font-bold";
+    if (score >= 70) return "text-orange-500 font-medium";
+    if (score >= 50) return "text-orange-400 font-medium";
+    return "text-gray-400"; // Low match
+};
