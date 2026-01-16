@@ -296,6 +296,18 @@ router.get("/feed", async (req, res) => {
             saved.forEach(s => savedShopSet.add(s.shop_id));
         }
 
+        // 3.8 Batch Fetch Follow status for authors
+        const followingAuthorSet = new Set<number>();
+        if (currentUserId && userIds.size > 0) {
+            const follows = await db.select({ following_id: users_follow.following_id })
+                .from(users_follow)
+                .where(and(
+                    eq(users_follow.follower_id, currentUserId),
+                    inArray(users_follow.following_id, Array.from(userIds))
+                ));
+            follows.forEach(f => followingAuthorSet.add(f.following_id));
+        }
+
         // 4. Enrich
         const result = feedItems.map(item => {
             let enrichedProp = item.review_prop as any;
@@ -343,7 +355,10 @@ router.get("/feed", async (req, res) => {
 
             return {
                 id: item.id,
-                user: item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null },
+                user: {
+                    ...(item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null }),
+                    is_following: followingAuthorSet.has(item.user_id)
+                },
                 text: item.text,
                 images: item.img || [],
                 created_at: item.created_at,
@@ -393,7 +408,10 @@ router.post("/", async (req, res) => {
         res.json(result[0]);
     } catch (error) {
         console.error("Create content error:", error);
-        res.status(500).json({ error: "Failed to create content" });
+        // Cast error to any to access typical Postgres error fields if available, or just stringify
+        const detailedError = error instanceof Error ? error.message : String(error);
+        const pgError = (error as any).code ? `PG Code: ${(error as any).code} - ${(error as any).detail || (error as any).hint || ''}` : '';
+        res.status(500).json({ error: "Failed to create content", details: detailedError, pgError });
     }
 });
 

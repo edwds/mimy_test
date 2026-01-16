@@ -369,6 +369,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                 <ContentCard
                                     user={item.user}
                                     content={item}
+                                    showActions={true}
                                 />
                                 <div className="bg-muted" />
 

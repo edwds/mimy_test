@@ -23,29 +23,43 @@ interface Props {
 export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, initialSelected, currentUserId }) => {
     // const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
-    const [followers, setFollowers] = useState<User[]>([]);
+    const [connections, setConnections] = useState<User[]>([]);
     const [selected, setSelected] = useState<User[]>(initialSelected);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen && currentUserId) {
-            fetchFollowers();
+            fetchConnections();
             setSelected(initialSelected);
         }
     }, [isOpen, currentUserId]);
 
-    const fetchFollowers = async () => {
+    const fetchConnections = async () => {
         setIsLoading(true);
         try {
-            // Using direct fetch via ApiService or generic fetch
-            // Assuming endpoint GET /api/users/:id/followers exists as seen in server routes
-            const response = await fetch(`/api/users/${currentUserId}/followers`);
-            if (response.ok) {
-                const data = await response.json();
-                setFollowers(data);
+            const [followersRes, followingRes] = await Promise.all([
+                fetch(`/api/users/${currentUserId}/followers`),
+                fetch(`/api/users/${currentUserId}/following`)
+            ]);
+
+            let combined: User[] = [];
+
+            if (followersRes.ok) {
+                const followers = await followersRes.json();
+                combined = [...combined, ...followers];
             }
+
+            if (followingRes.ok) {
+                const following = await followingRes.json();
+                combined = [...combined, ...following];
+            }
+
+            // Deduplicate by ID
+            const uniqueUsers = Array.from(new Map(combined.map(u => [u.id, u])).values());
+
+            setConnections(uniqueUsers);
         } catch (error) {
-            console.error("Failed to fetch followers", error);
+            console.error("Failed to fetch connections", error);
         } finally {
             setIsLoading(false);
         }
@@ -65,7 +79,7 @@ export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, in
         onClose();
     };
 
-    const filteredFollowers = followers.filter(user =>
+    const filteredConnections = connections.filter(user =>
         user.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.account_id.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -78,7 +92,7 @@ export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, in
                 {/* Header */}
                 <div className="px-6 py-4 border-b flex items-center justify-between bg-background sticky top-0 z-10">
                     <h2 className="text-lg font-bold">
-                        Tag Followers
+                        Tag People
                         <span className="ml-2 text-sm font-normal text-muted-foreground">
                             {selected.length}/10
                         </span>
@@ -105,13 +119,13 @@ export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, in
                 <div className="flex-1 overflow-y-auto p-4">
                     {isLoading ? (
                         <div className="flex justify-center py-8 text-muted-foreground">Loading...</div>
-                    ) : filteredFollowers.length === 0 ? (
+                    ) : filteredConnections.length === 0 ? (
                         <div className="text-center py-10 text-muted-foreground">
-                            {searchTerm ? "No users found" : "No followers yet"}
+                            {searchTerm ? "No users found" : "No connections yet"}
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {filteredFollowers.map(user => {
+                            {filteredConnections.map(user => {
                                 const isSelected = selected.some(u => u.id === user.id);
                                 return (
                                     <button

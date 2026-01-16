@@ -293,15 +293,25 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
         }
     };
 
+    const getBoundaries = (currentScale: number) => {
+        if (!imgDims) return { maxX: 0, maxY: 0 };
+        const minDim = Math.min(imgDims.w, imgDims.h);
+        const baseScale = CROP_SIZE / minDim;
+        const W = imgDims.w * baseScale * currentScale;
+        const H = imgDims.h * baseScale * currentScale;
+        return {
+            maxX: Math.max(0, (W - CROP_SIZE) / 2),
+            maxY: Math.max(0, (H - CROP_SIZE) / 2)
+        };
+    };
+
     const handlePan = (e: React.PointerEvent) => {
         if (e.buttons !== 1) return;
-        // e.movementX/Y is in screen pixels.
-        // We apply this directly to translate(x, y).
-        // Since the image is scaled by `scale`, visually 1px drag = 1px move.
-        // Code maps this 1:1.
+        const { maxX, maxY } = getBoundaries(scale);
+
         setPosition(prev => ({
-            x: prev.x + e.movementX,
-            y: prev.y + e.movementY
+            x: Math.max(-maxX, Math.min(maxX, prev.x + e.movementX)),
+            y: Math.max(-maxY, Math.min(maxY, prev.y + e.movementY))
         }));
     };
 
@@ -381,7 +391,16 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
                         min={MIN_SCALE}
                         max={MAX_SCALE}
                         step={0.01}
-                        onValueChange={(vals) => setScale(vals[0])}
+                        onValueChange={(vals) => {
+                            const newScale = vals[0];
+                            setScale(newScale);
+                            // Re-clamp position for new scale
+                            const { maxX, maxY } = getBoundaries(newScale);
+                            setPosition(prev => ({
+                                x: Math.max(-maxX, Math.min(maxX, prev.x)),
+                                y: Math.max(-maxY, Math.min(maxY, prev.y))
+                            }));
+                        }}
                         className="flex-1"
                     />
                     <span className="text-xs text-white/50">확대</span>

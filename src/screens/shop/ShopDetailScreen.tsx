@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
 import { cn } from '@/lib/utils';
@@ -137,19 +138,20 @@ export const ShopDetailScreen = () => {
         if (!user || !shop) return;
 
         // Optimistic toggle
-        // Note: Shop detail from backend doesn't officially send `is_saved` unless enriched.
-        // We will implement simpler toggle logic assuming we track it or just fire-and-forget for MVP visual if we don't have initial state.
-        // Actually, let's try to sync it if possible. For now, just toggle.
+        const prevSaved = shop.is_saved;
+        setShop(prev => prev ? { ...prev, is_saved: !prev.is_saved } : null);
+
         try {
             await fetch(`${API_BASE_URL}/api/shops/${id}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
             });
-            // Ideally refetch or toggle local state if we had it
-            alert(t('common.saved_to_list') || "Saved!"); // Simple feedback
+            // alert(t('common.saved_to_list') || "Saved!"); // Removed alert for smoother UX
         } catch (e) {
             console.error(e);
+            // Revert
+            setShop(prev => prev ? { ...prev, is_saved: prevSaved } : null);
         }
     };
 
@@ -209,13 +211,19 @@ export const ShopDetailScreen = () => {
                             {t('shop.reservation', 'Reservation')}
                         </button>
 
-                        <button
+                        <motion.button
                             onClick={handleBookmark}
-                            className="flex-1 h-12 rounded-xl bg-white border border-gray-200 text-gray-800 font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                            whileTap={{ scale: 0.95 }}
+                            className={cn(
+                                "flex-1 h-12 rounded-xl border flex items-center justify-center gap-2 font-bold transition-colors",
+                                shop.is_saved
+                                    ? "bg-orange-50 border-orange-200 text-orange-600"
+                                    : "bg-white border-gray-200 text-gray-800"
+                            )}
                         >
-                            <Bookmark size={20} />
-                            {t('shop.wants_to_go', 'Wants to go')}
-                        </button>
+                            <Bookmark size={20} className={cn(shop.is_saved && "fill-orange-600")} />
+                            {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
+                        </motion.button>
                     </div>
                 </div>
 

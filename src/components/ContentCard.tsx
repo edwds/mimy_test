@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -87,6 +88,7 @@ export interface ContentCardProps {
         profile_image: string | null;
         cluster_name?: string;
         taste_result?: { scores: Record<string, number> };
+        is_following?: boolean;
     };
     content: {
         id: number;
@@ -141,6 +143,7 @@ export interface ContentCardProps {
 
     onTogglePoiBookmark?: (contentId: number) => void;
     onReservePoi?: (contentId: number) => void;
+    showActions?: boolean;
 }
 
 const satisfactionBadgeClass = (s: Satisfaction) => {
@@ -153,7 +156,8 @@ const satisfactionBadgeClass = (s: Satisfaction) => {
 export const ContentCard = ({
     user,
     content,
-    onShare
+    onShare,
+    showActions = false
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
@@ -166,7 +170,11 @@ export const ContentCard = ({
     const [isPoiBookmarked, setIsPoiBookmarked] = useState(!!content.poi?.is_bookmarked); // Add local state
     const [showComments, setShowComments] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [isDeleted, setIsDeleted] = useState(false);
+
+    const [isFollowing, setIsFollowing] = useState(!!user.is_following);
+    const [followLoading, setFollowLoading] = useState(false);
 
     // Sync if prop changes (e.g. refetch)
     useEffect(() => {
@@ -174,7 +182,8 @@ export const ContentCard = ({
         setLikeCount(content.stats.likes);
         setCommentCount(content.stats.comments);
         setIsPoiBookmarked(!!content.poi?.is_bookmarked); // Sync prop
-    }, [content.stats, content.poi?.is_bookmarked]);
+        setIsFollowing(!!user.is_following);
+    }, [content.stats, content.poi?.is_bookmarked, user.is_following]);
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -199,6 +208,32 @@ export const ContentCard = ({
             setIsLiked(prevLiked);
             setLikeCount(prevCount);
             console.error("Like failed", error);
+        }
+    };
+
+    const handleFollow = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!currentUser || !user.id || followLoading) return;
+
+        setFollowLoading(true);
+        const prevFollowing = isFollowing;
+        setIsFollowing(!prevFollowing);
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/users/${user.id}/follow`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ followerId: currentUser.id })
+            });
+            const data = await res.json();
+            if (data.following !== (!prevFollowing)) {
+                setIsFollowing(data.following);
+            }
+        } catch (error) {
+            console.error(error);
+            setIsFollowing(prevFollowing);
+        } finally {
+            setFollowLoading(false);
         }
     };
 
@@ -288,81 +323,131 @@ export const ContentCard = ({
                 </div>
 
                 <div className="flex flex-col min-w-0 cursor-pointer active:opacity-80" onClick={handleUserClick}>
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-bold text-base text-gray-900 leading-tight truncate">
-                            {user.nickname}
-                        </span>
-                        {user.cluster_name && (
-                            (() => {
-                                const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
-                                    ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
-                                    : null;
+                    <span className="font-bold text-base text-gray-900 leading-tight truncate">
+                        {user.nickname}
+                    </span>
+                    {user.cluster_name && (
+                        (() => {
+                            const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
+                                ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
+                                : null;
 
-                                return (
-                                    <span className={cn(
-                                        "text-[10px] font-medium transition-colors",
-                                        getTasteBadgeStyle(matchScore)
-                                    )}>
-                                        {user.cluster_name}
-                                    </span>
-                                );
-                            })()
-                        )}
-                    </div>
-
-                    {contextText && (
-                        <div className="flex items-center gap-2 mt-1 min-w-0">
-                            <span className="text-[13px] text-gray-500 leading-tight truncate">{contextText}</span>
-                        </div>
+                            return (
+                                <span className={cn(
+                                    "text-xs font-medium transition-colors mt-0.5",
+                                    getTasteBadgeStyle(matchScore)
+                                )}>
+                                    {user.cluster_name}
+                                </span>
+                            );
+                        })()
                     )}
                 </div>
 
                 {/* More / Menu Button */}
-                {currentUser?.id === user.id && (
-                    <div className="relative ml-auto">
+                <div className="relative ml-auto flex items-center gap-2">
+                    {showActions && currentUser?.id !== user.id && (
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowMenu(!showMenu);
-                            }}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                            type="button"
+                            className={cn(
+                                "px-3 py-1.5 rounded-full text-[12px] font-bold active:scale-95 transition-all",
+                                isFollowing
+                                    ? "bg-white border border-gray-200 text-gray-700"
+                                    : "bg-orange-600 text-white"
+                            )}
+                            onClick={handleFollow}
+                            disabled={followLoading}
                         >
-                            <MoreHorizontal size={20} />
+                            {isFollowing ? "팔로잉" : "팔로우"}
                         </button>
+                    )}
 
-                        {showMenu && (
-                            <div className="absolute right-0 top-full mt-1 w-24 bg-white rounded-lg shadow-lg border border-gray-100 z-10 py-1 overflow-hidden">
+                    {currentUser?.id === user.id ? (
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMenu(!showMenu);
+                                }}
+                                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                            >
+                                <MoreHorizontal size={20} />
+                            </button>
+
+                            {showMenu && (
+                                <div className="absolute right-0 top-full mt-1 w-24 bg-white rounded-lg shadow-lg border border-gray-100 z-10 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete();
+                                            setShowMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                        삭제하기
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        showActions && (
+                            <div className="relative">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDelete();
+                                        setShowActionsMenu(!showActionsMenu);
                                     }}
-                                    className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-gray-50 flex items-center gap-2"
+                                    className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
                                 >
-                                    삭제하기
+                                    <MoreHorizontal size={20} />
                                 </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
 
-            {/* Companions Display */}
-            {companionUsers && companionUsers.length > 0 && (
-                <div className="px-5 mb-2 -mt-1 flex flex-wrap gap-1 items-center">
-                    <span className="text-xs text-gray-500">With</span>
-                    {companionUsers.map((u, i) => (
-                        <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
-                            <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                                {u.profile_image ? (
-                                    <img src={u.profile_image} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                {showActionsMenu && (
+                                    <div className="absolute right-0 top-full mt-1 w-24 bg-white rounded-lg shadow-lg border border-gray-100 z-10 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                alert("준비 중인 기능입니다.");
+                                                setShowActionsMenu(false);
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-gray-50 flex items-center gap-2 font-medium"
+                                        >
+                                            차단하기
+                                        </button>
+                                    </div>
                                 )}
                             </div>
-                            <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                        )
+                    )}
+                </div>
+            </div>
+
+            {/* Visit Info & Companions Block */}
+            {(contextText || (companionUsers && companionUsers.length > 0)) && (
+                <div className="px-5 mb-3 flex flex-col gap-1.5">
+                    {/* Visit Context Text */}
+                    {contextText && (
+                        <span className="text-sm text-gray-600 leading-tight">{contextText}</span>
+                    )}
+
+                    {/* Companions */}
+                    {companionUsers && companionUsers.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-center">
+                            <span className="text-xs text-gray-400 mr-1">With</span>
+                            {companionUsers.map((u, i) => (
+                                <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
+                                    <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
+                                        {u.profile_image ? (
+                                            <img src={u.profile_image} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                        )}
+                                    </div>
+                                    <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    )}
                 </div>
             )}
 
@@ -448,8 +533,9 @@ export const ContentCard = ({
                         {/* Shop actions: Reserve + Bookmark */}
                         <div className="flex items-center gap-4 mr-2">
                             {/* Reserve Button */}
-                            <button
+                            <motion.button
                                 type="button"
+                                whileTap={{ scale: 0.9 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     const ref = content.poi?.catchtable_ref;
@@ -464,11 +550,12 @@ export const ContentCard = ({
                                 aria-label="Reserve"
                             >
                                 <Calendar size={22} />
-                            </button>
+                            </motion.button>
 
                             {/* Bookmark Button */}
-                            <button
+                            <motion.button
                                 type="button"
+                                whileTap={{ scale: 0.8 }}
                                 onClick={async (e) => {
                                     e.stopPropagation();
                                     if (!currentUser) return;
@@ -508,8 +595,14 @@ export const ContentCard = ({
                                 )}
                                 aria-label="Bookmark shop"
                             >
-                                <Bookmark size={22} className={cn(isPoiBookmarked && 'fill-orange-600')} />
-                            </button>
+                                <motion.div
+                                    initial={false}
+                                    animate={{ scale: isPoiBookmarked ? [1, 1.4, 1] : 1 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <Bookmark size={22} className={cn(isPoiBookmarked && 'fill-orange-600')} />
+                                </motion.div>
+                            </motion.button>
                         </div>
                     </div>
                 )
@@ -525,14 +618,21 @@ export const ContentCard = ({
                 </div>
 
                 <div className="flex items-center gap-1">
-                    <button
+                    <motion.button
                         type="button"
+                        whileTap={{ scale: 0.8 }}
                         onClick={handleLike}
                         className="flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-full text-gray-600 active:text-red-500 active:bg-red-50 transition-colors"
                     >
-                        <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
+                        <motion.div
+                            initial={false}
+                            animate={{ scale: isLiked ? [1, 1.4, 1] : 1 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
+                        </motion.div>
                         {likeCount > 0 && <span className="text-sm font-medium">{likeCount}</span>}
-                    </button>
+                    </motion.button>
 
                     <button
                         type="button"

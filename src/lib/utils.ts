@@ -100,9 +100,8 @@ export const getTasteBadgeStyle = (score: number | null) => {
     if (score === null) return "text-gray-400";
 
     // Text-only Orange Scale
-    if (score >= 90) return "text-orange-600 font-bold";
-    if (score >= 80) return "text-orange-500 font-bold";
-    if (score >= 70) return "text-orange-500 font-medium";
-    if (score >= 50) return "text-orange-400 font-medium";
+    if (score >= 85) return "text-red-500 font-medium";
+    if (score >= 70) return "text-orange-400 font-medium";
+    if (score >= 55) return "text-muted-foreground";
     return "text-gray-400"; // Low match
 };
