@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Trophy, Medal, User as UserIcon } from 'lucide-react';
+import { User as UserIcon } from 'lucide-react';
 import { cn, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -188,7 +188,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {displayedItems.map((item, index) => {
+                            {displayedItems.map((item) => {
                                 // Find actual global rank (since items is ordered by score)
                                 const globalIndex = items.findIndex(it => it.user.id === item.user.id);
 

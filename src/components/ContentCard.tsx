@@ -296,11 +296,6 @@ export const ContentCard = ({
     let contextText: string | null = null;
 
     if (shopName) {
-        // String parts for Review
-        const visitDateText = content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : '';
-        const visitCountText = (typeof visitCount === 'number' && visitCount >= 2) ? `(${visitCount}회)` : '';
-        const shopWithJosa = appendJosa(shopName, '을/를');
-
         // Final review text components are handled in JSX
         contextText = null;
     } else if (content.type === 'post') {
