@@ -424,37 +424,37 @@ export const ContentCard = ({
 
             {/* Visit Info & Companions Block */}
             {(contextText || (companionUsers && companionUsers.length > 0)) && (
-                <div className="px-5 mb-3 flex flex-col gap-1.5">
-                    {/* Visit Context Text */}
-                    {contextText && (
-                        <div className="flex items-center gap-1.5">
+                <div className="px-5 mb-3">
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 max-h-12 overflow-hidden">
+                        {/* Icon & Context Text */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                             {shopName ? (
                                 <Utensils size={14} className="text-gray-400" />
                             ) : content.type === 'post' && content.keyword && content.keyword.length > 0 ? (
                                 <MessageSquare size={14} className="text-gray-400" />
                             ) : null}
-                            <span className="text-sm text-gray-600 leading-tight">{contextText}</span>
+                            <span className="text-sm text-gray-600 font-medium">{contextText}</span>
                         </div>
-                    )}
 
-                    {/* Companions */}
-                    {companionUsers && companionUsers.length > 0 && (
-                        <div className="flex flex-wrap gap-1 items-center">
-                            <span className="text-xs text-gray-400 mr-1">With</span>
-                            {companionUsers.map((u, i) => (
-                                <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
-                                    <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                                        {u.profile_image ? (
-                                            <img src={u.profile_image} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
-                                        )}
+                        {/* Companions in same flow */}
+                        {companionUsers && companionUsers.length > 0 && (
+                            <>
+                                <span className="text-[13px] text-gray-400 ml-0.5 shrink-0">with</span>
+                                {companionUsers.map((u, i) => (
+                                    <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100 shrink-0">
+                                        <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
+                                            {u.profile_image ? (
+                                                <img src={u.profile_image} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                            )}
+                                        </div>
+                                        <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
                                     </div>
-                                    <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                ))}
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -462,26 +462,28 @@ export const ContentCard = ({
             {content.text && <ContentBody text={content.text} maxLines={10} />}
 
             {/* Image Display */}
-            {content.images && content.images.length > 0 && (
-                content.images.length === 1 ? (
-                    <div className="px-5 mb-4">
-                        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative">
-                            <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
-                        {content.images.map((img, idx) => (
-                            <div
-                                key={idx}
-                                className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
-                            >
-                                <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+            {
+                content.images && content.images.length > 0 && (
+                    content.images.length === 1 ? (
+                        <div className="px-5 mb-4">
+                            <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative">
+                                <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
+                            {content.images.map((img, idx) => (
+                                <div
+                                    key={idx}
+                                    className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
+                                >
+                                    <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+                                </div>
+                            ))}
+                        </div>
+                    )
                 )
-            )}
+            }
 
             {/* Shop Info Card */}
             {
