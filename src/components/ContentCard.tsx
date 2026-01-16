@@ -434,24 +434,19 @@ export const ContentCard = ({
                     <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-gray-600 font-medium max-h-[2.8rem] overflow-hidden leading-tight">
                         {i18n.language === 'ko' ? (
                             <>
-                                {/* Korean: [Companions Tags] [와/과 함께] [Shop 을/를] [Date] [Count] 방문 */}
+                                {/* Korean: [Companions (Names Only)] [와/과 함께] [Shop 을/를] [Date] [N번째] 방문 */}
                                 {companionUsers && companionUsers.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1 shrink-0">
                                         {companionUsers.map((u, i) => (
-                                            <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
-                                                <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                                                    {u.profile_image ? (
-                                                        <img src={u.profile_image} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
-                                                    )}
-                                                </div>
+                                            <div key={i} className="bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 shrink-0">
                                                 <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
                                             </div>
                                         ))}
-                                        <span className="text-gray-400">
-                                            {appendJosa(companionUsers[companionUsers.length - 1].nickname, '와/과').replace(companionUsers[companionUsers.length - 1].nickname, '')} 함께
-                                        </span>
+                                        {companionUsers.length > 0 && (
+                                            <span className="text-gray-400">
+                                                {appendJosa(companionUsers[companionUsers.length - 1].nickname, '와/과').replace(companionUsers[companionUsers.length - 1].nickname, '')} 함께
+                                            </span>
+                                        )}
                                     </div>
                                 )}
 
@@ -466,34 +461,27 @@ export const ContentCard = ({
                                 )}
 
                                 {typeof visitCount === 'number' && visitCount >= 2 && (
-                                    <span className="text-gray-400 shrink-0">({visitCount}회)</span>
+                                    <span className="shrink-0">{visitCount}번째</span>
                                 )}
 
                                 {shopName && <span className="shrink-0">방문</span>}
                             </>
                         ) : (
                             <>
-                                {/* English: Visited [Shop Name] [Date] [Count] with [Companions Tags] */}
+                                {/* English: Visited [Shop Name] [Date] [Nth visit] with [Companions (Names Only)] */}
                                 {shopName && <span className="shrink-0">Visited</span>}
                                 {shopName && <span className="text-gray-800 font-bold shrink-0">{shopName}</span>}
                                 {content.review_prop?.visit_date && (
                                     <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
                                 )}
                                 {typeof visitCount === 'number' && visitCount >= 2 && (
-                                    <span className="text-gray-400 shrink-0">({visitCount} times)</span>
+                                    <span className="shrink-0">({visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : `${visitCount}th`} visit)</span>
                                 )}
                                 {companionUsers && companionUsers.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1 shrink-0">
                                         <span className="text-gray-400 ml-0.5 whitespace-nowrap">with</span>
                                         {companionUsers.map((u, i) => (
-                                            <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
-                                                <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                                                    {u.profile_image ? (
-                                                        <img src={u.profile_image} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
-                                                    )}
-                                                </div>
+                                            <div key={i} className="bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 shrink-0">
                                                 <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
                                             </div>
                                         ))}
