@@ -251,7 +251,11 @@
         "years_ago": "{{count}}년 전"
     },
     "content": {
-        "view_all_comments": "댓글 {{count}}개 모두 보기"
+        "view_all_comments": "댓글 {{count}}개 모두 보기",
+        "visit_info": {
+            "review": "<companions /> <shop /> <date /> <count /> <label />",
+            "post": "{{contextText}}"
+        }
     },
     "admin": {
         "title": "관리자 대시보드",

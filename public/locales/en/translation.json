@@ -265,7 +265,11 @@
         "years_ago": "{{count}}y ago"
     },
     "content": {
-        "view_all_comments": "View all {{count}} comments"
+        "view_all_comments": "View all {{count}} comments",
+        "visit_info": {
+            "review": "<label /> <shop /> <date /> <count /> with <companions />",
+            "post": "{{contextText}}"
+        }
     },
     "admin": {
         "title": "Admin Dashboard",
