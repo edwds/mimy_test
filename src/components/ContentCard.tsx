@@ -436,11 +436,11 @@ export const ContentCard = ({
                             <>
                                 {/* Korean: [Companions (Names Only)] [와/과 함께] [Shop 을/를] [Date] [N번째] 방문 */}
                                 {companionUsers && companionUsers.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
                                         {companionUsers.map((u, i) => (
-                                            <div key={i} className="bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 shrink-0">
-                                                <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
-                                            </div>
+                                            <span key={i} className="text-gray-800 shrink-0">
+                                                {u.nickname}{i < companionUsers.length - 1 ? ',' : ''}
+                                            </span>
                                         ))}
                                         {companionUsers.length > 0 && (
                                             <span className="text-gray-400">
@@ -478,12 +478,12 @@ export const ContentCard = ({
                                     <span className="shrink-0">({visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : `${visitCount}th`} visit)</span>
                                 )}
                                 {companionUsers && companionUsers.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
                                         <span className="text-gray-400 ml-0.5 whitespace-nowrap">with</span>
                                         {companionUsers.map((u, i) => (
-                                            <div key={i} className="bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 shrink-0">
-                                                <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
-                                            </div>
+                                            <span key={i} className="text-gray-800 shrink-0">
+                                                {u.nickname}{i < companionUsers.length - 1 ? ',' : ''}
+                                            </span>
                                         ))}
                                     </div>
                                 )}
