@@ -431,22 +431,22 @@ export const ContentCard = ({
             {/* Visit Info & Companions Block */}
             {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
                 <div className="px-5 mb-3">
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-bold max-h-[2.8rem] overflow-hidden leading-tight">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-medium max-h-[2.8rem] overflow-hidden leading-tight">
                         {i18n.language === 'ko' ? (
                             <>
                                 {/* Korean: [Companions (Names Only)] [와/과 함께] [Shop 을/를] [Date] [N번째] 방문 */}
                                 {companionUsers && companionUsers.length > 0 && (
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {companionUsers.map((u, i) => (
-                                            <span key={i} className="shrink-0">
-                                                {u.nickname}{i < companionUsers.length - 1 ? ',' : ''}
-                                            </span>
-                                        ))}
-                                        {companionUsers.length > 0 && (
-                                            <span className="shrink-0">
-                                                {appendJosa(companionUsers[companionUsers.length - 1].nickname, '와/과').replace(companionUsers[companionUsers.length - 1].nickname, '')} 함께
-                                            </span>
-                                        )}
+                                        <span className="shrink-0">
+                                            {companionUsers.map((u, i) => (
+                                                <span key={i}>
+                                                    {i < companionUsers.length - 1
+                                                        ? `${u.nickname}, `
+                                                        : appendJosa(u.nickname, '와/과')}
+                                                </span>
+                                            ))}
+                                        </span>
+                                        <span className="shrink-0">함께</span>
                                     </div>
                                 )}
 
@@ -482,7 +482,7 @@ export const ContentCard = ({
                                         <span className="shrink-0 whitespace-nowrap">with</span>
                                         {companionUsers.map((u, i) => (
                                             <span key={i} className="shrink-0">
-                                                {u.nickname}{i < companionUsers.length - 1 ? ',' : ''}
+                                                {u.nickname}{i < companionUsers.length - 1 ? ', ' : ''}
                                             </span>
                                         ))}
                                     </div>
