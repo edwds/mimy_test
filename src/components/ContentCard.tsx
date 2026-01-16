@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal, Utensils, MessageSquare } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -299,7 +299,7 @@ export const ContentCard = ({
         contextText = `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`;
     } else if (content.type === 'post') {
         if (content.keyword && content.keyword.length > 0) {
-            contextText = content.keyword.map(k => `${k}`).join(' ');
+            contextText = content.keyword.map(k => `#${k}`).join(' ');
         } else {
             contextText = '자유 형식 게시물입니다.';
         }
@@ -427,7 +427,14 @@ export const ContentCard = ({
                 <div className="px-5 mb-3 flex flex-col gap-1.5">
                     {/* Visit Context Text */}
                     {contextText && (
-                        <span className="text-sm text-gray-600 leading-tight">{contextText}</span>
+                        <div className="flex items-center gap-1.5">
+                            {shopName ? (
+                                <Utensils size={14} className="text-gray-400" />
+                            ) : content.type === 'post' && content.keyword && content.keyword.length > 0 ? (
+                                <MessageSquare size={14} className="text-gray-400" />
+                            ) : null}
+                            <span className="text-sm text-gray-600 leading-tight">{contextText}</span>
+                        </div>
                     )}
 
                     {/* Companions */}

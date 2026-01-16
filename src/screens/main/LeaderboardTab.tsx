@@ -167,7 +167,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                 {showSimilarOnly && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
                             </div>
                             <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">
-                                내 입맛이랑 비슷한 사람만 보기 (60% 이상)
+                                내 입맛과 비슷한 사람만 보기
                             </span>
                         </label>
                     </div>

@@ -10,7 +10,7 @@ import { ImageEditModal } from './ImageEditModal';
 import { UserSelectModal } from './UserSelectModal';
 
 interface Props {
-    onNext: (content: { text: string; images: string[]; companions?: any[] }) => void;
+    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[] }) => void;
     onBack: () => void;
     mode: 'review' | 'post';
     shop?: any;
@@ -51,7 +51,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         onNext({
             text,
             images,
-            companions: selectedUsers.map(u => u.id)
+            companions: selectedUsers.map(u => u.id),
+            keywords
         });
     };
 
