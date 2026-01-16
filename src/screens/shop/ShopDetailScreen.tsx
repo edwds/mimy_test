@@ -158,9 +158,9 @@ export const ShopDetailScreen = () => {
     if (!shop) return <div className="min-h-screen bg-white flex items-center justify-center">Store not found</div>;
 
     return (
-        <div className="min-h-screen bg-white pb-20">
+        <div className="h-full bg-white relative">
             {/* Header */}
-            <div className="fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4">
+            <div className="absolute top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4">
                 <button onClick={handleBack} className="p-2 -ml-2 text-gray-800">
                     <ArrowLeft size={24} />
                 </button>
@@ -171,107 +171,110 @@ export const ShopDetailScreen = () => {
                 </div>
             </div>
 
-            {/* Hero Image */}
-            <div className="w-full aspect-[4/3] bg-gray-200">
-                {shop.thumbnail_img ? (
-                    <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">🏢</div>
-                )}
-            </div>
-
-            {/* Shop Info */}
-            <div className="px-5 py-6">
-                <div className="text-sm font-bold text-orange-600 mb-1">{shop.food_kind || 'Restaurant'}</div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{shop.name}</h1>
-                <p className="text-gray-600 leading-relaxed mb-4 whitespace-pre-wrap">{shop.description}</p>
-
-                <div className="flex items-start gap-2 text-gray-500 text-sm mb-6">
-                    <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                    <span>{shop.address_full}</span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => {
-                            if (shop.catchtable_ref) {
-                                window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                            } else {
-                                alert("예약 링크가 없습니다.");
-                            }
-                        }}
-                        className="flex-1 h-12 rounded-xl bg-orange-600 text-white font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <Calendar size={20} />
-                        {t('shop.reservation', 'Reservation')}
-                    </button>
-
-                    <button
-                        onClick={handleBookmark}
-                        className="flex-1 h-12 rounded-xl bg-white border border-gray-200 text-gray-800 font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <Bookmark size={20} />
-                        {t('shop.wants_to_go', 'Wants to go')}
-                    </button>
-                </div>
-            </div>
-
-            <div className="h-2 bg-gray-50" />
-
-            {/* Review List */}
-            <div className="pt-6">
-                <div className="px-5 mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-bold">Reviews</h2>
-                    <div className="flex bg-gray-100 rounded-lg p-1">
-                        <button
-                            onClick={() => setSort('similar')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                sort === 'similar' ? "bg-white shadow text-gray-900" : "text-gray-500"
-                            )}
-                        >
-                            Similar Taste
-                        </button>
-                        <button
-                            onClick={() => setSort('popular')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                sort === 'popular' ? "bg-white shadow text-gray-900" : "text-gray-500"
-                            )}
-                        >
-                            Latest
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                    {reviews.map((review, idx) => (
-                        <ContentCard
-                            key={`${review.id}-${idx}`}
-                            user={review.user}
-                            content={{
-                                ...review,
-                                stats: {
-                                    likes: 0, // Mock stats for now as list endpoint might not have full stats yet
-                                    comments: 0
-                                }
-                            }}
-                        />
-                    ))}
-
-                    {reviews.length === 0 && !loadingReviews && (
-                        <div className="py-10 text-center text-gray-400 text-sm">
-                            No reviews yet.
-                        </div>
+            {/* Scrollable Content */}
+            <div className="h-full overflow-y-auto pb-20 no-scrollbar">
+                {/* Hero Image */}
+                <div className="w-full aspect-[4/3] bg-gray-200">
+                    {shop.thumbnail_img ? (
+                        <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">🏢</div>
                     )}
                 </div>
 
-                {hasMore && (
-                    <div ref={observerTarget} className="h-10 flex items-center justify-center">
-                        {loadingReviews && <div className="w-5 h-5 border-2 border-gray-300 border-t-orange-600 rounded-full animate-spin" />}
+                {/* Shop Info */}
+                <div className="px-5 py-6">
+                    <div className="text-sm font-bold text-orange-600 mb-1">{shop.food_kind || 'Restaurant'}</div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{shop.name}</h1>
+                    <p className="text-gray-600 leading-relaxed mb-4 whitespace-pre-wrap">{shop.description}</p>
+
+                    <div className="flex items-start gap-2 text-gray-500 text-sm mb-6">
+                        <MapPin size={16} className="mt-0.5 flex-shrink-0" />
+                        <span>{shop.address_full}</span>
                     </div>
-                )}
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                if (shop.catchtable_ref) {
+                                    window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
+                                } else {
+                                    alert("예약 링크가 없습니다.");
+                                }
+                            }}
+                            className="flex-1 h-12 rounded-xl bg-orange-600 text-white font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        >
+                            <Calendar size={20} />
+                            {t('shop.reservation', 'Reservation')}
+                        </button>
+
+                        <button
+                            onClick={handleBookmark}
+                            className="flex-1 h-12 rounded-xl bg-white border border-gray-200 text-gray-800 font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        >
+                            <Bookmark size={20} />
+                            {t('shop.wants_to_go', 'Wants to go')}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="h-2 bg-gray-50" />
+
+                {/* Review List */}
+                <div className="pt-6">
+                    <div className="px-5 mb-4 flex items-center justify-between">
+                        <h2 className="text-lg font-bold">Reviews</h2>
+                        <div className="flex bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setSort('similar')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
+                                    sort === 'similar' ? "bg-white shadow text-gray-900" : "text-gray-500"
+                                )}
+                            >
+                                Similar Taste
+                            </button>
+                            <button
+                                onClick={() => setSort('popular')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
+                                    sort === 'popular' ? "bg-white shadow text-gray-900" : "text-gray-500"
+                                )}
+                            >
+                                Latest
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        {reviews.map((review, idx) => (
+                            <ContentCard
+                                key={`${review.id}-${idx}`}
+                                user={review.user}
+                                content={{
+                                    ...review,
+                                    stats: {
+                                        likes: 0, // Mock stats for now as list endpoint might not have full stats yet
+                                        comments: 0
+                                    }
+                                }}
+                            />
+                        ))}
+
+                        {reviews.length === 0 && !loadingReviews && (
+                            <div className="py-10 text-center text-gray-400 text-sm">
+                                No reviews yet.
+                            </div>
+                        )}
+                    </div>
+
+                    {hasMore && (
+                        <div ref={observerTarget} className="h-10 flex items-center justify-center">
+                            {loadingReviews && <div className="w-5 h-5 border-2 border-gray-300 border-t-orange-600 rounded-full animate-spin" />}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
