@@ -196,7 +196,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                     <div
                                         key={item.user.id}
                                         className={cn(
-                                            "flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer hover:bg-muted/50 border border-transparent shadow-sm",
+                                            "flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer hover:bg-muted/50",
                                             globalIndex === 0 ? "bg-[#FFFBEB] border-yellow-100" :
                                                 globalIndex === 1 ? "bg-[#F9FAFB] border-gray-100" :
                                                     globalIndex === 2 ? "bg-[#FFF7ED] border-orange-100" : "bg-white"
@@ -268,9 +268,6 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                                         globalIndex === 2 ? "text-orange-600" : "text-primary"
                                             )}>
                                                 {item.score}
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                                                {t('leaderboard.points')}
                                             </span>
                                         </div>
                                     </div>

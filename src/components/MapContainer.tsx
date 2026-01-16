@@ -199,7 +199,6 @@ export const MapContainer = ({
         let targetCenter: [number, number] = [center[1], center[0]]; // [lng, lat]
 
         if (bottomSheetOffset && bottomSheetOffset > 0) {
-            const zoom = map.current.getZoom();
             const point = map.current.project(targetCenter as any);
             const newPoint = point.add(new maptilersdk.Point(0, bottomSheetOffset));
             const unprojected = map.current.unproject(newPoint);
