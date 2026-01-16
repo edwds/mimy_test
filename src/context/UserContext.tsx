@@ -6,6 +6,7 @@ export interface User {
     nickname: string | null;
     account_id: string;
     profile_image: string | null;
+    email: string | null;
     bio: string | null;
     link: string | null;
     links?: string[];

@@ -252,5 +252,18 @@
     },
     "content": {
         "view_all_comments": "댓글 {{count}}개 모두 보기"
+    },
+    "admin": {
+        "title": "관리자 대시보드",
+        "unauthorized": "권한이 없습니다. 관리자만 접근 가능합니다.",
+        "select_table": "테이블 선택",
+        "shops": "식당 (Shops)",
+        "content": "게시물 (Content)",
+        "upload_tsv": "TSV 파일 업로드",
+        "update_btn": "데이터베이스 업데이트",
+        "updating": "업데이트 중...",
+        "success": "업데이트 성공! {{count}}개의 레코드가 등록되었습니다.",
+        "error": "업데이트 실패: {{message}}",
+        "warning": "주의: 업데이트 시 기존 데이터는 모두 삭제됩니다."
     }
 }

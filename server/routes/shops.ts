@@ -229,22 +229,37 @@ router.get("/:id/reviews", async (req, res) => {
 
         // 2. Sorting Logic
         if (sort === 'similar' && userId) {
-            // Fetch Requesting User's Cluster
-            const requestingUser = await db.select({ taste_cluster: users.taste_cluster })
+            // Fetch Requesting User's Scores
+            const requestingUser = await db.select({ taste_result: users.taste_result })
                 .from(users)
                 .where(eq(users.id, userId))
                 .limit(1);
 
-            const userCluster = requestingUser[0]?.taste_cluster;
+            const viewerResult = requestingUser[0]?.taste_result as any;
+            const vS = viewerResult?.scores;
 
-            if (userCluster) {
-                // Sort by: (user.taste_cluster == userCluster) DESC, created_at DESC
+            if (vS) {
+                // Euclidean Distance: sum((a_i - b_i)^2)
+                // We extract scores from JSONB for each review author
+                // AXIS: boldness, acidity, richness, experimental, spiciness, sweetness, umami
+                const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+
+                const distanceSql = sql.join(
+                    axes.map(axis => {
+                        const viewerVal = vS[axis] || 0;
+                        return sql`power(
+                            coalesce((${users.taste_result}->'scores'->>${sql.raw(`'${axis}'`)})::int, 0) - ${viewerVal}, 
+                            2
+                        )`;
+                    }),
+                    sql` + `
+                );
+
                 query = query.orderBy(
-                    sql`CASE WHEN ${users.taste_cluster} = ${userCluster}::text THEN 1 ELSE 0 END DESC`,
+                    asc(sql`(${distanceSql})`),
                     desc(content.created_at)
                 );
             } else {
-                // Fallback if no cluster
                 query = query.orderBy(desc(content.created_at));
             }
         } else {

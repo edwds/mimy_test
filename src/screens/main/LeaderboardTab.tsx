@@ -39,12 +39,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const [items, setItems] = useState<LeaderboardItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
-
-    // useEffect(() => {
-    //     if (headerRef.current) {
-    //         setHeaderHeight(headerRef.current.offsetHeight);
-    //     }
-    // }, []);
+    const [showSimilarOnly, setShowSimilarOnly] = useState(false);
 
     useEffect(() => {
         if (!isEnabled) return;
@@ -53,7 +48,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             setLoading(true);
             try {
                 const [leaderboardRes, user] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/users/leaderboard`),
+                    fetch(`${API_BASE_URL}/api/users/leaderboard?filter=${filter}`),
                     UserService.getCurrentUser()
                 ]);
 
@@ -70,7 +65,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         };
 
         fetchData();
-    }, [isEnabled]);
+    }, [isEnabled, filter]);
 
     const handleScroll = () => {
         if (!containerRef.current) return;
@@ -89,14 +84,23 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         lastScrollY.current = currentScrollY;
     };
 
-    const getRankIcon = (index: number) => {
+    const getRankStyle = (index: number) => {
         switch (index) {
-            case 0: return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
-            case 1: return <Medal className="w-6 h-6 text-gray-400 fill-gray-400" />;
-            case 2: return <Medal className="w-6 h-6 text-amber-700 fill-amber-700" />;
-            default: return <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>;
+            case 0: return "text-yellow-600 font-black text-xl";
+            case 1: return "text-gray-500 font-black text-xl";
+            case 2: return "text-amber-800 font-black text-xl";
+            default: return "text-muted-foreground font-bold text-lg";
         }
     };
+
+    // Filter Items Client-side for Similarity
+    const displayedItems = showSimilarOnly && currentUser?.taste_result?.scores
+        ? items.filter(item => {
+            if (!item.user.taste_result?.scores) return false;
+            const match = calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores);
+            return match >= 60;
+        })
+        : items;
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -125,30 +129,47 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             >
                 <div className="p-4 pt-20 mb-4 pb-20"> {/* Adjusted pt-28 -> pt-20 */}
 
-                    {/* Mock Filter Chips */}
-                    <div className="flex gap-2 mb-6">
-                        <button
-                            onClick={() => setFilter('company')}
-                            className={cn(
-                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                                filter === 'company'
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                            )}
-                        >
-                            Mock Company
-                        </button>
-                        <button
-                            onClick={() => setFilter('neighborhood')}
-                            className={cn(
-                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                                filter === 'neighborhood'
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                            )}
-                        >
-                            Mock Neighborhood
-                        </button>
+                    {/* Filter Chips & Similarity Toggle */}
+                    <div className="flex flex-col gap-4 mb-6">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setFilter('company')}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-full text-sm font-bold transition-colors border",
+                                    filter === 'company'
+                                        ? "bg-primary text-secondary border-primary"
+                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                회사
+                            </button>
+                            <button
+                                onClick={() => setFilter('neighborhood')}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-full text-sm font-bold transition-colors border",
+                                    filter === 'neighborhood'
+                                        ? "bg-primary text-secondary border-primary"
+                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                지역
+                            </button>
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <div
+                                onClick={() => setShowSimilarOnly(!showSimilarOnly)}
+                                className={cn(
+                                    "w-5 h-5 rounded border flex items-center justify-center transition-all",
+                                    showSimilarOnly ? "bg-primary border-primary" : "border-gray-300 bg-white"
+                                )}
+                            >
+                                {showSimilarOnly && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                            </div>
+                            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">
+                                내 입맛이랑 비슷한 사람만 보기 (60% 이상)
+                            </span>
+                        </label>
                     </div>
 
                     {loading ? (
@@ -167,96 +188,97 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {items.map((item, index) => (
-                                <div
-                                    key={item.user.id}
-                                    className={cn(
-                                        "flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer hover:bg-muted/50 border border-transparent",
-                                        index < 3 ? "bg-gradient-to-r from-muted/50 to-transparent border-border/30" : "bg-card"
-                                    )}
-                                    onClick={() => {
-                                        const current = new URLSearchParams(window.location.search);
-                                        const targetId = item.user.account_id || item.user.id;
-                                        current.set('viewUser', String(targetId));
-                                        navigate(`${window.location.pathname}?${current.toString()}`);
-                                    }}
-                                >
-                                    {/* Rank */}
-                                    <div className="flex-shrink-0 w-8 flex justify-center">
-                                        {getRankIcon(index)}
-                                    </div>
+                            {displayedItems.map((item, index) => {
+                                // Find actual global rank (since items is ordered by score)
+                                const globalIndex = items.findIndex(it => it.user.id === item.user.id);
 
-                                    {/* Profile Image */}
-                                    <div className="relative flex-shrink-0">
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-full overflow-hidden border-2",
-                                            index === 0 ? "border-yellow-500" :
-                                                index === 1 ? "border-gray-400" :
-                                                    index === 2 ? "border-amber-700" : "border-transparent bg-muted"
-                                        )}>
-                                            {item.user.profile_image ? (
-                                                <img src={item.user.profile_image} alt={item.user.nickname || "User"} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
-                                                    <UserIcon className="w-6 h-6 opacity-50" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        {index < 3 && (
-                                            <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-[2px]">
-                                                {getRankIcon(index)}
-                                            </div>
+                                return (
+                                    <div
+                                        key={item.user.id}
+                                        className={cn(
+                                            "flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer hover:bg-muted/50 border border-transparent shadow-sm",
+                                            globalIndex === 0 ? "bg-[#FFFBEB] border-yellow-100" :
+                                                globalIndex === 1 ? "bg-[#F9FAFB] border-gray-100" :
+                                                    globalIndex === 2 ? "bg-[#FFF7ED] border-orange-100" : "bg-white"
                                         )}
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-base truncate">
-                                                {item.user.nickname || "User"}
-                                            </h3>
-                                            {item.user.cluster_name && (
-                                                (() => {
-                                                    const matchScore = (currentUser?.taste_result?.scores && item.user.taste_result?.scores)
-                                                        ? calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores)
-                                                        : null;
-
-                                                    return (
-                                                        <span className={cn(
-                                                            "text-[10px] truncate flex-shrink-0 transition-colors",
-                                                            getTasteBadgeStyle(matchScore)
-                                                        )}>
-                                                            {item.user.cluster_name}
-                                                            {/* Percentage removed per request */}
-                                                        </span>
-                                                    );
-                                                })()
-                                            )}
+                                        onClick={() => {
+                                            const current = new URLSearchParams(window.location.search);
+                                            const targetId = item.user.account_id || item.user.id;
+                                            current.set('viewUser', String(targetId));
+                                            navigate(`${window.location.pathname}?${current.toString()}`);
+                                        }}
+                                    >
+                                        {/* Rank */}
+                                        <div className="flex-shrink-0 w-8 flex justify-center">
+                                            <span className={getRankStyle(globalIndex)}>{globalIndex + 1}</span>
                                         </div>
-                                        <p className="text-xs text-muted-foreground truncate">
-                                            @{item.user.account_id}
-                                        </p>
-                                    </div>
 
-                                    {/* Score */}
-                                    <div className="flex flex-col items-end flex-shrink-0">
-                                        <span className={cn(
-                                            "text-lg font-black",
-                                            index === 0 ? "text-yellow-600" :
-                                                index === 1 ? "text-gray-500" :
-                                                    index === 2 ? "text-amber-700" : "text-primary"
-                                        )}>
-                                            {item.score}
-                                        </span>
-                                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                                            {t('leaderboard.points')}
-                                        </span>
+                                        {/* Profile Image */}
+                                        <div className="relative flex-shrink-0">
+                                            <div className={cn(
+                                                "w-12 h-12 rounded-full overflow-hidden border-2 shadow-sm",
+                                                globalIndex === 0 ? "border-yellow-400" :
+                                                    globalIndex === 1 ? "border-gray-300" :
+                                                        globalIndex === 2 ? "border-orange-300" : "border-transparent bg-muted"
+                                            )}>
+                                                {item.user.profile_image ? (
+                                                    <img src={item.user.profile_image} alt={item.user.nickname || "User"} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                                                        <UserIcon className="w-6 h-6 opacity-30" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-base truncate">
+                                                    {item.user.nickname || "User"}
+                                                </h3>
+                                                {item.user.cluster_name && (
+                                                    (() => {
+                                                        const matchScore = (currentUser?.taste_result?.scores && item.user.taste_result?.scores)
+                                                            ? calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores)
+                                                            : null;
+
+                                                        return (
+                                                            <span className={cn(
+                                                                "text-[10px] truncate flex-shrink-0 transition-colors px-1.5 py-0.5 rounded-md",
+                                                                getTasteBadgeStyle(matchScore)
+                                                            )}>
+                                                                {item.user.cluster_name}
+                                                            </span>
+                                                        );
+                                                    })()
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                @{item.user.account_id}
+                                            </p>
+                                        </div>
+
+                                        {/* Score */}
+                                        <div className="flex flex-col items-end flex-shrink-0">
+                                            <span className={cn(
+                                                "text-lg font-black",
+                                                globalIndex === 0 ? "text-yellow-600" :
+                                                    globalIndex === 1 ? "text-gray-600" :
+                                                        globalIndex === 2 ? "text-orange-600" : "text-primary"
+                                            )}>
+                                                {item.score}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                                                {t('leaderboard.points')}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {/* Empty State */}
-                            {items.length === 0 && (
+                            {displayedItems.length === 0 && (
                                 <div className="text-center py-20 text-muted-foreground">
                                     <p>{t('leaderboard.empty_title')}</p>
                                     <p className="text-sm opacity-70">{t('leaderboard.empty_desc')}</p>

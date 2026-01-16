@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -34,6 +34,19 @@ export const ShopDetailScreen = () => {
     const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [sort, setSort] = useState<'popular' | 'similar'>('similar');
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowSortDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
     // page state removed as unused (derived in effect or local var if needed, but error said it was unused)
     // Actually, verify if page is used in fetchReviews.
     // fetchReviews uses pageNum argument.
@@ -233,25 +246,51 @@ export const ShopDetailScreen = () => {
                 <div className="pt-6">
                     <div className="px-5 mb-4 flex items-center justify-between">
                         <h2 className="text-lg font-bold">Reviews</h2>
-                        <div className="flex bg-gray-100 rounded-lg p-1">
+
+                        {/* Sort Dropdown */}
+                        <div className="relative" ref={dropdownRef}>
                             <button
-                                onClick={() => setSort('similar')}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                    sort === 'similar' ? "bg-white shadow text-gray-900" : "text-gray-500"
-                                )}
+                                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
                             >
-                                Similar Taste
+                                {sort === 'similar' ? 'Similar Taste' : 'Latest'}
+                                <ChevronDown size={14} className={cn("transition-transform duration-200", showSortDropdown && "rotate-180")} />
                             </button>
-                            <button
-                                onClick={() => setSort('popular')}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                    sort === 'popular' ? "bg-white shadow text-gray-900" : "text-gray-500"
-                                )}
-                            >
-                                Latest
-                            </button>
+
+                            {showSortDropdown && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className="absolute right-0 mt-2 w-36 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[60]"
+                                >
+                                    <button
+                                        onClick={() => {
+                                            setSort('similar');
+                                            setShowSortDropdown(false);
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
+                                            sort === 'similar' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
+                                        )}
+                                    >
+                                        Similar Taste
+                                        {sort === 'similar' && <Check size={14} />}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setSort('popular');
+                                            setShowSortDropdown(false);
+                                        }}
+                                        className={cn(
+                                            "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
+                                            sort === 'popular' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
+                                        )}
+                                    >
+                                        Latest
+                                        {sort === 'popular' && <Check size={14} />}
+                                    </button>
+                                </motion.div>
+                            )}
                         </div>
                     </div>
 

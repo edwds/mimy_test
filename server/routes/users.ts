@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, clusters, shops, users_wantstogo, users_follow, content, likes } from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, ilike } from "drizzle-orm";
 
 const router = Router();
 
@@ -28,35 +28,25 @@ router.get("/check-handle", async (req, res) => {
 router.get("/leaderboard", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 20;
+        const filter = (req.query.filter as string) || '';
+        let limit = parseInt(req.query.limit as string) || 20;
+
+        // Requirement: "회사" and "지역" should show up to 100
+        if (filter === 'company' || filter === 'neighborhood') {
+            limit = 100;
+        }
+
         const offset = (page - 1) * limit;
 
-        // 1. Calculate Scores
-        // Content Score: 5 points per post/review
-        // Like Score: 3 points per like received
-
-        // 1. Calculate Scores
-        // Content Score: 5 points per post/review
-        // Follower Score: 3 points per follower
-
-        // Note: We use subqueries for counts to avoid multiplicative rows from joins
-
-
-        // Note: The above query is a simplification. 
-        // Realistically we might need separate queries or a more complex join to avoid multiplication.
-        // For MVP, let's just fetch top users based on content count first, or mock the score logic 
-        // if the 'likes' table structure isn't fully clear from my memory. 
-        // CHECK: schema.ts wasn't fully read for 'likes'. 
-        // Let's stick to a simple robust query or just return users ordered by content count for now
-        // to fix the 404.
-
-        const leaderboard = await db.select({
+        // 1. Base Selection
+        let query = db.select({
             id: users.id,
             nickname: users.nickname,
             account_id: users.account_id,
+            email: users.email,
             profile_image: users.profile_image,
-            cluster_name: clusters.name, // Add cluster_name
-            taste_result: users.taste_result, // Add taste_result for matching
+            cluster_name: clusters.name,
+            taste_result: users.taste_result,
             stats: {
                 content_count: sql<number>`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`,
                 received_likes: sql<number>`(
@@ -70,9 +60,19 @@ router.get("/leaderboard", async (req, res) => {
             }
         })
             .from(users)
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `) // Join clusters
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
+            .$dynamic();
+
+        // 2. Apply Filters
+        if (filter === 'company') {
+            query = query.where(ilike(users.email, '%@catchtable.co.kr'));
+        }
+
+        // 3. Sorting & Execution
+        const leaderboard = await query
             .orderBy(desc(sql`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`))
-            .limit(limit);
+            .limit(limit)
+            .offset(offset);
 
         // Map to score
         const result = leaderboard.map((u, i) => {
@@ -122,6 +122,7 @@ router.get("/:id", async (req, res) => {
             bio: users.bio,
             link: users.link,
             profile_image: users.profile_image,
+            email: users.email,
             visible_rank: users.visible_rank,
             taste_cluster: users.taste_cluster,
             taste_result: users.taste_result,
