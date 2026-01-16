@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Send, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -28,6 +28,9 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
     const [loading, setLoading] = useState(false);
     const [inputText, setInputText] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+    const listRef = useRef<HTMLDivElement>(null);
 
     // Fetch comments when sheet opens
     useEffect(() => {
@@ -35,6 +38,55 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
             fetchComments();
         }
     }, [isOpen, contentId]);
+
+    // Handle Keyboard and Body Scroll
+    useEffect(() => {
+        if (!isOpen) {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            return;
+        }
+
+        // Lock scroll - more robust for mobile
+        const originalOverflow = document.body.style.overflow;
+        const originalPosition = document.body.style.position;
+        const originalWidth = document.body.style.width;
+
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+
+        const handleVisualViewportChange = () => {
+            if (window.visualViewport) {
+                const vh = window.visualViewport.height;
+                const kh = window.innerHeight - vh;
+                setKeyboardHeight(Math.max(0, kh));
+                setViewportHeight(vh);
+            }
+        };
+
+        window.visualViewport?.addEventListener('resize', handleVisualViewportChange);
+        window.visualViewport?.addEventListener('scroll', handleVisualViewportChange);
+        handleVisualViewportChange();
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            document.body.style.position = originalPosition;
+            document.body.style.width = originalWidth;
+            window.visualViewport?.removeEventListener('resize', handleVisualViewportChange);
+            window.visualViewport?.removeEventListener('scroll', handleVisualViewportChange);
+        };
+    }, [isOpen]);
+
+    const scrollToBottom = () => {
+        if (listRef.current) {
+            listRef.current.scrollTo({
+                top: listRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     const fetchComments = async () => {
         setLoading(true);
@@ -70,7 +122,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
                 const newComment = await res.json();
                 setComments(prev => [...prev, newComment]);
                 setInputText('');
-                // Scroll to bottom logic could be added here
+                setTimeout(scrollToBottom, 100);
             }
         } catch (error) {
             console.error("Failed to post comment", error);
@@ -98,15 +150,21 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center pointer-events-auto">
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center pointer-events-none">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto"
                 onClick={onClose}
             />
 
             {/* Sheet */}
-            <div className="relative w-full max-w-[430px] h-[75%] bg-white rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300">
+            <div
+                style={{
+                    transform: `translateY(-${keyboardHeight}px)`,
+                    maxHeight: keyboardHeight > 0 ? `${viewportHeight}px` : '85%'
+                }}
+                className="relative w-full max-w-[430px] h-[75%] bg-white rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 pointer-events-auto transition-transform duration-200 ease-out"
+            >
                 {/* Header */}
                 <div className="p-4 border-b flex items-center justify-between bg-white/80 backdrop-blur-md rounded-t-3xl z-10 sticky top-0">
                     <div className="w-5" /> {/* Spacer */}
@@ -119,7 +177,10 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div
+                    ref={listRef}
+                    className="flex-1 overflow-y-auto p-4 space-y-4"
+                >
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
