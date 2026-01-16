@@ -267,8 +267,9 @@
     "content": {
         "view_all_comments": "View all {{count}} comments",
         "visit_info": {
-            "review": "<label /> <shop /> <date /> <count /> with <companions />",
-            "post": "{{contextText}}"
+            "visited": "Visited",
+            "with": "with",
+            "nth": "visit"
         }
     },
     "admin": {

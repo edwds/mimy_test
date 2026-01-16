@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
@@ -427,50 +427,63 @@ export const ContentCard = ({
             {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
                 <div className="px-5 mb-3">
                     <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-medium max-h-[2.8rem] overflow-hidden leading-tight">
-                        <Trans
-                            i18nKey={shopName ? "content.visit_info.review" : "content.visit_info.post"}
-                            t={t}
-                            values={{
-                                shopName: shopName || '',
-                                visitCount: visitCount,
-                                contextText: (!shopName && contextText) ? contextText : '',
-                                dateStr: content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''
-                            }}
-                            components={{
-                                companions: companionUsers && companionUsers.length > 0 ? (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <span className="shrink-0">
-                                            {companionUsers.map((u, i) => (
-                                                <span key={i}>
-                                                    {i < companionUsers.length - 1
-                                                        ? `${u.nickname}, `
-                                                        : (i18n.language === 'ko' ? appendJosa(u.nickname, '와/과') : u.nickname)}
-                                                </span>
-                                            ))}
-                                        </span>
-                                        {i18n.language === 'ko' && <span className="shrink-0">함께</span>}
-                                    </div>
-                                ) : <span />,
-                                shop: shopName ? (
+                        {i18n.language === 'ko' ? (
+                            <>
+                                {/* Korean: [Companions]와/과 함께 [Shop]을/를 [Date] [N번째] 방문 */}
+                                {companionUsers && companionUsers.length > 0 && (
                                     <span className="shrink-0">
-                                        {i18n.language === 'ko' ? appendJosa(shopName, '을/를') : shopName}
+                                        {companionUsers.map((u, i) => (
+                                            <span key={i}>
+                                                {i < companionUsers.length - 1
+                                                    ? `${u.nickname}, `
+                                                    : appendJosa(u.nickname, '와/과')}
+                                            </span>
+                                        ))}
+                                        {' '}{t('content.visit_info.with')}
                                     </span>
-                                ) : <span />,
-                                date: content.review_prop?.visit_date ? (
+                                )}
+
+                                {shopName && (
+                                    <span className="shrink-0">
+                                        {appendJosa(shopName, '을/를')}
+                                    </span>
+                                )}
+
+                                {content.review_prop?.visit_date && (
                                     <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
-                                ) : <span />,
-                                count: typeof visitCount === 'number' && visitCount >= 2 ? (
+                                )}
+
+                                {typeof visitCount === 'number' && visitCount >= 2 && (
+                                    <span className="shrink-0">{visitCount}{t('content.visit_info.nth')}</span>
+                                )}
+
+                                {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
+                            </>
+                        ) : (
+                            <>
+                                {/* English: Visited [Shop Name] [Date] ([Nth] visit) with [Companions] */}
+                                {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
+                                {shopName && <span className="shrink-0">{shopName}</span>}
+                                {content.review_prop?.visit_date && (
+                                    <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                )}
+                                {typeof visitCount === 'number' && visitCount >= 2 && (
                                     <span className="shrink-0">
-                                        {i18n.language === 'ko'
-                                            ? `${visitCount}번째`
-                                            : `(${visitCount}${visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : 'th'} visit)`}
+                                        ({visitCount}{visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : 'th'} {t('content.visit_info.nth')})
                                     </span>
-                                ) : <span />,
-                                label: shopName ? (
-                                    <span className="shrink-0">{i18n.language === 'ko' ? '방문' : 'Visited'}</span>
-                                ) : <span />
-                            }}
-                        />
+                                )}
+                                {companionUsers && companionUsers.length > 0 && (
+                                    <span className="shrink-0">
+                                        {t('content.visit_info.with')}{' '}
+                                        {companionUsers.map((u, i) => (
+                                            <span key={i}>
+                                                {u.nickname}{i < companionUsers.length - 1 ? ', ' : ''}
+                                            </span>
+                                        ))}
+                                    </span>
+                                )}
+                            </>
+                        )}
 
                         {/* Post Keywords (if not review) */}
                         {!shopName && contextText && (

@@ -253,8 +253,9 @@
     "content": {
         "view_all_comments": "댓글 {{count}}개 모두 보기",
         "visit_info": {
-            "review": "<companions /> <shop /> <date /> <count /> <label />",
-            "post": "{{contextText}}"
+            "visited": "방문",
+            "with": "함께",
+            "nth": "번째"
         }
     },
     "admin": {
