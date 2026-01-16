@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal, Utensils, MessageSquare } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -296,10 +296,16 @@ export const ContentCard = ({
     let contextText: string | null = null;
 
     if (shopName) {
-        contextText = `${appendJosa(shopName, '을/를')} ${content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : ''} ${typeof visitCount === 'number' && visitCount >= 2 ? `${visitCount}번째 ` : ''}방문`;
+        // String parts for Review
+        const visitDateText = content.review_prop?.visit_date ? formatVisitDate(content.review_prop.visit_date, t) : '';
+        const visitCountText = (typeof visitCount === 'number' && visitCount >= 2) ? `(${visitCount}회)` : '';
+        const shopWithJosa = appendJosa(shopName, '을/를');
+
+        // Final review text components are handled in JSX
+        contextText = null;
     } else if (content.type === 'post') {
         if (content.keyword && content.keyword.length > 0) {
-            contextText = content.keyword.map(k => `#${k}`).join(' ');
+            contextText = content.keyword.join(' ');
         } else {
             contextText = '자유 형식 게시물입니다.';
         }
@@ -423,36 +429,82 @@ export const ContentCard = ({
             </div>
 
             {/* Visit Info & Companions Block */}
-            {(contextText || (companionUsers && companionUsers.length > 0)) && (
+            {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
                 <div className="px-5 mb-3">
-                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 max-h-12 overflow-hidden">
-                        {/* Icon & Context Text */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {shopName ? (
-                                <Utensils size={14} className="text-gray-400" />
-                            ) : content.type === 'post' && content.keyword && content.keyword.length > 0 ? (
-                                <MessageSquare size={14} className="text-gray-400" />
-                            ) : null}
-                            <span className="text-sm text-gray-600 font-medium">{contextText}</span>
-                        </div>
-
-                        {/* Companions in same flow */}
-                        {companionUsers && companionUsers.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-gray-600 font-medium max-h-[2.8rem] overflow-hidden leading-tight">
+                        {i18n.language === 'ko' ? (
                             <>
-                                <span className="text-[13px] text-gray-400 ml-0.5 shrink-0">with</span>
-                                {companionUsers.map((u, i) => (
-                                    <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100 shrink-0">
-                                        <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                                            {u.profile_image ? (
-                                                <img src={u.profile_image} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
-                                            )}
-                                        </div>
-                                        <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                                {/* Korean: [Companions Tags] [와/과 함께] [Shop 을/를] [Date] [Count] 방문 */}
+                                {companionUsers && companionUsers.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                        {companionUsers.map((u, i) => (
+                                            <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
+                                                <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
+                                                    {u.profile_image ? (
+                                                        <img src={u.profile_image} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                                            </div>
+                                        ))}
+                                        <span className="text-gray-400">
+                                            {appendJosa(companionUsers[companionUsers.length - 1].nickname, '와/과').replace(companionUsers[companionUsers.length - 1].nickname, '')} 함께
+                                        </span>
                                     </div>
-                                ))}
+                                )}
+
+                                {shopName && (
+                                    <span className="text-gray-800 font-bold shrink-0">
+                                        {appendJosa(shopName, '을/를')}
+                                    </span>
+                                )}
+
+                                {content.review_prop?.visit_date && (
+                                    <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                )}
+
+                                {typeof visitCount === 'number' && visitCount >= 2 && (
+                                    <span className="text-gray-400 shrink-0">({visitCount}회)</span>
+                                )}
+
+                                {shopName && <span className="shrink-0">방문</span>}
                             </>
+                        ) : (
+                            <>
+                                {/* English: Visited [Shop Name] [Date] [Count] with [Companions Tags] */}
+                                {shopName && <span className="shrink-0">Visited</span>}
+                                {shopName && <span className="text-gray-800 font-bold shrink-0">{shopName}</span>}
+                                {content.review_prop?.visit_date && (
+                                    <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                )}
+                                {typeof visitCount === 'number' && visitCount >= 2 && (
+                                    <span className="text-gray-400 shrink-0">({visitCount} times)</span>
+                                )}
+                                {companionUsers && companionUsers.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                        <span className="text-gray-400 ml-0.5 whitespace-nowrap">with</span>
+                                        {companionUsers.map((u, i) => (
+                                            <div key={i} className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-full border border-gray-100">
+                                                <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
+                                                    {u.profile_image ? (
+                                                        <img src={u.profile_image} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold">{u.nickname?.[0]}</div>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-medium text-gray-700">{u.nickname}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Post Keywords (if not review) */}
+                        {!shopName && contextText && (
+                            <span>{contextText}</span>
                         )}
                     </div>
                 </div>
