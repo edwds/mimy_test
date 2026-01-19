@@ -14,7 +14,7 @@ export interface ListCardProps {
     onPress?: () => void;
 }
 
-export const ListCard = ({ id, title, count, updatedAt, author, onPress }: ListCardProps) => {
+export const ListCard = ({ title, count, updatedAt, author, onPress }: ListCardProps) => {
     const { i18n } = useTranslation();
 
     const formattedDate = new Date(updatedAt).toLocaleDateString(i18n.language, {

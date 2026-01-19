@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
-import { useUser } from '@/context/UserContext';
+import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface ListItem {
     rank: number;
