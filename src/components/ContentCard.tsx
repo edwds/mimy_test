@@ -147,12 +147,6 @@ export interface ContentCardProps {
     hideShopInfo?: boolean;
 }
 
-const satisfactionBadgeClass = (s: Satisfaction) => {
-    if (s === 'best') return 'bg-orange-100 text-orange-600';
-    if (s === 'good') return 'bg-green-100 text-green-600';
-    if (s === 'ok') return 'bg-gray-100 text-gray-600';
-    return 'bg-gray-100 text-gray-600';
-};
 
 export const ContentCard = ({
     user,
