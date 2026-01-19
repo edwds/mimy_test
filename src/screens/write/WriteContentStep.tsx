@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, MapPin, Utensils, Smile, Meh, Frown, Users, UserPlus } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, MapPin, Utensils, Smile, Meh, Frown, Users, UserPlus, Calendar } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { ImageEditModal } from './ImageEditModal';
 import { UserSelectModal } from './UserSelectModal';
 
 interface Props {
-    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[] }) => void;
+    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[]; visitDate?: string }) => void;
     onBack: () => void;
     mode: 'review' | 'post';
     shop?: any;
@@ -23,6 +23,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const [images, setImages] = useState<string[]>([]);
     const [keywords, setKeywords] = useState<string[]>([]);
     const [keywordInput, setKeywordInput] = useState('');
+    const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
 
     // User Tagging State
     const [isUserSelectOpen, setIsUserSelectOpen] = useState(false);
@@ -52,7 +53,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             text,
             images,
             companions: selectedUsers.map(u => u.id),
-            keywords
+            keywords,
+            visitDate
         });
     };
 
@@ -196,53 +198,70 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         />
                     </div>
 
-                    {/* Use Review: Mentions */}
+                    {/* Use Review: Visit Date & Mentions */}
                     {mode === 'review' && (
-                        <div className="space-y-2 pt-4 border-t border-border/50">
-                            <div className="flex items-center justify-between text-base text-foreground font-semibold mb-2">
-                                <span className="flex items-center gap-2">
-                                    <Users className="w-4 h-4" />
-                                    With who?
-                                </span>
-                                {selectedUsers.length > 0 && (
-                                    <span className="text-sm font-normal text-muted-foreground">
-                                        {selectedUsers.length} people
-                                    </span>
-                                )}
+                        <div className="space-y-6 pt-4 border-t border-border/50">
+                            {/* Visit Date */}
+                            <div className="space-y-2">
+                                <Label className="text-base font-semibold flex items-center gap-2">
+                                    <Calendar className="w-4 h-4" />
+                                    {t('write.content.visit_date', 'Visit Date')}
+                                </Label>
+                                <input
+                                    type="date"
+                                    value={visitDate}
+                                    onChange={(e) => setVisitDate(e.target.value)}
+                                    className="w-full bg-muted/30 border border-transparent rounded-xl px-4 py-3 text-base focus:bg-background focus:border-primary transition-colors outline-none"
+                                />
                             </div>
 
-                            {selectedUsers.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedUsers.map(user => (
-                                        <div key={user.id} className="flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border">
-                                            <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
-                                                {user.profile_image ? (
-                                                    <img src={user.profile_image} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">
-                                                        {user.nickname[0]}
-                                                    </div>
-                                                )}
+                            {/* Companions */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between text-base text-foreground font-semibold mb-2">
+                                    <span className="flex items-center gap-2">
+                                        <Users className="w-4 h-4" />
+                                        With who?
+                                    </span>
+                                    {selectedUsers.length > 0 && (
+                                        <span className="text-sm font-normal text-muted-foreground">
+                                            {selectedUsers.length} people
+                                        </span>
+                                    )}
+                                </div>
+
+                                {selectedUsers.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedUsers.map(user => (
+                                            <div key={user.id} className="flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border">
+                                                <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
+                                                    {user.profile_image ? (
+                                                        <img src={user.profile_image} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">
+                                                            {user.nickname[0]}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="text-sm font-medium">{user.nickname}</span>
                                             </div>
-                                            <span className="text-sm font-medium">{user.nickname}</span>
-                                        </div>
-                                    ))}
+                                        ))}
+                                        <button
+                                            onClick={() => setIsUserSelectOpen(true)}
+                                            className="w-8 h-8 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
                                     <button
                                         onClick={() => setIsUserSelectOpen(true)}
-                                        className="w-8 h-8 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                                        className="w-full h-12 rounded-xl bg-muted/30 hover:bg-muted/50 border border-transparent transition-all flex items-center justify-center text-muted-foreground gap-2 font-medium"
                                     >
-                                        <UserPlus className="w-4 h-4" />
+                                        <UserPlus className="w-5 h-5 opacity-70" />
+                                        <span>Tag followers</span>
                                     </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setIsUserSelectOpen(true)}
-                                    className="w-full h-12 rounded-xl bg-muted/30 hover:bg-muted/50 border border-transparent transition-all flex items-center justify-center text-muted-foreground gap-2 font-medium"
-                                >
-                                    <UserPlus className="w-5 h-5 opacity-70" />
-                                    <span>Tag followers</span>
-                                </button>
-                            )}
+                                )}
+                            </div>
                         </div>
                     )}
 

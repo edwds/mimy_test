@@ -144,6 +144,7 @@ export interface ContentCardProps {
     onTogglePoiBookmark?: (contentId: number) => void;
     onReservePoi?: (contentId: number) => void;
     showActions?: boolean;
+    hideShopInfo?: boolean;
 }
 
 const satisfactionBadgeClass = (s: Satisfaction) => {
@@ -157,11 +158,15 @@ export const ContentCard = ({
     user,
     content,
     onShare,
-    showActions = false
+    showActions = false,
+    hideShopInfo = false
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const { user: currentUser } = useUser();
+
+    const rank = content.poi?.rank ?? content.review_prop?.rank;
+    const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
 
     // Local State for Optimistic Updates
     const [isLiked, setIsLiked] = useState(content.stats.is_liked);
@@ -287,8 +292,6 @@ export const ContentCard = ({
     const shopName = content.poi?.shop_name ?? content.review_prop?.shop_name;
     const shopAddress = content.poi?.shop_address ?? content.review_prop?.shop_address;
     const shopThumbnail = content.poi?.thumbnail_img ?? content.review_prop?.thumbnail_img;
-    const rank = content.poi?.rank ?? content.review_prop?.rank;
-    const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
     const visitCount = content.poi?.visit_count ?? content.review_prop?.visit_count;
     // const isPoiBookmarked used state above
 
@@ -489,9 +492,35 @@ export const ContentCard = ({
                         {!shopName && contextText && (
                             <span>{contextText}</span>
                         )}
+
+                        {/* Satisfaction & Ranking */}
+                        {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
+                            <>
+                                <span className="text-gray-300">·</span>
+                                {satisfaction && (
+                                    <span className={cn(
+                                        "font-bold",
+                                        (satisfaction === 'best' || satisfaction === 'good') ? "text-orange-600" : "text-gray-500"
+                                    )}>
+                                        {satisfaction === 'best' ? "인생 맛집" : t(`write.basic.${satisfaction}`)}
+                                    </span>
+                                )}
+                                {typeof rank === 'number' && rank > 0 && (
+                                    <>
+                                        {satisfaction && <span className="text-gray-300">·</span>}
+                                        <span className="font-bold text-black inline-flex items-center gap-0.5">
+                                            <span className="text-sm">🏆</span>
+                                            {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
+                                        </span>
+                                    </>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             )}
+
+
 
             {/* Text Body */}
             {content.text && <ContentBody text={content.text} maxLines={10} />}
@@ -522,7 +551,7 @@ export const ContentCard = ({
 
             {/* Shop Info Card */}
             {
-                shopName && (
+                shopName && !hideShopInfo && (
                     <div
                         className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative cursor-pointer"
                         onClick={(e) => {
@@ -535,14 +564,7 @@ export const ContentCard = ({
                     >
                         {/* Image Wrapper with Badge */}
                         <div className="relative flex-shrink-0">
-                            {typeof rank === 'number' && (
-                                <div className={cn(
-                                    "absolute -top-1.5 -left-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[10px] font-bold border-2 border-white shadow-sm z-10 px-1",
-                                    rank <= 3 ? "bg-yellow-400 text-white" : "bg-gray-400 text-white"
-                                )}>
-                                    {rank}
-                                </div>
-                            )}
+
                             <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden">
                                 {shopThumbnail ? (
                                     <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
@@ -557,16 +579,7 @@ export const ContentCard = ({
                                 <div className="font-bold text-[14px] text-gray-900 truncate">{shopName}</div>
 
                                 {/* Satisfaction after shop name */}
-                                {satisfaction && (
-                                    <span
-                                        className={cn(
-                                            'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0',
-                                            satisfactionBadgeClass(satisfaction)
-                                        )}
-                                    >
-                                        {satisfaction}
-                                    </span>
-                                )}
+
                             </div>
 
                             <div className="text-[12px] text-gray-500 truncate mt-0.5">

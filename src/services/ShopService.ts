@@ -16,5 +16,21 @@ export const ShopService = {
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch reviews');
         return response.json();
+    },
+    searchGoogle: async (query: string, region?: string) => {
+        let url = `/api/shops/search/google?q=${encodeURIComponent(query)}`;
+        if (region) url += `&region=${encodeURIComponent(region)}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to search Google Places');
+        return response.json();
+    },
+    importGoogleShop: async (placeData: any) => {
+        const response = await fetch(`/api/shops/import-google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(placeData)
+        });
+        if (!response.ok) throw new Error('Failed to import shop');
+        return response.json();
     }
 };

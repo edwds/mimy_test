@@ -39,17 +39,16 @@ const createMarkerElement = (isSelected: boolean, isSaved: boolean) => {
     el.style.display = 'flex';
     el.style.alignItems = 'center';
     el.style.justifyContent = 'center';
-    el.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    // Fix jitter: Only transition specific properties, avoid generic 'all' which includes transform
+    el.style.transition = 'width 0.3s, height 0.3s, background-color 0.3s, border-color 0.3s';
     el.style.cursor = 'pointer';
     el.style.zIndex = isSelected ? '1000' : (isSaved ? '500' : '1');
 
     const innerHtml = isSaved
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
-        : `<div style="width: 8px; height: 8px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
+        : `<div style="width: 10px; height: 10px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
 
-    const pointerHtml = isSelected ? `<div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid ${color};"></div>` : '';
-
-    el.innerHTML = innerHtml + pointerHtml;
+    el.innerHTML = innerHtml;
     return el;
 };
 
@@ -158,12 +157,10 @@ export const MapContainer = ({
                 el.style.zIndex = isSelected ? '1000' : (isSaved ? '500' : '1');
 
                 const innerHtml = isSaved
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
-                    : `<div style="width: 8px; height: 8px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
+                    : `<div style="width: 10px; height: 10px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
 
-                const pointerHtml = isSelected ? `<div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid ${color};"></div>` : '';
-
-                el.innerHTML = innerHtml + pointerHtml;
+                el.innerHTML = innerHtml;
             } else {
                 // Create new marker
                 const el = createMarkerElement(isSelected, isSaved);

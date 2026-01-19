@@ -71,6 +71,7 @@ export const shops = pgTable('shops', {
     id: serial('id').primaryKey(),
     catchtable_id: integer('catchtable_id'),
     catchtable_ref: text('catchtable_ref'),
+    google_place_id: text('google_place_id').unique(),
 
     name: text('name').notNull(),
     description: text('description'),

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Check, RotateCcw } from 'lucide-react';
+import { X, Loader2, Check, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
@@ -115,6 +115,15 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
         setEditingItem(null);
     };
 
+    const handleDeleteItem = (id: string) => {
+        const item = items.find(i => i.id === id);
+        if (item) {
+            URL.revokeObjectURL(item.previewUrl);
+            setItems(prev => prev.filter(i => i.id !== id));
+            setEditingItem(null);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -191,6 +200,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
                     item={editingItem}
                     onCancel={() => setEditingItem(null)}
                     onSave={handleSaveCrop}
+                    onDelete={() => handleDeleteItem(editingItem.id)}
                 />
             )}
         </div>
@@ -246,7 +256,7 @@ const DraggableItem = ({ item, index, onClick }: { item: ProcessingItem, index: 
     );
 };
 
-const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel: () => void, onSave: (id: string, blob: Blob) => void }) => {
+const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem, onCancel: () => void, onSave: (id: string, blob: Blob) => void, onDelete: () => void }) => {
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
@@ -405,12 +415,24 @@ const CropEditor = ({ item, onCancel, onSave }: { item: ProcessingItem, onCancel
                     />
                     <span className="text-xs text-white/50">확대</span>
                 </div>
-                <div className="text-center mt-4">
+                <div className="flex justify-between items-center mt-4 px-4">
+                    <button
+                        onClick={onCancel}
+                        className="text-white/50 flex flex-col items-center gap-1 text-[10px] hover:text-white transition-colors"
+                    >
+                        <X size={20} /> 취소
+                    </button>
                     <button
                         onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }}
-                        className="text-xs text-white/50 flex items-center justify-center gap-1 mx-auto hover:text-white transition-colors"
+                        className="text-white/50 flex flex-col items-center gap-1 text-[10px] hover:text-white transition-colors"
                     >
-                        <RotateCcw size={12} /> 초기화
+                        <RotateCcw size={20} /> 초기화
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        className="text-red-400/80 flex flex-col items-center gap-1 text-[10px] hover:text-red-400 transition-colors"
+                    >
+                        <Trash2 size={20} /> 삭제
                     </button>
                 </div>
             </div>

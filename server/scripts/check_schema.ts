@@ -1,19 +1,20 @@
 
-import { db } from '../db/index.js';
+import { db } from '../db/index';
 import { sql } from 'drizzle-orm';
 
-async function checkSchema() {
+async function main() {
+    console.log("Checking shops table columns...");
     try {
         const result = await db.execute(sql`
             SELECT column_name, data_type 
             FROM information_schema.columns 
-            WHERE table_name = 'content';
+            WHERE table_name = 'shops';
         `);
-        console.log("Columns in 'content' table:", result.rows);
-    } catch (e) {
-        console.error("Error checking schema:", e);
+        console.log("Columns:", result.rows);
+    } catch (error) {
+        console.error("Error checking columns:", error);
     }
     process.exit(0);
 }
 
-checkSchema();
+main();

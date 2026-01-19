@@ -172,155 +172,244 @@ export const ShopDetailScreen = () => {
 
     if (!shop) return <div className="min-h-screen bg-white flex items-center justify-center">Store not found</div>;
 
+    // Extract latest photos from reviews for the gallery
+    const latestPhotos = reviews
+        .flatMap(r => r.images || [])
+        .slice(0, 12);
+
     return (
-        <div className="h-full bg-white relative">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4">
-                <button onClick={handleBack} className="p-2 -ml-2 text-gray-800">
+        <div className="h-full bg-background relative flex flex-col w-full max-w-md mx-auto shadow-2xl overflow-hidden">
+            {/* Header (Transparent/Float) */}
+            <div className="absolute top-0 left-0 right-0 h-20 z-50 flex items-start pt-4 justify-between px-4 bg-gradient-to-b from-black/60 to-transparent">
+                <button
+                    onClick={handleBack}
+                    className="p-2 text-white hover:bg-white/10 rounded-full transition-colors active:scale-95"
+                >
                     <ArrowLeft size={24} />
                 </button>
                 <div className="flex items-center gap-2">
-                    <button className="p-2 -mr-2 text-gray-800">
+                    <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors active:scale-95">
                         <MoreHorizontal size={24} />
                     </button>
                 </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="h-full overflow-y-auto pb-20 no-scrollbar">
-                {/* Hero Image */}
-                <div className="w-full aspect-[4/3] bg-gray-200">
-                    {shop.thumbnail_img ? (
-                        <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">🏢</div>
-                    )}
-                </div>
+            {/* Fixed Hero Image (Constrained to container width via absolute since root is relative & full-height, but we want parallax effect?)
+               If we change 'fixed' to 'absolute', it scrolls WITH content unless we have a scroll container separate.
+               The current design has `flex-1 overflow-y-auto` for the sheet.
+               So if 'Hero' is 'absolute top-0' inside the root flex container, it will stay at top...
+               Wait, `flex-1 overflow-y-auto` is the scrollable part.
+               If Hero is OUTSIDE that scrollable part (it is), and absolute/fixed:
+               - Fixed: Stays on screen.
+               - Absolute: Stays at top of ROOT container.
 
-                {/* Shop Info */}
-                <div className="px-5 py-6">
-                    <div className="text-sm font-bold text-orange-600 mb-1">{shop.food_kind || 'Restaurant'}</div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{shop.name}</h1>
-                    <p className="text-gray-600 leading-relaxed mb-4 whitespace-pre-wrap">{shop.description}</p>
+               Since root container `h-full` matches viewport (or constrained height), `absolute` works like `fixed` relative to the app container!
+               So I should change `fixed` to `absolute`.
+            */}
+            <div className="absolute top-0 left-0 right-0 h-[28vh] z-0">
+                {shop.thumbnail_img ? (
+                    <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-4xl">🏢</div>
+                )}
+                {/* Gradient Overlay for text readability if needed, but we have a white sheet coming up */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
+            </div>
 
-                    <div className="flex items-start gap-2 text-gray-500 text-sm mb-6">
-                        <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                        <span>{shop.address_full}</span>
-                    </div>
+            {/* Scrollable Sheet Content */}
+            <div className="flex-1 overflow-y-auto z-10 no-scrollbar relative pt-[24vh]">
+                <div className="min-h-screen bg-background rounded-t-[32px] shadow-[-0_-4px_20px_rgba(0,0,0,0.1)] relative overflow-hidden">
 
-                    {/* Actions */}
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => {
-                                if (shop.catchtable_ref) {
-                                    window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                                } else {
-                                    alert("예약 링크가 없습니다.");
-                                }
-                            }}
-                            className="flex-1 h-12 rounded-xl bg-orange-600 text-white font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                        >
-                            <Calendar size={20} />
-                            {t('shop.reservation', 'Reservation')}
-                        </button>
-
-                        <motion.button
-                            onClick={handleBookmark}
-                            whileTap={{ scale: 0.95 }}
-                            className={cn(
-                                "flex-1 h-12 rounded-xl border flex items-center justify-center gap-2 font-bold transition-colors",
-                                shop.is_saved
-                                    ? "bg-orange-50 border-orange-200 text-orange-600"
-                                    : "bg-white border-gray-200 text-gray-800"
-                            )}
-                        >
-                            <Bookmark size={20} className={cn(shop.is_saved && "fill-orange-600")} />
-                            {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
-                        </motion.button>
-                    </div>
-                </div>
-
-                <div className="h-2 bg-gray-50" />
-
-                {/* Review List */}
-                <div className="pt-6">
-                    <div className="px-5 mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-bold">Reviews</h2>
-
-                        {/* Sort Dropdown */}
-                        <div className="relative" ref={dropdownRef}>
-                            <button
-                                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-[13px] font-bold text-gray-700 hover:bg-gray-100 transition-colors"
-                            >
-                                {sort === 'similar' ? 'Similar Taste' : 'Latest'}
-                                <ChevronDown size={14} className={cn("transition-transform duration-200", showSortDropdown && "rotate-180")} />
-                            </button>
-
-                            {showSortDropdown && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    className="absolute right-0 mt-2 w-36 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[60]"
-                                >
-                                    <button
-                                        onClick={() => {
-                                            setSort('similar');
-                                            setShowSortDropdown(false);
-                                        }}
-                                        className={cn(
-                                            "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
-                                            sort === 'similar' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
-                                        )}
-                                    >
-                                        Similar Taste
-                                        {sort === 'similar' && <Check size={14} />}
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setSort('popular');
-                                            setShowSortDropdown(false);
-                                        }}
-                                        className={cn(
-                                            "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
-                                            sort === 'popular' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
-                                        )}
-                                    >
-                                        Latest
-                                        {sort === 'popular' && <Check size={14} />}
-                                    </button>
-                                </motion.div>
-                            )}
+                    {/* Shop Info & Actions */}
+                    <div className="px-6 py-8">
+                        {/* Title Section */}
+                        <div className="flex justify-between items-start mb-2">
+                            <h1 className="text-2xl font-bold text-gray-900 flex-1 leading-tight mr-2">{shop.name}</h1>
                         </div>
-                    </div>
 
-                    <div className="flex flex-col gap-4">
-                        {reviews.map((review, idx) => (
-                            <ContentCard
-                                key={`${review.id}-${idx}`}
-                                user={review.user}
-                                content={{
-                                    ...review,
-                                    stats: {
-                                        likes: 0, // Mock stats for now as list endpoint might not have full stats yet
-                                        comments: 0
+                        {/* Rating/Kind */}
+                        <div className="flex items-center gap-2 mb-4 text-sm">
+                            {/* Mock Rating if unavailable */}
+                            <span className="flex items-center font-bold text-gray-900">
+                                ⭐ 4.5 <span className="text-gray-400 font-normal ml-1">({reviews.length})</span>
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="text-gray-500">{shop.food_kind || 'Restaurant'}</span>
+                        </div>
+
+                        {/* Actions Row */}
+                        <div className="flex gap-3 mb-4">
+                            <button
+                                onClick={() => {
+                                    if (shop.catchtable_ref) {
+                                        window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
+                                    } else {
+                                        alert("예약 링크가 없습니다.");
                                     }
                                 }}
-                            />
-                        ))}
+                                className="flex-1 h-12 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
+                            >
+                                <Calendar size={18} />
+                                {t('shop.reservation', 'Reservation')}
+                            </button>
 
-                        {reviews.length === 0 && !loadingReviews && (
-                            <div className="py-10 text-center text-gray-400 text-sm">
-                                No reviews yet.
+                            <button
+                                onClick={() => {
+                                    // Wants to go is basically save, but maybe different UI? 
+                                    // User req said "Reservation / Wants to go".
+                                    // We merged bookmark into title, so maybe this is "Takeout" or "Share"?
+                                    // Re-reading: "예약 / wants to go" buttons.
+                                    // So I should keep the second button as "Wants to go" (Save).
+                                    handleBookmark();
+                                }}
+                                className={cn(
+                                    "flex-1 h-12 rounded-2xl border flex items-center justify-center gap-2 font-bold transition-colors active:scale-[0.98]",
+                                    shop.is_saved
+                                        ? "bg-red-50 border-red-100 text-red-500"
+                                        : "bg-gray-50 border-gray-100 text-gray-900"
+                                )}
+                            >
+                                <Bookmark size={18} className={cn(shop.is_saved && "fill-current")} />
+                                {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
+                            </button>
+                        </div>
+
+                        {/* Write Button (Style from Profile) */}
+                        <button
+                            onClick={() => navigate(`/write?type=review&shop_id=${shop.id}`)}
+                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors mb-6"
+                        >
+                            <span className="font-semibold text-sm">기록하기</span>
+                        </button>
+
+                        <div className="mb-6" />
+
+                        {/* Address & Desc */}
+                        <div className="space-y-4">
+                            {shop.description && (
+                                <p className="text-gray-600 text-base whitespace-pre-wrap">
+                                    {shop.description}
+                                </p>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center flex-shrink-0">
+                                    <MapPin size={16} className="text-gray-300" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-gray-500">{shop.address_full}</div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />
+
+                    {/* Photos Section */}
+                    {latestPhotos.length > 0 && (
+                        <div className="py-6">
+                            <div className="px-6 mb-3 flex items-center justify-between">
+                                <h2 className="text-lg font-bold text-gray-900">Photos</h2>
+                                <button className="text-primary text-sm font-bold">See all</button>
+                            </div>
+                            <div className="overflow-x-auto no-scrollbar px-6">
+                                <div className="grid grid-rows-2 grid-flow-col gap-2 w-max">
+                                    {latestPhotos.map((img, i) => (
+                                        <div key={i} className="w-32 h-32 rounded-xl overflow-hidden bg-gray-100 border border-gray-100">
+                                            <img src={img} className="w-full h-full object-cover" loading="lazy" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {latestPhotos.length > 0 && <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />}
+
+                    {/* Review List */}
+                    <div className="py-6 min-h-[500px]">
+                        <div className="px-6 mb-4 flex items-center justify-between">
+                            <h2 className="text-lg font-bold">Reviews <span className="text-gray-400 ml-1">{reviews.length}</span></h2>
+
+                            {/* Sort Dropdown */}
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setShowSortDropdown(!showSortDropdown)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                                >
+                                    {sort === 'similar' ? 'Similar Taste' : 'Latest'}
+                                    <ChevronDown size={14} className={cn("transition-transform duration-200", showSortDropdown && "rotate-180")} />
+                                </button>
+
+                                {showSortDropdown && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        className="absolute right-0 mt-2 w-36 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[60]"
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                setSort('similar');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={cn(
+                                                "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
+                                                sort === 'similar' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            Similar Taste
+                                            {sort === 'similar' && <Check size={14} />}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('popular');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={cn(
+                                                "w-full px-4 py-2.5 text-left text-[13px] font-bold flex items-center justify-between",
+                                                sort === 'popular' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            Latest
+                                            {sort === 'popular' && <Check size={14} />}
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-8">
+                            {reviews.map((review, idx) => (
+                                <ContentCard
+                                    key={`${review.id}-${idx}`}
+                                    user={review.user}
+                                    content={{
+                                        ...review,
+                                        stats: {
+                                            likes: 0,
+                                            comments: 0
+                                        }
+                                    }}
+                                    hideShopInfo={true}
+                                />
+                            ))}
+
+                            {reviews.length === 0 && !loadingReviews && (
+                                <div className="py-10 text-center text-gray-400 text-sm">
+                                    No reviews yet.
+                                </div>
+                            )}
+                        </div>
+
+                        {hasMore && (
+                            <div ref={observerTarget} className="h-20 flex items-center justify-center">
+                                {loadingReviews && <div className="w-5 h-5 border-2 border-gray-300 border-t-black rounded-full animate-spin" />}
                             </div>
                         )}
                     </div>
 
-                    {hasMore && (
-                        <div ref={observerTarget} className="h-10 flex items-center justify-center">
-                            {loadingReviews && <div className="w-5 h-5 border-2 border-gray-300 border-t-orange-600 rounded-full animate-spin" />}
-                        </div>
-                    )}
+                    {/* Floating Reserve Button (appear on scroll if needed, but for now buttons are at top of sheet) */}
                 </div>
             </div>
         </div>

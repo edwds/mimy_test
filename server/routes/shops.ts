@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { shops, users_wantstogo, content, users } from "../db/schema.js";
+import { shops, users_wantstogo, content, users, users_ranking } from "../db/schema.js";
 import { ilike, or, eq, sql, and, desc, asc, not } from "drizzle-orm";
 import fs from 'fs';
 import path from 'path';
@@ -216,10 +216,12 @@ router.get("/:id/reviews", async (req, res) => {
                 taste_cluster: users.taste_cluster,
                 cluster_name: users.taste_cluster, // Map for ContentCard
                 taste_result: users.taste_result
-            }
+            },
+            rank: users_ranking.rank
         })
             .from(content)
             .innerJoin(users, eq(content.user_id, users.id))
+            .leftJoin(users_ranking, and(eq(users_ranking.user_id, content.user_id), eq(users_ranking.shop_id, shopId)))
             .where(and(
                 eq(content.type, 'review'),
                 eq(content.is_deleted, false),
@@ -290,6 +292,10 @@ router.get("/:id/reviews", async (req, res) => {
         const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
         const clusterMap = new Map(clusterData.map(c => [c.cluster_id, c.cluster_name]));
 
+        // Fetch Shop Info for POI enrichment
+        const shopInfo = await db.select().from(shops).where(eq(shops.id, shopId)).limit(1);
+        const currentShop = shopInfo[0] || { name: 'Unknown', address_full: '', thumbnail_img: '' };
+
         const result = reviews.map(r => ({
             id: r.id,
             user: {
@@ -300,14 +306,185 @@ router.get("/:id/reviews", async (req, res) => {
             images: r.img,
             created_at: r.created_at,
             review_prop: r.review_prop,
+            poi: {
+                shop_id: currentShop.id,
+                shop_name: currentShop.name,
+                shop_address: currentShop.address_full,
+                thumbnail_img: currentShop.thumbnail_img,
+                rank: r.rank,
+                satisfaction: (r.review_prop as any)?.satisfaction
+            },
             keyword: r.keyword,
         }));
 
         res.json(result);
 
+
+
     } catch (error) {
         console.error("Shop reviews error:", error);
         res.status(500).json({ error: "Failed to fetch shop reviews" });
+    }
+});
+
+const ALLOWED_GOOGLE_TYPES = [
+    "acai_shop", "afghani_restaurant", "african_restaurant", "american_restaurant", "asian_restaurant",
+    "bagel_shop", "bakery", "bar", "bar_and_grill", "barbecue_restaurant", "brazilian_restaurant",
+    "breakfast_restaurant", "brunch_restaurant", "buffet_restaurant", "cafe", "cafeteria", "candy_store",
+    "cat_cafe", "chinese_restaurant", "chocolate_factory", "chocolate_shop", "coffee_shop", "confectionery",
+    "deli", "dessert_restaurant", "dessert_shop", "diner", "dog_cafe", "donut_shop", "fast_food_restaurant",
+    "fine_dining_restaurant", "food_court", "french_restaurant", "greek_restaurant", "hamburger_restaurant",
+    "ice_cream_shop", "indian_restaurant", "indonesian_restaurant", "italian_restaurant", "japanese_restaurant",
+    "juice_shop", "korean_restaurant", "lebanese_restaurant", "meal_delivery", "meal_takeaway",
+    "mediterranean_restaurant", "mexican_restaurant", "middle_eastern_restaurant", "pizza_restaurant",
+    "pub", "ramen_restaurant", "restaurant", "sandwich_shop", "seafood_restaurant", "spanish_restaurant",
+    "steak_house", "sushi_restaurant", "tea_house", "thai_restaurant", "turkish_restaurant",
+    "vegan_restaurant", "vegetarian_restaurant", "vietnamese_restaurant", "wine_bar"
+];
+
+// GET /api/shops/search/google?q=query&region=optional
+router.get("/search/google", async (req, res) => {
+    try {
+        const { q, region } = req.query;
+        if (!q || typeof q !== 'string') {
+            return res.json([]);
+        }
+
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            console.error("GOOGLE_MAPS_API_KEY is missing");
+            return res.status(500).json({ error: "Service configuration error" });
+        }
+
+        // Construct Query: "Query [Region]"
+        const textQuery = region ? `${q} ${region}` : q;
+        console.log(`[GoogleSearch] Query: "${textQuery}"`);
+
+        const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.types'
+            },
+            body: JSON.stringify({
+                textQuery: textQuery,
+                languageCode: 'ko'
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google API error: ${response.status} ${errText}`);
+        }
+
+        const data = await response.json();
+
+        // Filter by types
+        const rawResults = data.places || [];
+        const filteredResults = rawResults.filter((place: any) => {
+            if (!place.types) return false;
+            return place.types.some((t: string) => ALLOWED_GOOGLE_TYPES.includes(t));
+        });
+
+        const results = filteredResults.map((place: any) => {
+            // Find specific type for food_kind
+            const matchedType = place.types.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+
+            // Construct thumbnail URL
+            let thumb = null;
+            if (place.photos && place.photos.length > 0) {
+                // New API uses photo names like "places/PLACE_ID/photos/PHOTO_ID"
+                // Need to fetch using "https://places.googleapis.com/v1/{name}/media?key=KEY&maxHeightPx=400&maxWidthPx=400"
+                // But wait, the previous implementation used the old Places API photo reference.
+                // New API returns `name` resource string for photos.
+                thumb = `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
+            }
+
+            return {
+                google_place_id: place.id, // New API uses 'id', not 'place_id' (but they allow both references usually? Actually 'id' is standard now)
+                name: place.displayName?.text || place.formattedAddress,
+                formatted_address: place.formattedAddress,
+                location: { lat: place.location?.latitude, lng: place.location?.longitude },
+                rating: place.rating,
+                user_ratings_total: place.userRatingCount,
+                thumbnail_img: thumb,
+                food_kind: matchedType,
+                description: place.generativeSummary?.overview?.text?.text, // New API structure
+                photos: place.photos // Pass through for import logic
+            };
+        });
+
+        res.json(results);
+    } catch (error) {
+        console.error("Google search error:", error);
+        res.status(500).json({ error: "Failed to search Google Places" });
+    }
+});
+
+// POST /api/shops/import-google
+router.post("/import-google", async (req, res) => {
+    try {
+        console.log("[ImportGoogle] Received request body:", JSON.stringify(req.body, null, 2));
+
+        const place = req.body;
+        if (!place || !place.google_place_id || !place.name) {
+            console.error("[ImportGoogle] Invalid payload");
+            return res.status(400).json({ error: "Invalid place data" });
+        }
+
+        // Check if exists
+        console.log("[ImportGoogle] Checking existing shop for id:", place.google_place_id);
+        const existing = await db.select().from(shops).where(eq(shops.google_place_id, place.google_place_id)).limit(1);
+        if (existing.length > 0) {
+            console.log("[ImportGoogle] Found existing shop:", existing[0].id);
+            return res.json(existing[0]);
+        }
+
+        // Data Preparation
+        let thumbnail_img = place.thumbnail_img; // Already constructed in search
+
+        // Parse address region
+        let address_region = null;
+        if (place.formatted_address) {
+            const parts = place.formatted_address.split(" ");
+            address_region = parts.slice(0, 3).join(" ");
+        }
+
+        // Values from search result
+        const description = place.description || null;
+        const food_kind = place.food_kind || null;
+
+        console.log("[ImportGoogle] Inserting new shop...");
+        const newShopId = await db.insert(shops).values({
+            name: place.name,
+            google_place_id: place.google_place_id,
+            address_full: place.formatted_address,
+            address_region: address_region,
+            // New Places API returns location as { latitude, longitude } mapped to { lat, lng } in search
+            lat: place.location?.lat,
+            lon: place.location?.lng,
+            thumbnail_img: thumbnail_img,
+            description: description, // Insert description from generativeSummary
+            food_kind: food_kind, // Insert mapped food_kind
+            status: 2, // Open
+            country_code: 'KR',
+            visibility: true
+        }).returning({ id: shops.id });
+
+        console.log("[ImportGoogle] Insert response:", JSON.stringify(newShopId));
+
+        if (!newShopId || newShopId.length === 0) {
+            throw new Error("Failed to insert shop (no ID returned)");
+        }
+
+        const created = await db.select().from(shops).where(eq(shops.id, newShopId[0].id)).limit(1);
+        console.log("[ImportGoogle] Fetched created shop:", created[0]);
+        res.json(created[0]);
+
+    } catch (error) {
+        console.error("Import Google Shop error details:", error);
+        res.status(500).json({ error: "Failed to import shop" });
     }
 });
 

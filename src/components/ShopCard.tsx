@@ -43,7 +43,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             onClick={handleCardClick}
         >
             {/* Image Area */}
-            <div className="relative h-48 bg-muted">
+            <div className="relative h-36 bg-muted">
                 {shop.thumbnail_img ? (
                     <img
                         src={shop.thumbnail_img}
@@ -69,9 +69,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                            {shop.description || t('discovery.shop_card.default_desc')}
-                        </p>
+                        {shop.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                {shop.description}
+                            </p>
+                        )}
                     </div>
                 </div>
 

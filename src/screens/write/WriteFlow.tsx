@@ -48,7 +48,7 @@ export const WriteFlow = () => {
         setStep('WRITE_CONTENT');
     };
 
-    const handleContentNext = async (contentData: { text: string; images: string[]; companions?: number[]; keywords?: string[] }) => {
+    const handleContentNext = async (contentData: { text: string; images: string[]; companions?: number[]; keywords?: string[]; visitDate?: string }) => {
         try {
             if (!currentUserId) {
                 alert("Login required");
@@ -64,7 +64,7 @@ export const WriteFlow = () => {
                 video: [],
                 review_prop: type === 'review' ? {
                     shop_id: selectedShop.id,
-                    visit_date: basicInfo?.visitDate || new Date().toISOString().split('T')[0], // Default date if missing
+                    visit_date: contentData.visitDate || basicInfo?.visitDate || new Date().toISOString().split('T')[0], // Priority: Content Step -> Basic -> Today
                     companions: contentData.companions || [], // Use from content step
                     satisfaction: basicInfo?.satisfaction
                 } : undefined,
