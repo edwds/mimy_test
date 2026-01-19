@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check } from 'lucide-react';
-import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
 import { cn } from '@/lib/utils';
@@ -172,7 +172,6 @@ export const ShopDetailScreen = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll({ container: scrollRef });
     const scale = useTransform(scrollY, [-300, 0], [1.5, 1]);
-    const opacity = useTransform(scrollY, [-100, 0, 200], [1, 1, 0]);
 
     // Header Transitions (Trigger earlier: 40px ~ 120px)
     const headerOpacity = useTransform(scrollY, [40, 120], [0, 1]);
