@@ -3,7 +3,7 @@ import { X, Loader2, Check, RotateCcw, Trash2, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
-import { API_BASE_URL } from '@/lib/api';
+
 import { Slider } from '@/components/ui/slider';
 
 interface ImageEditModalProps {

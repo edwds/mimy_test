@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, MapPin, Utensils, Smile, Meh, Frown, Users, UserPlus, Calendar } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ interface UploadingImage {
     error?: boolean;
 }
 
-const UploadingThumbnail = ({ file, progress, error }: { file: File, progress: number, error?: boolean }) => {
+const UploadingThumbnail = ({ file, error }: { file: File, progress: number, error?: boolean }) => {
     const [preview, setPreview] = useState<string>('');
 
     React.useEffect(() => {
@@ -174,14 +174,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         }
     };
 
-    const getSatisfactionIcon = () => {
-        switch (satisfaction) {
-            case 'good': return <Smile className="w-5 h-5 text-orange-600" />;
-            case 'ok': return <Meh className="w-5 h-5 text-gray-500" />;
-            case 'bad': return <Frown className="w-5 h-5 text-gray-400" />;
-            default: return null;
-        }
-    };
+
 
     const getSatisfactionLabel = () => {
         switch (satisfaction) {
