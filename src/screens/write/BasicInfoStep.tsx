@@ -50,48 +50,28 @@ export const BasicInfoStep: React.FC<Props> = ({ shopName, onNext, onBack }) => 
                 </h1>
 
                 {/* Satisfaction */}
-                <div className="flex flex-col gap-4 w-full max-w-[320px] mx-auto">
+                <div className="flex flex-col gap-3 w-full max-w-[320px] mx-auto">
                     {[
-                        {
-                            value: 'good',
-                            icon: Smile,
-                            label: t('write.basic.good'),
-                            gradient: 'bg-gradient-to-br from-teal-400 to-emerald-500',
-                            activeScale: 'scale-[1.02]',
-                            shadow: 'shadow-teal-500/30'
-                        },
-                        {
-                            value: 'ok',
-                            icon: Meh,
-                            label: t('write.basic.ok'),
-                            gradient: 'bg-gradient-to-br from-amber-400 to-orange-500',
-                            activeScale: 'scale-[1.02]',
-                            shadow: 'shadow-orange-500/30'
-                        },
-                        {
-                            value: 'bad',
-                            icon: Frown,
-                            label: t('write.basic.bad'),
-                            gradient: 'bg-gradient-to-br from-rose-400 to-pink-500',
-                            activeScale: 'scale-[1.02]',
-                            shadow: 'shadow-rose-500/30'
-                        },
+                        { value: 'good', icon: Smile, label: t('write.basic.good') },
+                        { value: 'ok', icon: Meh, label: t('write.basic.ok') },
+                        { value: 'bad', icon: Frown, label: t('write.basic.bad') },
                     ].map((item) => (
                         <button
                             key={item.value}
                             onClick={() => handleSelect(item.value as any)}
-                            className="flex items-center justify-between p-6 rounded-[28px] transition-all duration-300 w-full relative overflow-hidden group border-2 border-transparent hover:scale-[1.02] active:scale-95"
+                            className="flex items-center justify-between p-5 rounded-2xl bg-white border border-border hover:border-orange-500/50 hover:bg-orange-50/50 transition-all active:scale-95 group shadow-sm"
                         >
-                            {/* Background */}
-                            <div className={cn(
-                                "absolute inset-0 transition-opacity duration-300 opacity-90 group-hover:opacity-100",
-                                item.gradient
-                            )} />
-
-                            <span className="relative z-10 text-white font-bold text-xl drop-shadow-sm">{item.label}</span>
-                            <div className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center">
-                                <item.icon className="w-7 h-7 text-white" strokeWidth={2.5} />
-                            </div>
+                            <span className={cn(
+                                "font-bold text-lg",
+                                item.value === 'good' ? "text-orange-600" : "text-gray-600"
+                            )}>{item.label}</span>
+                            <item.icon
+                                className={cn(
+                                    "w-8 h-8",
+                                    item.value === 'good' ? "text-orange-600" : "text-gray-400"
+                                )}
+                                strokeWidth={2}
+                            />
                         </button>
                     ))}
                 </div>

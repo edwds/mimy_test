@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Check, RotateCcw, Trash2 } from 'lucide-react';
+import { X, Loader2, Check, RotateCcw, Trash2, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
@@ -10,7 +10,7 @@ interface ImageEditModalProps {
     files: File[];
     isOpen: boolean;
     onClose: () => void;
-    onUploadComplete: (urls: string[]) => void;
+    onEditingComplete: (files: File[]) => void;
 }
 
 interface ProcessingItem {
@@ -21,14 +21,37 @@ interface ProcessingItem {
     status: 'pending' | 'processing' | 'ready' | 'uploading' | 'done' | 'error';
 }
 
-export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: ImageEditModalProps) => {
+export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: ImageEditModalProps) => {
     const [items, setItems] = useState<ProcessingItem[]>([]);
     const [isProcessing, setIsProcessing] = useState(true);
-    const [isUploading, setIsUploading] = useState(false);
-    const [progress, setProgress] = useState(0);
 
     // Edit State
     const [editingItem, setEditingItem] = useState<ProcessingItem | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const containerRef = useRef<HTMLUListElement>(null);
+    const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    const moveItem = (index: number, direction: number) => {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= items.length) return;
+
+        const newItems = [...items];
+        const [movedItem] = newItems.splice(index, 1);
+        newItems.splice(newIndex, 0, movedItem);
+        setItems(newItems);
+
+        // Ensure current item is selected
+        setSelectedId(movedItem.id);
+
+        // Scroll to the moved item
+        // Scroll to the moved item
+        setTimeout(() => {
+            const el = itemRefs.current.get(movedItem.id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 250);
+    };
 
     // 1. Initial Processing
     useEffect(() => {
@@ -58,6 +81,8 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
         } else {
             setItems([]);
             setEditingItem(null);
+            setSelectedId(null);
+            itemRefs.current.clear();
         }
     }, [isOpen, files]);
 
@@ -68,37 +93,15 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
         };
     }, []);
 
-    const handleConfirmUpload = async () => {
-        setIsUploading(true);
-        const uploadedUrls: string[] = [];
-        let completed = 0;
-
-        for (const item of items) {
-            if (!item.blob) continue;
-
-            try {
-                const formData = new FormData();
-                formData.append('file', item.blob, item.file.name);
-
-                const response = await fetch(`${API_BASE_URL}/api/upload`, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    uploadedUrls.push(data.url);
-                }
-            } catch (e) {
-                console.error("Upload error", e);
+    const handleConfirm = () => {
+        const finalFiles: File[] = items.map(item => {
+            if (item.blob) {
+                return new File([item.blob], item.file.name, { type: item.blob.type });
             }
+            return item.file;
+        });
 
-            completed++;
-            setProgress((completed / items.length) * 100);
-        }
-
-        setIsUploading(false);
-        onUploadComplete(uploadedUrls);
+        onEditingComplete(finalFiles);
         onClose();
     };
 
@@ -121,6 +124,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
             URL.revokeObjectURL(item.previewUrl);
             setItems(prev => prev.filter(i => i.id !== id));
             setEditingItem(null);
+            itemRefs.current.delete(id);
         }
     };
 
@@ -137,59 +141,57 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
                         </button>
                         <div className="font-bold text-lg">사진 편집 ({items.length})</div>
                         <Button
-                            onClick={handleConfirmUpload}
-                            disabled={isProcessing || isUploading || items.length === 0}
+                            onClick={handleConfirm}
+                            disabled={isProcessing || items.length === 0}
                             className="bg-primary text-white hover:bg-primary/90 h-9 px-4 rounded-full font-bold"
                         >
-                            {isUploading ? "업로드 중..." : "완료"}
+                            완료
                         </Button>
                     </div>
 
-                    <div className="flex-1 overflow-hidden relative flex flex-col items-center justify-center p-4 bg-[#111]">
+                    <div className="flex-1 overflow-hidden relative flex flex-col items-center justify-center bg-[#111]">
                         {isProcessing ? (
                             <div className="flex flex-col items-center gap-4 text-white/80">
                                 <Loader2 className="w-10 h-10 animate-spin" />
                                 <p>사진 불러오는 중...</p>
                             </div>
                         ) : (
-                            <div className="w-full flex flex-col items-center gap-6 h-full justify-center">
-                                <div className="text-white/50 text-sm mb-2 text-center">
-                                    사진을 꾹 눌러서 순서를 변경하거나<br />터치해서 편집하세요
+                            <div className="w-full flex flex-col items-center h-full justify-center">
+                                <div className="text-white/50 text-sm text-center">
+                                    사진을 선택해서 편집하거나 순서를 변경하세요
                                 </div>
 
                                 <Reorder.Group
+                                    ref={containerRef}
                                     axis="x"
                                     values={items}
                                     onReorder={setItems}
-                                    className="flex gap-4 overflow-x-auto p-4 w-full min-h-[320px] items-center no-scrollbar touch-pan-x"
-                                    style={{ scrollBehavior: 'smooth' }}
+                                    className="flex gap-4 overflow-x-auto p-6 w-full min-h-[320px] items-center no-scrollbar touch-pan-x"
                                 >
                                     {items.map((item, index) => (
                                         <DraggableItem
                                             key={item.id}
+                                            domRef={(el) => {
+                                                if (el) itemRefs.current.set(item.id, el);
+                                                else itemRefs.current.delete(item.id);
+                                            }}
                                             item={item}
                                             index={index}
-                                            onClick={() => setEditingItem(item)}
+                                            isSelected={selectedId === item.id}
+                                            onSelect={() => setSelectedId(item.id)}
+                                            onEdit={() => setEditingItem(item)}
+                                            onDelete={() => handleDeleteItem(item.id)}
+                                            onMoveLeft={() => moveItem(index, -1)}
+                                            onMoveRight={() => moveItem(index, 1)}
+                                            isFirst={index === 0}
+                                            isLast={index === items.length - 1}
                                         />
                                     ))}
                                 </Reorder.Group>
                             </div>
                         )}
 
-                        {/* Progress Overlay */}
-                        {isUploading && (
-                            <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
-                                <div className="w-64 space-y-4 text-center">
-                                    <div className="text-white font-bold text-xl">업로드 중... {Math.round(progress)}%</div>
-                                    <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-primary transition-all duration-300"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+
                     </div>
                 </>
             )}
@@ -209,52 +211,99 @@ export const ImageEditModal = ({ files, isOpen, onClose, onUploadComplete }: Ima
 
 // --- Sub Components ---
 
-const DraggableItem = ({ item, index, onClick }: { item: ProcessingItem, index: number, onClick: () => void }) => {
+const DraggableItem = ({
+    item,
+    index,
+    domRef,
+    isSelected,
+    onSelect,
+    onEdit,
+    onDelete,
+    onMoveLeft,
+    onMoveRight,
+    isFirst,
+    isLast
+}: {
+    item: ProcessingItem,
+    index: number,
+    domRef?: (element: any) => void,
+    isSelected: boolean,
+    onSelect: () => void,
+    onEdit: () => void,
+    onDelete: () => void,
+    onMoveLeft: () => void,
+    onMoveRight: () => void,
+    isFirst: boolean,
+    isLast: boolean
+}) => {
     const controls = useDragControls();
-    const [isDragging, setIsDragging] = useState(false);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    const handlePointerDown = (e: React.PointerEvent) => {
-        // Start long press timer
-        timeoutRef.current = setTimeout(() => {
-            setIsDragging(true);
-            controls.start(e);
-            if (navigator.vibrate) navigator.vibrate(50);
-        }, 300); // 300ms long press
-    };
-
-    const handlePointerUp = () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setIsDragging(false);
-    };
 
     return (
         <Reorder.Item
             value={item}
             dragListener={false} // Disable auto drag to allow scroll
             dragControls={controls}
-            className={`relative flex-shrink-0 w-[240px] h-[240px] rounded-xl overflow-hidden shadow-2xl border border-white/10 transition-transform ${isDragging ? 'scale-105 ring-2 ring-primary z-50' : ''}`}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            onClick={() => {
-                // Only trigger click if not dragging
-                if (!isDragging) onClick();
-            }}
+            className={`relative flex-shrink-0 w-[240px] h-[240px] rounded-xl overflow-hidden shadow-2xl border ${isSelected ? 'border-primary ring-2 ring-primary z-10' : 'border-white/10'}`}
+            onClick={onSelect}
             style={{ touchAction: 'none' }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
         >
-            <img src={item.previewUrl} alt="preview" className="w-full h-full object-cover pointer-events-none select-none" />
-            <div className="absolute top-2 right-2 bg-black/50 rounded-full w-6 h-6 flex items-center justify-center text-xs text-white">
-                {index + 1}
-            </div>
-            {isDragging && (
-                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center pointer-events-none">
-                    <div className="text-white font-bold drop-shadow-md">이동 중</div>
+            <div ref={domRef} className="w-full h-full relative">
+                <img src={item.previewUrl} alt="preview" className="w-full h-full object-cover pointer-events-none select-none opacity-80" />
+
+                {/* Index Badge */}
+                <div className="absolute top-2 left-2 bg-black/50 rounded-full w-6 h-6 flex items-center justify-center text-xs text-white">
+                    {index + 1}
                 </div>
-            )}
+
+                {/* Delete Button (Top Right) */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-sm transition-colors"
+                >
+                    <X size={16} />
+                </button>
+
+                {/* Center Edit Button & Overlay (Visible when selected) */}
+                {isSelected && (
+                    <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center gap-4 pointer-events-none">
+                        {/* Edit Button - Enable pointer events */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                            className="pointer-events-auto bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 border border-white/20 transition-all active:scale-95"
+                        >
+                            <Crop size={16} />
+                            편집
+                        </button>
+
+                    </div>
+                )}
+
+                {/* Reorder Buttons (Bottom) - Always visible or only selected? User said "image bottom < > buttons". Let's make them always visible or partially visible */}
+                <div className="absolute bottom-0 left-0 right-0 p-2 flex justify-between items-end bg-gradient-to-t from-black/80 to-transparent pt-8">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
+                        disabled={isFirst}
+                        className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
+                        disabled={isLast}
+                        className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+
+            </div>
         </Reorder.Item>
     );
 };
+
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem, onCancel: () => void, onSave: (id: string, blob: Blob) => void, onDelete: () => void }) => {
     const [scale, setScale] = useState(1);

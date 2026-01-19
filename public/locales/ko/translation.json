@@ -94,7 +94,8 @@
             "placeholder_post": "자유롭게 이야기를 나눠보세요.",
             "photo_label": "사진",
             "add": "추가",
-            "done": "완료"
+            "done": "완료",
+            "and_others": "외 {{count}}명"
         },
         "ranking": {
             "title": "어떤 곳이 더 좋았나요?",

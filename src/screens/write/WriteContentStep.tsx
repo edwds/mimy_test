@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
 import { ImageEditModal } from './ImageEditModal';
 import { UserSelectModal } from './UserSelectModal';
+import exifr from 'exifr';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[]; visitDate?: string }) => void;
@@ -17,13 +19,48 @@ interface Props {
     satisfaction?: string;
 }
 
+interface UploadingImage {
+    id: string;
+    file: File;
+    progress: number;
+    url?: string;
+    error?: boolean;
+}
+
+const UploadingThumbnail = ({ file, progress, error }: { file: File, progress: number, error?: boolean }) => {
+    const [preview, setPreview] = useState<string>('');
+
+    React.useEffect(() => {
+        const url = URL.createObjectURL(file);
+        setPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
+
+    if (error) return (
+        <div className="w-full h-full flex items-center justify-center bg-red-100">
+            <X className="w-6 h-6 text-red-500" />
+        </div>
+    );
+
+    return (
+        <div className="relative w-full h-full">
+            {preview && <img src={preview} alt="uploading" className="w-full h-full object-cover opacity-60" />}
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/20 backdrop-blur-[1px]">
+                <div className="w-6 h-6 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
+            </div>
+        </div>
+    );
+};
+
 export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, satisfaction }) => {
     const { t } = useTranslation();
     const [text, setText] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
     const [keywords, setKeywords] = useState<string[]>([]);
     const [keywordInput, setKeywordInput] = useState('');
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isDateManuallySet, setIsDateManuallySet] = useState(false);
 
     // User Tagging State
     const [isUserSelectOpen, setIsUserSelectOpen] = useState(false);
@@ -34,18 +71,88 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
-        const files = Array.from(e.target.files);
-        setPendingFiles(files);
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+        setPendingFiles(Array.from(e.target.files));
         setIsEditModalOpen(true);
         e.target.value = '';
     };
 
-    const handleUploadComplete = (newUrls: string[]) => {
-        setImages(prev => [...prev, ...newUrls]);
-        setPendingFiles([]);
+    const handleEditingComplete = (files: File[]) => {
         setIsEditModalOpen(false);
+        setPendingFiles([]);
+
+        // Auto-set date from photo if not manually set
+        if (!isDateManuallySet && files.length > 0) {
+            const file = files[0];
+            // Try extracting EXIF date
+            exifr.parse(file).then(output => {
+                const exifDate = output?.DateTimeOriginal || output?.CreateDate;
+                if (exifDate) {
+                    const date = new Date(exifDate);
+                    const localDate = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+                    setVisitDate(localDate);
+                } else {
+                    // Fallback to lastModified if no EXIF date
+                    const fileDate = new Date(file.lastModified);
+                    const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
+                    setVisitDate(localDate);
+                }
+            }).catch(() => {
+                // Fallback on error
+                const fileDate = new Date(file.lastModified);
+                const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
+                setVisitDate(localDate);
+            });
+        }
+
+        uploadFiles(files);
+    };
+
+    const uploadFiles = async (files: File[]) => {
+        const newUploads = files.map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file,
+            progress: 0
+        }));
+        setUploadingImages(prev => [...prev, ...newUploads]);
+
+        newUploads.forEach(upload => {
+            const formData = new FormData();
+            formData.append('file', upload.file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE_URL}/api/upload`);
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = (e.loaded / e.total) * 100;
+                    setUploadingImages(prev => prev.map(u =>
+                        u.id === upload.id ? { ...u, progress: percent } : u
+                    ));
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.response);
+                        setImages(prev => [...prev, data.url]);
+                        setUploadingImages(prev => prev.filter(u => u.id !== upload.id));
+                    } catch (e) {
+                        setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+                    }
+                } else {
+                    setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+                }
+            };
+
+            xhr.onerror = () => {
+                setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+            };
+
+            xhr.send(formData);
+        });
     };
 
     const handleSubmit = () => {
@@ -69,9 +176,9 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
     const getSatisfactionIcon = () => {
         switch (satisfaction) {
-            case 'good': return <Smile className="w-5 h-5 text-teal-500" />;
-            case 'ok': return <Meh className="w-5 h-5 text-orange-500" />;
-            case 'bad': return <Frown className="w-5 h-5 text-rose-500" />;
+            case 'good': return <Smile className="w-5 h-5 text-orange-600" />;
+            case 'ok': return <Meh className="w-5 h-5 text-gray-500" />;
+            case 'bad': return <Frown className="w-5 h-5 text-gray-400" />;
             default: return null;
         }
     };
@@ -91,7 +198,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 files={pendingFiles}
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
-                onUploadComplete={handleUploadComplete}
+                onEditingComplete={handleEditingComplete}
             />
 
             <UserSelectModal
@@ -115,7 +222,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </div>
                 <Button
                     onClick={handleSubmit}
-                    disabled={mode === 'review' ? (!text.trim() && images.length === 0) : (!text.trim())}
+                    disabled={uploadingImages.length > 0 || (mode === 'review' ? (!text.trim() && images.length === 0) : (!text.trim()))}
                     className={cn(
                         "rounded-full px-4 font-bold transition-all",
                         (mode === 'review' ? (text.trim() || images.length > 0) : text.trim())
@@ -135,27 +242,37 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     {mode === 'review' && shop && (
                         <div className="space-y-6">
                             {/* POI Card */}
-                            <div className="flex gap-4 p-4 rounded-2xl bg-card border border-border shadow-sm">
-                                <div className="w-20 h-20 rounded-xl bg-muted flex-shrink-0 overflow-hidden relative">
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-border/50">
+                                <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
                                     {shop.thumbnail_img ? (
                                         <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                            <Utensils className="w-8 h-8 opacity-50" />
-                                        </div>
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
                                     )}
                                 </div>
-                                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                    <h3 className="font-bold text-lg truncate mb-1">{shop.name}</h3>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-lg">
-                                            {getSatisfactionIcon()}
-                                            <span className="text-xs font-bold">{getSatisfactionLabel()}</span>
-                                        </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-baseline gap-2 mb-1 min-w-0">
+                                        <h3 className="font-bold text-sm leading-none text-gray-900 truncate">
+                                            {shop.name}
+                                        </h3>
+
+                                        <span
+                                            className={cn(
+                                                "inline-flex items-center h-5 px-2 rounded-md text-xs font-bold leading-none border shadow-sm whitespace-nowrap",
+                                                satisfaction === "good"
+                                                    ? "bg-orange-50 border-orange-200 text-orange-600"
+                                                    : "bg-gray-50 border-gray-200 text-gray-600"
+                                            )}
+                                        >
+                                            {getSatisfactionLabel()}
+                                        </span>
+
+                                        <span className="text-xs leading-none text-gray-500 truncate">
+                                            {shop.category}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <MapPin className="w-3 h-3" />
-                                        <span className="truncate">{shop.address_region || shop.address_full}</span>
+                                    <div className="text-xs text-gray-500 truncate">
+                                        {shop.address_region || shop.address_full}
                                     </div>
                                 </div>
                             </div>
@@ -169,7 +286,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             <div className="flex flex-wrap gap-2 mb-2">
                                 {keywords.map((k, i) => (
                                     <span key={i} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-bold flex items-center gap-1">
-                                        #{k}
+                                        {k}
                                         <button onClick={() => setKeywords(keywords.filter((_, idx) => idx !== i))} className="hover:text-primary/70">
                                             <X className="w-3 h-3" />
                                         </button>
@@ -186,6 +303,59 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         </div>
                     )}
 
+                    {/* Mode Specific: Review - Metadata (Date & Companions) */}
+                    {mode === 'review' && (
+                        <div className="flex gap-3">
+                            {/* Visit Date */}
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold text-muted-foreground mb-1.5 ml-1">
+                                    {t('write.content.visit_date', 'Visit Date')}
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                        <Calendar className="w-4 h-4" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={visitDate}
+                                        onChange={(e) => {
+                                            setVisitDate(e.target.value);
+                                            setIsDateManuallySet(true);
+                                        }}
+                                        className={cn(
+                                            "w-full bg-muted/30 h-10 pl-9 pr-3 rounded-xl text-sm font-medium focus:bg-background border border-transparent focus:border-primary transition-colors outline-none cursor-pointer",
+                                            !isDateManuallySet && "text-muted-foreground"
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Companions */}
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold text-muted-foreground mb-1.5 ml-1">
+                                    {t('write.content.with_who', 'With who?')}
+                                </label>
+                                <button
+                                    onClick={() => setIsUserSelectOpen(true)}
+                                    className="w-full h-10 bg-muted/30 rounded-xl px-3 flex items-center gap-2 text-sm border border-transparent hover:bg-muted/50 border-dashed hover:border-primary/50 transition-all font-medium text-left"
+                                >
+                                    <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <div className="flex-1 truncate">
+                                        {selectedUsers.length > 0 ? (
+                                            <span className="text-foreground">
+                                                {selectedUsers[0].nickname}
+                                                {selectedUsers.length > 1 && ` +${selectedUsers.length - 1}`}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground/70">{t('write.content.tag_friends', 'Tag friends')}</span>
+                                        )}
+                                    </div>
+                                    <UserPlus className="w-3 h-3 text-muted-foreground shrink-0" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Common: Main Text */}
                     <div className="space-y-2">
                         <Textarea
@@ -198,84 +368,19 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         />
                     </div>
 
-                    {/* Use Review: Visit Date & Mentions */}
-                    {mode === 'review' && (
-                        <div className="space-y-6 pt-4 border-t border-border/50">
-                            {/* Visit Date */}
-                            <div className="space-y-2">
-                                <Label className="text-base font-semibold flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    {t('write.content.visit_date', 'Visit Date')}
-                                </Label>
-                                <input
-                                    type="date"
-                                    value={visitDate}
-                                    onChange={(e) => setVisitDate(e.target.value)}
-                                    className="w-full bg-muted/30 border border-transparent rounded-xl px-4 py-3 text-base focus:bg-background focus:border-primary transition-colors outline-none"
-                                />
-                            </div>
 
-                            {/* Companions */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-base text-foreground font-semibold mb-2">
-                                    <span className="flex items-center gap-2">
-                                        <Users className="w-4 h-4" />
-                                        With who?
-                                    </span>
-                                    {selectedUsers.length > 0 && (
-                                        <span className="text-sm font-normal text-muted-foreground">
-                                            {selectedUsers.length} people
-                                        </span>
-                                    )}
-                                </div>
-
-                                {selectedUsers.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedUsers.map(user => (
-                                            <div key={user.id} className="flex items-center gap-2 bg-muted/50 pl-1 pr-3 py-1 rounded-full border border-border">
-                                                <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
-                                                    {user.profile_image ? (
-                                                        <img src={user.profile_image} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">
-                                                            {user.nickname[0]}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <span className="text-sm font-medium">{user.nickname}</span>
-                                            </div>
-                                        ))}
-                                        <button
-                                            onClick={() => setIsUserSelectOpen(true)}
-                                            className="w-8 h-8 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                                        >
-                                            <UserPlus className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => setIsUserSelectOpen(true)}
-                                        className="w-full h-12 rounded-xl bg-muted/30 hover:bg-muted/50 border border-transparent transition-all flex items-center justify-center text-muted-foreground gap-2 font-medium"
-                                    >
-                                        <UserPlus className="w-5 h-5 opacity-70" />
-                                        <span>Tag followers</span>
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Common: Images */}
-                    <div className="space-y-3 pt-4 border-t border-border/50">
+                    <div className="space-y-3 pt-4">
                         <div className="flex items-center justify-between mb-2">
                             <Label className="text-base font-semibold flex items-center gap-2">
                                 <ImageIcon className="w-4 h-4" />
                                 {t('write.content.photo_label')}
                             </Label>
-                            <span className="text-xs text-muted-foreground font-medium">{images.length}/10</span>
+                            <span className="text-xs text-muted-foreground font-medium">{images.length}/30</span>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                             {images.map((src, idx) => (
                                 <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm">
                                     <img src={src} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
@@ -288,7 +393,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 </div>
                             ))}
 
-                            {images.length < 10 && (
+                            {uploadingImages.map((u) => (
+                                <div key={u.id} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
+                                    <UploadingThumbnail file={u.file} progress={u.progress} error={u.error} />
+                                </div>
+                            ))}
+
+                            {images.length + uploadingImages.length < 30 && (
                                 <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
                                     <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
                                     <input
@@ -296,7 +407,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         multiple
                                         accept="image/*"
                                         className="hidden"
-                                        onChange={handleImageUpload}
+                                        onChange={handleFileSelect}
                                     />
                                 </label>
                             )}

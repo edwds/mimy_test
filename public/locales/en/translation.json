@@ -109,7 +109,8 @@
             "placeholder_post": "Share your stories freely.",
             "photo_label": "Photos",
             "add": "Add",
-            "done": "Done"
+            "done": "Done",
+            "and_others": "and {{count}} others"
         },
         "ranking": {
             "title": "Which place was better?",

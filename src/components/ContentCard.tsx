@@ -423,20 +423,41 @@ export const ContentCard = ({
             {/* Visit Info & Companions Block */}
             {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
                 <div className="px-5 mb-3">
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-medium max-h-[2.8rem] overflow-hidden leading-tight">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-medium leading-tight">
                         {i18n.language === 'ko' ? (
                             <>
                                 {/* Korean: [Companions]와/과 함께 [Shop]을/를 [Date] [N번째] 방문 */}
                                 {companionUsers && companionUsers.length > 0 && (
-                                    <span className="shrink-0">
-                                        {companionUsers.map((u, i) => (
-                                            <span key={i}>
-                                                {i < companionUsers.length - 1
-                                                    ? `${u.nickname}, `
-                                                    : appendJosa(u.nickname, '와/과')}
-                                            </span>
-                                        ))}
-                                        {' '}{t('content.visit_info.with')}
+                                    <span>
+                                        {(() => {
+                                            const MAX = 3;
+                                            const overflow = companionUsers.length - MAX;
+                                            if (overflow > 0) {
+                                                const display = companionUsers.slice(0, MAX);
+                                                const others = t('write.content.and_others', { count: overflow });
+                                                return (
+                                                    <>
+                                                        {display.map((u, i) => (
+                                                            <span key={i}>{u.nickname}, </span>
+                                                        ))}
+                                                        {appendJosa(others, '와/과')}
+                                                        {' '}{t('content.visit_info.with')}
+                                                    </>
+                                                );
+                                            }
+                                            return (
+                                                <>
+                                                    {companionUsers.map((u, i) => (
+                                                        <span key={i}>
+                                                            {i < companionUsers.length - 1
+                                                                ? `${u.nickname}, `
+                                                                : appendJosa(u.nickname, '와/과')}
+                                                        </span>
+                                                    ))}
+                                                    {' '}{t('content.visit_info.with')}
+                                                </>
+                                            );
+                                        })()}
                                     </span>
                                 )}
 
@@ -494,16 +515,16 @@ export const ContentCard = ({
                                 {satisfaction && (
                                     <span className={cn(
                                         "font-bold",
-                                        (satisfaction === 'best' || satisfaction === 'good') ? "text-orange-600" : "text-gray-500"
+                                        satisfaction === 'good' ? "text-orange-600" : "text-gray-500"
                                     )}>
-                                        {satisfaction === 'best' ? "인생 맛집" : t(`write.basic.${satisfaction}`)}
+                                        {t(`write.basic.${satisfaction}`)}
                                     </span>
                                 )}
                                 {typeof rank === 'number' && rank > 0 && (
                                     <>
                                         {satisfaction && <span className="text-gray-300">·</span>}
-                                        <span className="font-bold text-black inline-flex items-center gap-0.5">
-                                            <span className="text-sm">🏆</span>
+                                        <span className="font-bold text-sm text-black inline-flex items-center gap-0.5">
+                                            <span className="text-[7pt]">🏆</span>
                                             {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
                                         </span>
                                     </>

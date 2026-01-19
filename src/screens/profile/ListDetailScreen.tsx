@@ -231,15 +231,15 @@ const RankingListItem = ({ item }: { item: ListItem }) => {
                     <h3 className="font-bold text-base truncate pr-2">{shop.name}</h3>
                     {(() => {
                         // Map tier to string code
-                        const tierMap: Record<number, string> = { 1: 'best', 2: 'good', 3: 'ok', 4: 'bad' };
+                        const tierMap: Record<number, string> = { 1: 'good', 2: 'good', 3: 'ok', 4: 'bad' };
                         const satisfaction = tierMap[satisfaction_tier] || 'good';
 
                         return (
                             <span className={cn(
                                 "font-bold text-sm",
-                                (satisfaction === 'best' || satisfaction === 'good') ? "text-orange-600" : "text-gray-500"
+                                satisfaction === 'good' ? "text-orange-600" : "text-gray-500"
                             )}>
-                                {satisfaction === 'best' ? "인생 맛집" : t(`write.basic.${satisfaction}`)}
+                                {t(`write.basic.${satisfaction}`)}
                             </span>
                         );
                     })()}
