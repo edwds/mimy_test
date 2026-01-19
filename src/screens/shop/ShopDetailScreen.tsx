@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check } from 'lucide-react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
 import { cn } from '@/lib/utils';
@@ -168,16 +168,15 @@ export const ShopDetailScreen = () => {
         }
     };
 
-    // Scroll for Hero Zoom Effect (Must be before conditional returns)
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const { scrollY } = useScroll({ container: scrollRef });
+    // Scroll for Hero Zoom Effect (Manual Tracking)
+    const scrollY = useMotionValue(0);
     const scale = useTransform(scrollY, [-300, 0], [1.5, 1]);
 
-    // Header Transitions (Trigger earlier: 40px ~ 120px)
-    const headerOpacity = useTransform(scrollY, [40, 120], [0, 1]);
-    const headerTitleY = useTransform(scrollY, [40, 120], [20, 0]);
-    const headerTitleOpacity = useTransform(scrollY, [60, 120], [0, 1]);
-    const buttonColor = useTransform(scrollY, [40, 120], ["#ffffff", "#000000"]);
+    // Header Transitions (Trigger when title reaches top: ~200px)
+    const headerOpacity = useTransform(scrollY, [180, 240], [0, 1]);
+    const headerTitleY = useTransform(scrollY, [180, 240], [20, 0]);
+    const headerTitleOpacity = useTransform(scrollY, [200, 240], [0, 1]);
+    const buttonColor = useTransform(scrollY, [180, 240], ["#ffffff", "#000000"]);
 
     if (loading) return <div className="min-h-screen bg-white" />;
 
@@ -248,26 +247,36 @@ export const ShopDetailScreen = () => {
 
             {/* Scrollable Sheet Content */}
             <div
-                ref={scrollRef}
+                onScroll={(e) => scrollY.set(e.currentTarget.scrollTop)}
                 className="flex-1 overflow-y-auto z-10 no-scrollbar relative pt-[24vh]"
             >
                 <div className="min-h-screen bg-background rounded-t-[32px] shadow-[-0_-4px_20px_rgba(0,0,0,0.1)] relative overflow-hidden">
 
                     {/* Shop Info & Actions */}
                     <div className="px-6 py-8">
-                        {/* Title Section */}
-                        <div className="flex justify-between items-start mb-2">
-                            <h1 className="text-2xl font-bold text-gray-900 flex-1 leading-tight mr-2">{shop.name}</h1>
+                        {/* Title Section (Name + Kind) */}
+                        <div className="flex justify-between items-start mb-4">
+                            <h1 className="text-2xl font-bold text-gray-900 flex-1 leading-tight mr-2">
+                                {shop.name}
+                                <span className="text-sm text-gray-400 font-normal ml-2 align-middle">
+                                    {shop.food_kind || 'Restaurant'}
+                                </span>
+                            </h1>
                         </div>
 
-                        {/* Rating/Kind */}
-                        <div className="flex items-center gap-2 mb-4 text-sm">
-                            {/* Mock Rating if unavailable */}
-                            <span className="flex items-center font-bold text-gray-900">
-                                ⭐ 4.5 <span className="text-gray-400 font-normal ml-1">({reviews.length})</span>
-                            </span>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-gray-500">{shop.food_kind || 'Restaurant'}</span>
+                        {/* Address & Desc (Moved Up) */}
+                        <div className="space-y-4 mb-8">
+                            {shop.description && (
+                                <p className="text-gray-600 text-base whitespace-pre-wrap leading-relaxed">
+                                    {shop.description}
+                                </p>
+                            )}
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center flex-shrink-0">
+                                    <MapPin size={16} className="text-gray-300" />
+                                </div>
+                                <div className="text-sm text-gray-500">{shop.address_full}</div>
+                            </div>
                         </div>
 
                         {/* Actions Row */}
@@ -287,14 +296,7 @@ export const ShopDetailScreen = () => {
                             </button>
 
                             <button
-                                onClick={() => {
-                                    // Wants to go is basically save, but maybe different UI? 
-                                    // User req said "Reservation / Wants to go".
-                                    // We merged bookmark into title, so maybe this is "Takeout" or "Share"?
-                                    // Re-reading: "예약 / wants to go" buttons.
-                                    // So I should keep the second button as "Wants to go" (Save).
-                                    handleBookmark();
-                                }}
+                                onClick={handleBookmark}
                                 className={cn(
                                     "flex-1 h-12 rounded-2xl border flex items-center justify-center gap-2 font-bold transition-colors active:scale-[0.98]",
                                     shop.is_saved
@@ -310,30 +312,10 @@ export const ShopDetailScreen = () => {
                         {/* Write Button (Style from Profile) */}
                         <button
                             onClick={() => navigate(`/write?type=review&shop_id=${shop.id}`)}
-                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors mb-6"
+                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors"
                         >
                             <span className="font-semibold text-sm">기록하기</span>
                         </button>
-
-                        <div className="mb-6" />
-
-                        {/* Address & Desc */}
-                        <div className="space-y-4">
-                            {shop.description && (
-                                <p className="text-gray-600 text-base whitespace-pre-wrap">
-                                    {shop.description}
-                                </p>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center justify-center flex-shrink-0">
-                                    <MapPin size={16} className="text-gray-300" />
-                                </div>
-                                <div>
-                                    <div className="text-sm text-gray-500">{shop.address_full}</div>
-                                </div>
-                            </div>
-
-                        </div>
 
                     </div>
 

@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SelectTypeStep } from './SelectTypeStep';
@@ -8,26 +7,48 @@ import { BasicInfoStep } from './BasicInfoStep';
 import { WriteContentStep } from './WriteContentStep';
 import { RankingStep } from './RankingStep';
 import { ContentService } from '@/services/ContentService';
+import { ShopService } from '@/services/ShopService';
 
 export const WriteFlow = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const initialType = searchParams.get('type') as 'review' | 'post' | null;
-
-    const [step, setStep] = useState<'TYPE_SELECT' | 'SEARCH_SHOP' | 'BASIC_INFO' | 'WRITE_CONTENT' | 'RANKING'>(() => {
-        if (initialType === 'review') return 'SEARCH_SHOP';
-        if (initialType === 'post') return 'WRITE_CONTENT';
-        return 'TYPE_SELECT';
-    });
+    const initialShopId = searchParams.get('shop_id');
 
     // Data Accumulation
     const [type, setType] = useState<'review' | 'post'>(initialType || 'review');
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const [basicInfo, setBasicInfo] = useState<{ satisfaction: string; visitDate: string; companions: any[] } | null>(null);
 
+    // Initial Step Logic
+    const [step, setStep] = useState<'TYPE_SELECT' | 'SEARCH_SHOP' | 'BASIC_INFO' | 'WRITE_CONTENT' | 'RANKING' | 'LOADING'>(() => {
+        if (initialShopId) return 'LOADING'; // Wait for fetch
+        if (initialType === 'review') return 'SEARCH_SHOP';
+        if (initialType === 'post') return 'WRITE_CONTENT';
+        return 'TYPE_SELECT';
+    });
+
     // Get real user ID
     const currentUserId = Number(localStorage.getItem("mimy_user_id") || 0);
+
+    // Fetch Shop if shop_id is present
+    useEffect(() => {
+        if (initialShopId) {
+            const fetchShop = async () => {
+                try {
+                    const shopData = await ShopService.getById(Number(initialShopId));
+                    setSelectedShop(shopData);
+                    setStep('BASIC_INFO');
+                } catch (error) {
+                    console.error("Failed to fetch shop:", error);
+                    alert("매장 정보를 불러올 수 없습니다.");
+                    navigate(-1);
+                }
+            };
+            fetchShop();
+        }
+    }, [initialShopId, navigate]);
 
     const handleTypeSelect = (selectedType: 'review' | 'post') => {
         setType(selectedType);
@@ -88,6 +109,10 @@ export const WriteFlow = () => {
         }
     };
 
+    if (step === 'LOADING') {
+        return <div className="h-full bg-background flex items-center justify-center">Loading...</div>;
+    }
+
     return (
         <div className="relative h-full bg-background">
             <SelectTypeStep
@@ -107,7 +132,13 @@ export const WriteFlow = () => {
                 <BasicInfoStep
                     shopName={selectedShop.name}
                     onNext={handleBasicInfoNext}
-                    onBack={() => setStep('SEARCH_SHOP')}
+                    onBack={() => {
+                        if (initialShopId) {
+                            navigate(-1);
+                        } else {
+                            setStep('SEARCH_SHOP');
+                        }
+                    }}
                 />
             )}
 

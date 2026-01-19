@@ -232,9 +232,13 @@
             "content": "No contents yet",
             "lists": "No public lists",
             "shared": "No shared saved places found.",
-            "saved": "No saved places"
+            "saved": "No saved places.",
+            "list_detail": "No items in this list."
         },
-        "shared_count": "You both saved <strong>{{count}}</strong> places!",
+        "list_detail": {
+            "items_count": "items"
+        },
+        "shared_count": "You tracked <strong>{{count}}</strong> places together!",
         "menu": {
             "change_id": "Change ID",
             "retake_quiz": "Retake Taste Quiz",

@@ -21,11 +21,12 @@ interface ShopCardProps {
     onWrite?: (shopId: number) => void;
     onReserve?: (shopId: number) => void; // Optional catchtable link
     onClick?: (shopId: number) => void; // Optional click handler for entire card
+    hideActions?: boolean;
 }
 
 import { useNavigate } from 'react-router-dom';
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick }) => {
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
 
@@ -83,37 +84,39 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (shop.catchtable_ref) {
-                                window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                            } else {
-                                onReserve?.(shop.id);
-                            }
-                        }}
-                        className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
-                    >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {t('discovery.shop_card.reserve_btn')}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onSave?.(shop.id);
-                        }}
-                        className={cn(
-                            "flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors flex items-center justify-center",
-                            shop.is_saved
-                                ? "bg-primary/10 text-primary border-primary/20"
-                                : "bg-transparent text-foreground border-border hover:bg-muted"
-                        )}
-                    >
-                        <Bookmark className={cn("w-4 h-4 mr-2", shop.is_saved && "fill-current")} />
-                        {shop.is_saved ? t('discovery.shop_card.saved') : t('discovery.shop_card.save')}
-                    </button>
-                </div>
+                {!hideActions && (
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (shop.catchtable_ref) {
+                                    window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
+                                } else {
+                                    onReserve?.(shop.id);
+                                }
+                            }}
+                            className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
+                        >
+                            <Calendar className="w-4 h-4 mr-2" />
+                            {t('discovery.shop_card.reserve_btn')}
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSave?.(shop.id);
+                            }}
+                            className={cn(
+                                "flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors flex items-center justify-center",
+                                shop.is_saved
+                                    ? "bg-primary/10 text-primary border-primary/20"
+                                    : "bg-transparent text-foreground border-border hover:bg-muted"
+                            )}
+                        >
+                            <Bookmark className={cn("w-4 h-4 mr-2", shop.is_saved && "fill-current")} />
+                            {shop.is_saved ? t('discovery.shop_card.saved') : t('discovery.shop_card.save')}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Saved Footer (Conditional) */}

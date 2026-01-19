@@ -17,6 +17,7 @@ import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
+import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
@@ -81,6 +82,7 @@ function App() {
                             <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
                             <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
                             <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
+                            <Route path="/profile/lists/:userId" element={<ProtectedRoute><ListDetailScreen /></ProtectedRoute>} />
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
                             <Route path="/shop/:shopId" element={<ProtectedRoute><ShopDetailScreen /></ProtectedRoute>} />

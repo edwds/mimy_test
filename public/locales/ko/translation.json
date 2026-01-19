@@ -218,7 +218,11 @@
             "content": "게시물이 없습니다",
             "lists": "공개된 리스트가 없습니다",
             "shared": "함께 저장한 장소가 없습니다.",
-            "saved": "저장된 장소가 없습니다."
+            "saved": "저장된 장소가 없습니다.",
+            "list_detail": "이 리스트에 항목이 없습니다."
+        },
+        "list_detail": {
+            "items_count": "개의 맛집"
         },
         "shared_count": "함께 <strong>{{count}}</strong>곳을 저장했어요!",
         "menu": {

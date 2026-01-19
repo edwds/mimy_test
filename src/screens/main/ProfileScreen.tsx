@@ -9,6 +9,7 @@ import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
+import { ListCard } from '@/components/ListCard';
 
 import { useTranslation } from 'react-i18next';
 
@@ -46,6 +47,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     // Content State
     const [contents, setContents] = useState<any[]>([]);
     const [loadingContent, setLoadingContent] = useState(false);
+
+    // Lists State
+    const [lists, setLists] = useState<any[]>([]);
+    const [loadingLists, setLoadingLists] = useState(false);
 
     // Refresh listener
     useEffect(() => {
@@ -211,6 +216,28 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
         fetchSaved();
     }, [user?.id, activeTab]);
+
+    // Fetch Lists
+    useEffect(() => {
+        const fetchLists = async () => {
+            if (!user?.id || activeTab !== 'list') return;
+
+            setLoadingLists(true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/lists`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setLists(data);
+                }
+            } catch (error) {
+                console.error("Failed to load lists", error);
+            } finally {
+                setLoadingLists(false);
+            }
+        };
+
+        fetchLists();
+    }, [user?.id, activeTab, refreshTrigger]);
 
     const handleUnsave = async (shopId: number) => {
         // Optimistic remove from list
@@ -472,9 +499,40 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     )}
 
                     {activeTab === "list" && (
-                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                            <List className="w-10 h-10 mb-2 opacity-20" />
-                            <p className="text-sm">{t('profile.empty.lists')}</p>
+                        <div className="pb-20 px-5 pt-4">
+                            {lists.map((list) => (
+                                <ListCard
+                                    key={list.id}
+                                    id={list.id}
+                                    type={list.type}
+                                    title={list.title}
+                                    count={list.count}
+                                    updatedAt={list.updated_at}
+                                    author={list.author}
+                                    onPress={() => {
+                                        // Navigate to details
+                                        const query = new URLSearchParams({
+                                            type: list.type,
+                                            value: list.value || '',
+                                            title: list.title
+                                        });
+                                        navigate(`/profile/lists/${user.id}?${query.toString()}`);
+                                    }}
+                                />
+                            ))}
+
+                            {!loadingLists && lists.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                    <List className="w-10 h-10 mb-2 opacity-20" />
+                                    <p className="text-sm">{t('profile.empty.lists')}</p>
+                                </div>
+                            )}
+
+                            {loadingLists && (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
                         </div>
                     )}
 
