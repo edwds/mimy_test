@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
 import { cn } from '@/lib/utils';
@@ -168,6 +168,18 @@ export const ShopDetailScreen = () => {
         }
     };
 
+    // Scroll for Hero Zoom Effect (Must be before conditional returns)
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const { scrollY } = useScroll({ container: scrollRef });
+    const scale = useTransform(scrollY, [-300, 0], [1.5, 1]);
+    const opacity = useTransform(scrollY, [-100, 0, 200], [1, 1, 0]);
+
+    // Header Transitions (Trigger earlier: 40px ~ 120px)
+    const headerOpacity = useTransform(scrollY, [40, 120], [0, 1]);
+    const headerTitleY = useTransform(scrollY, [40, 120], [20, 0]);
+    const headerTitleOpacity = useTransform(scrollY, [60, 120], [0, 1]);
+    const buttonColor = useTransform(scrollY, [40, 120], ["#ffffff", "#000000"]);
+
     if (loading) return <div className="min-h-screen bg-white" />;
 
     if (!shop) return <div className="min-h-screen bg-white flex items-center justify-center">Store not found</div>;
@@ -179,45 +191,67 @@ export const ShopDetailScreen = () => {
 
     return (
         <div className="h-full bg-background relative flex flex-col w-full max-w-md mx-auto shadow-2xl overflow-hidden">
-            {/* Header (Transparent/Float) */}
-            <div className="absolute top-0 left-0 right-0 h-20 z-50 flex items-start pt-4 justify-between px-4 bg-gradient-to-b from-black/60 to-transparent">
-                <button
-                    onClick={handleBack}
-                    className="p-2 text-white hover:bg-white/10 rounded-full transition-colors active:scale-95"
+            {/* Header (Transparent -> Sticky White) */}
+            <div className="absolute top-0 left-0 right-0 h-14 z-50 flex items-center justify-between px-4 pointer-events-none">
+                {/* Dim Gradient (Always present, covered by white layer) */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 z-0" />
+
+                {/* Solid White Background Layer */}
+                <motion.div
+                    className="absolute inset-0 bg-white border-b border-gray-100 z-10"
+                    style={{ opacity: headerOpacity }}
+                />
+
+                {/* Header Title */}
+                <motion.div
+                    className="absolute inset-0 flex items-center justify-center z-20"
+                    style={{ opacity: headerTitleOpacity, y: headerTitleY }}
                 >
-                    <ArrowLeft size={24} />
-                </button>
-                <div className="flex items-center gap-2">
-                    <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors active:scale-95">
+                    <span className="font-bold text-lg text-black truncate max-w-[60%]">
+                        {shop.name}
+                    </span>
+                </motion.div>
+
+                {/* Back Button */}
+                <div className="relative z-30 pointer-events-auto">
+                    <motion.button
+                        onClick={handleBack}
+                        style={{ color: buttonColor }}
+                        className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
+                    >
+                        <ArrowLeft size={24} />
+                    </motion.button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="relative z-30 flex items-center gap-2 pointer-events-auto">
+                    <motion.button
+                        style={{ color: buttonColor }}
+                        className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
+                    >
                         <MoreHorizontal size={24} />
-                    </button>
+                    </motion.button>
                 </div>
             </div>
 
-            {/* Fixed Hero Image (Constrained to container width via absolute since root is relative & full-height, but we want parallax effect?)
-               If we change 'fixed' to 'absolute', it scrolls WITH content unless we have a scroll container separate.
-               The current design has `flex-1 overflow-y-auto` for the sheet.
-               So if 'Hero' is 'absolute top-0' inside the root flex container, it will stay at top...
-               Wait, `flex-1 overflow-y-auto` is the scrollable part.
-               If Hero is OUTSIDE that scrollable part (it is), and absolute/fixed:
-               - Fixed: Stays on screen.
-               - Absolute: Stays at top of ROOT container.
-
-               Since root container `h-full` matches viewport (or constrained height), `absolute` works like `fixed` relative to the app container!
-               So I should change `fixed` to `absolute`.
-            */}
-            <div className="absolute top-0 left-0 right-0 h-[28vh] z-0">
+            {/* Hero Image with Zoom Effect */}
+            <motion.div
+                style={{ scale }}
+                className="absolute top-0 left-0 right-0 h-[28vh] z-0 origin-top"
+            >
                 {shop.thumbnail_img ? (
                     <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-4xl">🏢</div>
                 )}
-                {/* Gradient Overlay for text readability if needed, but we have a white sheet coming up */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
-            </div>
+            </motion.div>
 
             {/* Scrollable Sheet Content */}
-            <div className="flex-1 overflow-y-auto z-10 no-scrollbar relative pt-[24vh]">
+            <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto z-10 no-scrollbar relative pt-[24vh]"
+            >
                 <div className="min-h-screen bg-background rounded-t-[32px] shadow-[-0_-4px_20px_rgba(0,0,0,0.1)] relative overflow-hidden">
 
                     {/* Shop Info & Actions */}
@@ -307,7 +341,7 @@ export const ShopDetailScreen = () => {
                     <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />
 
                     {/* Photos Section */}
-                    {latestPhotos.length > 0 && (
+                    {latestPhotos.length >= 6 && (
                         <div className="py-6">
                             <div className="px-6 mb-3 flex items-center justify-between">
                                 <h2 className="text-lg font-bold text-gray-900">Photos</h2>
