@@ -46,6 +46,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Search Overlay State
     const [isSearching, setIsSearching] = useState(false);
 
+    // Cluster "Freeze" State - prevents auto-refetch on move if we are viewing a cluster
+    const [viewingCluster, setViewingCluster] = useState(false);
+
     const fetchShops = async (useBounds = false) => {
         setIsLoading(true);
         try {
@@ -101,6 +104,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             seedRef.current = newSeed;
             // Also reset filter?
             // setShowSavedOnly(false); // Maybe? Let's keep filter if user wants.
+            setViewingCluster(false); // Reset cluster view on refresh
             fetchShops();
         }
     }, [refreshTrigger]);
@@ -167,8 +171,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     };
 
     const handleMoveEnd = (newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
-        // Only show button if we are NOT in saved mode
-        if (!showSavedOnly) {
+        // Only show button if we are NOT in saved mode AND not viewing a cluster explicitly
+        if (!showSavedOnly && !viewingCluster) {
+            setBounds(newBounds);
+            setShowSearchHere(true);
+        }
+        // If viewing cluster, we might want to allow "Search Here" to break out of it?
+        // Yes, if user moves map, they might want to search new area.
+        if (viewingCluster) {
             setBounds(newBounds);
             setShowSearchHere(true);
         }
@@ -190,6 +200,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
         // 3. Close Overlay
         setIsSearching(false);
+        setViewingCluster(false);
+    };
+
+    const handleClusterClick = (clusterShops: any[]) => {
+        setShops(clusterShops);
+        setViewingCluster(true);
+        setSelectedShopId(null); // Deselect individual shop if any
+        // We probably don't need to change map center, user wants to see the cluster context.
     };
 
     return (
@@ -209,6 +227,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     selectedShopId={selectedShopId}
                     bottomSheetOffset={selectedShopId ? window.innerHeight * 0.1 : 0}
                     onMoveEnd={handleMoveEnd}
+                    onClusterClick={handleClusterClick}
                 />
             </div>
 
