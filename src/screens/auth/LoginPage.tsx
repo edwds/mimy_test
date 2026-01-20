@@ -48,7 +48,7 @@ export const LoginPage = () => {
     });
 
     return (
-        <div className="flex flex-col h-full bg-background p-6 animate-in fade-in duration-500 overflow-hidden">
+        <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 animate-in fade-in duration-500 overflow-hidden">
             <header className="flex-1 flex flex-col justify-center items-center space-y-6">
                 <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center">
                     <span className="text-4xl">🍽️</span>

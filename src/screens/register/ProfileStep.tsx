@@ -224,7 +224,7 @@ export const ProfileStep = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background p-6 overflow-hidden">
+        <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 overflow-hidden">
             <header className="flex items-center mb-8 gap-4">
                 <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-muted">
                     <ChevronLeft className="w-6 h-6" />

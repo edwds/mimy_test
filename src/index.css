@@ -26,6 +26,23 @@
         --radius: 0.75rem;
     }
 
+    /* Safe Area Utilities */
+    .pt-safe-offset-6 {
+        padding-top: calc(env(safe-area-inset-top) + 1.5rem);
+    }
+
+    .pb-safe-offset-6 {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+    }
+
+    .pt-safe-offset-4 {
+        padding-top: calc(env(safe-area-inset-top) + 1rem);
+    }
+
+    .pb-safe-offset-4 {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+    }
+
     .dark {
         --background: 20 14.3% 4.1%;
         --foreground: 60 9.1% 97.8%;

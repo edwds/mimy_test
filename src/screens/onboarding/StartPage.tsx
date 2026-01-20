@@ -51,7 +51,7 @@ export const StartPage = ({ onStart }: { onStart: () => void }) => {
             <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-secondary/20 rounded-full blur-3xl pointer-events-none" />
 
-            <main className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
+            <main className="flex-1 flex flex-col items-center justify-center px-6 pt-safe-offset-6 pb-safe-offset-6 relative z-10">
                 <div className="w-full max-w-md space-y-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700">
                     {/* Carousel Content */}
                     <div className="h-[300px] flex flex-col items-center justify-center space-y-6">
