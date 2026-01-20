@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { MainHeader } from '@/components/MainHeader';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
-import { Capacitor } from '@capacitor/core';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
 
 // Force deploy check
@@ -31,10 +32,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const abortControllerRef = useRef<AbortController | null>(null);
 
     // Smart Header & Scroll Preservation
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const lastScrollY = useRef(0);
-    const scrollPositions = useRef<{ [key: string]: number }>({});
     const containerRef = useRef<HTMLDivElement>(null);
+    const { isVisible: isHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
+    const scrollPositions = useRef<{ [key: string]: number }>({});
     const headerRef = useRef<HTMLDivElement>(null);
     const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -47,21 +47,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
     // Scroll Handler
     const handleScroll = () => {
-        if (!containerRef.current) return;
-        const currentScrollY = containerRef.current.scrollTop;
-        const diff = currentScrollY - lastScrollY.current;
-
-        // Smart Header Logic
-        if (currentScrollY < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) { // Threshold
-            if (diff > 0) { // Scrolling Down
-                setIsHeaderVisible(false);
-            } else { // Scrolling Up
-                setIsHeaderVisible(true);
-            }
-        }
-        lastScrollY.current = currentScrollY;
+        onSmartScroll();
     };
 
     const handleChipChange = (newChip: string) => {
@@ -97,13 +83,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         // Or just call fetchFeed(1, newChip) directly?
         // To be safe with state, let's use an effect on [activeChip].
 
-        requestAnimationFrame(() => {
-            if (containerRef.current) {
-                const savedPos = scrollPositions.current[newChip] || 0;
-                containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
-                setIsHeaderVisible(true);
-            }
-        });
+        if (containerRef.current) {
+            const savedPos = scrollPositions.current[newChip] || 0;
+            containerRef.current.scrollTo({ top: savedPos, behavior: 'instant' });
+        }
     };
 
 
@@ -264,24 +247,19 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header */}
-            <div
+            <MainHeader
                 ref={headerRef}
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-                    } ${!Capacitor.isNativePlatform() && "pt-6"}`}
-                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 10px)' } : undefined}
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">{t('home.today')}</h1>
+                title={t('home.today')}
+                isVisible={isHeaderVisible}
+                rightAction={
                     <div className="flex gap-4">
                         <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
-                            <Bell className="w-6 h-6 text-foreground" />
+                            <Bell className="text-foreground" />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
                         </button>
-
                     </div>
-                </div>
-
-            </div>
+                }
+            />
 
             {/* Feed List */}
             <div

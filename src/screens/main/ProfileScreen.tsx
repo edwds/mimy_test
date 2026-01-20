@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { MainHeader } from '@/components/MainHeader';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
@@ -58,9 +60,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     // Scroll + Header
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<Record<string, number>>({});
-    const lastScrollY = useRef(0);
-
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+    const { isVisible: isHeaderVisible, setIsVisible: setIsHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
 
     // Header height measurement (removed dynamic calculation)
     const headerRef = useRef<HTMLDivElement>(null);
@@ -142,24 +142,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     }, [isMenuOpen]);
 
     const handleScroll = () => {
-        const el = containerRef.current;
-        if (!el) return;
-
-        const y = el.scrollTop;
-        const diff = y - lastScrollY.current;
-
-        if (y < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) {
-            if (diff > 0) {
-                setIsHeaderVisible(false);
-                setIsMenuOpen(false);
-            } else {
-                setIsHeaderVisible(true);
-            }
-        }
-
-        lastScrollY.current = y;
+        onSmartScroll();
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -290,64 +273,56 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header (overlay) */}
-            <div
+            <MainHeader
                 ref={headerRef}
-                className={cn(
-                    'absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 transition-transform duration-300',
-                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-                )}
-                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
-            >
-                <div className="px-5 pb-2">
-                    <div className="flex items-center justify-between mb-2">
-                        <h1 className="text-2xl font-bold">@{user.account_id}</h1>
+                title={`@${user.account_id}`}
+                isVisible={isHeaderVisible}
+                rightAction={
+                    <div className="relative">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-muted"
+                            onClick={() => setIsMenuOpen((v) => !v)}
+                        >
+                            <Settings className="text-foreground" />
+                        </Button>
 
-                        <div className="relative">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="rounded-full hover:bg-muted"
-                                onClick={() => setIsMenuOpen((v) => !v)}
+                        {isMenuOpen && (
+                            <div
+                                ref={menuRef}
+                                className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-[100] animate-in fade-in zoom-in-95 duration-200"
                             >
-                                <Settings className="w-6 h-6 text-foreground" />
-                            </Button>
-
-                            {isMenuOpen && (
-                                <div
-                                    ref={menuRef}
-                                    className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-[100] animate-in fade-in zoom-in-95 duration-200"
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={openIdSheet}
                                 >
-                                    <button
-                                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                        onClick={openIdSheet}
-                                    >
-                                        {t('profile.menu.change_id')}
-                                    </button>
-                                    <button
-                                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                        onClick={handleRetakeQuiz}
-                                    >
-                                        {t('profile.menu.retake_quiz')}
-                                    </button>
-                                    <button
-                                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                        onClick={handleReport}
-                                    >
-                                        {t('profile.menu.report')}
-                                    </button>
-                                    <div className="h-px bg-border my-1" />
-                                    <button
-                                        className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
-                                        onClick={handleLogout}
-                                    >
-                                        {t('profile.menu.logout')}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                    {t('profile.menu.change_id')}
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={handleRetakeQuiz}
+                                >
+                                    {t('profile.menu.retake_quiz')}
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+                                    onClick={handleReport}
+                                >
+                                    {t('profile.menu.report')}
+                                </button>
+                                <div className="h-px bg-border my-1" />
+                                <button
+                                    className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
+                                    onClick={handleLogout}
+                                >
+                                    {t('profile.menu.logout')}
+                                </button>
+                            </div>
+                        )}
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             {/* Scroll container: push content by headerHeight (no hardcoding) */}
             <main

@@ -1,12 +1,14 @@
 
 import { useState, useRef, useEffect } from 'react';
+import { MainHeader } from '@/components/MainHeader';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { User as UserIcon } from 'lucide-react';
 import { cn, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
-import { Capacitor } from '@capacitor/core';
+
 
 interface LeaderboardItem {
     rank: number;
@@ -27,18 +29,9 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     // Smart Header State
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const lastScrollY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
+    const { isVisible: isHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
     const headerRef = useRef<HTMLDivElement>(null);
-    const [headerHeight, setHeaderHeight] = useState(0);
-
-    // Measure Header Height for padding
-    useEffect(() => {
-        if (headerRef.current) {
-            setHeaderHeight(headerRef.current.offsetHeight);
-        }
-    }, []);
 
 
     // Filter State (Mock)
@@ -77,20 +70,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     }, [isEnabled, filter]);
 
     const handleScroll = () => {
-        if (!containerRef.current) return;
-        const currentScrollY = containerRef.current.scrollTop;
-        const diff = currentScrollY - lastScrollY.current;
-
-        if (currentScrollY < 10) {
-            setIsHeaderVisible(true);
-        } else if (Math.abs(diff) > 10) {
-            if (diff > 0) {
-                setIsHeaderVisible(false);
-            } else {
-                setIsHeaderVisible(true);
-            }
-        }
-        lastScrollY.current = currentScrollY;
+        onSmartScroll();
     };
 
     const getRankStyle = (index: number) => {
@@ -114,19 +94,11 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     return (
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header */}
-            <div
+            <MainHeader
                 ref={headerRef}
-                className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pb-2 transition-transform duration-300",
-                    !Capacitor.isNativePlatform() && "pt-6",
-                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-                )}
-                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">{t('leaderboard.title')}</h1>
-                </div>
-            </div>
+                title={t('leaderboard.title')}
+                isVisible={isHeaderVisible}
+            />
 
             {/* Content */}
             <main
@@ -136,8 +108,8 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             // style={{ paddingTop: headerHeight }} // Removed unreliable JS padding
             >
                 <div
-                    className={cn("p-4 mb-4 pb-20")}
-                    style={{ paddingTop: headerHeight ? headerHeight + 16 : 100 }}
+                    className={cn("px-5 py-4 mb-4 pb-20")}
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)' }}
                 >
 
 

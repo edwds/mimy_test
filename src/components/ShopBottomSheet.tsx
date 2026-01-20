@@ -80,8 +80,13 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         >
             {/* Handle Bar */}
             <div className="pt-3 pb-2 flex justify-center cursor-grab active:cursor-grabbing w-full">
-                <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+                <div className={`w-12 h-1.5 bg-gray-300 rounded-full transition-opacity duration-300 ${snapState === 'full' ? 'opacity-0' : 'opacity-100'}`} />
             </div>
+            {/* Add spacing if handle is gone? Or styling handles it. Header has padding. 
+                If handle is gone, we might need top padding. 
+                Wait, full state has `pt-[env(safe-area-inset-top)]` on container. 
+                Header follows immediately.
+            */}
 
             {/* Header (Draggable) */}
             <div className="flex justify-between items-center mb-0 px-5 pb-4">
