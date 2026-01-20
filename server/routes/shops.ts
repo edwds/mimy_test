@@ -148,13 +148,17 @@ router.get("/search", async (req, res) => {
             return res.json([]);
         }
 
-        const query = `%${q}%`;
+        const query = `%${q.replace(/\s+/g, '')}%`; // Remove spaces from query
+
+        // Search matches where DB name (spaces removed) matches query OR original name matches query
         const results = await db.select()
             .from(shops)
             .where(
                 or(
-                    ilike(shops.name, query),
-                    ilike(shops.address_full, query)
+                    // Name match (fuzzy: ignore spaces)
+                    sql`REPLACE(${shops.name}, ' ', '') LIKE ${query}`,
+                    // Address match (fuzzy: ignore spaces)
+                    sql`REPLACE(${shops.address_full}, ' ', '') LIKE ${query}`
                 )
             )
             .limit(20);

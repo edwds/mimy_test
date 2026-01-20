@@ -113,6 +113,7 @@ export const content = pgTable('content', {
     text: text('text'),
     review_prop: jsonb('review_prop'), // { shop_id, visit_date, companions, satisfaction }
     keyword: jsonb('keyword'),
+    link_json: jsonb('link_json'), // [{ title: string, url: string }]
     visibility: boolean('visibility').default(true),
     is_deleted: boolean('is_deleted').default(false),
     created_at: timestamp('created_at').defaultNow(),

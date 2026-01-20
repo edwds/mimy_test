@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { UserSelectModal } from './UserSelectModal';
 import exifr from 'exifr';
 
 interface Props {
-    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[]; visitDate?: string }) => void;
+    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
     onBack: () => void;
     mode: 'review' | 'post';
     shop?: any;
@@ -64,6 +64,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const [keywordInput, setKeywordInput] = useState('');
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
     const [isDateManuallySet, setIsDateManuallySet] = useState(false);
+
+    // Link State
+    const [showLinkInput, setShowLinkInput] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const [linkTitle, setLinkTitle] = useState('');
+    const [links, setLinks] = useState<{ title: string; url: string }[]>([]);
 
     // User Tagging State
     const [isUserSelectOpen, setIsUserSelectOpen] = useState(false);
@@ -181,7 +187,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             images: validImages,
             companions: selectedUsers.map(u => u.id),
             keywords,
-            visitDate
+            visitDate,
+            links
         });
     };
 
@@ -191,6 +198,24 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 setKeywords([...keywords, keywordInput.trim()]);
             }
             setKeywordInput('');
+        }
+    };
+
+    const handleAddLink = () => {
+        if (linkUrl.trim()) {
+            // Basic URL validation/prefixing
+            let url = linkUrl.trim();
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+
+            setLinks([{
+                title: linkTitle.trim() || url,
+                url: url
+            }]);
+            setShowLinkInput(false);
+            setLinkUrl('');
+            setLinkTitle('');
         }
     };
 
@@ -389,6 +414,58 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
 
 
+                    {/* Link Section */}
+                    <div className="space-y-2">
+                        {links.length > 0 ? (
+                            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
+                                <LinkIcon className="w-4 h-4 text-gray-400" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-bold truncate">{links[0].title}</div>
+                                    <div className="text-xs text-gray-400 truncate">{links[0].url}</div>
+                                </div>
+                                <button
+                                    onClick={() => setLinks([])}
+                                    className="p-1 hover:bg-gray-200 rounded-full"
+                                >
+                                    <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                        ) : (
+                            showLinkInput ? (
+                                <div className="p-3 bg-gray-50 rounded-lg border space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-1">
+                                        <span>Add Link</span>
+                                        <button onClick={() => setShowLinkInput(false)}><X className="w-3 h-3" /></button>
+                                    </div>
+                                    <input
+                                        className="w-full bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                                        placeholder="URL (e.g. https://mimy.kr)"
+                                        value={linkUrl}
+                                        onChange={e => setLinkUrl(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <input
+                                        className="w-full bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                                        placeholder="Link Title (Optional)"
+                                        value={linkTitle}
+                                        onChange={e => setLinkTitle(e.target.value)}
+                                    />
+                                    <div className="flex justify-end pt-1">
+                                        <Button size="sm" onClick={handleAddLink} disabled={!linkUrl.trim()}>Add</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowLinkInput(true)}
+                                    className="flex items-center gap-2 text-sm font-bold text-primary px-1 py-2 hover:bg-primary/5 rounded-lg transition-colors"
+                                >
+                                    <LinkIcon className="w-4 h-4" />
+                                    Add Link
+                                </button>
+                            )
+                        )}
+                    </div>
+
                     {/* Common: Images */}
                     <div className="space-y-3 pt-4">
                         <div className="flex items-center justify-between mb-2">
@@ -400,7 +477,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
-                            {mediaItems.map((item, idx) => (
+                            {mediaItems.map((item) => (
                                 <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm bg-muted">
 
                                     {item.status === 'complete' && item.url ? (

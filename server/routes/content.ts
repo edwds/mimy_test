@@ -35,6 +35,7 @@ router.get("/feed", async (req, res) => {
                 cluster_name: clusters.name,
                 taste_result: users.taste_result
             },
+            link_json: content.link_json,
             // For 'near' sort, we might want distance, but let's just filter for now
         })
             .from(content)
@@ -365,6 +366,7 @@ router.get("/feed", async (req, res) => {
                 type: item.type,
                 review_prop: enrichedProp,
                 keyword: item.keyword || [], // Add keyword here
+                link_json: item.link_json || [],
                 poi,
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
@@ -387,7 +389,7 @@ router.get("/feed", async (req, res) => {
 // POST /api/content (Create Review/Post)
 router.post("/", async (req, res) => {
     try {
-        const { user_id, type, text, img, video, review_prop, keyword } = req.body;
+        const { user_id, type, text, img, video, review_prop, keyword, link_json } = req.body;
 
         // Validation
         if (!user_id || !type) {
@@ -403,6 +405,7 @@ router.post("/", async (req, res) => {
             video,
             review_prop, // { shop_id, visit_date, companions, satisfaction }
             keyword,
+            link_json
         }).returning();
 
         res.json(result[0]);
@@ -617,7 +620,8 @@ router.get("/user/:userId", async (req, res) => {
                 profile_image: users.profile_image,
                 cluster_name: clusters.name,
                 taste_result: users.taste_result
-            }
+            },
+            link_json: content.link_json
         })
             .from(content)
             .leftJoin(users, eq(content.user_id, users.id))

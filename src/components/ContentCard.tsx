@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -136,6 +136,7 @@ export interface ContentCardProps {
             };
         }>;
         keyword?: string[]; // Add keyword prop
+        link_json?: Array<{ title: string; url: string }>;
     };
 
     // Optional handlers (wire later)
@@ -539,6 +540,54 @@ export const ContentCard = ({
 
             {/* Text Body */}
             {content.text && <ContentBody text={content.text} maxLines={10} />}
+
+
+
+            {/* Link Display */}
+            {content.link_json && content.link_json.length > 0 && (
+                <div className="px-5 mb-3 space-y-1">
+                    {content.link_json.map((link: any, idx: number) => {
+                        const url = link.url.toLowerCase();
+                        let Icon = LinkIcon;
+                        let label: React.ReactNode = null;
+
+                        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                            Icon = Youtube;
+                        } else if (url.includes('instagram.com')) {
+                            Icon = Instagram;
+                        } else if (url.includes('twitter.com') || url.includes('x.com')) {
+                            Icon = Twitter;
+                        } else if (url.includes('tiktok.com')) {
+                            // TikTok custom text badge
+                            label = <span className="text-[10px] font-bold bg-orange-600 text-white px-1.5 py-0.5 rounded-full leading-none">TikTok</span>;
+                        } else if (url.includes('naver.com')) {
+                            // Naver custom text badge
+                            label = <span className="text-[10px] font-bold bg-orange-600 text-white px-1.5 py-0.5 rounded-full leading-none">N</span>;
+                        }
+
+                        // Fallback title logic:
+                        // If specific platform, maybe just show title? 
+                        // User said: "Show as text". 
+
+                        return (
+                            <a
+                                key={idx}
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 py-0.5 hover:underline decoration-orange-300 underline-offset-2 transition-all group"
+                            >
+                                <div className="flex-shrink-0 flex items-center justify-center w-5">
+                                    {label ? label : <Icon size={18} className="text-orange-600 transition-transform group-hover:scale-110" />}
+                                </div>
+                                <span className="text-sm text-orange-600 leading-normal truncate font-medium">
+                                    {link.title || link.url}
+                                </span>
+                            </a>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Image Display */}
             {

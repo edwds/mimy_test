@@ -275,9 +275,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                             <Bell className="w-6 h-6 text-foreground" />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
                         </button>
-                        <button className="p-2 rounded-full hover:bg-muted transition-colors">
-                            <Search className="w-6 h-6 text-foreground" />
-                        </button>
+
                     </div>
                 </div>
 

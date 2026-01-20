@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 // import { Search } from 'lucide-react'; 
-import { Locate, Heart } from 'lucide-react'; // Icons
+import { Locate, Heart, Search } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
 // Let's keep the Search button overlay if possible, or just the map.
 // The Plan said: "Replace current list view with... MapContainer + ShopBottomSheet".
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/api';
 import { MapContainer } from '@/components/MapContainer';
 import { ShopBottomSheet } from '@/components/ShopBottomSheet';
+import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOverlay'; // Import Overlay
 import { cn } from '@/lib/utils';
 
 const getSessionSeed = () => {
@@ -41,6 +42,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Filter State
     const [showSavedOnly, setShowSavedOnly] = useState(false);
+
+    // Search Overlay State
+    const [isSearching, setIsSearching] = useState(false);
 
     const fetchShops = async (useBounds = false) => {
         setIsLoading(true);
@@ -170,6 +174,24 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
     };
 
+    const handleSearchSelect = (shop: any) => {
+        // 1. Add to shops if not present (or update)
+        setShops(prev => {
+            const exists = prev.find(s => s.id === shop.id);
+            if (exists) return prev;
+            return [shop, ...prev]; // Add to top
+        });
+
+        // 2. Select & Center
+        setSelectedShopId(shop.id);
+        if (shop.lat && shop.lon) {
+            setMapCenter([shop.lat, shop.lon]);
+        }
+
+        // 3. Close Overlay
+        setIsSearching(false);
+    };
+
     return (
         <div className="relative h-full w-full overflow-hidden">
             {/* Map Background */}
@@ -199,8 +221,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
             {/* Top Search Overlay */}
             <div className="absolute top-6 left-6 right-6 z-10 flex flex-col gap-2 items-center">
-                <div className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50">
+                <div
+                    onClick={() => setIsSearching(true)}
+                    className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50 cursor-pointer active:scale-98 transition-transform"
+                >
                     <span className="text-muted-foreground text-sm flex-1">{t('discovery.search_placeholder')}</span>
+                    <div className="bg-primary/10 p-1.5 rounded-full">
+                        <Search className="w-4 h-4 text-primary" />
+                    </div>
                 </div>
 
                 {/* Search Here Button */}
@@ -239,6 +267,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     <Heart className={cn("w-6 h-6", showSavedOnly ? "fill-current text-white" : "")} />
                 </button>
             </div>
+            {/* Search Overlay */}
+            {isSearching && (
+                <DiscoverySearchOverlay
+                    onClose={() => setIsSearching(false)}
+                    onSelect={handleSearchSelect}
+                />
+            )}
         </div>
     );
 };
