@@ -782,13 +782,28 @@ router.get("/user/:userId", async (req, res) => {
                 }
             });
         }
+        // 3.6 Fetch "Saved" Status for Current Viewer
+        const savedShopSet = new Set<number>();
+        // viewerId is already declared at line 709
+        if (viewerId && shopIds.size > 0) {
+            const saved = await db.select({ shop_id: users_wantstogo.shop_id })
+                .from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, viewerId),
+                    inArray(users_wantstogo.shop_id, Array.from(shopIds))
+                ));
+            saved.forEach(s => savedShopSet.add(s.shop_id));
+        }
 
         // 4. Transform Data
         const result = userContent.map(item => {
             let enrichedProp = item.review_prop as any;
+            let poi = undefined;
+
             if (item.type === 'review' && enrichedProp?.shop_id && shopMap.has(enrichedProp.shop_id)) {
-                const shop = shopMap.get(enrichedProp.shop_id);
-                const rank = rankMap.get(enrichedProp.shop_id);
+                const sid = Number(enrichedProp.shop_id);
+                const shop = shopMap.get(sid);
+                const rank = rankMap.get(sid);
                 const visitCount = contentVisitRankMap.get(item.id) || 1;
 
                 enrichedProp = {
@@ -796,21 +811,38 @@ router.get("/user/:userId", async (req, res) => {
                     shop_name: shop.name,
                     shop_address: shop.address_region || shop.address_full,
                     thumbnail_img: shop.thumbnail_img,
-                    rank: rank || null, // Add rank
+                    rank: rank || null,
                     visit_count: visitCount
-                    // satisfaction is already in enrichedProp from DB JSON
+                };
+
+                // Construct POI object
+                poi = {
+                    shop_id: sid,
+                    shop_name: shop.name,
+                    shop_address: shop.address_region || shop.address_full,
+                    thumbnail_img: shop.thumbnail_img,
+                    rank: rank || null,
+                    satisfaction: enrichedProp.satisfaction,
+                    visit_count: visitCount,
+                    is_bookmarked: savedShopSet.has(sid),
+                    catchtable_ref: shop.catchtable_ref
                 };
             }
 
             return {
                 id: item.id,
-                user: item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null },
+                user: {
+                    ...(item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null }),
+                    is_following: false // Profile owner logic handles follow button visibility usually
+                },
                 text: item.text,
-                images: item.img || [], // Assuming jsonb stores string[]
+                images: item.img || [],
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
                 keyword: item.keyword || [],
+                link_json: item.link_json || [],
+                poi, // Pass POI
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
