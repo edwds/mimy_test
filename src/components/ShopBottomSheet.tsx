@@ -69,10 +69,10 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             ref={sheetRef}
             initial={{ y: "50%" }}
             animate={controls}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
             drag="y"
             dragConstraints={{ top: 0 }}
-            dragMomentum={false}
-            dragElastic={0.05}
+            dragElastic={0.1}
             onDragEnd={handleDragEnd}
             className="absolute bottom-0 left-0 right-0 h-full bg-background rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform"
             style={{ touchAction: 'none' }}
