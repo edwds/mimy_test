@@ -119,7 +119,10 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
     if (mode === 'COMPARING' && candidates[compareIdx]) {
         const opponent = candidates[compareIdx];
         return (
-            <div className="flex flex-col h-full bg-[var(--color-surface)] p-6">
+            <div
+                className="flex flex-col h-full bg-[var(--color-surface)] px-6 pb-6"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
+            >
                 <h2 className="text-xl font-bold text-center mb-8 mt-4 text-[var(--color-text-primary)]">{t('write.ranking.title')}</h2>
 
                 <div className="flex-1 flex flex-col gap-4 justify-center">

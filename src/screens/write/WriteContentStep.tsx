@@ -254,7 +254,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             />
 
             {/* Header */}
-            <div className="px-4 py-3 flex items-center justify-between bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors border-b">
+            <div
+                className="px-4 pb-3 flex items-center justify-between bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors border-b"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            >
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"

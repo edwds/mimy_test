@@ -92,7 +92,10 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
             {/* Header */}
-            <div className="pl-4 pr-8 py-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
+            <div
+                className="pl-4 pr-8 pb-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            >
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"

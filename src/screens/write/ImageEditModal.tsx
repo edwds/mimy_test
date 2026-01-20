@@ -138,7 +138,11 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
             {/* Main View */}
             {!editingItem && (
                 <>
-                    <div className="flex items-center justify-between p-4 bg-black/50 text-white z-10">
+
+                    <div
+                        className="flex items-center justify-between px-4 pb-4 bg-black/50 text-white z-10"
+                        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+                    >
                         <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-white/10">
                             <X className="w-6 h-6" />
                         </button>
@@ -399,7 +403,10 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     return (
         <div className="absolute inset-0 z-50 bg-black flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 z-10 bg-black/50 backdrop-blur-md">
+            <div
+                className="flex items-center justify-between px-4 pb-4 z-10 bg-black/50 backdrop-blur-md"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+            >
                 <button onClick={onCancel} className="p-2 text-white">
                     <X />
                 </button>

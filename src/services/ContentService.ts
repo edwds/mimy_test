@@ -1,7 +1,9 @@
 
+import { API_BASE_URL } from '@/lib/api';
+
 export const ContentService = {
     create: async (data: any) => {
-        const response = await fetch('/api/content', {
+        const response = await fetch(`${API_BASE_URL}/api/content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -11,7 +13,7 @@ export const ContentService = {
     },
     submitRanking: async (data: { user_id: number; shop_id: number; sort_key: number }) => {
         // Deprecated: use applyRanking
-        const response = await fetch('/api/content/ranking', {
+        const response = await fetch(`${API_BASE_URL}/api/content/ranking`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -20,7 +22,7 @@ export const ContentService = {
         return response.json();
     },
     applyRanking: async (data: { user_id: number; shop_id: number; insert_index: number; satisfaction?: string }) => {
-        const response = await fetch('/api/content/ranking/apply', {
+        const response = await fetch(`${API_BASE_URL}/api/content/ranking/apply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
