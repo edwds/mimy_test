@@ -41,7 +41,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     }, [snapState, controls]);
 
     const handleDragEnd = (_: any, info: PanInfo) => {
-        const offset = info.offset.y;
+        // const offset = info.offset.y; // Unused
         const velocity = info.velocity.y;
         const currentY = sheetRef.current?.getBoundingClientRect().y || 0;
         const screenH = window.innerHeight;

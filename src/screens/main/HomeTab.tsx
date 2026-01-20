@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
-import { User as UserIcon, Bell, Search, PenLine } from 'lucide-react';
+import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 import { useTranslation, Trans } from 'react-i18next';
 
