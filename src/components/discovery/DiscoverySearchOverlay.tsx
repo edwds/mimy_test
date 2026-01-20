@@ -61,7 +61,10 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
     return (
         <div className="absolute inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom-5 duration-200">
             {/* Header */}
-            <div className="px-4 py-3 flex items-center bg-background border-b border-border/50">
+            <div
+                className="px-4 pb-3 flex items-center bg-background border-b border-border/50"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            >
                 <button
                     onClick={onClose}
                     className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors mr-2"
@@ -89,7 +92,10 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div
+                className="flex-1 overflow-y-auto px-4 py-4"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+            >
                 {loading ? (
                     <div className="space-y-4">
                         {[1, 2, 3].map((i) => (
