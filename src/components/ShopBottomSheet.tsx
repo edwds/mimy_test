@@ -33,9 +33,9 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     // Handle Snap State Changes
     useEffect(() => {
         const variants = {
-            peek: { y: "80%" }, // Raise peek height slightly
+            peek: { y: "calc(100% - 130px)" }, // Ensure at least 130px visible
             half: { y: "50%" },
-            full: { y: "10%" }
+            full: { y: "0%" }
         };
         controls.start(variants[snapState]);
     }, [snapState, controls]);
@@ -74,7 +74,8 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             dragConstraints={{ top: 0 }}
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
-            className="absolute bottom-0 left-0 right-0 h-full bg-background rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform"
+            className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform transition-[border-radius] duration-300 ${snapState === 'full' ? 'rounded-none pt-[env(safe-area-inset-top)]' : 'rounded-t-3xl'
+                }`}
             style={{ touchAction: 'none' }}
         >
             {/* Handle Bar */}

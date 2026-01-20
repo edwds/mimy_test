@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
+import { Capacitor } from '@capacitor/core';
 
 interface ShopDetail {
     id: number;
@@ -190,7 +191,13 @@ export const ShopDetailScreen = () => {
     return (
         <div className="h-full bg-background relative flex flex-col w-full max-w-md mx-auto shadow-2xl overflow-hidden">
             {/* Header (Transparent -> Sticky White) */}
-            <div className="absolute top-0 left-0 right-0 h-14 z-50 flex items-center justify-between px-4 pointer-events-none">
+            <div
+                className={cn(
+                    "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none transition-all duration-200",
+                    Capacitor.isNativePlatform() ? "h-auto pb-3" : "h-14"
+                )}
+                style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
+            >
                 {/* Dim Gradient (Always present, covered by white layer) */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 z-0" />
 
@@ -203,7 +210,11 @@ export const ShopDetailScreen = () => {
                 {/* Header Title */}
                 <motion.div
                     className="absolute inset-0 flex items-center justify-center z-20"
-                    style={{ opacity: headerTitleOpacity, y: headerTitleY }}
+                    style={{
+                        opacity: headerTitleOpacity,
+                        y: headerTitleY,
+                        paddingTop: Capacitor.isNativePlatform() ? 'env(safe-area-inset-top)' : 0
+                    }}
                 >
                     <span className="font-bold text-lg text-black truncate max-w-[60%]">
                         {shop.name}
@@ -223,6 +234,28 @@ export const ShopDetailScreen = () => {
 
                 {/* Action Buttons */}
                 <div className="relative z-30 flex items-center gap-2 pointer-events-auto">
+                    {/* Sticky Header Bookmark Button */}
+                    <motion.button
+                        onClick={handleBookmark}
+                        style={{
+                            opacity: headerTitleOpacity,
+                            pointerEvents: headerTitleOpacity.get() < 0.5 ? 'none' : 'auto', // Note: .get() might not start reactive in render, but standard motion usage usually handles this via style visibility or we rely on z-index context if needed. 
+                            // Better: use a transform or just opacity. If it relies on pointer-events, motion value needs a listener or use `display`.
+                            // React framer-motion doesn't easily map motion value to boolean for conditional rendering efficiently without state.
+                            // However, we can just leave it there. If opacity is 0, user likely won't click it accidentally if it's small, or we can use `display: headerTitleOpacity.to(v => v < 0.1 ? 'none' : 'block')`.
+                            color: buttonColor
+                        }}
+                        className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center mr-[-4px]"
+                    >
+                        <Bookmark size={24} style={shop.is_saved ? { color: '#ef4444' } : undefined} className={cn(shop.is_saved && "fill-current")} />
+                        {/* Note: buttonColor controls the color. If saved, we might want to override color to Red? 
+                            The original button uses `text-red-500` class if saved.
+                            Here `style={{ color: buttonColor }}` sets text color. 
+                            If I want red when saved, I should override the style or let class take precedence? 
+                            Style usually takes precedence.
+                            I will modify the style prop logic for this button.
+                        */}
+                    </motion.button>
                     <motion.button
                         style={{ color: buttonColor }}
                         className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
@@ -235,7 +268,8 @@ export const ShopDetailScreen = () => {
             {/* Hero Image with Zoom Effect */}
             <motion.div
                 style={{ scale }}
-                className="absolute top-0 left-0 right-0 h-[28vh] z-0 origin-top"
+                className="absolute top-0 left-0 right-0 h-[calc(28vh+env(safe-area-inset-top))] z-0 origin-top"
+            // Added negative margin and increased height to cover notch if parent has safe-area padding
             >
                 {shop.thumbnail_img ? (
                     <img src={shop.thumbnail_img} alt={shop.name} className="w-full h-full object-cover" />

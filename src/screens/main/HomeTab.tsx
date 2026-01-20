@@ -3,8 +3,9 @@ import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
-import { useUser } from '@/context/UserContext';
 import { useTranslation, Trans } from 'react-i18next';
+import { Capacitor } from '@capacitor/core';
+import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
 
 // Force deploy check
 interface Props {
@@ -265,8 +266,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             {/* Smart Header */}
             <div
                 ref={headerRef}
-                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-6 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-                    }`}
+                className={`absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pb-2 transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                    } ${!Capacitor.isNativePlatform() && "pt-6"}`}
+                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 10px)' } : undefined}
             >
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-2xl font-bold">{t('home.today')}</h1>

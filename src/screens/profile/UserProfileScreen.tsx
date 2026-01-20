@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Grid, List, Loader2, ArrowLeft } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
@@ -269,7 +270,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const scrollPositions = useRef<{ [key: string]: number }>({});
 
     // Header is always visible now to prevent issues
-    // const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+    const [isHeaderVisible] = useState(true);
 
     const handleScroll = () => {
         // Keep scroll position tracking for tab switching if needed, 
@@ -300,7 +301,10 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             {/* Header */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-2 bg-background/95 backdrop-blur-sm z-50 px-4 pt-6 pb-2 transition-transform duration-300 flex items-center gap-2")}
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-4 pb-2 transition-transform duration-300 flex items-center gap-2",
+                    isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+                )}
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
             >
                 <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate(-1)}>
                     <ArrowLeft className="w-6 h-6" />
@@ -336,7 +340,10 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 onScroll={handleScroll}
             >
                 {/* Top Area */}
-                <div className="p-5 pt-20 pb-2 relative">
+                <div
+                    className={cn("p-5 pb-2 relative", !Capacitor.isNativePlatform() && "pt-20")}
+                    style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 6rem)' } : undefined}
+                >
                     <div className="flex justify-between items-start mb-6">
                         {/* Info */}
                         <div className="flex-1 pr-4 flex flex-col min-w-0">

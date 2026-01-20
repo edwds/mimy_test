@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 // I will keep the header overlay logic but adapt it.
 import { API_BASE_URL } from '@/lib/api';
 import { MapContainer } from '@/components/MapContainer';
+import { Capacitor } from '@capacitor/core';
 import { ShopBottomSheet } from '@/components/ShopBottomSheet';
 import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOverlay'; // Import Overlay
 import { cn } from '@/lib/utils';
@@ -62,6 +63,16 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 url = `${API_BASE_URL}/api/users/${userId}/saved_shops`;
             } else if (useBounds && bounds) {
                 url += `&minLat=${bounds.minLat}&maxLat=${bounds.maxLat}&minLon=${bounds.minLon}&maxLon=${bounds.maxLon}`;
+            } else if (useBounds === false && !showSavedOnly && mapCenter) {
+                // Initial load with mapCenter logic if we want to default to "Nearby" without explicit bounds 
+                // But better to expect bounds to be passed if useBounds is true.
+                // If useBounds is false (initial "discovery" feed), the backend just returns random shops.
+                // User Requirement: "Fetch 50 shops based on current location"
+                // So we should actually pass bounds or coordinates.
+                // Let's modify logic to support lat/lon simply? 
+                // Backend supports BBox. Let's stick to BBox.
+
+                // If we have no bounds but have a center (initial load), maybe we construct a box?
             }
 
             const res = await fetch(url, { headers });
@@ -90,11 +101,62 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         fetchShops();
     }, [showSavedOnly]); // Refetch when mode changes
 
-    // Initial Fetch
+    // Initial Fetch with Location
     useEffect(() => {
         if (!isEnabled) return;
-        fetchShops();
+
+        // Try to get location first
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setMapCenter([latitude, longitude]);
+
+                    // Construct 5km approx bounding box (approx 0.045 deg lat, ~0.05 deg lon)
+                    const delta = 0.05;
+                    const initialBounds = {
+                        minLat: latitude - delta,
+                        maxLat: latitude + delta,
+                        minLon: longitude - delta,
+                        maxLon: longitude + delta
+                    };
+                    setBounds(initialBounds);
+
+                    // Fetch directly with bounds logic (custom call)
+                    // We need to pass these bounds to fetchShops manually since state might not be flushed.
+                    // Actually refactoring fetchShops to take bounds arg is cleaner.
+                    fetchShopsWithBounds(initialBounds);
+                },
+                (error) => {
+                    console.error("Location init error", error);
+                    // Fallback to random/default
+                    fetchShops();
+                }
+            );
+        } else {
+            fetchShops();
+        }
     }, [isEnabled, refreshTrigger]);
+
+    const fetchShopsWithBounds = async (customBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
+        setIsLoading(true);
+        try {
+            const userId = localStorage.getItem('mimy_user_id');
+            const headers: any = {};
+            if (userId) headers['x-user-id'] = userId;
+
+            // Always use discovery endpoint with bounds
+            let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
+            url += `&minLat=${customBounds.minLat}&maxLat=${customBounds.maxLat}&minLon=${customBounds.minLon}&maxLon=${customBounds.maxLon}`;
+
+            const res = await fetch(url, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                setShops(data);
+            }
+        } catch (e) { console.error(e); }
+        finally { setIsLoading(false); }
+    };
 
     // Refresh Listener
     useEffect(() => {
@@ -239,7 +301,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             />
 
             {/* Top Search Overlay */}
-            <div className="absolute top-6 left-6 right-6 z-10 flex flex-col gap-2 items-center">
+            <div
+                className="absolute left-6 right-6 z-10 flex flex-col gap-2 items-center"
+                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 2.5rem)' : '1.5rem' }}
+            >
                 <div
                     onClick={() => setIsSearching(true)}
                     className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50 cursor-pointer active:scale-98 transition-transform"
@@ -262,7 +327,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             </div>
 
             {/* Map Controls */}
-            <div className="absolute top-32 right-4 z-10 flex flex-col gap-3">
+            <div
+                className="absolute right-4 z-10 flex flex-col gap-3"
+                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 8rem)' : '8rem' }}
+            >
                 <button
                     onClick={handleCurrentLocation}
                     className="p-3 bg-white rounded-full shadow-lg border border-gray-100 active:scale-95 transition-transform"

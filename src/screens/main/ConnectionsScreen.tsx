@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
@@ -52,7 +54,13 @@ export const ConnectionsScreen = () => {
             )}
 
             {/* Header */}
-            <div className="flex items-center px-4 pt-6 pb-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+            <div
+                className={cn(
+                    "flex items-center px-4 pb-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10",
+                    !Capacitor.isNativePlatform() && "pt-6"
+                )}
+                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
+            >
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="-ml-2 mr-2">
                     <ArrowLeft className="w-6 h-6" />
                 </Button>

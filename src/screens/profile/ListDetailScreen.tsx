@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 
 interface ListItem {
     rank: number;
@@ -90,7 +91,10 @@ export const ListDetailScreen = () => {
     return (
         <div className="flex flex-col h-full bg-background relative">
             {/* Header */}
-            <header className="bg-background border-b border-border z-20 sticky top-0">
+            <header
+                className="bg-background border-b border-border z-20 sticky top-0"
+                style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
+            >
                 <div className="flex items-center gap-2 px-4 py-3">
                     <Button variant="ghost" size="icon" className="-ml-2" onClick={handleBack}>
                         <ArrowLeft className="w-6 h-6" />

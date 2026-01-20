@@ -23,6 +23,14 @@ import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { UserProvider } from '@/context/UserContext';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { StatusBarGuard } from '@/components/StatusBarGuard';
+
+// Initialize GoogleAuth once at app startup
+if (Capacitor.isNativePlatform()) {
+    GoogleAuth.initialize();
+}
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const isLoggedIn = !!localStorage.getItem("mimy_user_id");
@@ -51,9 +59,10 @@ function App() {
 
     return (
         <GoogleOAuthProvider clientId={googleClientId || ""}>
-            <DebugLocaleSwitcher />
             <UserProvider>
+                <DebugLocaleSwitcher />
                 <BrowserRouter>
+                    <StatusBarGuard />
                     {loading ? (
                         <SplashScreen />
                     ) : (
@@ -94,7 +103,7 @@ function App() {
                     )}
                 </BrowserRouter>
             </UserProvider>
-        </GoogleOAuthProvider>
+        </GoogleOAuthProvider >
     );
 }
 

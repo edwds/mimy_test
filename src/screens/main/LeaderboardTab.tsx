@@ -6,6 +6,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
+import { Capacitor } from '@capacitor/core';
 
 interface LeaderboardItem {
     rank: number;
@@ -30,6 +31,14 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const lastScrollY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
+    const [headerHeight, setHeaderHeight] = useState(0);
+
+    // Measure Header Height for padding
+    useEffect(() => {
+        if (headerRef.current) {
+            setHeaderHeight(headerRef.current.offsetHeight);
+        }
+    }, []);
 
 
     // Filter State (Mock)
@@ -108,26 +117,29 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             <div
                 ref={headerRef}
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pt-7 pb-2 transition-transform duration-300",
+                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-5 pb-2 transition-transform duration-300",
+                    !Capacitor.isNativePlatform() && "pt-6",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
+                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
             >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-4">
                     <h1 className="text-2xl font-bold">{t('leaderboard.title')}</h1>
-                    <div className="flex gap-4">
-                        {/* Icons */}
-                    </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div
+            <main
                 ref={containerRef}
-                className="flex-1 overflow-y-auto"
+                className="flex-1 overflow-y-auto pb-20"
                 onScroll={handleScroll}
             // style={{ paddingTop: headerHeight }} // Removed unreliable JS padding
             >
-                <div className="p-4 pt-20 mb-4 pb-20"> {/* Adjusted pt-28 -> pt-20 */}
+                <div
+                    className={cn("p-4 mb-4 pb-20")}
+                    style={{ paddingTop: headerHeight ? headerHeight + 16 : 100 }}
+                >
+
 
                     {/* Filter Chips & Similarity Toggle */}
                     <div className="flex flex-col gap-4 mb-6">
@@ -284,7 +296,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                         </div>
                     )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

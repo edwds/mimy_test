@@ -421,7 +421,6 @@ router.post("/", async (req, res) => {
 // Helper
 function mapSatisfactionToTier(satisfaction: string): number {
     switch (satisfaction) {
-        case 'best': return 3;
         case 'good': return 2;
         case 'ok': return 1;
         case 'bad': return 0;

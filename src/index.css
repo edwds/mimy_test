@@ -43,6 +43,30 @@
         padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
     }
 
+    .pt-safe-offset-5 {
+        padding-top: calc(env(safe-area-inset-top) + 1.25rem);
+    }
+
+    .pb-safe-offset-5 {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+    }
+
+    .pt-safe-offset-8 {
+        padding-top: calc(env(safe-area-inset-top) + 2rem);
+    }
+
+    .pb-safe-offset-8 {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);
+    }
+
+    .pt-safe-offset-10 {
+        padding-top: calc(env(safe-area-inset-top) + 2.5rem);
+    }
+
+    .pb-safe-offset-10 {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 2.5rem);
+    }
+
     .dark {
         --background: 20 14.3% 4.1%;
         --foreground: 60 9.1% 97.8%;
