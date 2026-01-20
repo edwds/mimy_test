@@ -10,7 +10,7 @@ interface ImageEditModalProps {
     files: File[];
     isOpen: boolean;
     onClose: () => void;
-    onEditingComplete: (files: File[]) => void;
+    onEditingComplete: (files: File[], originalFirstFile?: File) => void;
 }
 
 interface ProcessingItem {
@@ -101,7 +101,10 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
             return item.file;
         });
 
-        onEditingComplete(finalFiles);
+        // Pass the original file of the first item to preserve EXIF data
+        const originalFirstFile = items.length > 0 ? items[0].file : undefined;
+
+        onEditingComplete(finalFiles, originalFirstFile);
         onClose();
     };
 

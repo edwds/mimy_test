@@ -19,18 +19,19 @@ interface Props {
     satisfaction?: string;
 }
 
-interface UploadingImage {
+interface MediaItem {
     id: string;
-    file: File;
-    progress: number;
+    file?: File;
     url?: string;
-    error?: boolean;
+    status: 'uploading' | 'complete' | 'error';
+    progress: number;
 }
 
-const UploadingThumbnail = ({ file, error }: { file: File, progress: number, error?: boolean }) => {
+const UploadingThumbnail = ({ file, error }: { file?: File, progress: number, error?: boolean }) => {
     const [preview, setPreview] = useState<string>('');
 
     React.useEffect(() => {
+        if (!file) return;
         const url = URL.createObjectURL(file);
         setPreview(url);
         return () => URL.revokeObjectURL(url);
@@ -55,8 +56,10 @@ const UploadingThumbnail = ({ file, error }: { file: File, progress: number, err
 export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, satisfaction }) => {
     const { t } = useTranslation();
     const [text, setText] = useState('');
-    const [images, setImages] = useState<string[]>([]);
-    const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
+
+    // Unified Media State
+    const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+
     const [keywords, setKeywords] = useState<string[]>([]);
     const [keywordInput, setKeywordInput] = useState('');
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
@@ -78,15 +81,15 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         e.target.value = '';
     };
 
-    const handleEditingComplete = (files: File[]) => {
+    const handleEditingComplete = (files: File[], originalFirstFile?: File) => {
         setIsEditModalOpen(false);
         setPendingFiles([]);
 
         // Auto-set date from photo if not manually set
         if (!isDateManuallySet && files.length > 0) {
-            const file = files[0];
+            const fileToCheck = originalFirstFile || files[0];
             // Try extracting EXIF date
-            exifr.parse(file).then(output => {
+            exifr.parse(fileToCheck).then(output => {
                 const exifDate = output?.DateTimeOriginal || output?.CreateDate;
                 if (exifDate) {
                     const date = new Date(exifDate);
@@ -94,13 +97,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     setVisitDate(localDate);
                 } else {
                     // Fallback to lastModified if no EXIF date
-                    const fileDate = new Date(file.lastModified);
+                    const fileDate = new Date(fileToCheck.lastModified);
                     const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
                     setVisitDate(localDate);
                 }
             }).catch(() => {
                 // Fallback on error
-                const fileDate = new Date(file.lastModified);
+                const fileDate = new Date(fileToCheck.lastModified);
                 const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
                 setVisitDate(localDate);
             });
@@ -110,16 +113,21 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     };
 
     const uploadFiles = async (files: File[]) => {
-        const newUploads = files.map(file => ({
+        // Create placeholders in order
+        const newItems: MediaItem[] = files.map(file => ({
             id: Math.random().toString(36).substr(2, 9),
             file,
+            status: 'uploading',
             progress: 0
         }));
-        setUploadingImages(prev => [...prev, ...newUploads]);
 
-        newUploads.forEach(upload => {
+        setMediaItems(prev => [...prev, ...newItems]);
+
+        // Start uploads
+        newItems.forEach(item => {
+            if (!item.file) return;
             const formData = new FormData();
-            formData.append('file', upload.file);
+            formData.append('file', item.file);
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${API_BASE_URL}/api/upload`);
@@ -127,8 +135,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const percent = (e.loaded / e.total) * 100;
-                    setUploadingImages(prev => prev.map(u =>
-                        u.id === upload.id ? { ...u, progress: percent } : u
+                    setMediaItems(prev => prev.map(m =>
+                        m.id === item.id ? { ...m, progress: percent } : m
                     ));
                 }
             };
@@ -137,18 +145,25 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 if (xhr.status === 200) {
                     try {
                         const data = JSON.parse(xhr.response);
-                        setImages(prev => [...prev, data.url]);
-                        setUploadingImages(prev => prev.filter(u => u.id !== upload.id));
+                        setMediaItems(prev => prev.map(m =>
+                            m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                        ));
                     } catch (e) {
-                        setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+                        setMediaItems(prev => prev.map(m =>
+                            m.id === item.id ? { ...m, status: 'error' } : m
+                        ));
                     }
                 } else {
-                    setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+                    setMediaItems(prev => prev.map(m =>
+                        m.id === item.id ? { ...m, status: 'error' } : m
+                    ));
                 }
             };
 
             xhr.onerror = () => {
-                setUploadingImages(prev => prev.map(u => u.id === upload.id ? { ...u, error: true } : u));
+                setMediaItems(prev => prev.map(m =>
+                    m.id === item.id ? { ...m, status: 'error' } : m
+                ));
             };
 
             xhr.send(formData);
@@ -156,9 +171,14 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     };
 
     const handleSubmit = () => {
+        // Extract only completed URLs, in order
+        const validImages = mediaItems
+            .filter(m => m.status === 'complete' && m.url)
+            .map(m => m.url!);
+
         onNext({
             text,
-            images,
+            images: validImages,
             companions: selectedUsers.map(u => u.id),
             keywords,
             visitDate
@@ -174,8 +194,6 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         }
     };
 
-
-
     const getSatisfactionLabel = () => {
         switch (satisfaction) {
             case 'good': return t('write.basic.good');
@@ -184,6 +202,14 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             default: return '';
         }
     };
+
+    // Check if any uploads are in progress
+    const isUploading = mediaItems.some(m => m.status === 'uploading');
+
+    // Check validation
+    const isValid = mode === 'review'
+        ? (text.trim() || mediaItems.some(m => m.status === 'complete'))
+        : text.trim();
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
@@ -215,10 +241,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </div>
                 <Button
                     onClick={handleSubmit}
-                    disabled={uploadingImages.length > 0 || (mode === 'review' ? (!text.trim() && images.length === 0) : (!text.trim()))}
+                    disabled={isUploading || !isValid}
                     className={cn(
                         "rounded-full px-4 font-bold transition-all",
-                        (mode === 'review' ? (text.trim() || images.length > 0) : text.trim())
+                        isValid
                             ? "bg-primary text-primary-foreground hover:bg-primary/90"
                             : "bg-muted text-muted-foreground"
                     )}
@@ -370,29 +396,35 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 <ImageIcon className="w-4 h-4" />
                                 {t('write.content.photo_label')}
                             </Label>
-                            <span className="text-xs text-muted-foreground font-medium">{images.length}/30</span>
+                            <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">
-                            {images.map((src, idx) => (
-                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm">
-                                    <img src={src} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                                    <button
-                                        onClick={() => setImages(images.filter((_, i) => i !== idx))}
-                                        className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                                    >
-                                        <X className="w-3 h-3 text-white" />
-                                    </button>
+                            {mediaItems.map((item, idx) => (
+                                <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm bg-muted">
+
+                                    {item.status === 'complete' && item.url ? (
+                                        <>
+                                            <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                                            <button
+                                                onClick={() => setMediaItems(prev => prev.filter(m => m.id !== item.id))}
+                                                className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                                            >
+                                                <X className="w-3 h-3 text-white" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <UploadingThumbnail
+                                            file={item.file}
+                                            progress={item.progress}
+                                            error={item.status === 'error'}
+                                        />
+                                    )}
+
                                 </div>
                             ))}
 
-                            {uploadingImages.map((u) => (
-                                <div key={u.id} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
-                                    <UploadingThumbnail file={u.file} progress={u.progress} error={u.error} />
-                                </div>
-                            ))}
-
-                            {images.length + uploadingImages.length < 30 && (
+                            {mediaItems.length < 30 && (
                                 <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
                                     <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
                                     <input
