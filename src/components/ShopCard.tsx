@@ -30,11 +30,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
     const { t } = useTranslation();
     const navigate = useNavigate();
 
+
+
     const handleCardClick = () => {
         if (onClick) {
             onClick(shop.id);
         } else {
-            navigate(`/shop/${shop.id}`);
+            const current = new URLSearchParams(window.location.search);
+            current.set('viewShop', String(shop.id));
+            navigate({ search: current.toString() });
         }
     };
 

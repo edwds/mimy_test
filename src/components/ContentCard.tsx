@@ -247,6 +247,14 @@ export const ContentCard = ({
         const targetId = user.account_id || (user as any).id;
         if (targetId) {
             const current = new URLSearchParams(window.location.search);
+            // Clear conflicting overlays (List/Shop) since UserProfile is lower in hierarchy
+            // and we want it to be visible (or rather, we treat this as a context switch).
+            current.delete('viewShop');
+            current.delete('viewListUser');
+            current.delete('type');
+            current.delete('value');
+            current.delete('title');
+
             current.set('viewUser', String(targetId));
 
             // If we are not in main tab (e.g. ShopDetail), navigate to main
@@ -622,7 +630,9 @@ export const ContentCard = ({
                             e.stopPropagation();
                             const sid = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
                             if (sid) {
-                                navigate(`/shop/${sid}`);
+                                const current = new URLSearchParams(window.location.search);
+                                current.set('viewShop', String(sid));
+                                navigate({ search: current.toString() });
                             }
                         }}
                     >

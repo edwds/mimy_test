@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { MainHeader } from '@/components/MainHeader';
+import { FilterChip } from '@/components/FilterChip';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
@@ -265,6 +266,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             <div
                 ref={containerRef}
                 className="flex-1 overflow-y-auto"
+                data-scroll-container="true"
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }} // Compensate for fixed header
             >
@@ -272,19 +274,12 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                     {/* Chips */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 px-5">
                         {CHIPS.map(chip => (
-                            <button
+                            <FilterChip
                                 key={chip}
+                                label={t(`home.chips.${chip}`)}
+                                isActive={activeChip === chip}
                                 onClick={() => handleChipChange(chip)}
-                                className={`
-                                    px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                    ${activeChip === chip
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                                    }
-                                `}
-                            >
-                                {t(`home.chips.${chip}`)}
-                            </button>
+                            />
                         ))}
                     </div>
 

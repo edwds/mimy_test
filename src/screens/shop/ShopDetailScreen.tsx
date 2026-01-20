@@ -25,8 +25,13 @@ interface ShopDetail {
     is_saved?: boolean;
 }
 
-export const ShopDetailScreen = () => {
-    const { shopId } = useParams<{ shopId: string }>();
+interface ShopDetailProps {
+    shopIdProp?: string;
+}
+
+export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
+    const { shopId: paramShopId } = useParams<{ shopId: string }>();
+    const shopId = shopIdProp || paramShopId;
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { user } = useUser();
@@ -146,7 +151,12 @@ export const ShopDetailScreen = () => {
     // Actually, `fetchReviews` above closes over `id` and `user?.id` but params match args.
     // Better to just let the effect trigger the next page content fetch.
 
-    const handleBack = () => navigate(-1);
+    const handleBack = () => {
+        // If prop driven (overlay), we likely want to just close the overlay (remove query param)
+        // Navigate -1 might work if we pushed state.
+        // If we just set query param, navigate -1 removes it.
+        navigate(-1);
+    };
 
     const handleBookmark = async () => {
         if (!user || !shop) return;

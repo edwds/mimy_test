@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { MainHeader } from '@/components/MainHeader';
+import { FilterChip } from '@/components/FilterChip';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { User as UserIcon } from 'lucide-react';
 import { cn, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
@@ -31,7 +32,13 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     // Smart Header State
     const containerRef = useRef<HTMLDivElement>(null);
     const { isVisible: isHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
-    const headerRef = useRef<HTMLDivElement>(null);
+    // Header height measurement
+    const [headerHeight, setHeaderHeight] = useState(0);
+    const measureHeader = (node: HTMLDivElement | null) => {
+        if (node) {
+            setHeaderHeight(node.offsetHeight);
+        }
+    };
 
 
     // Filter State (Mock)
@@ -95,7 +102,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header */}
             <MainHeader
-                ref={headerRef}
+                ref={measureHeader}
                 title={t('leaderboard.title')}
                 isVisible={isHeaderVisible}
             />
@@ -104,40 +111,28 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             <main
                 ref={containerRef}
                 className="flex-1 overflow-y-auto pb-20"
+                data-scroll-container="true"
                 onScroll={handleScroll}
-            // style={{ paddingTop: headerHeight }} // Removed unreliable JS padding
+                style={{ paddingTop: headerHeight }}
             >
                 <div
-                    className={cn("px-5 py-4 mb-4 pb-20")}
-                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)' }}
+                    className={cn("px-5 mb-4 pb-20")}
                 >
 
 
                     {/* Filter Chips & Similarity Toggle */}
                     <div className="flex flex-col gap-4 mb-6">
                         <div className="flex gap-2">
-                            <button
+                            <FilterChip
+                                label="회사"
+                                isActive={filter === 'company'}
                                 onClick={() => setFilter('company')}
-                                className={cn(
-                                    "px-4 py-1.5 rounded-full text-sm font-bold transition-colors border",
-                                    filter === 'company'
-                                        ? "bg-primary text-secondary border-primary"
-                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
-                                )}
-                            >
-                                회사
-                            </button>
-                            <button
+                            />
+                            <FilterChip
+                                label="지역"
+                                isActive={filter === 'neighborhood'}
                                 onClick={() => setFilter('neighborhood')}
-                                className={cn(
-                                    "px-4 py-1.5 rounded-full text-sm font-bold transition-colors border",
-                                    filter === 'neighborhood'
-                                        ? "bg-primary text-secondary border-primary"
-                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
-                                )}
-                            >
-                                지역
-                            </button>
+                            />
                         </div>
 
                         <label className="flex items-center gap-2 cursor-pointer group">

@@ -9,6 +9,8 @@ import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
 import { LeaderboardTab } from './LeaderboardTab';
+import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
+import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 
 const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
 
@@ -94,19 +96,37 @@ export const MainTab = () => {
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <main className="flex-1 overflow-hidden relative min-h-0">
-                {/* Stacked Screen: User Profile via Query Param */}
+                {/* Stacked Screens */}
                 {(() => {
                     const searchParams = new URLSearchParams(location.search);
                     const viewUserId = searchParams.get('viewUser');
+                    const viewShopId = searchParams.get('viewShop');
+                    const viewListUserId = searchParams.get('viewListUser'); // User ID for the list
 
-                    if (viewUserId) {
-                        return (
-                            <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
-                                <UserProfileScreen userId={viewUserId} />
-                            </div>
-                        );
-                    }
-                    return null;
+                    // Render stack based on what is present. 
+                    // Note: If multiple are present, we might want to show the last one, 
+                    // or standard LIFO if we tracked history, but here we just check sequentially.
+                    // For now, let's allow them to stack if needed, or just prioritize ONE.
+                    // The user interaction usually sets one.
+                    return (
+                        <>
+                            {viewUserId && (
+                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                    <UserProfileScreen userId={viewUserId} />
+                                </div>
+                            )}
+                            {viewListUserId && (
+                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                    <ListDetailScreen userIdProp={viewListUserId} />
+                                </div>
+                            )}
+                            {viewShopId && (
+                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                    <ShopDetailScreen shopIdProp={viewShopId} />
+                                </div>
+                            )}
+                        </>
+                    );
                 })()}
 
                 <div className={cn("h-full w-full", activeTab === 'home' ? `block ${getAnimationClass()}` : 'hidden')}>

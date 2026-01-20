@@ -483,14 +483,16 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     author={list.author}
                                     onPress={() => {
                                         // Navigate to details
-                                        const query = new URLSearchParams({
-                                            type: list.type,
-                                            value: list.value || '',
-                                            title: list.title
-                                        });
-                                        // Using user.id if available, otherwise userId param
+                                        // Navigate to details via Overlay (query params)
+                                        const current = new URLSearchParams(window.location.search);
                                         const targetId = user?.id || userId;
-                                        navigate(`/profile/lists/${targetId}?${query.toString()}`);
+
+                                        current.set('viewListUser', String(targetId));
+                                        current.set('type', list.type);
+                                        if (list.value) current.set('value', list.value);
+                                        if (list.title) current.set('title', list.title);
+
+                                        navigate({ search: current.toString() });
                                     }}
                                 />
                             ))}

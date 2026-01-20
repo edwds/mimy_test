@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -62,8 +61,13 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const scrollPositions = useRef<Record<string, number>>({});
     const { isVisible: isHeaderVisible, setIsVisible: setIsHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
 
-    // Header height measurement (removed dynamic calculation)
-    const headerRef = useRef<HTMLDivElement>(null);
+    // Header height measurement
+    const [headerHeight, setHeaderHeight] = useState(0);
+    const measureHeader = (node: HTMLDivElement | null) => {
+        if (node) {
+            setHeaderHeight(node.offsetHeight);
+        }
+    };
 
     // Refresh listener
     useEffect(() => {
@@ -274,7 +278,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header (overlay) */}
             <MainHeader
-                ref={headerRef}
+                ref={measureHeader}
                 title={`@${user.account_id}`}
                 isVisible={isHeaderVisible}
                 rightAction={
@@ -328,12 +332,13 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             <main
                 ref={containerRef}
                 className="flex-1 overflow-y-auto"
+                data-scroll-container="true"
                 onScroll={handleScroll}
+                style={{ paddingTop: headerHeight }}
             >
                 {/* Top Area */}
                 <div
-                    className={cn("p-5 pb-2 relative", !Capacitor.isNativePlatform() && "pt-20")}
-                    style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 6rem)' } : undefined}
+                    className={cn("p-5 pb-2 relative")}
                 >
                     <div className="flex justify-between items-start mb-6">
                         {/* Left */}
@@ -409,7 +414,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-background border-b border-border/50 sticky top-0 z-20">
+                <div className="bg-background border-b border-border/50 z-20">
                     <div className="flex w-full px-0">
                         <TabButton
                             active={activeTab === 'content'}

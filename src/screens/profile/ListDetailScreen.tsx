@@ -21,10 +21,15 @@ interface ListAuthor {
     profile_image?: string;
 }
 
-export const ListDetailScreen = () => {
+interface ListDetailProps {
+    userIdProp?: string;
+}
+
+export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { userId } = useParams(); // URL param (could be ID or account_id)
+    const { userId: paramUserId } = useParams(); // URL param (could be ID or account_id)
+    const userId = userIdProp || paramUserId;
     const [searchParams] = useSearchParams();
 
     // List Metadata from URL or initial fetch
@@ -217,7 +222,11 @@ const RankingListItem = ({ item }: { item: ListItem }) => {
     return (
         <div
             className="flex bg-background rounded-xl p-4 shadow-sm border border-border/50 items-start gap-4 active:scale-[0.99] transition-transform cursor-pointer"
-            onClick={() => navigate(`/shop/${shop.id}`)}
+            onClick={() => {
+                const current = new URLSearchParams(window.location.search);
+                current.set('viewShop', String(shop.id));
+                navigate({ search: current.toString() });
+            }}
         >
             {/* Rank */}
             <div className="flex-shrink-0 flex flex-col items-center justify-center w-8 pt-1">

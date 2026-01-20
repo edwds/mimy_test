@@ -12,6 +12,21 @@ export const StatusBarGuard = () => {
 
     useEffect(() => {
         setIsNative(Capacitor.isNativePlatform());
+
+        const handleStatusTap = () => {
+            // Find the active scroll container
+            // We search for elements with 'data-scroll-container' that are visible
+            const containers = document.querySelectorAll('[data-scroll-container="true"]');
+            containers.forEach((container) => {
+                // Check if visible (simple check: offsetParent is not null)
+                if ((container as HTMLElement).offsetParent !== null) {
+                    container.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        };
+
+        window.addEventListener('statusTap', handleStatusTap);
+        return () => window.removeEventListener('statusTap', handleStatusTap);
     }, []);
 
     // If on Discovery Tab (assuming query param or specific route), disable the white background

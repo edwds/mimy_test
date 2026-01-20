@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SplashScreen } from '@/screens/onboarding/SplashScreen';
 import { StartPage } from '@/screens/onboarding/StartPage';
@@ -17,9 +18,7 @@ import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
-import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
-import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { UserProvider } from '@/context/UserContext';
@@ -91,10 +90,10 @@ function App() {
                             <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
                             <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
                             <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
-                            <Route path="/profile/lists/:userId" element={<ProtectedRoute><ListDetailScreen /></ProtectedRoute>} />
+                            <Route path="/profile/lists/:userId" element={<ProtectedRoute><RedirectToList /></ProtectedRoute>} />
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
-                            <Route path="/shop/:shopId" element={<ProtectedRoute><ShopDetailScreen /></ProtectedRoute>} />
+                            <Route path="/shop/:shopId" element={<ProtectedRoute><RedirectToShop /></ProtectedRoute>} />
                             <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
 
                             {/* Redirect old user profile link to new one */}
@@ -114,7 +113,18 @@ const StartRoute = () => {
 
 const RedirectToMainUser = () => {
     const { userId } = useParams();
-    return <Navigate to={`/main/user/${userId}`} replace />;
+    return <Navigate to={`/main?viewUser=${userId}`} replace />;
+};
+
+const RedirectToShop = () => {
+    const { shopId } = useParams();
+    return <Navigate to={`/main?viewShop=${shopId}`} replace />;
+};
+
+const RedirectToList = () => {
+    const { userId } = useParams();
+    const [searchParams] = useSearchParams();
+    return <Navigate to={`/main?viewListUser=${userId}&${searchParams.toString()}`} replace />;
 };
 
 // PublicHome removed as it's replaced by explicit /start route
