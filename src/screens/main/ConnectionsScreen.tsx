@@ -86,7 +86,7 @@ export const ConnectionsScreen = () => {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4" data-scroll-container="true">
                 {loading ? (
                     <div className="flex justify-center py-10">Loading...</div>
                 ) : (

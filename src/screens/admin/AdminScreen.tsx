@@ -84,9 +84,9 @@ export const AdminScreen = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
             {/* Header */}
-            <header className="h-16 bg-white border-b flex items-center px-4 sticky top-0 z-10">
+            <header className="h-16 bg-white border-b flex items-center px-4 shrink-0 z-10">
                 <button onClick={() => navigate('/main')} className="p-2 -ml-2 text-gray-400">
                     <ChevronLeft size={24} />
                 </button>
@@ -95,7 +95,7 @@ export const AdminScreen = () => {
                 </h1>
             </header>
 
-            <main className="flex-1 p-6 space-y-6">
+            <main className="flex-1 overflow-y-auto p-6 space-y-6" data-scroll-container="true">
                 {/* Info Card */}
                 {!isUpdating && !result?.success && (
                     <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 flex gap-3">
@@ -217,7 +217,7 @@ export const AdminScreen = () => {
             </main>
 
             {/* Bottom Actions */}
-            <footer className="p-6 bg-white border-t sticky bottom-0">
+            <footer className="p-6 bg-white border-t shrink-0">
                 <button
                     onClick={handleUpdate}
                     disabled={!file || isUpdating}

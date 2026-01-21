@@ -337,6 +337,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             <main
                 ref={containerRef}
                 className="flex-1 overflow-y-auto"
+                data-scroll-container="true"
                 onScroll={handleScroll}
             >
                 {/* Top Area */}

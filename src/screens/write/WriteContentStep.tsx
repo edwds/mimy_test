@@ -281,7 +281,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto" data-scroll-container="true">
                 {/* Content Area */}
                 <div className="p-6 space-y-8">
 

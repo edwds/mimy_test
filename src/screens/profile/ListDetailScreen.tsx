@@ -156,7 +156,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
             </header>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto bg-muted/5 relative">
+            <main className="flex-1 overflow-y-auto bg-muted/5 relative" data-scroll-container="true">
                 {loading ? (
                     <div className="flex justify-center py-20">
                         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

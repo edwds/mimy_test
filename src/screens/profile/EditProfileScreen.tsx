@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Camera, Loader2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { resizeImage } from '@/lib/image';
@@ -122,12 +123,15 @@ export const EditProfileScreen = () => {
         }
     };
 
-    if (loading) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
+    if (loading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
     return (
         <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <header className="px-4 py-3 flex items-center justify-between border-b border-border">
+            <header
+                className="px-4 py-3 flex items-center justify-between border-b border-border bg-background sticky top-0 z-10"
+                style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.75rem)' : undefined }}
+            >
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted">
                     <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -142,7 +146,7 @@ export const EditProfileScreen = () => {
                 </Button>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-6">
+            <main className="flex-1 overflow-y-auto p-6" data-scroll-container="true">
 
                 {/* Image Upload */}
                 <div className="flex flex-col items-center mb-8">

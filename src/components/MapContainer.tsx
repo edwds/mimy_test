@@ -14,7 +14,7 @@ interface Props {
     shops: Shop[];
     onMarkerClick?: (shopId: number) => void;
     onMapClick?: () => void;
-    center?: [number, number]; // [lat, lon] - keeping Leaflet order for compatibility with parent
+    center?: [number, number]; // [lat, lon]
     isActive?: boolean;
     selectedShopId?: number | null;
     bottomSheetOffset?: number;
@@ -23,58 +23,72 @@ interface Props {
 }
 
 // Function to create custom marker HTML
-const createMarkerElement = (isSelected: boolean, isSaved: boolean) => {
+const createMarkerElement = (shop: Shop, isSelected: boolean) => {
+    const isSaved = shop.is_saved;
     const color = isSaved ? '#DC2626' : '#FF6B00';
     const bgColor = isSelected ? color : '#FFFFFF';
     const borderColor = isSelected ? '#FFFFFF' : color;
-    const size = isSelected ? 40 : 32;
+    const size = isSelected ? 32 : 24;
 
-    const el = document.createElement('div');
-    el.className = 'custom-marker';
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.backgroundColor = bgColor;
-    el.style.borderRadius = '50%';
-    el.style.border = `2px solid ${borderColor}`;
-    el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    // Fix jitter: Only transition specific properties, avoid generic 'all' which includes transform
-    el.style.transition = 'width 0.3s, height 0.3s, background-color 0.3s, border-color 0.3s';
-    el.style.cursor = 'pointer';
-    el.style.zIndex = isSelected ? '1000' : (isSaved ? '500' : '1');
+    // Root Container: 0x0 size, centered at coordinate
+    const container = document.createElement('div');
+    container.className = 'marker-root';
+    container.style.width = '0px';
+    container.style.height = '0px';
+    container.style.position = 'relative';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.cursor = 'pointer';
+    container.style.pointerEvents = 'auto'; // allow clicks
+    container.style.zIndex = isSelected ? '1000' : (isSaved ? '500' : '100');
+
+    // Pin: Absolutely centered
+    const pin = document.createElement('div');
+    pin.className = 'custom-marker-pin';
+    pin.style.position = 'absolute';
+    pin.style.width = `${size}px`;
+    pin.style.height = `${size}px`;
+    pin.style.left = '50%';
+    pin.style.top = '50%';
+    pin.style.transform = 'translate(-50%, -50%)';
+    pin.style.backgroundColor = bgColor;
+    pin.style.borderRadius = '50%';
+    pin.style.border = `2px solid ${borderColor}`;
+    pin.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    pin.style.display = 'flex';
+    pin.style.alignItems = 'center';
+    pin.style.justifyContent = 'center';
+    pin.style.transition = 'all 0.2s ease-out';
 
     const innerHtml = isSaved
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
-        : `<div style="width: 10px; height: 10px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
+        : `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
 
-    el.innerHTML = innerHtml;
-    return el;
-};
+    pin.innerHTML = innerHtml;
+    container.appendChild(pin);
 
-const createClusterElement = (count: number) => {
-    const el = document.createElement('div');
-    el.className = 'custom-cluster';
-    // Premium Cluster Style - White BG, Orange Text
-    const size = count < 10 ? 40 : (count < 100 ? 48 : 56);
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.background = '#FFFFFF';
-    el.style.borderRadius = '50%';
-    el.style.border = '2px solid #FF6B00'; // Orange border
-    el.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.style.color = '#FF6B00'; // Orange text
-    el.style.fontFamily = 'var(--font-family-display, sans-serif)';
-    el.style.fontWeight = 'bold';
-    el.style.fontSize = '16px';
-    el.style.cursor = 'pointer';
-    el.style.pointerEvents = 'auto'; // Ensure clicks are captured
-    el.innerHTML = `<span>${count}</span>`;
-    return el;
+    // Label: Positioned to the right of the pin
+    const label = document.createElement('div');
+    label.innerText = shop.name;
+    label.style.position = 'absolute';
+    label.style.left = `${size / 2 + 6}px`; // Offset by radius + margin
+    label.style.top = '50%';
+    label.style.transform = 'translateY(-50%)';
+    label.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+    label.style.padding = '2px 6px';
+    label.style.borderRadius = '4px';
+    label.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15)';
+    label.style.fontSize = '12px';
+    label.style.fontWeight = '600';
+    label.style.color = '#333';
+    label.style.whiteSpace = 'nowrap';
+    label.style.pointerEvents = 'none';
+    label.style.transition = 'opacity 0.2s';
+
+    container.appendChild(label);
+
+    return container;
 };
 
 export const MapContainer = ({
@@ -86,11 +100,11 @@ export const MapContainer = ({
     selectedShopId,
     bottomSheetOffset,
     onMoveEnd,
-    onClusterClick
+    // onClusterClick // Not used anymore
 }: Props) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maptilersdk.Map | null>(null);
-    const markers = useRef<Map<string, maptilersdk.Marker>>(new Map()); // Changed key to string for IDs
+    const markers = useRef<Map<string, maptilersdk.Marker>>(new Map());
     const prevParams = useRef<{ center?: [number, number], offset?: number }>({});
 
     // Initialize Map
@@ -102,7 +116,7 @@ export const MapContainer = ({
         map.current = new maptilersdk.Map({
             container: mapContainer.current,
             style: `https://api.maptiler.com/maps/base-v4/style.json?key=${import.meta.env.VITE_MAPTILER_API_KEY}`,
-            center: [126.9780, 37.5665], // Seoul [lng, lat]
+            center: [126.9780, 37.5665],
             zoom: 14,
             navigationControl: false,
             geolocateControl: false,
@@ -110,45 +124,26 @@ export const MapContainer = ({
         });
 
         map.current.on('load', () => {
+            // Source is still useful for data mgmt but we won't use cluster
             map.current?.addSource('shops', {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: [] },
-                cluster: true,
-                clusterMaxZoom: 16,
-                clusterRadius: 35 // Reduced from 50 to keep clusters tighter
+                cluster: false, // DISABLED
             });
 
-            // Add invisible layer to query against
+            // We don't strictly need layers if we use Markers for everything.
+            // But we might want 'shops-point' layer for queryRenderedFeatures logic to still work efficiently?
+            // Yes, queryRenderedFeatures is better for viewport rendering.
+
             map.current?.addLayer({
                 id: 'shops-point',
                 type: 'circle',
                 source: 'shops',
-                filter: ['!', ['has', 'point_count']],
-                paint: { 'circle-opacity': 0, 'circle-radius': 0 }
-            });
-
-            // We also need to query clusters? Use same layer or separate?
-            // Since we use queryRenderedFeatures, we assume clusters are also rendered?
-            // Actually, typically you add a layer for unclustered and a layer for clusters.
-            // But if we want to query *anything*, we need layers for both conditions if we filter.
-            // OR just one layer without filter?
-            // Let's add a general layer with opacity 0 that covers both.
-            // Keep it simple.
-
-            // Actually, `queryRenderedFeatures` returns features from layers. If we filter '!', we won't get clusters.
-            // So add another layer for clusters.
-            map.current?.addLayer({
-                id: 'shops-cluster',
-                type: 'circle',
-                source: 'shops',
-                filter: ['has', 'point_count'],
-                paint: { 'circle-opacity': 0, 'circle-radius': 1 } // Radius > 0 ensures it renders to be queryable?
+                paint: { 'circle-opacity': 0, 'circle-radius': 0 } // Invisible query layer
             });
         });
 
         map.current.on('click', (e) => {
-            // Check if click was on a marker (markers handle their own clicks)
-            // But we want to deselect if click was on map itself
             if (!e.defaultPrevented) {
                 onMapClick?.();
             }
@@ -171,7 +166,6 @@ export const MapContainer = ({
         };
     }, []);
 
-    // Handle Active State (resize)
     useEffect(() => {
         if (isActive && map.current) {
             setTimeout(() => {
@@ -180,15 +174,10 @@ export const MapContainer = ({
         }
     }, [isActive]);
 
-    // Handle Markers & Clustering
+    // Handle Data Updates
     useEffect(() => {
         if (!map.current) return;
-
         const currentMap = map.current;
-        // removed unused currentMarkers
-
-
-        // 1. Update Source Data
         const source = currentMap.getSource('shops') as any;
         const geojson = {
             type: 'FeatureCollection',
@@ -201,20 +190,18 @@ export const MapContainer = ({
                 properties: {
                     id: shop.id,
                     is_saved: shop.is_saved ? 1 : 0,
-                    // We need to pass selection state, but GeoJSON properties are static until updated.
-                    // We can handle selection highlighting in the render loop by checking `selectedShopId`
+                    // Pass name for initial feature properties if needed, 
+                    // though we use 'shop' object from props in render loop by ID lookup.
+                    // Actually feature.properties is handy.
+                    name: shop.name
                 }
             }))
         };
 
         if (source) {
             source.setData(geojson);
-        } else {
-            // Only add if map is loaded, handled in init or checking `map.loaded()`?
-            // Actually, we should add source in init, but if shops update before init, we need to handle it.
-            // Best to rely on `useEffect` for data updates and `on('load')` for source creation.
         }
-    }, [shops]); // Only data updates
+    }, [shops]);
 
     // Marker Render Loop
     useEffect(() => {
@@ -222,107 +209,72 @@ export const MapContainer = ({
         const currentMap = map.current;
 
         const updateMarkers = () => {
-            // Query visible features
-            const featuresPoints = currentMap.queryRenderedFeatures({ layers: ['shops-point'] });
-            const featuresClusters = currentMap.queryRenderedFeatures({ layers: ['shops-cluster'] });
-            const features = [...featuresPoints, ...featuresClusters];
+            const features = currentMap.queryRenderedFeatures({ layers: ['shops-point'] });
 
-            // Track used IDs to remove old ones
+            // Track IDs we want to keep
             const newMarkerIds = new Set<string>();
 
-            features.forEach((feature: any) => {
-                const isCluster = !!feature.properties.cluster;
-                const id = isCluster
-                    ? `cluster-${feature.properties.cluster_id}`
-                    : `shop-${feature.properties.id}`;
-
+            // Helper to add/update marker
+            const renderMarker = (shopId: number, lat: number, lon: number) => {
+                const id = `shop-${shopId}`;
                 newMarkerIds.add(id);
 
+                const shop = shops.find(s => s.id === shopId);
+                if (!shop) return;
+
                 if (!markers.current.has(id)) {
-                    // Create Marker
-                    let marker: maptilersdk.Marker;
-                    let el: HTMLElement;
+                    // Create New Marker
+                    const isSelected = shopId === selectedShopId;
+                    const el = createMarkerElement(shop, isSelected);
 
-                    if (isCluster) {
-                        const count = feature.properties.point_count;
-                        el = createClusterElement(count);
-                        el.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            e.preventDefault(); // Prevent map click logic
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        onMarkerClick?.(shopId);
+                    });
 
-                            const clusterId = feature.properties.cluster_id;
-                            const source = currentMap.getSource('shops') as any;
+                    const marker = new maptilersdk.Marker({
+                        element: el,
+                        anchor: 'center'
+                    });
 
-                            // NEW: Activate cluster (Get shops) instead of zooming
-                            // Get leaves (unclustered points)
-                            source.getClusterLeaves(clusterId, Infinity, 0, (err: any, features: any[]) => {
-                                if (err) {
-                                    console.error("Error getting cluster leaves:", err);
-                                    return;
-                                }
-
-                                // Map leaves back to full Shop objects from our prop
-                                // We rely on IDs to match current prop data
-                                const leafIds = new Set(features.map(f => f.properties.id));
-                                const clusterShops = shops.filter(s => leafIds.has(s.id));
-
-                                onClusterClick?.(clusterShops);
-                            });
-                        });
-                        marker = new maptilersdk.Marker({ element: el });
-                    } else {
-                        // Shop Marker
-                        // We need real-time properties. 
-                        // `feature.properties` has the static data from Source.
-                        // For selection state, we check `selectedShopId`.
-                        const shopId = feature.properties.id;
-                        const isSaved = !!feature.properties.is_saved;
-                        const isSelected = shopId === selectedShopId;
-
-                        el = createMarkerElement(isSelected, isSaved);
-                        el.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            onMarkerClick?.(shopId);
-                        });
-                        marker = new maptilersdk.Marker({ element: el });
-                    }
-
-                    marker.setLngLat(feature.geometry.coordinates).addTo(currentMap);
+                    marker.setLngLat([lon, lat]).addTo(currentMap);
                     markers.current.set(id, marker);
                 } else {
-                    // Update Existing (Highlihgt check)
-                    // If it's a shop, we might need to update style if selectedShopId changed
-                    if (!isCluster) {
-                        const shopId = feature.properties.id;
-                        const isSaved = !!feature.properties.is_saved;
-                        const isSelected = shopId === selectedShopId;
+                    // Update Existing
+                    const marker = markers.current.get(id)!;
+                    const isSelected = shopId === selectedShopId;
 
-                        const marker = markers.current.get(id)!;
-                        const oldEl = marker.getElement();
+                    const newEl = createMarkerElement(shop, isSelected);
+                    const oldEl = marker.getElement();
 
-                        // Check if we need to replace element? 
-                        // Or just update styles. createMarkerElement logic creates a complex SVG/Div.
-                        // Simplest is to replace element if state differs? 
-                        // Optim: modify styles directly if possible.
-                        // For now, let's just replace the element content or style if key props changed.
-                        // Optimization: Compare flags. But DOM access is cheap enough for 20 items.
-
-                        const newEl = createMarkerElement(isSelected, isSaved);
-                        // Don't lose listeners... replacing element is tricky in Marker.
-                        // Better: manual style update.
-                        // Let's reuse createMarkerElement logic manually here or make it updateable.
-                        // For speed, let's just check if we can update the color/size.
-
-                        // Hack: Replace internal HTML?
+                    if (oldEl.innerHTML !== newEl.innerHTML || oldEl.style.zIndex !== newEl.style.zIndex) {
                         oldEl.innerHTML = newEl.innerHTML;
-                        oldEl.style.backgroundColor = newEl.style.backgroundColor;
-                        oldEl.style.border = newEl.style.border;
-                        oldEl.style.width = newEl.style.width;
-                        oldEl.style.height = newEl.style.height;
                         oldEl.style.zIndex = newEl.style.zIndex;
                     }
+                    // For selected marker, ensure position serves correct if we manually added it
+                    if (isSelected) {
+                        marker.setLngLat([lon, lat]);
+                    }
                 }
+            };
+
+            // 1. Render Visible Features
+            features.forEach((feature: any) => {
+                const shopId = feature.properties.id;
+                // Properties might be localized or partial, but ID is reliable.
+                // We need lat/lon. Feature geometry has it.
+                // Note: feature.geometry.coordinates is [lon, lat]
+                const [lon, lat] = feature.geometry.coordinates;
+                renderMarker(shopId, lat, lon);
             });
+
+            // 2. Explicitly Render Selected Shop (to prevent disappearing on pan/edge cases)
+            if (selectedShopId) {
+                const selectedShop = shops.find(s => s.id === selectedShopId);
+                if (selectedShop && selectedShop.lat && selectedShop.lon) {
+                    renderMarker(selectedShop.id, selectedShop.lat, selectedShop.lon);
+                }
+            }
 
             // Cleanup
             markers.current.forEach((marker, id) => {
@@ -336,25 +288,23 @@ export const MapContainer = ({
         currentMap.on('load', updateMarkers);
         currentMap.on('move', updateMarkers);
         currentMap.on('moveend', updateMarkers);
+        currentMap.on('sourcedata', (e) => {
+            if (e.sourceId === 'shops' && e.isSourceLoaded) updateMarkers();
+        });
 
-        // Initial call if loaded
         if (currentMap.loaded()) updateMarkers();
 
         return () => {
             currentMap.off('load', updateMarkers);
             currentMap.off('move', updateMarkers);
             currentMap.off('moveend', updateMarkers);
+            currentMap.off('sourcedata', updateMarkers);
         };
-    }, [selectedShopId]); // Re-bind updateMarkers when selection changes (to update highlights)
+    }, [selectedShopId, shops]);
 
-    // Initial Source Setup (Moved from init to separate effect to ensure map exists)
-    // Actually, do it in Map Init logic to ensure order.
-
-
-    // Handle Centering with Offset
+    // Handle Centering
     useEffect(() => {
         if (!map.current || !center) return;
-
         const prev = prevParams.current;
         const sameCenter = prev.center && prev.center[0] === center[0] && prev.center[1] === center[1];
         const sameOffset = prev.offset === bottomSheetOffset;
@@ -362,7 +312,7 @@ export const MapContainer = ({
         if (sameCenter && sameOffset) return;
         prevParams.current = { center, offset: bottomSheetOffset };
 
-        let targetCenter: [number, number] = [center[1], center[0]]; // [lng, lat]
+        let targetCenter: [number, number] = [center[1], center[0]];
 
         if (bottomSheetOffset && bottomSheetOffset > 0) {
             const point = map.current.project(targetCenter as any);
@@ -381,6 +331,14 @@ export const MapContainer = ({
     return (
         <div className="w-full h-full relative">
             <div ref={mapContainer} className="absolute inset-0" />
+            <style>{`
+                /* Ensure marker interaction */
+                .marker-container {
+                    /* Since we set width via element style, this might not be needed */
+                }
+            `}</style>
         </div>
     );
 };
+
+

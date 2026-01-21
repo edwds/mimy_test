@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 
@@ -135,14 +136,17 @@ export function ImportScreen() {
         return (
             <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
                 {/* Header */}
-                <div className="flex items-center p-4 border-b border-white/5">
+                <div
+                    className="flex items-center p-4 border-b border-white/5 bg-background sticky top-0 z-10"
+                    style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 1rem)' : undefined }}
+                >
                     <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-foreground">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <h1 className="text-xl font-bold ml-2">가져오기 완료</h1>
                 </div>
 
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" data-scroll-container="true">
                     <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
                         <CheckCircle2 className="w-8 h-8 text-green-500" />
                     </div>
@@ -181,7 +185,10 @@ export function ImportScreen() {
     return (
         <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center p-4 border-b border-white/5">
+            <div
+                className="flex items-center p-4 border-b border-white/5 bg-background sticky top-0 z-10"
+                style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 1rem)' : undefined }}
+            >
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-foreground">
                     <ArrowLeft className="w-6 h-6" />
                 </button>
@@ -189,7 +196,7 @@ export function ImportScreen() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-6 overflow-y-auto" data-scroll-container="true">
                 <div className="space-y-6">
                     {/* Intro */}
                     <div>

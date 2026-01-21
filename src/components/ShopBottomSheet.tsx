@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShopCard } from './ShopCard';
-import { motion, PanInfo, useAnimation } from 'framer-motion';
+import { motion, PanInfo, useAnimation, useDragControls } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,9 +12,9 @@ interface Props {
 
 export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     // 0: Collapsed (just peek), 1: List View (half), 2: Expanded (full)
-    // If selectedShopId is present, we might want to default to 'half' or 'peek' depending on content.
     const [snapState, setSnapState] = useState<'peek' | 'half' | 'full'>('half');
     const controls = useAnimation();
+    const dragControls = useDragControls();
     const sheetRef = useRef<HTMLDivElement>(null);
     const { t } = useTranslation();
 
@@ -24,16 +24,16 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         : shops;
 
     useEffect(() => {
-        // When selection changes...
+        // Upon selection, ensure at least half visible
         if (selectedShopId) {
-            setSnapState('half'); // Ensure visible
+            setSnapState('half');
         }
     }, [selectedShopId]);
 
     // Handle Snap State Changes
     useEffect(() => {
         const variants = {
-            peek: { y: "calc(100% - 130px)" }, // Ensure at least 130px visible
+            peek: { y: "calc(100% - 130px)" },
             half: { y: "50%" },
             full: { y: "0%" }
         };
@@ -41,25 +41,22 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     }, [snapState, controls]);
 
     const handleDragEnd = (_: any, info: PanInfo) => {
-        // const offset = info.offset.y; // Unused
         const velocity = info.velocity.y;
         const currentY = sheetRef.current?.getBoundingClientRect().y || 0;
         const screenH = window.innerHeight;
-
-        // Calculate relative position (0 to 1, where 0 is top)
         const ratio = currentY / screenH;
 
         // Velocity threshold for flicks
-        if (velocity < -500) { // Flick Up
+        if (velocity < -400) { // Flick Up
             if (snapState === 'peek') setSnapState('half');
             else setSnapState('full');
-        } else if (velocity > 500) { // Flick Down
+        } else if (velocity > 400) { // Flick Down
             if (snapState === 'full') setSnapState('half');
             else setSnapState('peek');
         } else {
             // Position based snapping
-            if (ratio > 0.75) setSnapState('peek');
-            else if (ratio > 0.30) setSnapState('half');
+            if (ratio > 0.8) setSnapState('peek');
+            else if (ratio > 0.35) setSnapState('half');
             else setSnapState('full');
         }
     };
@@ -69,36 +66,44 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             ref={sheetRef}
             initial={{ y: "50%" }}
             animate={controls}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
             drag="y"
+            dragControls={dragControls}
+            dragListener={false} // Only allow drag from specific areas
+            dragMomentum={false} // Prevent overshooting
             dragConstraints={{ top: 0 }}
-            dragElastic={0.1}
+            dragElastic={0.05} // Stiffer resistance
             onDragEnd={handleDragEnd}
             className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform transition-[border-radius] duration-300 ${snapState === 'full' ? 'rounded-none pt-[env(safe-area-inset-top)]' : 'rounded-t-3xl'
                 }`}
             style={{ touchAction: 'none' }}
         >
-            {/* Handle Bar */}
-            <div className="pt-3 pb-2 flex justify-center cursor-grab active:cursor-grabbing w-full">
-                <div className={`w-12 h-1.5 bg-gray-300 rounded-full transition-opacity duration-300 ${snapState === 'full' ? 'opacity-0' : 'opacity-100'}`} />
-            </div>
-            {/* Add spacing if handle is gone? Or styling handles it. Header has padding. 
-                If handle is gone, we might need top padding. 
-                Wait, full state has `pt-[env(safe-area-inset-top)]` on container. 
-                Header follows immediately.
-            */}
+            {/* Draggable Area Container */}
+            <div
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                onPointerDown={(e) => dragControls.start(e)}
+            >
+                {/* Handle Bar */}
+                <div className="pt-3 pb-2 flex justify-center w-full">
+                    <div className={`w-12 h-1.5 bg-gray-300 rounded-full transition-opacity duration-300 ${snapState === 'full' ? 'opacity-0' : 'opacity-100'}`} />
+                </div>
 
-            {/* Header (Draggable) */}
-            <div className="flex justify-between items-center mb-0 px-5 pb-4">
-                <h2 className="text-lg font-bold">
-                    {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
-                </h2>
-                <button
-                    onClick={() => setSnapState('peek')}
-                    className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                >
-                    <X size={20} />
-                </button>
+                {/* Header */}
+                <div className="flex justify-between items-center mb-0 px-5 pb-4">
+                    <h2 className="text-lg font-bold">
+                        {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
+                    </h2>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation(); // Don't trigger drag
+                            setSnapState('peek');
+                        }}
+                        className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                        onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* Content (Scrollable only when full) */}

@@ -29,7 +29,44 @@ router.post("/update-db", upload.single("file"), async (req, res) => {
             return res.status(400).json({ error: "Empty or invalid TSV file" });
         }
 
-        const headers = lines[0].split('\t').map(h => h.trim());
+        // Helper to parse TSV line handling quotes
+        const parseTSVLine = (line: string): string[] => {
+            const result: string[] = [];
+            let current = '';
+            let inQuote = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+
+                if (inQuote) {
+                    if (char === '"') {
+                        if (i + 1 < line.length && line[i + 1] === '"') {
+                            // Escaped quote
+                            current += '"';
+                            i++;
+                        } else {
+                            // End of quote
+                            inQuote = false;
+                        }
+                    } else {
+                        current += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuote = true;
+                    } else if (char === '\t') {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+            }
+            result.push(current);
+            return result;
+        };
+
+        const headers = parseTSVLine(lines[0]).map(h => h.trim());
         const dataLines = lines.slice(1).filter(line => line.trim().length > 0);
 
         // 3. Validate Schema
@@ -49,7 +86,7 @@ router.post("/update-db", upload.single("file"), async (req, res) => {
 
         for (let i = 0; i < dataLines.length; i += batchSize) {
             const batch = dataLines.slice(i, i + batchSize).map(line => {
-                const values = line.split('\t');
+                const values = parseTSVLine(line);
                 const row: any = {};
                 headers.forEach((header, index) => {
                     let val = values[index];

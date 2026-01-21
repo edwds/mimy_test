@@ -1,4 +1,0 @@
-name	catchtable_id	description	address_full	address_region	kind	food_kind	lat	lon	thumbnail_img	status	country_code	visibility	google_place_id
-Mimy Test Shop 1	1001	A premium test restaurant	Seoul Gangnam-gu	Seoul	restaurant	korean	37.5172	127.0473	https://example.com/img1.jpg	2	KR	true	google_mimy_1
-Mimy Test Shop 2	1002	Modern fusion cuisine	Seoul Seocho-gu	Seoul	restaurant	fusion	37.4833	127.0322	https://example.com/img2.jpg	2	KR	true	google_mimy_2
-Mimy Test Shop 3	1003	Cozy cafe with specialty coffee	Seoul Mapo-gu	Seoul	cafe	coffee	37.5567	126.9235	https://example.com/img3.jpg	2	KR	true	google_mimy_3
