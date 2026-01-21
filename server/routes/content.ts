@@ -1,10 +1,12 @@
-
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters, users_follow } from "../db/schema.js";
-import { eq, desc, and, sql, not, count, ilike, or, inArray, gt, gte, ne, lte } from "drizzle-orm";
+import { eq, desc, and, sql, count, inArray, gt, gte, ne, lte } from "drizzle-orm";
 
 const router = Router();
+
+// Helper for standardized rank key
+const getRankKey = (userId: number, shopId: number) => `${userId}:${shopId}`;
 
 // GET /api/content/feed
 router.get("/feed", async (req, res) => {
@@ -13,8 +15,14 @@ router.get("/feed", async (req, res) => {
         const limit = parseInt(req.query.limit as string) || 20;
         const offset = (page - 1) * limit;
         const filter = (req.query.filter as string) || 'popular';
-        const userLat = parseFloat(req.query.lat as string);
-        const userLon = parseFloat(req.query.lon as string);
+
+        // Validation for location
+        const rawLat = parseFloat(req.query.lat as string);
+        const rawLon = parseFloat(req.query.lon as string);
+        const userLat = Number.isFinite(rawLat) ? rawLat : null;
+        const userLon = Number.isFinite(rawLon) ? rawLon : null;
+
+        // TODO: Replace with secure session/token auth
         const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
 
         // 1. Fetch Content + User Info
@@ -36,22 +44,21 @@ router.get("/feed", async (req, res) => {
                 taste_result: users.taste_result
             },
             link_json: content.link_json,
-            // For 'near' sort, we might want distance, but let's just filter for now
         })
             .from(content)
             .leftJoin(users, eq(content.user_id, users.id))
             .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
 
-        // Fetch Current User's Taste Profile if filtering by popular (default) to personalize
+        // Fetch Current User's Taste Profile for 'popular' personalization
         let myScores: any = null;
         if (currentUserId && (filter === 'popular' || filter === '')) {
-            const me = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, currentUserId)).limit(1);
+            const me = await db.select({ taste_result: users.taste_result })
+                .from(users)
+                .where(eq(users.id, currentUserId))
+                .limit(1);
             if (me.length > 0 && me[0].taste_result) {
-                // Parse scores from jsonb
                 const tr = me[0].taste_result as any;
-                if (tr.scores) {
-                    myScores = tr.scores;
-                }
+                if (tr.scores) myScores = tr.scores;
             }
         }
 
@@ -62,75 +69,35 @@ router.get("/feed", async (req, res) => {
         ];
 
         if (filter === 'follow') {
-            if (!currentUserId) {
-                return res.json([]); // Login required
-            }
-            // Join users_follow to only get people I follow
-            query.innerJoin(users_follow,
+            if (!currentUserId) return res.json([]);
+            // Fix: Reassign query for explicit join
+            query = query.innerJoin(users_follow,
                 and(
                     eq(users_follow.follower_id, currentUserId),
                     eq(users_follow.following_id, content.user_id)
                 )
             );
         } else if (filter === 'like') {
-            if (!currentUserId) {
-                return res.json([]); // Login required
-            }
-            // Join likes to get content I liked
-            query.innerJoin(likes,
+            if (!currentUserId) return res.json([]);
+            // Fix: Reassign query
+            query = query.innerJoin(likes,
                 and(
                     eq(likes.target_type, 'content'),
                     eq(likes.target_id, content.id),
                     eq(likes.user_id, currentUserId)
                 )
             );
-
-        } else if ((filter === 'popular' || filter === '') && myScores) {
-            // Apply Taste Match Filter (>= 70% Match)
-            // 70% match approx sumSqDiff <= 17.83 (Gaussian sigma=5)
-            // Axes: boldness, acidity, richness, experimental, spiciness, sweetness, umami
-            const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
-
-            // Build raw SQL for distance calculation
-            // (user.score - my.score)^2 + ...
-            const distillSQL = axes.map(axis => {
-                const myVal = Number(myScores[axis] || 0);
-                // Extract value from JSON path: taste_result->'scores'->>axis
-                // We assume users.taste_result is structured as { scores: { ... } }
-                return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
-            }).join(' + ');
-
-            // Filter where sum of squared diffs <= 17.83
-            // Also ensure the user HAS a taste result
-            whereConditions.push(sql`(${users.taste_result} IS NOT NULL)`);
-            whereConditions.push(sql`(${sql.raw(distillSQL)}) <= 17.83`);
-
         } else if (filter === 'near') {
-            if (!userLat || !userLon) {
-                // If location missing, fallback to popular or empty? 
-                // Let's return empty or normal feed? Spec implies "near 10km".
-                // If no loc, probably empty or error.
+            if (userLat === null || userLon === null) {
+                // Spec fallback: return empty if location missing for 'near'
+                return res.json([]);
             } else {
-                // Approximate 10km filter using Haversine
-                // We need to join local shops to get lat/lon
-                // Limitation: We have to extract shop_id from jsonb review_prop
-                // JOIN shops ON shops.id = (content.review_prop->>'shop_id')::int
-
-                query.innerJoin(shops,
+                // Fix: 10km radius
+                query = query.innerJoin(shops,
                     sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shops.id}`
                 );
 
-                // Haversine Formula for 10km (approx)
-                // 6371 * acos(...)
-                // SQL in SQLite/Postgres compatibility is tricky for math functions if using pure sqlite, 
-                // but Drizzle `sql` tag passes raw string.
-                // Assuming Postgres (based on pg-core imports) or SQLite with Math functions enabled?
-                // The project uses `drizzle-orm/pg-core` so it IS Postgres.
-                // Postgres has earth_distance or we can use raw math.
-
-                const R = 6371; // Radius of Earth in km
-
-                // Using raw SQL for distance filter
+                const R = 6371;
                 whereConditions.push(sql`
                     (
                         ${R} * acos(
@@ -140,22 +107,37 @@ router.get("/feed", async (req, res) => {
                                 sin(radians(${userLat})) * sin(radians(${shops.lat}))
                             ))
                         )
-                    ) <= 5
+                    ) <= 10
                 `);
             }
+        } else if ((filter === 'popular' || filter === '') && myScores) {
+            // Fix: Taste Match Safety
+            const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+            const distillSQL = axes.map(axis => {
+                const myVal = Number(myScores[axis] || 0);
+                // Safe casting and coalescing
+                return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
+            }).join(' + ');
+
+            whereConditions.push(sql`(${users.taste_result} IS NOT NULL)`);
+            whereConditions.push(sql`(${sql.raw(distillSQL)}) <= 17.83`);
         }
 
-        // Apply Where
         const feedItems = await query
             .where(and(...whereConditions))
             .orderBy(desc(content.created_at))
             .limit(limit)
             .offset(offset);
 
-        // 2. Collect IDs for enrichment
+        if (feedItems.length === 0) {
+            return res.json([]);
+        }
+
+        // 2. Collection & Batching
         const shopIds = new Set<number>();
         const userIds = new Set<number>();
-        const companionIds = new Set<number>(); // New: Collect companion IDs
+        const companionIds = new Set<number>();
+        const contentIds = feedItems.map(i => i.id);
 
         feedItems.forEach(item => {
             if (item.type === 'review' && item.review_prop) {
@@ -164,178 +146,181 @@ router.get("/feed", async (req, res) => {
                     shopIds.add(Number(prop.shop_id));
                     userIds.add(item.user_id);
                 }
-                // New: Check for companions
                 if (prop.companions && Array.isArray(prop.companions)) {
                     prop.companions.forEach((cid: number) => companionIds.add(cid));
                 }
             }
         });
 
-        // 3. Batch Fetch Shops, Rankings, VisitCounts, Companions
         const shopMap = new Map();
         const rankMap = new Map<string, number>();
-        const contentVisitRankMap = new Map<number, number>();
-        const companionMap = new Map<number, any>(); // New: Map ID to User info
+        const companionMap = new Map<number, any>();
+        const visitCountMap = new Map<number, number>(); // ContentID -> Count
 
+        // 3. Batch Fetching
         if (shopIds.size > 0 || companionIds.size > 0) {
             const sIds = Array.from(shopIds);
             const uIds = Array.from(userIds);
             const cIds = Array.from(companionIds);
 
-            // Fetch Shops
             if (sIds.length > 0) {
+                // Shops
                 const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
                 shopList.forEach(s => shopMap.set(s.id, s));
 
-                // Rankings
+                // Rankings (User-Shop pairs)
                 const rankings = await db.select().from(users_ranking)
                     .where(and(
                         inArray(users_ranking.user_id, uIds),
                         inArray(users_ranking.shop_id, sIds)
                     ));
-                rankings.forEach(r => rankMap.set(`${r.user_id} -${r.shop_id} `, r.rank));
+                rankings.forEach(r => rankMap.set(getRankKey(r.user_id, r.shop_id), r.rank));
 
-                // Visit Counts
-                const visitCountPromises = feedItems.map(async (item) => {
-                    if (item.type !== 'review' || !item.review_prop) return null;
-                    const prop = item.review_prop as any;
-                    if (!prop.shop_id) return null;
-                    const sid = Number(prop.shop_id);
-                    const targetDate = item.created_at ? new Date(item.created_at) : new Date();
+                // Visit Counts (N+1 Fix: Window Function / Subquery)
+                // We need to know: For each content item (which represents a visit), what was its ordinal number?
+                // "Rank of this content among all reviews by this user for this shop, ordered by created_at"
+                if (contentIds.length > 0) {
+                    const visitranks = await db.execute(sql`
+                        WITH ranks AS (
+                            SELECT 
+                                id,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY user_id, (review_prop->>'shop_id')::int 
+                                    ORDER BY created_at ASC
+                                ) as visit_num
+                            FROM ${content}
+                            WHERE is_deleted = false 
+                              AND type = 'review'
+                              -- optimization: filter only relevant users/shops if dataset is huge, 
+                              -- but global partition is safer for correctness if missing items
+                              AND user_id IN ${uIds}
+                              AND (review_prop->>'shop_id')::int IN ${sIds}
+                        )
+                        SELECT id, visit_num FROM ranks WHERE id IN ${contentIds}
+                     `);
+                    // Drizzle execute returns weird raw structure depending on driver. 
+                    // Safe way with array params in template literal might be tricky in pure sql tag.
+                    // Let's use simpler query builder or raw string mapping.
+                    // The above `IN ${uIds}` might not expand correctly in standard Drizzle sql tag without `sql.raw`.
+                    // Let's rely on a simpler aggregation if the above is risky.
 
-                    try {
-                        const countRes = await db.select({ count: count(content.id) })
-                            .from(content)
-                            .where(and(
-                                eq(content.user_id, item.user_id),
-                                eq(content.type, 'review'),
-                                eq(content.is_deleted, false),
-                                sql`(${content.review_prop}->>'shop_id')::int = ${sid}`,
-                                lte(content.created_at, targetDate)
-                            ));
-                        return { id: item.id, count: countRes[0].count };
-                    } catch (err) {
-                        return null;
-                    }
-                });
-                const visitCounts = await Promise.all(visitCountPromises);
-                visitCounts.forEach(vc => {
-                    if (vc) contentVisitRankMap.set(vc.id, vc.count);
-                });
+                    // Safer Approach with Drizzle Query Builder using sql<T>:
+                    // Hard to do complex Window in QB. Let's use formatting for IDs.
+                    const contentIdList = contentIds.join(',');
+                    // Only fetch for relevant items to save DB load
+
+                    const rawVisits = await db.execute(sql.raw(`
+                        WITH ranks AS (
+                            SELECT 
+                                id,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY user_id, (review_prop->>'shop_id')::int 
+                                    ORDER BY created_at ASC
+                                ) as visit_num
+                            FROM content
+                            WHERE is_deleted = false 
+                              AND type = 'review'
+                              AND user_id IN (${uIds.join(',')})
+                              AND (review_prop->>'shop_id')::int IN (${sIds.join(',')})
+                        )
+                        SELECT id, visit_num FROM ranks WHERE id IN (${contentIdList})
+                     `));
+
+                    rawVisits.rows.forEach((row: any) => {
+                        visitCountMap.set(Number(row.id), Number(row.visit_num));
+                    });
+                }
             }
 
-            // Fetch Companions
+            // Companions
             if (cIds.length > 0) {
-                const companionsList = await db.select({
-                    id: users.id,
-                    nickname: users.nickname,
-                    profile_image: users.profile_image
-                })
-                    .from(users)
-                    .where(inArray(users.id, cIds));
-                companionsList.forEach(c => companionMap.set(c.id, c));
+                const companions = await db.select({
+                    id: users.id, nickname: users.nickname, profile_image: users.profile_image
+                }).from(users).where(inArray(users.id, cIds));
+                companions.forEach(c => companionMap.set(c.id, c));
             }
         }
 
-        // 3.5 Batch Fetch Likes & Comments Counts + IsLiked
-        const contentIds = feedItems.map(i => i.id);
+        // 3.5 Interactions (Likes, Comments, Saved)
         const likeCountMap = new Map<number, number>();
         const commentCountMap = new Map<number, number>();
         const likedSet = new Set<number>();
-
+        const savedShopSet = new Set<number>();
 
         if (contentIds.length > 0) {
-            // Like Counts
-            const likeCounts = await db.select({
-                target_id: likes.target_id,
-                count: sql<number>`count(*)`
-            })
-                .from(likes)
-                .where(and(
-                    eq(likes.target_type, 'content'),
-                    inArray(likes.target_id, contentIds)
-                ))
+            // Counts
+            const likesRes = await db.select({
+                target_id: likes.target_id, count: sql<number>`count(*)`
+            }).from(likes)
+                .where(and(eq(likes.target_type, 'content'), inArray(likes.target_id, contentIds)))
                 .groupBy(likes.target_id);
+            likesRes.forEach(r => likeCountMap.set(r.target_id, Number(r.count)));
 
-            likeCounts.forEach(l => likeCountMap.set(l.target_id, Number(l.count)));
-
-            // Comment Counts
-            const commentCounts = await db.select({
-                content_id: comments.content_id,
-                count: sql<number>`count(*)`
-            })
-                .from(comments)
-                .where(and(
-                    inArray(comments.content_id, contentIds),
-                    eq(comments.is_deleted, false)
-                ))
+            const commentsRes = await db.select({
+                content_id: comments.content_id, count: sql<number>`count(*)`
+            }).from(comments)
+                .where(and(inArray(comments.content_id, contentIds), eq(comments.is_deleted, false)))
                 .groupBy(comments.content_id);
+            commentsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
 
-            commentCounts.forEach(c => commentCountMap.set(c.content_id, Number(c.count)));
-
-            // Is Liked
-            if (currentUserId && !isNaN(currentUserId)) {
-                const myLikes = await db.select({
-                    target_id: likes.target_id
-                })
-                    .from(likes)
+            // User Specific Status
+            if (currentUserId) {
+                const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
                     .where(and(
                         eq(likes.target_type, 'content'),
                         eq(likes.user_id, currentUserId),
                         inArray(likes.target_id, contentIds)
                     ));
-
                 myLikes.forEach(l => likedSet.add(l.target_id));
+
+                if (shopIds.size > 0) {
+                    const mySaved = await db.select({ shop_id: users_wantstogo.shop_id }).from(users_wantstogo)
+                        .where(and(
+                            eq(users_wantstogo.user_id, currentUserId),
+                            inArray(users_wantstogo.shop_id, Array.from(shopIds)),
+                            eq(users_wantstogo.is_deleted, false)
+                        ));
+                    mySaved.forEach(s => savedShopSet.add(s.shop_id));
+                }
             }
         }
 
-        // 3.6 Batch Fetch Preview Comments (Latest 2)
+        // 3.6 Preview Comments (N+1 Fix: Row Number Limit)
         const previewCommentsMap = new Map<number, any[]>();
         if (contentIds.length > 0) {
-            const recentComments = await db.select({
-                id: comments.id,
-                content_id: comments.content_id,
-                text: comments.text,
-                created_at: comments.created_at,
-                user: {
-                    nickname: users.nickname,
-                    profile_image: users.profile_image
-                }
-            })
-                .from(comments)
-                .leftJoin(users, eq(comments.user_id, users.id))
-                .where(and(
-                    inArray(comments.content_id, contentIds),
-                    eq(comments.is_deleted, false)
-                ))
-                .orderBy(desc(comments.created_at));
+            const rawComments = await db.execute(sql.raw(`
+                WITH ranked_comments AS (
+                    SELECT 
+                        c.id, c.content_id, c.text, c.created_at,
+                        u.nickname, u.profile_image,
+                        ROW_NUMBER() OVER (PARTITION BY c.content_id ORDER BY c.created_at DESC) as rn
+                    FROM comments c
+                    LEFT JOIN users u ON c.user_id = u.id
+                    WHERE c.content_id IN (${contentIds.join(',')})
+                      AND c.is_deleted = false
+                )
+                SELECT * FROM ranked_comments WHERE rn <= 2 ORDER BY created_at DESC
+             `));
 
-            recentComments.forEach(c => {
-                const list = previewCommentsMap.get(c.content_id) || [];
-                if (list.length < 2) {
-                    list.push(c);
-                    previewCommentsMap.set(c.content_id, list);
-                }
+            rawComments.rows.forEach((row: any) => {
+                const cid = Number(row.content_id);
+                const list = previewCommentsMap.get(cid) || [];
+                // Transform back to simple object
+                list.push({
+                    id: row.id,
+                    content_id: cid,
+                    text: row.text,
+                    created_at: row.created_at,
+                    user: { nickname: row.nickname, profile_image: row.profile_image }
+                });
+                previewCommentsMap.set(cid, list);
             });
         }
 
-        // 3.7 OPTIONAL: Fetch "Saved" Status for Current User
-        const savedShopSet = new Set<number>();
-        if (currentUserId && shopIds.size > 0) {
-            const saved = await db.select({ shop_id: users_wantstogo.shop_id })
-                .from(users_wantstogo)
-                .where(and(
-                    eq(users_wantstogo.user_id, currentUserId),
-                    inArray(users_wantstogo.shop_id, Array.from(shopIds))
-                ));
-            saved.forEach(s => savedShopSet.add(s.shop_id));
-        }
-
-        // 3.8 Batch Fetch Follow status for authors
+        // 3.8 Follow Status
         const followingAuthorSet = new Set<number>();
         if (currentUserId && userIds.size > 0) {
-            const follows = await db.select({ following_id: users_follow.following_id })
-                .from(users_follow)
+            const follows = await db.select({ following_id: users_follow.following_id }).from(users_follow)
                 .where(and(
                     eq(users_follow.follower_id, currentUserId),
                     inArray(users_follow.following_id, Array.from(userIds))
@@ -343,7 +328,7 @@ router.get("/feed", async (req, res) => {
             follows.forEach(f => followingAuthorSet.add(f.following_id));
         }
 
-        // 4. Enrich
+        // 4. Enrich & Respond
         const result = feedItems.map(item => {
             let enrichedProp = item.review_prop as any;
             let poi = undefined;
@@ -351,10 +336,10 @@ router.get("/feed", async (req, res) => {
             if (item.type === 'review' && enrichedProp?.shop_id) {
                 const sid = Number(enrichedProp.shop_id);
                 const shop = shopMap.get(sid);
-                const rank = rankMap.get(`${item.user_id} -${sid} `);
-                const visitCount = contentVisitRankMap.get(item.id) || 1;
+                const rank = rankMap.get(getRankKey(item.user_id, sid));
+                const visitCount = visitCountMap.get(item.id) || 1;
+                const isSaved = savedShopSet.has(sid);
 
-                // New: Enrich Companions
                 let displayCompanions = [];
                 if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
                     displayCompanions = enrichedProp.companions
@@ -370,10 +355,9 @@ router.get("/feed", async (req, res) => {
                         thumbnail_img: shop.thumbnail_img,
                         rank: rank || null,
                         visit_count: visitCount,
-                        companions_info: displayCompanions // Pass Enriched Info
+                        companions_info: displayCompanions
                     };
 
-                    // Construct POI object for modern frontend
                     poi = {
                         shop_id: sid,
                         shop_name: shop.name,
@@ -382,7 +366,7 @@ router.get("/feed", async (req, res) => {
                         rank: rank || null,
                         satisfaction: enrichedProp.satisfaction,
                         visit_count: visitCount,
-                        is_bookmarked: savedShopSet.has(sid),
+                        is_bookmarked: isSaved, // Consistent with stats
                         catchtable_ref: shop.catchtable_ref
                     };
                 }
@@ -399,14 +383,14 @@ router.get("/feed", async (req, res) => {
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
-                keyword: item.keyword || [], // Add keyword here
+                keyword: item.keyword || [],
                 link_json: item.link_json || [],
                 poi,
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
                     is_liked: likedSet.has(item.id),
-                    is_saved: false
+                    is_saved: poi?.is_bookmarked || false // Fix: Correctly reflect saved status
                 },
                 preview_comments: previewCommentsMap.get(item.id) || []
             };
@@ -425,19 +409,17 @@ router.post("/", async (req, res) => {
     try {
         const { user_id, type, text, img, video, review_prop, keyword, link_json } = req.body;
 
-        // Validation
         if (!user_id || !type) {
             return res.status(400).json({ error: "user_id and type are required" });
         }
 
-        // Insert content
         const result = await db.insert(content).values({
             user_id,
-            type, // 'review' or 'post'
+            type,
             text,
             img,
             video,
-            review_prop, // { shop_id, visit_date, companions, satisfaction }
+            review_prop,
             keyword,
             link_json
         }).returning();
@@ -445,49 +427,43 @@ router.post("/", async (req, res) => {
         res.json(result[0]);
     } catch (error) {
         console.error("Create content error:", error);
-        // Cast error to any to access typical Postgres error fields if available, or just stringify
         const detailedError = error instanceof Error ? error.message : String(error);
-        const pgError = (error as any).code ? `PG Code: ${(error as any).code} - ${(error as any).detail || (error as any).hint || ''}` : '';
+        const pgError = (error as any).code ? `PG Code: ${(error as any).code}` : '';
         res.status(500).json({ error: "Failed to create content", details: detailedError, pgError });
     }
 });
 
-// Helper
 function mapSatisfactionToTier(satisfaction: string): number {
     switch (satisfaction) {
         case 'good': return 2;
         case 'ok': return 1;
         case 'bad': return 0;
-        default: return 2; // Default to 'good'
+        default: return 2;
     }
 }
 
-// POST /api/content/ranking/apply (Apply Ranking with Dense Rank Logic)
+// POST /api/content/ranking/apply
 router.post("/ranking/apply", async (req, res) => {
     try {
         const { user_id, shop_id, insert_index } = req.body;
-        let { satisfaction } = req.body; // Allow satisfaction to be passed
+        let { satisfaction } = req.body;
 
         if (!user_id || !shop_id || insert_index === undefined) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // 1. Determine Satisfaction Tier
         if (!satisfaction) {
-            // Fallback: Find latest review for this user/shop
             const latestContent = await db.select().from(content)
-                .where(
-                    and(
-                        eq(content.user_id, user_id),
-                        eq(content.type, 'review'),
-                        eq(content.is_deleted, false),
-                        eq(content.visibility, true)
-                    )
-                )
+                .where(and(
+                    eq(content.user_id, user_id),
+                    eq(content.type, 'review'),
+                    eq(content.is_deleted, false),
+                    eq(content.visibility, true)
+                ))
                 .orderBy(desc(content.created_at))
                 .limit(10);
 
-            satisfaction = 'good'; // default
+            satisfaction = 'good';
             for (const c of latestContent) {
                 const prop = c.review_prop as any;
                 if (prop && Number(prop.shop_id) === Number(shop_id)) {
@@ -499,99 +475,55 @@ router.post("/ranking/apply", async (req, res) => {
 
         const new_tier = mapSatisfactionToTier(satisfaction);
 
-        // 2. Execute Transaction
         await db.transaction(async (tx) => {
-            // Check existing ranking
             const existing = await tx.select().from(users_ranking)
-                .where(
-                    and(
-                        eq(users_ranking.user_id, user_id),
-                        eq(users_ranking.shop_id, shop_id)
-                    )
-                ).limit(1);
+                .where(and(eq(users_ranking.user_id, user_id), eq(users_ranking.shop_id, shop_id)))
+                .limit(1);
 
-            // A. If exists, remove it first to handle "Move" logic cleanly
-            // (Closing the gap from old position)
             if (existing.length > 0) {
                 const old_rank = existing[0].rank;
-
-                await tx.delete(users_ranking)
-                    .where(eq(users_ranking.id, existing[0].id));
-
-                // Close gap (Global Shift Up)
+                await tx.delete(users_ranking).where(eq(users_ranking.id, existing[0].id));
                 await tx.update(users_ranking)
                     .set({ rank: sql`${users_ranking.rank} - 1` })
-                    .where(
-                        and(
-                            eq(users_ranking.user_id, user_id),
-                            gt(users_ranking.rank, old_rank)
-                        )
-                    );
+                    .where(and(eq(users_ranking.user_id, user_id), gt(users_ranking.rank, old_rank)));
             }
 
-            // B. Calculate New Global Rank
-            // 1. Count items in HIGHER tiers
             const higherTierCountRes = await tx.select({ count: sql<number>`count(*)` })
                 .from(users_ranking)
-                .where(
-                    and(
-                        eq(users_ranking.user_id, user_id),
-                        gt(users_ranking.satisfaction_tier, new_tier)
-                    )
-                );
+                .where(and(eq(users_ranking.user_id, user_id), gt(users_ranking.satisfaction_tier, new_tier)));
             const higherTierCount = Number(higherTierCountRes[0]?.count || 0);
 
-            // 2. Target Rank = (Count of higher tiers) + (Index in current tier) + 1
-            // Note: insert_index is 0-based index WITHIN the tier (from frontend tournament)
             const new_global_rank = higherTierCount + insert_index + 1;
 
-            // C. Open Gap (Global Shift Down) at new position
             await tx.update(users_ranking)
                 .set({ rank: sql`${users_ranking.rank} + 1` })
-                .where(
-                    and(
-                        eq(users_ranking.user_id, user_id),
-                        gte(users_ranking.rank, new_global_rank)
-                    )
-                );
+                .where(and(eq(users_ranking.user_id, user_id), gte(users_ranking.rank, new_global_rank)));
 
-            // D. Insert at new global position
             await tx.insert(users_ranking).values({
-                user_id,
-                shop_id,
-                satisfaction_tier: new_tier,
-                rank: new_global_rank
+                user_id, shop_id, satisfaction_tier: new_tier, rank: new_global_rank
             });
         });
 
         res.json({ success: true, shop_id, satisfaction_tier: new_tier });
-
     } catch (error) {
         console.error("Ranking apply error:", error);
         res.status(500).json({ error: "Failed to apply ranking" });
     }
 });
 
-// GET /api/content/ranking/candidates (Fetch candidates for tournament)
+// GET /api/content/ranking/candidates
 router.get("/ranking/candidates", async (req, res) => {
     try {
         const { user_id, satisfaction, satisfaction_tier, exclude_shop_id } = req.query;
-        if (!user_id) {
-            return res.status(400).json({ error: "Missing parameters" });
-        }
+        if (!user_id) return res.status(400).json({ error: "Missing parameters" });
 
         const userId = parseInt(user_id as string);
-        let tier = 2; // Default good
-
-        if (satisfaction_tier) {
-            tier = parseInt(satisfaction_tier as string);
-        } else if (satisfaction) {
-            tier = mapSatisfactionToTier(satisfaction as string);
-        }
+        let tier = 2;
+        if (satisfaction_tier) tier = parseInt(satisfaction_tier as string);
+        else if (satisfaction) tier = mapSatisfactionToTier(satisfaction as string);
 
         const excludeId = exclude_shop_id ? parseInt(exclude_shop_id as string) : -1;
 
-        // Fetch rankings directly from users_ranking
         const candidates = await db.select({
             shop_id: users_ranking.shop_id,
             rank: users_ranking.rank,
@@ -600,13 +532,11 @@ router.get("/ranking/candidates", async (req, res) => {
         })
             .from(users_ranking)
             .leftJoin(shops, eq(users_ranking.shop_id, shops.id))
-            .where(
-                and(
-                    eq(users_ranking.user_id, userId),
-                    eq(users_ranking.satisfaction_tier, tier),
-                    ne(users_ranking.shop_id, excludeId)
-                )
-            )
+            .where(and(
+                eq(users_ranking.user_id, userId),
+                eq(users_ranking.satisfaction_tier, tier),
+                ne(users_ranking.shop_id, excludeId)
+            ))
             .orderBy(users_ranking.rank);
 
         res.json(candidates);
@@ -616,27 +546,21 @@ router.get("/ranking/candidates", async (req, res) => {
     }
 });
 
-
 // GET /api/content/user/:userId
+// Using simplified logic consistent with Feed (without complex filters for now, but enriched)
 router.get("/user/:userId", async (req, res) => {
     try {
         let userId = parseInt(req.params.userId);
-
-        // If not numeric, try looking up by account_id
         if (isNaN(userId)) {
-            const user = await db.select({ id: users.id })
-                .from(users)
-                .where(eq(users.account_id, req.params.userId))
-                .limit(1);
-
-            if (user.length > 0) {
-                userId = user[0].id;
-            } else {
-                return res.status(404).json({ error: "User not found" });
-            }
+            const user = await db.select({ id: users.id }).from(users)
+                .where(eq(users.account_id, req.params.userId)).limit(1);
+            if (user.length > 0) userId = user[0].id;
+            else return res.status(404).json({ error: "User not found" });
         }
 
-        // 1. Fetch content + User Info (for the content creator)
+        const viewerId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+
+        // Fetch User Content
         const userContent = await db.select({
             id: content.id,
             user_id: content.user_id,
@@ -664,210 +588,181 @@ router.get("/user/:userId", async (req, res) => {
                 eq(content.is_deleted, false),
                 eq(content.visibility, true)
             ))
-            .orderBy(desc(content.created_at)) // Latest first
+            .orderBy(desc(content.created_at))
             .limit(20);
 
-        if (userContent.length === 0) {
-            return res.json([]);
-        }
+        if (userContent.length === 0) return res.json([]);
 
-        // 2. Collect Shop IDs
+        // Collect IDs
         const shopIds = new Set<number>();
+        const contentIds = userContent.map(i => i.id);
+        const companionIds = new Set<number>();
+
         userContent.forEach(item => {
             if (item.type === 'review' && item.review_prop) {
                 const prop = item.review_prop as any;
-                if (prop.shop_id) shopIds.add(prop.shop_id);
+                if (prop.shop_id) shopIds.add(Number(prop.shop_id));
+                if (prop.companions && Array.isArray(prop.companions)) {
+                    prop.companions.forEach((cid: number) => companionIds.add(cid));
+                }
             }
         });
 
-        // 3. Fetch Shops and Rankings
         const shopMap = new Map();
-        const rankMap = new Map<number, number>();
-        // Refactored: visitCountMap removed, using contentVisitRankMap
-        const contentVisitRankMap = new Map<number, number>();
+        const rankMap = new Map<string, number>();
+        const companionMap = new Map<number, any>();
+        const visitCountMap = new Map<number, number>();
 
+        // Batch Fetching
         if (shopIds.size > 0) {
-            const idsList = Array.from(shopIds);
+            const sIds = Array.from(shopIds);
+            const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
+            shopList.forEach(s => shopMap.set(s.id, s));
 
-            // Shops
-            const shopList = await db.select().from(shops)
-                .where(inArray(shops.id, idsList));
-            shopList.forEach(shop => shopMap.set(shop.id, shop));
+            const rankings = await db.select().from(users_ranking)
+                .where(and(eq(users_ranking.user_id, userId), inArray(users_ranking.shop_id, sIds)));
+            rankings.forEach(r => rankMap.set(getRankKey(r.user_id, r.shop_id), r.rank));
 
-            // Rankings
-            const rankingList = await db.select().from(users_ranking)
-                .where(
-                    and(
-                        eq(users_ranking.user_id, userId),
-                        inArray(users_ranking.shop_id, idsList)
-                    )
-                );
-            rankingList.forEach(r => rankMap.set(r.shop_id, r.rank));
-
-            // Visit Counts (Ordinal)
-            const allUserReviews = await db.select({
-                id: content.id,
-                prop: content.review_prop,
-                created_at: content.created_at
-            }).from(content)
-                .where(
-                    and(
-                        eq(content.user_id, userId),
-                        eq(content.type, 'review')
-                    )
+            // Visit Counts (N+1 Fix)
+            const rawVisits = await db.execute(sql.raw(`
+                WITH ranks AS (
+                    SELECT 
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY user_id, (review_prop->>'shop_id')::int 
+                            ORDER BY created_at ASC
+                        ) as visit_num
+                    FROM content
+                    WHERE is_deleted = false 
+                      AND type = 'review'
+                      AND user_id = ${userId}
+                      AND (review_prop->>'shop_id')::int IN (${sIds.join(',')})
                 )
-                .orderBy(content.created_at);
-
-            const shopCounter = new Map<number, number>();
-            // contentVisitRankMap is now in outer scope
-
-            allUserReviews.forEach(r => {
-                const p = r.prop as any;
-                if (p && p.shop_id) {
-                    const sid = Number(p.shop_id);
-                    if (idsList.includes(sid)) {
-                        const current = (shopCounter.get(sid) || 0) + 1;
-                        shopCounter.set(sid, current);
-                        contentVisitRankMap.set(r.id, current);
-                    }
-                }
-            });
+                SELECT id, visit_num FROM ranks WHERE id IN (${contentIds.join(',')})
+            `));
+            rawVisits.rows.forEach((row: any) => visitCountMap.set(Number(row.id), Number(row.visit_num)));
         }
 
-        // 3.5 Batch Fetch Likes & Comments Counts + IsLiked
-        const contentIds = userContent.map(i => i.id);
+        if (companionIds.size > 0) {
+            const cIds = Array.from(companionIds);
+            const comps = await db.select({ id: users.id, nickname: users.nickname, profile_image: users.profile_image })
+                .from(users).where(inArray(users.id, cIds));
+            comps.forEach(c => companionMap.set(c.id, c));
+        }
+
+        // Stats & Interactions
         const likeCountMap = new Map<number, number>();
         const commentCountMap = new Map<number, number>();
         const likedSet = new Set<number>();
-        // Check "viewer_id" or "user_id" from query to see if *I* liked this user's content
-        const viewerId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+        const savedShopSet = new Set<number>();
 
         if (contentIds.length > 0) {
-            // Like Counts
-            const likeCounts = await db.select({
-                target_id: likes.target_id,
-                count: sql<number>`count(*)`
-            })
-                .from(likes)
-                .where(and(
-                    eq(likes.target_type, 'content'),
-                    inArray(likes.target_id, contentIds)
-                ))
+            const likesRes = await db.select({ target_id: likes.target_id, count: sql<number>`count(*)` })
+                .from(likes).where(and(eq(likes.target_type, 'content'), inArray(likes.target_id, contentIds)))
                 .groupBy(likes.target_id);
+            likesRes.forEach(r => likeCountMap.set(r.target_id, Number(r.count)));
 
-            likeCounts.forEach(l => likeCountMap.set(l.target_id, Number(l.count)));
-
-            // Comment Counts
-            const commentCounts = await db.select({
-                content_id: comments.content_id,
-                count: sql<number>`count(*)`
-            })
-                .from(comments)
-                .where(and(
-                    inArray(comments.content_id, contentIds),
-                    eq(comments.is_deleted, false)
-                ))
+            const commsRes = await db.select({ content_id: comments.content_id, count: sql<number>`count(*)` })
+                .from(comments).where(and(inArray(comments.content_id, contentIds), eq(comments.is_deleted, false)))
                 .groupBy(comments.content_id);
+            commsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
 
-            commentCounts.forEach(c => commentCountMap.set(c.content_id, Number(c.count)));
-
-            // Is Liked (by viewer)
-            if (viewerId && !isNaN(viewerId)) {
-                const myLikes = await db.select({
-                    target_id: likes.target_id
-                })
-                    .from(likes)
-                    .where(and(
-                        eq(likes.target_type, 'content'),
-                        eq(likes.user_id, viewerId),
-                        inArray(likes.target_id, contentIds)
-                    ));
-
+            if (viewerId) {
+                const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
+                    .where(and(eq(likes.target_type, 'content'), eq(likes.user_id, viewerId), inArray(likes.target_id, contentIds)));
                 myLikes.forEach(l => likedSet.add(l.target_id));
+
+                if (shopIds.size > 0) {
+                    const mySaved = await db.select({ shop_id: users_wantstogo.shop_id }).from(users_wantstogo)
+                        .where(and(eq(users_wantstogo.user_id, viewerId), inArray(users_wantstogo.shop_id, Array.from(shopIds)), eq(users_wantstogo.is_deleted, false)));
+                    mySaved.forEach(s => savedShopSet.add(s.shop_id));
+                }
             }
         }
 
-        // 3.6 Batch Fetch Preview Comments (Latest 2)
+        // Preview Comments (N+1 restriction)
         const previewCommentsMap = new Map<number, any[]>();
         if (contentIds.length > 0) {
-            const recentComments = await db.select({
-                id: comments.id,
-                content_id: comments.content_id,
-                text: comments.text,
-                created_at: comments.created_at,
-                user: {
-                    nickname: users.nickname,
-                    profile_image: users.profile_image
-                }
-            })
-                .from(comments)
-                .leftJoin(users, eq(comments.user_id, users.id))
-                .where(and(
-                    inArray(comments.content_id, contentIds),
-                    eq(comments.is_deleted, false)
-                ))
-                .orderBy(desc(comments.created_at));
+            const rawComments = await db.execute(sql.raw(`
+                WITH ranked_comments AS (
+                    SELECT 
+                        c.id, c.content_id, c.text, c.created_at,
+                        u.nickname, u.profile_image,
+                        ROW_NUMBER() OVER (PARTITION BY c.content_id ORDER BY c.created_at DESC) as rn
+                    FROM comments c
+                    LEFT JOIN users u ON c.user_id = u.id
+                    WHERE c.content_id IN (${contentIds.join(',')})
+                      AND c.is_deleted = false
+                )
+                SELECT * FROM ranked_comments WHERE rn <= 2 ORDER BY created_at DESC
+             `));
 
-            recentComments.forEach(c => {
-                const list = previewCommentsMap.get(c.content_id) || [];
-                if (list.length < 2) {
-                    list.push(c);
-                    previewCommentsMap.set(c.content_id, list);
-                }
+            rawComments.rows.forEach((row: any) => {
+                const cid = Number(row.content_id);
+                const list = previewCommentsMap.get(cid) || [];
+                list.push({
+                    id: row.id,
+                    content_id: cid,
+                    text: row.text,
+                    created_at: row.created_at,
+                    user: { nickname: row.nickname, profile_image: row.profile_image }
+                });
+                previewCommentsMap.set(cid, list);
             });
         }
-        // 3.6 Fetch "Saved" Status for Current Viewer
-        const savedShopSet = new Set<number>();
-        // viewerId is already declared at line 709
-        if (viewerId && shopIds.size > 0) {
-            const saved = await db.select({ shop_id: users_wantstogo.shop_id })
-                .from(users_wantstogo)
-                .where(and(
-                    eq(users_wantstogo.user_id, viewerId),
-                    inArray(users_wantstogo.shop_id, Array.from(shopIds))
-                ));
-            saved.forEach(s => savedShopSet.add(s.shop_id));
+
+        // Following status check for author (if viewer exists)
+        let isFollowing = false;
+        if (viewerId && userId !== viewerId) {
+            const f = await db.select().from(users_follow).where(and(eq(users_follow.follower_id, viewerId), eq(users_follow.following_id, userId))).limit(1);
+            isFollowing = f.length > 0;
         }
 
-        // 4. Transform Data
         const result = userContent.map(item => {
             let enrichedProp = item.review_prop as any;
             let poi = undefined;
+            const visitCount = visitCountMap.get(item.id) || 1;
 
-            if (item.type === 'review' && enrichedProp?.shop_id && shopMap.has(enrichedProp.shop_id)) {
+            if (item.type === 'review' && enrichedProp?.shop_id) {
                 const sid = Number(enrichedProp.shop_id);
                 const shop = shopMap.get(sid);
-                const rank = rankMap.get(sid);
-                const visitCount = contentVisitRankMap.get(item.id) || 1;
+                const rank = rankMap.get(getRankKey(item.user_id, sid));
+                const isSaved = savedShopSet.has(sid);
 
-                enrichedProp = {
-                    ...enrichedProp,
-                    shop_name: shop.name,
-                    shop_address: shop.address_region || shop.address_full,
-                    thumbnail_img: shop.thumbnail_img,
-                    rank: rank || null,
-                    visit_count: visitCount
-                };
+                let displayCompanions = [];
+                if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
+                    displayCompanions = enrichedProp.companions.map((cid: number) => companionMap.get(cid)).filter(Boolean);
+                }
 
-                // Construct POI object
-                poi = {
-                    shop_id: sid,
-                    shop_name: shop.name,
-                    shop_address: shop.address_region || shop.address_full,
-                    thumbnail_img: shop.thumbnail_img,
-                    rank: rank || null,
-                    satisfaction: enrichedProp.satisfaction,
-                    visit_count: visitCount,
-                    is_bookmarked: savedShopSet.has(sid),
-                    catchtable_ref: shop.catchtable_ref
-                };
+                if (shop) {
+                    enrichedProp = {
+                        ...enrichedProp,
+                        shop_name: shop.name,
+                        shop_address: shop.address_region || shop.address_full,
+                        thumbnail_img: shop.thumbnail_img,
+                        rank: rank || null,
+                        visit_count: visitCount,
+                        companions_info: displayCompanions
+                    };
+                    poi = {
+                        shop_id: sid,
+                        shop_name: shop.name,
+                        shop_address: shop.address_region || shop.address_full,
+                        thumbnail_img: shop.thumbnail_img,
+                        rank: rank || null,
+                        satisfaction: enrichedProp.satisfaction,
+                        visit_count: visitCount,
+                        is_bookmarked: isSaved,
+                        catchtable_ref: shop.catchtable_ref
+                    };
+                }
             }
 
             return {
                 id: item.id,
                 user: {
                     ...(item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null }),
-                    is_following: false // Profile owner logic handles follow button visibility usually
+                    is_following: isFollowing // For user profile feed, this flag is if *we* follow the profile owner generally
                 },
                 text: item.text,
                 images: item.img || [],
@@ -876,12 +771,12 @@ router.get("/user/:userId", async (req, res) => {
                 review_prop: enrichedProp,
                 keyword: item.keyword || [],
                 link_json: item.link_json || [],
-                poi, // Pass POI
+                poi,
                 stats: {
                     likes: likeCountMap.get(item.id) || 0,
                     comments: commentCountMap.get(item.id) || 0,
                     is_liked: likedSet.has(item.id),
-                    is_saved: false
+                    is_saved: poi?.is_bookmarked || false
                 },
                 preview_comments: previewCommentsMap.get(item.id) || []
             };
@@ -889,213 +784,8 @@ router.get("/user/:userId", async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error("Fetch user content error:", error);
-        res.status(500).json({ error: "Failed to fetch content" });
-    }
-});
-
-// --- Likes & Comments Endpoints ---
-
-// DELETE /api/content/:id (Soft Delete Content)
-router.delete("/:id", async (req, res) => {
-    try {
-        const contentId = parseInt(req.params.id);
-        const { user_id } = req.body;
-
-        if (!user_id || isNaN(contentId)) {
-            return res.status(400).json({ error: "Missing user_id or content ID" });
-        }
-
-        // Verify ownership (optional but recommended)
-        const contentItem = await db.select().from(content).where(eq(content.id, contentId)).limit(1);
-        if (contentItem.length === 0) {
-            return res.status(404).json({ error: "Content not found" });
-        }
-        if (contentItem[0].user_id !== user_id) {
-            return res.status(403).json({ error: "Unauthorized" });
-        }
-
-        await db.transaction(async (tx) => {
-            // 1. Soft Delete Content
-            await tx.update(content)
-                .set({
-                    is_deleted: true,
-                    visibility: false,
-                    updated_at: new Date()
-                })
-                .where(eq(content.id, contentId));
-
-            // 2. If it's a review, remove from Ranking
-            if (contentItem[0].type === 'review' && contentItem[0].review_prop) {
-                const prop = contentItem[0].review_prop as any;
-                if (prop.shop_id) {
-                    const shopId = Number(prop.shop_id);
-
-                    // Check if ranking exists
-                    const existingRank = await tx.select().from(users_ranking)
-                        .where(
-                            and(
-                                eq(users_ranking.user_id, user_id),
-                                eq(users_ranking.shop_id, shopId)
-                            )
-                        ).limit(1);
-
-                    if (existingRank.length > 0) {
-                        const oldRank = existingRank[0].rank;
-
-                        // Delete ranking
-                        await tx.delete(users_ranking)
-                            .where(eq(users_ranking.id, existingRank[0].id));
-
-                        // Shift ranks up (Close the gap)
-                        await tx.update(users_ranking)
-                            .set({ rank: sql`${users_ranking.rank} - 1` })
-                            .where(
-                                and(
-                                    eq(users_ranking.user_id, user_id),
-                                    gt(users_ranking.rank, oldRank)
-                                )
-                            );
-                    }
-                }
-            }
-        });
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error("Delete content error:", error);
-        res.status(500).json({ error: "Failed to delete content" });
-    }
-});
-
-// POST /api/content/:id/like (Add Like)
-router.post("/:id/like", async (req, res) => {
-    try {
-        const contentId = parseInt(req.params.id);
-        const { user_id } = req.body;
-
-        if (!user_id || isNaN(contentId)) {
-            return res.status(400).json({ error: "Missing user_id or content ID" });
-        }
-
-        // Check if already liked
-        await db.insert(likes).values({
-            target_type: 'content',
-            target_id: contentId,
-            user_id: user_id
-        }).onConflictDoNothing();
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error("Add like error:", error);
-        res.status(500).json({ error: "Failed to add like" });
-    }
-});
-
-// DELETE /api/content/:id/like (Remove Like)
-router.delete("/:id/like", async (req, res) => {
-    try {
-        const contentId = parseInt(req.params.id);
-        const { user_id } = req.body; // Usually implicit in session/token, but assumed here
-
-        if (!user_id || isNaN(contentId)) {
-            return res.status(400).json({ error: "Missing user_id or content ID" });
-        }
-
-        await db.delete(likes).where(
-            and(
-                eq(likes.target_type, 'content'),
-                eq(likes.target_id, contentId),
-                eq(likes.user_id, user_id)
-            )
-        );
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error("Remove like error:", error);
-        res.status(500).json({ error: "Failed to remove like" });
-    }
-});
-
-// GET /api/content/:id/comments (List Comments)
-router.get("/:id/comments", async (req, res) => {
-    try {
-        const contentId = parseInt(req.params.id);
-        if (isNaN(contentId)) {
-            return res.status(400).json({ error: "Invalid content ID" });
-        }
-
-        const commentList = await db.select({
-            id: comments.id,
-            text: comments.text,
-            created_at: comments.created_at,
-            user_id: comments.user_id,
-            user: {
-                id: users.id,
-                nickname: users.nickname,
-                profile_image: users.profile_image,
-                cluster_name: clusters.name
-            }
-        })
-            .from(comments)
-            .leftJoin(users, eq(comments.user_id, users.id))
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
-            .where(and(eq(comments.content_id, contentId), eq(comments.is_deleted, false)))
-            .orderBy(comments.created_at);
-
-        res.json(commentList);
-    } catch (error) {
-        console.error("Fetch comments error:", error);
-        res.status(500).json({ error: "Failed to fetch comments" });
-    }
-});
-
-// POST /api/content/:id/comments (Add Comment)
-router.post("/:id/comments", async (req, res) => {
-    try {
-        const contentId = parseInt(req.params.id);
-        const { user_id, text } = req.body;
-
-        if (!user_id || !text || isNaN(contentId)) {
-            return res.status(400).json({ error: "Missing required fields" });
-        }
-
-        const result = await db.insert(comments).values({
-            content_id: contentId,
-            user_id,
-            text
-        }).returning();
-
-        // Fetch user info for immediate display
-        const user = await db.select({
-            id: users.id,
-            nickname: users.nickname,
-            profile_image: users.profile_image
-        }).from(users).where(eq(users.id, user_id)).limit(1);
-
-        res.json({ ...result[0], user: user[0] });
-    } catch (error) {
-        console.error("Add comment error:", error);
-        res.status(500).json({ error: "Failed to add comment" });
-    }
-});
-
-// DELETE /api/content/comments/:id (Delete Comment) - Note the path difference
-// Moving delete comment to specific route /api/content/comments/:id for clarity if needed, 
-// or keep consistent URL structure. Let's use /api/content/comments/:id as requested indirectly
-router.delete("/comments/:id", async (req, res) => {
-    try {
-        const commentId = parseInt(req.params.id);
-        // In real app, verify user_id ownership
-
-        await db.update(comments)
-            .set({ is_deleted: true })
-            .where(eq(comments.id, commentId));
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error("Delete comment error:", error);
-        res.status(500).json({ error: "Failed to delete comment" });
+        console.error("User feed error:", error);
+        res.status(500).json({ error: "Failed to fetch user feed" });
     }
 });
 

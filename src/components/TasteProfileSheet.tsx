@@ -48,92 +48,107 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
         }
     }, [userId]);
 
+    // Generate color based on cluster name (simple hash or preset)
+    const getCardStyle = (name: string = "") => {
+        const colors = [
+            "bg-[#4e6b9f]", // Blueish (Like the reference)
+            "bg-[#9f4e6b]", // Pinkish
+            "bg-[#4e9f6b]", // Greenish
+            "bg-[#6b4e9f]", // Purplish
+            "bg-[#d97706]", // Amber
+        ];
+        const index = name.length % colors.length;
+        return colors[index];
+    };
+
+    const bgColor = getCardStyle(data?.cluster_name);
+
     if (!isVisible) return null;
 
     return (
         <div className={cn(
-            "absolute inset-0 z-50 flex items-center justify-center", // Always center
+            "fixed inset-0 z-50 flex items-center justify-center p-6", // Full screen flex center with padding
             isOpen ? "pointer-events-auto" : "pointer-events-none"
         )}>
-            {/* Backdrop */}
+            {/* Backdrop - Blur effect */}
             <div
                 className={cn(
-                    "absolute inset-0 bg-black/50 transition-opacity duration-300",
+                    "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500",
                     isOpen ? "opacity-100" : "opacity-0"
                 )}
                 onClick={onClose}
             />
 
-            {/* Sheet Content */}
+            {/* The "Spotify" Card */}
             <div
                 className={cn(
-                    "relative bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl shadow-xl transition-all duration-300 transform flex flex-col overflow-hidden",
-                    "w-[80%] max-h-[60%] h-auto", // Dynamic height: auto up to 60%
-                    isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0" // Zoom animation
+                    `relative w-full max-w-sm aspect-[4/5] ${bgColor} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 transform`,
+                    isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-90 opacity-0 translate-y-10"
                 )}
             >
-                {/* Scrollable Content */}
-                <div className="overflow-y-auto p-6">
-                    {/* Close Button */}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-muted-foreground hover:bg-muted rounded-full"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                {/* Texture/Noise Overlay (Optional) */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
-                    <div className="flex flex-col items-center text-center pt-8 pb-8 space-y-6">
-                        <div className="space-y-2">
-                            <h2 className="text-xl font-black text-primary tracking-tight">
-                                {data?.cluster_name || "Unknown Flavor"}
-                            </h2>
-                            <div className="bg-white rounded-3xl p-4">
-                                <p className="text-lg font-medium">
-                                    "{data?.cluster_tagline || "Your unique taste profile."}"
-                                </p>
-                            </div>
+                {/* Close Button (Subtle, Top Right) */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-6 right-6 z-20 p-2 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 rounded-full transition-colors backdrop-blur-md"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+
+                {/* Content Container */}
+                <div className="flex-1 flex flex-col p-8 z-10 text-white relative">
+
+                    {/* Header: User Info / "Album Art" */}
+                    <div className="flex items-center gap-3 mb-auto">
+                        <div className="w-12 h-12 rounded-xl bg-white/20 shadow-inner flex items-center justify-center overflow-hidden backdrop-blur-md border border-white/10">
+                            {/* Ideally user profile image here, or cluster icon */}
+                            <span className="text-2xl">😋</span>
                         </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Taste Profile</span>
+                            <span className="text-lg font-bold leading-none">{data?.cluster_name || "Unknown"}</span>
+                        </div>
+                    </div>
 
-                        {/* VS History Section - Only show if has history or loading */}
-                        {(loading || history.length > 0) && (
-                            <div className="w-full">
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                                    밸런스 게임 결과
-                                </h3>
+                    {/* Main Body: The "Lyrics" / Tagline */}
+                    <div className="my-8">
+                        <h2 className="text-4xl font-black leading-[1.15] tracking-tight drop-shadow-sm font-display">
+                            "{data?.cluster_tagline || 'Discovering your unique taste journey.'}"
+                        </h2>
+                    </div>
 
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                    {loading ? (
-                                        <div className="text-center py-4 text-sm text-muted-foreground">Loading...</div>
-                                    ) : (
-                                        history.map(item => (
-                                            <div key={item.id} className="flex items-center justify-between text-sm bg-muted/30 rounded-lg p-3 relative overflow-hidden">
-                                                {/* Background highlight based on selection */}
-                                                <div className={`absolute inset-y-0 left-0 w-1/2 bg-primary/5 transition-colors ${item.selected_value === 'A' ? 'bg-primary/10' : 'bg-transparent'}`} />
-                                                <div className={`absolute inset-y-0 right-0 w-1/2 bg-primary/5 transition-colors ${item.selected_value === 'B' ? 'bg-primary/10' : 'bg-transparent'}`} />
-
-                                                <div className={`
-                                                flex-1 text-center relative z-10 font-medium transition-all
-                                                ${item.selected_value === 'A' ? 'text-primary font-bold scale-105' : 'text-muted-foreground scale-95'}
-                                            `}>
-                                                    {item.item_a}
-                                                </div>
-
-                                                <div className="mx-3 text-xs font-black text-muted-foreground/50 z-10">VS</div>
-
-                                                <div className={`
-                                                flex-1 text-center relative z-10 font-medium transition-all
-                                                ${item.selected_value === 'B' ? 'text-primary font-bold scale-105' : 'text-muted-foreground scale-95'}
-                                            `}>
-                                                    {item.item_b}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
+                    {/* Footer: VS History Preview or Logo */}
+                    <div className="mt-auto pt-6 border-t border-white/20">
+                        {/* VS History Mini-List (Scrollable if many) */}
+                        {(loading || history.length > 0) ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-xs font-medium opacity-60 uppercase tracking-wider mb-2">
+                                    <span>Balance Game History</span>
+                                    <span>mimichelin</span>
                                 </div>
+                                <div className="max-h-[120px] overflow-y-auto space-y-2 pr-1 scrollbar-hide">
+                                    {history.map(item => (
+                                        <div key={item.id} className="flex items-center justify-between text-xs bg-black/20 rounded-lg p-2.5 backdrop-blur-sm border border-white/5">
+                                            <span className={cn(item.selected_value === 'A' ? "text-white font-bold" : "text-white/50")}>{item.item_a}</span>
+                                            <span className="opacity-30 mx-2 text-[10px]">vs</span>
+                                            <span className={cn(item.selected_value === 'B' ? "text-white font-bold" : "text-white/50")}>{item.item_b}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 opacity-80">
+                                {/* Mimy Logo Placeholder */}
+                                <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
+                                    <span className="text-black font-black text-[10px]">M</span>
+                                </div>
+                                <span className="font-bold tracking-wide">Mimy</span>
                             </div>
                         )}
                     </div>
-                </div> {/* End Scrollable Content */}
+                </div>
             </div>
         </div>
     );

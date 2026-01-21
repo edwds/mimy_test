@@ -94,7 +94,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         ? items.filter(item => {
             if (!item.user.taste_result?.scores) return false;
             const match = calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores);
-            return match >= 60;
+            return match >= 70;
         })
         : items;
 

@@ -252,7 +252,7 @@ const DraggableItem = ({
             dragControls={controls}
             className={`relative flex-shrink-0 w-[240px] h-[240px] rounded-xl overflow-hidden shadow-2xl border ${isSelected ? 'border-primary ring-2 ring-primary z-10' : 'border-white/10'}`}
             onClick={onSelect}
-            style={{ touchAction: 'none' }}
+            style={{ touchAction: 'pan-x' }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
         >
             <div ref={domRef} className="w-full h-full relative">

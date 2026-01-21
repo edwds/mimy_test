@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Locate, Heart, Search } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 // Let's keep the Search button overlay if possible, or just the map.
 // The Plan said: "Replace current list view with... MapContainer + ShopBottomSheet".
 // I will keep the header overlay logic but adapt it.
@@ -31,11 +31,11 @@ interface Props {
 
 export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnabled = true }) => {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
+    const navigationOrderRef = useRef<number[]>([]); // Store sorted order for navigation to prevent UI flickering
 
     // Map & Sheet State
     const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
@@ -296,31 +296,39 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             return;
         }
 
-        const currentSid = searchParams.get('selectedShop');
-        const isReplacing = !!currentSid;
 
-        // Update URL
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set('selectedShop', shopId.toString());
+        // const isReplacing = !!currentSid;
 
-        navigate({ search: newParams.toString() }, { replace: isReplacing });
+        // Update URL - DISABLED temporarily to fix "bounce to home" crash issue
+        // const newParams = new URLSearchParams(searchParams);
+        // newParams.set('selectedShop', shopId.toString());
+        // navigate({ search: newParams.toString() }, { replace: isReplacing });
 
-        // Logic below purely for optimization/sorting (visual), state will be synced by effect eventually,
-        // but updating local state immediately feels snappier.
+        // Pre-calculate navigation order (sorted by distance to selected)
+        // Store in Ref to define the "swipe playlist" without triggering a re-render/flicker
         const selected = shops.find(s => s.id === shopId);
         if (selected && selected.lat && selected.lon) {
-            const sorted = [...shops].sort((a, b) => {
-                if (a.id === selected.id) return -1;
-                if (b.id === selected.id) return 1;
-                if (!a.lat || !a.lon) return 1;
-                if (!b.lat || !b.lon) return -1;
+            const sortedIds = [...shops]
+                .sort((a, b) => {
+                    if (a.id === selected.id) return -1;
+                    if (b.id === selected.id) return 1;
+                    if (!a.lat || !a.lon) return 1;
+                    if (!b.lat || !b.lon) return -1;
 
-                const distA = getDistance(selected.lat!, selected.lon!, a.lat, a.lon);
-                const distB = getDistance(selected.lat!, selected.lon!, b.lat, b.lon);
-                return distA - distB;
-            });
-            setShops(sorted);
+                    const distA = getDistance(selected.lat!, selected.lon!, a.lat, a.lon);
+                    const distB = getDistance(selected.lat!, selected.lon!, b.lat, b.lon);
+                    return distA - distB;
+                })
+                .map(s => s.id);
+            navigationOrderRef.current = sortedIds;
+        } else {
+            // Fallback: just current order
+            navigationOrderRef.current = shops.map(s => s.id);
         }
+
+        setSelectedShopId(shopId);
+
+
     };
 
     // Override handleSearchSelect to use new logic
@@ -348,14 +356,12 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     const handleCloseShop = () => {
         // Go back to remove the query param if it exists, simulating a "Close" via navigation
-        const currentSid = searchParams.get('selectedShop');
-        if (currentSid) {
-            navigate(-1);
-        } else {
-            // Fallback just in case
-            setSelectedShopId(null);
-        }
-
+        // const currentSid = searchParams.get('selectedShop');
+        // if (currentSid) {
+        //     navigate(-1);
+        // } else {
+        setSelectedShopId(null);
+        // }
         // Restore list if we have a saved state
         if (prevShopsRef.current.length > 0) {
             setShops(prevShopsRef.current);
@@ -366,28 +372,36 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Override handleSwipeNavigation
     const handleSwipeNavigation = (direction: 'next' | 'prev') => {
         if (!selectedShopId || shops.length === 0) return;
-        const currentIndex = shops.findIndex(s => s.id === selectedShopId);
+
+        // Use the stable navigation order
+        const navList = navigationOrderRef.current.length > 0 ? navigationOrderRef.current : shops.map(s => s.id);
+        const currentIndex = navList.indexOf(selectedShopId);
+
         if (currentIndex === -1) return;
 
         let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
 
-        // Bounded check
-        if (nextIndex >= shops.length) nextIndex = 0; // Cycle? Or stop?
-        if (nextIndex < 0) nextIndex = shops.length - 1;
+        // Bounded check (Cycle)
+        if (nextIndex >= navList.length) nextIndex = 0;
+        if (nextIndex < 0) nextIndex = navList.length - 1;
 
         setSlideDirection(direction);
 
-        const nextShop = shops[nextIndex];
-        setSelectedShopId(nextShop.id); // Triggers re-render with new key
+        const nextShopId = navList[nextIndex];
+        const nextShop = shops.find(s => s.id === nextShopId);
 
-        if (nextShop.lat && nextShop.lon) {
-            setMapCenter([nextShop.lat, nextShop.lon]);
+        if (nextShop) {
+            setSelectedShopId(nextShop.id); // Triggers re-render with new key
+
+            if (nextShop.lat && nextShop.lon) {
+                setMapCenter([nextShop.lat, nextShop.lon]);
+            }
         }
 
         // Update URL (Replace history for carousel navigation)
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set('selectedShop', nextShop.id.toString());
-        navigate({ search: newParams.toString() }, { replace: true });
+        // const newParams = new URLSearchParams(searchParams);
+        // newParams.set('selectedShop', nextShop.id.toString());
+        // navigate({ search: newParams.toString() }, { replace: true });
     };
 
     const handleClusterClick = (clusterShops: any[]) => {
@@ -397,41 +411,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         // We probably don't need to change map center, user wants to see the cluster context.
     };
 
-    // Prefetch neighbor review snippets
-    // Batch fetch review snippets
-    useEffect(() => {
-        if (shops.length === 0) return;
 
-        // Find shops needing snippets
-        const shopsToFetch = shops.filter(s => s.reviewSnippet === undefined).map(s => s.id);
-        if (shopsToFetch.length === 0) return;
-
-        const fetchBatch = async () => {
-            try {
-                const userId = localStorage.getItem('mimy_user_id');
-                const res = await fetch(`${API_BASE_URL}/api/shops/batch-reviews`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shopIds: shopsToFetch, userId })
-                });
-
-                if (res.ok) {
-                    const snippetMap = await res.json();
-                    setShops(prev => prev.map(shop => {
-                        if (snippetMap[shop.id] !== undefined) {
-                            return { ...shop, reviewSnippet: snippetMap[shop.id] };
-                        }
-                        return shop;
-                    }));
-                }
-            } catch (e) {
-                console.error("Batch review fetch failed", e);
-            }
-        };
-
-        // Debounce slightly or just call
-        fetchBatch();
-    }, [shops.length]); // Trig only when length changes (new page loaded)
 
     return (
         <div className="relative h-full w-full overflow-hidden">

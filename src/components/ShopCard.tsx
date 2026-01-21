@@ -136,7 +136,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
 
             {/* Review Snippet (Priority over Saved Footer if both exist, or stack? User said "at bottom") */}
             {/* Let's stack them or prioritize. Review snippet is usually more dynamic context. */}
-            {reviewSnippet && (
+            {reviewSnippet && reviewSnippet.user && (
                 <div className="bg-gray-50 px-4 py-3 border-t border-border">
                     <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">
@@ -146,8 +146,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                                 </span>
                                 {reviewSnippet.user.cluster_name && (
                                     (() => {
-                                        const matchScore = (currentUser && (currentUser as any).taste_result?.scores && reviewSnippet.user.taste_result?.scores)
-                                            ? calculateTasteMatch((currentUser as any).taste_result.scores, reviewSnippet.user.taste_result.scores)
+                                        const myScores = (currentUser as any)?.taste_result?.scores;
+                                        const theirScores = reviewSnippet.user.taste_result?.scores;
+
+                                        const matchScore = (myScores && theirScores)
+                                            ? calculateTasteMatch(myScores, theirScores)
                                             : null;
 
                                         return (

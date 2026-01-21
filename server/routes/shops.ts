@@ -1,26 +1,50 @@
 
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { shops, users_wantstogo, content, users, users_ranking } from "../db/schema.js";
-import { ilike, or, eq, sql, and, desc, asc, not } from "drizzle-orm";
+import { shops, users_wantstogo, content, users, users_ranking, clusters } from "../db/schema.js";
+import { ilike, or, eq, sql, and, desc, asc, not, inArray } from "drizzle-orm";
 import fs from 'fs';
 import path from 'path';
 
 const router = Router();
 
-// GET /api/shops/discovery?page=1&limit=20&seed=123
-// Returns random shops consistently for the same seed
+// Cache cluster data for name mapping
+let clusterMap: Map<string, string> | null = null;
+try {
+    const clusterPath = path.join(process.cwd(), 'server/data/cluster.json');
+    if (fs.existsSync(clusterPath)) {
+        const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
+        clusterMap = new Map(clusterData.map(c => [c.cluster_id.toString(), c.cluster_name]));
+        // Ensure keys are strings for safe lookup
+    } else {
+        console.warn("server/data/cluster.json not found, using empty map");
+        clusterMap = new Map();
+    }
+} catch (e) {
+    console.warn("Failed to load cluster data:", e);
+    clusterMap = new Map();
+}
+
+const getClusterName = (id: string | number | null) => {
+    if (!id) return undefined;
+    return clusterMap?.get(id.toString()) || id.toString();
+};
+
+// GET /api/shops/discovery
 router.get("/discovery", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
         const seed = req.query.seed || 'default_seed';
 
-        // Bounding Box Params
-        const minLat = req.query.minLat ? parseFloat(req.query.minLat as string) : null;
-        const maxLat = req.query.maxLat ? parseFloat(req.query.maxLat as string) : null;
-        const minLon = req.query.minLon ? parseFloat(req.query.minLon as string) : null;
-        const maxLon = req.query.maxLon ? parseFloat(req.query.maxLon as string) : null;
+        // Bounding Box Params & Validation
+        const rawMinLat = parseFloat(req.query.minLat as string);
+        const rawMaxLat = parseFloat(req.query.maxLat as string);
+        const rawMinLon = parseFloat(req.query.minLon as string);
+        const rawMaxLon = parseFloat(req.query.maxLon as string);
+
+        const hasBBox = Number.isFinite(rawMinLat) && Number.isFinite(rawMaxLat) &&
+            Number.isFinite(rawMinLon) && Number.isFinite(rawMaxLon);
 
         let query = db.select({
             id: shops.id,
@@ -34,110 +58,127 @@ router.get("/discovery", async (req, res) => {
             catchtable_ref: shops.catchtable_ref
         }).from(shops).$dynamic();
 
-        if (minLat && maxLat && minLon && maxLon) {
+        if (hasBBox) {
             query = query.where(and(
-                sql`${shops.lat} >= ${minLat}`,
-                sql`${shops.lat} <= ${maxLat}`,
-                sql`${shops.lon} >= ${minLon}`,
-                sql`${shops.lon} <= ${maxLon}`
+                sql`${shops.lat} >= ${rawMinLat}`,
+                sql`${shops.lat} <= ${rawMaxLat}`,
+                sql`${shops.lon} >= ${rawMinLon}`,
+                sql`${shops.lon} <= ${rawMaxLon}`
             ));
         }
 
-        // Use MD5 hash of (id || seed) for consistent random sort
+        // Consistent Sort
         const results = await query
             .orderBy(sql`md5(${shops.id}::text || ${seed})`)
             .limit(limit)
             .offset((page - 1) * limit);
 
-        // If user is logged in (client sends header/param?), we should enrich `is_saved`.
-        // For MVP, assuming client might fetch status or we assume generic feed first.
-        // Let's check query `userId` for simple auth context if needed, or just return shops.
-        // User requested: "Refresh resets".
+        if (results.length === 0) {
+            return res.json([]);
+        }
 
-        // Enrich with "is_saved" if userId is present in query header (custom simple auth)
-        // Or handle in frontend. Let's try to handle it here if passed.
-        const userId = req.headers['x-user-id'];
+        // --- Enrichment (Batching) ---
+        // TODO: Switch to secure session/token auth
+        const userIdHeader = req.headers['x-user-id'];
+        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+        const shopIds = results.map(s => s.id);
 
-        const uid = userId ? parseInt(userId as string) : 0;
+        // 1. Batch Check Saved Status
+        const savedSet = new Set<number>();
+        const savedAtMap = new Map<number, Date>();
 
-        // Fetch User Taste Result for Similarity Sorting
-        const requestingUser = await db.select({ taste_result: users.taste_result })
-            .from(users)
-            .where(eq(users.id, uid))
-            .limit(1);
-        const viewerResult = requestingUser[0]?.taste_result as any;
-        const vS = viewerResult?.scores;
-
-        const enriched = await Promise.all(results.map(async (shop) => {
-            // 1. Check Saved Status
-            const saved = await db.select().from(users_wantstogo)
+        if (uid > 0) {
+            const savedList = await db.select({
+                shop_id: users_wantstogo.shop_id,
+                created_at: users_wantstogo.created_at
+            }).from(users_wantstogo)
                 .where(and(
                     eq(users_wantstogo.user_id, uid),
-                    eq(users_wantstogo.shop_id, shop.id),
-                    eq(users_wantstogo.is_deleted, false)
-                ))
-                .limit(1);
+                    inArray(users_wantstogo.shop_id, shopIds),
+                    eq(users_wantstogo.is_deleted, false) // Active only
+                ));
 
-            // 2. Fetch Best Review Snippet
-            // Logic mirrors GET /:id/reviews but limited to 1 and optimized
-            let reviewQuery = db.select({
-                id: content.id,
-                text: content.text,
-                images: content.img,
-                created_at: content.created_at,
-                review_prop: content.review_prop,
-                user: {
-                    id: users.id,
-                    nickname: users.nickname,
-                    profile_image: users.profile_image,
-                    taste_cluster: users.taste_cluster,
-                    taste_result: users.taste_result
-                }
-            })
-                .from(content)
-                .innerJoin(users, eq(content.user_id, users.id))
-                .where(and(
-                    eq(content.type, 'review'),
-                    eq(content.is_deleted, false),
-                    eq(content.visibility, true),
-                    sql`(${content.review_prop}::jsonb)->>'shop_id' = ${shop.id.toString()}::text`
-                ))
-                .$dynamic();
+            savedList.forEach(s => {
+                savedSet.add(s.shop_id);
+                if (s.created_at) savedAtMap.set(s.shop_id, s.created_at);
+            });
+        }
 
-            if (vS) {
-                const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
-                const distanceSql = sql.join(
-                    axes.map(axis => {
-                        const viewerVal = vS[axis] || 0;
-                        return sql`power(
-                                coalesce((${users.taste_result}->'scores'->>${sql.raw(`'${axis}'`)})::int, 0) - ${viewerVal}, 
-                                2
-                            )`;
-                    }),
-                    sql` + `
-                );
-                reviewQuery = reviewQuery.orderBy(asc(sql`(${distanceSql})`), desc(content.created_at));
-            } else {
-                reviewQuery = reviewQuery.orderBy(desc(content.created_at));
+        // 2. Batch Fetch Best Review Snippet
+        // Strategy: Row_Number() partitioned by shop_id
+        // Priority: If viewer has taste scores, sort by compatibility (distance asc), else created_at desc
+        const snippetsMap = new Map<number, any>();
+
+        let viewerScores: any = null;
+        if (uid > 0) {
+            const u = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, uid)).limit(1);
+            if (u.length > 0 && u[0].taste_result) {
+                viewerScores = (u[0].taste_result as any).scores;
             }
+        }
 
-            const reviews = await reviewQuery.limit(1);
-            const reviewSnippet = reviews.length > 0 ? {
-                ...reviews[0],
+        const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+
+        // Construct Sort Clause for Window Function
+        let orderByClause = "c.created_at DESC";
+        if (viewerScores) {
+            const distExpr = axes.map(axis => {
+                const v = Number(viewerScores[axis] || 0);
+                // Postgres JSON operator ->> returns text, cast to float
+                return `power(COALESCE((u.taste_result->'scores'->>'${axis}')::float, 0) - ${v}, 2)`;
+            }).join(' + ');
+            orderByClause = `(${distExpr}) ASC, c.created_at DESC`;
+        }
+
+        // Execute Raw SQL for efficient windowing
+        // Note: shop_id is in review_prop (jsonb), need to cast
+        const rawSnippets = await db.execute(sql.raw(`
+            WITH ranked_reviews AS (
+                SELECT 
+                    c.id, c.text, c.img, c.created_at, c.review_prop,
+                    u.id as user_id, u.nickname, u.profile_image, u.taste_cluster, u.taste_result,
+                    (c.review_prop->>'shop_id')::int as shop_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY (c.review_prop->>'shop_id')::int 
+                        ORDER BY ${orderByClause}
+                    ) as rn
+                FROM content c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.type = 'review' 
+                  AND c.is_deleted = false 
+                  AND c.visibility = true
+                  AND (c.review_prop->>'shop_id')::int IN (${shopIds.join(',')})
+            )
+            SELECT * FROM ranked_reviews WHERE rn = 1
+        `));
+
+        rawSnippets.rows.forEach((row: any) => {
+            snippetsMap.set(Number(row.shop_id), {
+                id: row.id,
+                text: row.text,
+                images: row.img, // Drizzle/pg driver usually parses json, but check if string
+                created_at: row.created_at,
+                review_prop: row.review_prop,
                 user: {
-                    ...reviews[0].user,
-                    cluster_name: reviews[0].user.taste_cluster
+                    id: row.user_id,
+                    nickname: row.nickname,
+                    profile_image: row.profile_image,
+                    cluster_name: getClusterName(row.taste_cluster),
+                    taste_cluster: row.taste_cluster,
+                    taste_result: row.taste_result
                 }
-            } : null;
+            });
+        });
 
-            return {
-                ...shop,
-                is_saved: saved.length > 0,
-                saved_at: saved.length > 0 ? saved[0].created_at : null,
-                reviewSnippet: reviewSnippet
-            };
+        const enriched = results.map(shop => ({
+            ...shop,
+            is_saved: savedSet.has(shop.id),
+            saved_at: savedAtMap.get(shop.id) || null,
+            reviewSnippet: snippetsMap.get(shop.id) || null
         }));
-        return res.json(enriched);
+
+        res.json(enriched);
+
     } catch (error) {
         console.error("Discovery feed error:", error);
         res.status(500).json({ error: "Failed to fetch discovery feed" });
@@ -145,53 +186,52 @@ router.get("/discovery", async (req, res) => {
 });
 
 // POST /api/shops/:id/save
-// Toggle save status
 router.post("/:id/save", async (req, res) => {
     try {
         const shopId = parseInt(req.params.id);
-        const { userId } = req.body; // Expect userId in body for MVP auth
+        const { userId } = req.body; // TODO: Replace with secure session auth
 
         if (!userId || isNaN(shopId)) {
             return res.status(400).json({ error: "Invalid parameters" });
         }
 
-        // Check if exists
-        const existing = await db.select().from(users_wantstogo)
-            .where(and(
-                eq(users_wantstogo.user_id, userId),
-                eq(users_wantstogo.shop_id, shopId)
-            ))
-            .limit(1);
-
         let isSaved = false;
 
-        if (existing.length > 0) {
-            // Toggle deletion status or remove
-            // Spec says "users_wantstogo" table has is_deleted.
-            const current = existing[0];
-            if (current.is_deleted) {
-                // Restore
-                await db.update(users_wantstogo)
-                    .set({ is_deleted: false, updated_at: new Date() })
-                    .where(eq(users_wantstogo.id, current.id));
-                isSaved = true;
+        // Transactional toggle
+        await db.transaction(async (tx) => {
+            // Check existing record
+            const existing = await tx.select().from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, userId),
+                    eq(users_wantstogo.shop_id, shopId)
+                )).limit(1);
+
+            if (existing.length > 0) {
+                const current = existing[0];
+                if (current.is_deleted) {
+                    // Restore
+                    await tx.update(users_wantstogo)
+                        .set({ is_deleted: false, updated_at: new Date() })
+                        .where(eq(users_wantstogo.id, current.id));
+                    isSaved = true;
+                } else {
+                    // Soft Delete
+                    await tx.update(users_wantstogo)
+                        .set({ is_deleted: true, updated_at: new Date() })
+                        .where(eq(users_wantstogo.id, current.id));
+                    isSaved = false;
+                }
             } else {
-                // Delete (Soft)
-                await db.update(users_wantstogo)
-                    .set({ is_deleted: true, updated_at: new Date() })
-                    .where(eq(users_wantstogo.id, current.id));
-                isSaved = false;
+                // Insert New
+                await tx.insert(users_wantstogo).values({
+                    user_id: userId,
+                    shop_id: shopId,
+                    channel: 'discovery',
+                    is_deleted: false
+                });
+                isSaved = true;
             }
-        } else {
-            // Insert
-            await db.insert(users_wantstogo).values({
-                user_id: userId,
-                shop_id: shopId,
-                channel: 'discovery', // Default channel
-                is_deleted: false
-            });
-            isSaved = true;
-        }
+        });
 
         res.json({ success: true, is_saved: isSaved });
     } catch (error) {
@@ -200,27 +240,34 @@ router.post("/:id/save", async (req, res) => {
     }
 });
 
-// GET /api/shops/search?q=query
+// GET /api/shops/search
 router.get("/search", async (req, res) => {
     try {
         const { q } = req.query;
-        if (!q || typeof q !== 'string') {
-            return res.json([]);
-        }
+        if (!q || typeof q !== 'string') return res.json([]);
 
-        const query = `%${q.replace(/\s+/g, '')}%`; // Remove spaces from query
+        // Normalize: remove spaces for fuzzy match
+        const normalizedQuery = q.replace(/\s+/g, '');
+        const likePattern = `%${normalizedQuery}%`;
 
-        // Search matches where DB name (spaces removed) matches query OR original name matches query
-        const results = await db.select()
+        // Select minimal fields
+        const results = await db.select({
+            id: shops.id,
+            name: shops.name,
+            address_full: shops.address_full,
+            thumbnail_img: shops.thumbnail_img,
+            lat: shops.lat,
+            lon: shops.lon,
+            catchtable_ref: shops.catchtable_ref
+        })
             .from(shops)
-            .where(
-                or(
-                    // Name match (fuzzy: ignore spaces)
-                    sql`REPLACE(${shops.name}, ' ', '') LIKE ${query}`,
-                    // Address match (fuzzy: ignore spaces)
-                    sql`REPLACE(${shops.address_full}, ' ', '') LIKE ${query}`
-                )
-            )
+            .where(or(
+                // Use ILIKE for case-insensitive, REPLACE for space-insensitive
+                // Note: REPLACE + ILIKE might be slow on large datasets without functional index.
+                // TODO: Add TRGM/GIN index for 'replace(name, " ", "")' if slow.
+                sql`REPLACE(${shops.name}, ' ', '') ILIKE ${likePattern}`,
+                sql`REPLACE(${shops.address_full}, ' ', '') ILIKE ${likePattern}`
+            ))
             .limit(20);
 
         res.json(results);
@@ -234,14 +281,11 @@ router.get("/search", async (req, res) => {
 router.get("/:id", async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        if (isNaN(id)) {
-            return res.status(400).json({ error: "Invalid ID" });
-        }
-        const results = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
+        if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        if (results.length === 0) {
-            return res.status(404).json({ error: "Shop not found" });
-        }
+        const results = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
+        if (results.length === 0) return res.status(404).json({ error: "Shop not found" });
+
         res.json(results[0]);
     } catch (error) {
         console.error("Shop details error:", error);
@@ -249,36 +293,17 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-
-// Cache cluster data
-let clusterMap: Map<string, string> | null = null;
-try {
-    const clusterPath = path.join(process.cwd(), 'server/data/cluster.json');
-    if (fs.existsSync(clusterPath)) {
-        const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
-        clusterMap = new Map(clusterData.map(c => [c.cluster_id, c.cluster_name]));
-    } else {
-        console.warn("server/data/cluster.json not found, using empty map");
-        clusterMap = new Map();
-    }
-} catch (e) {
-    console.warn("Failed to load cluster data:", e);
-    clusterMap = new Map();
-}
-
 // GET /api/shops/:id/reviews
 router.get("/:id/reviews", async (req, res) => {
     try {
         const shopId = parseInt(req.params.id);
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
-        const sort = (req.query.sort as string) || 'popular'; // 'popular' | 'similar'
+        const sort = (req.query.sort as string) || 'popular';
         const userId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
         const offset = (page - 1) * limit;
 
-        if (isNaN(shopId)) {
-            return res.status(400).json({ error: "Invalid Shop ID" });
-        }
+        if (isNaN(shopId)) return res.status(400).json({ error: "Invalid Shop ID" });
 
         // 1. Base Query
         let query = db.select({
@@ -294,69 +319,57 @@ router.get("/:id/reviews", async (req, res) => {
                 nickname: users.nickname,
                 profile_image: users.profile_image,
                 taste_cluster: users.taste_cluster,
-                cluster_name: users.taste_cluster, // Placeholder
                 taste_result: users.taste_result
             },
             rank: users_ranking.rank
         })
             .from(content)
             .innerJoin(users, eq(content.user_id, users.id))
-            .leftJoin(users_ranking, and(eq(users_ranking.user_id, content.user_id), eq(users_ranking.shop_id, shopId)))
+            .leftJoin(users_ranking, and(
+                eq(users_ranking.user_id, content.user_id),
+                eq(users_ranking.shop_id, shopId)
+            ))
             .where(and(
                 eq(content.type, 'review'),
                 eq(content.is_deleted, false),
                 eq(content.visibility, true),
                 sql`(${content.review_prop}::jsonb)->>'shop_id' = ${shopId.toString()}::text`
-            )).$dynamic();
+            ));
 
-        // 2. Sorting Logic
+        // 2. Sorting
         if (sort === 'similar' && userId) {
-            // Fetch Requesting User's Scores
-            const requestingUser = await db.select({ taste_result: users.taste_result })
-                .from(users)
-                .where(eq(users.id, userId))
-                .limit(1);
+            const me = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, userId)).limit(1);
+            const myScores = (me[0]?.taste_result as any)?.scores;
 
-            const viewerResult = requestingUser[0]?.taste_result as any;
-            const vS = viewerResult?.scores;
-
-            if (vS) {
+            if (myScores) {
                 const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+                const distSQL = axes.map(axis => {
+                    const myVal = Number(myScores[axis] || 0);
+                    return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
+                }).join(' + ');
 
-                const distanceSql = sql.join(
-                    axes.map(axis => {
-                        const viewerVal = vS[axis] || 0;
-                        return sql`power(
-                            coalesce((${users.taste_result}->'scores'->>${sql.raw(`'${axis}'`)})::int, 0) - ${viewerVal}, 
-                            2
-                        )`;
-                    }),
-                    sql` + `
-                );
-
-                query = query.orderBy(
-                    asc(sql`(${distanceSql})`),
-                    desc(content.created_at)
-                );
+                query = query.orderBy(asc(sql.raw(`(${distSQL})`)), desc(content.created_at));
             } else {
                 query = query.orderBy(desc(content.created_at));
             }
         } else {
+            // TODO: 'popular' currently defaults to newest; implement like/count based sort if needed
             query = query.orderBy(desc(content.created_at));
         }
 
-        // 3. Execute & Pagination
         const reviews = await query.limit(limit).offset(offset);
 
-        // Fetch Shop Info for POI enrichment
-        const shopInfo = await db.select().from(shops).where(eq(shops.id, shopId)).limit(1);
-        const currentShop = shopInfo[0] || { name: 'Unknown', address_full: '', thumbnail_img: '' };
+        // Fetch Shop (minimal) for POI
+        const shopInfo = await db.select({
+            id: shops.id, name: shops.name, address_full: shops.address_full, thumbnail_img: shops.thumbnail_img, catchtable_ref: shops.catchtable_ref
+        }).from(shops).where(eq(shops.id, shopId)).limit(1);
+        const currentShop = shopInfo[0] || { id: shopId, name: 'Unknown', address_full: '', thumbnail_img: '' };
 
         const result = reviews.map(r => ({
             id: r.id,
             user: {
                 ...r.user,
-                cluster_name: r.user.taste_cluster ? (clusterMap?.get(r.user.taste_cluster) || r.user.taste_cluster) : undefined
+                cluster_name: getClusterName(r.user.taste_cluster)
             },
             text: r.text,
             images: r.img,
@@ -374,9 +387,8 @@ router.get("/:id/reviews", async (req, res) => {
         }));
 
         res.json(result);
-
     } catch (error) {
-        console.error(`[ShopReviewsError] shopId: ${req.params.id}, userId: ${req.query.user_id}, Error:`, error);
+        console.error(`[ShopReviewsError] shopId: ${req.params.id}, userId: ${req.query.user_id}`, error);
         res.status(500).json({ error: "Failed to fetch shop reviews" });
     }
 });
@@ -396,23 +408,23 @@ const ALLOWED_GOOGLE_TYPES = [
     "vegan_restaurant", "vegetarian_restaurant", "vietnamese_restaurant", "wine_bar"
 ];
 
-// GET /api/shops/search/google?q=query&region=optional
+// GET /api/shops/search/google
+// Wraps Google Places Text Search (New API)
 router.get("/search/google", async (req, res) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     try {
         const { q, region } = req.query;
-        if (!q || typeof q !== 'string') {
-            return res.json([]);
-        }
+        if (!q || typeof q !== 'string') return res.json([]);
 
         const apiKey = process.env.GOOGLE_MAPS_API_KEY;
         if (!apiKey) {
-            console.error("GOOGLE_MAPS_API_KEY is missing");
-            return res.status(500).json({ error: "Service configuration error" });
+            console.error("GOOGLE_MAPS_API_KEY missing");
+            return res.status(500).json({ error: "Service config error" });
         }
 
-        // Construct Query: "Query [Region]"
         const textQuery = region ? `${q} ${region}` : q;
-        console.log(`[GoogleSearch] Query: "${textQuery}"`);
 
         const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
             method: 'POST',
@@ -421,123 +433,94 @@ router.get("/search/google", async (req, res) => {
                 'X-Goog-Api-Key': apiKey,
                 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.types'
             },
-            body: JSON.stringify({
-                textQuery: textQuery,
-                languageCode: 'ko'
-            })
+            body: JSON.stringify({ textQuery, languageCode: 'ko' }),
+            signal: controller.signal
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            throw new Error(`Google API error: ${response.status} ${errText}`);
+            throw new Error(`Google API ${response.status}: ${errText}`);
         }
 
         const data = await response.json();
-
-        // Filter by types
         const rawResults = data.places || [];
-        const filteredResults = rawResults.filter((place: any) => {
-            if (!place.types) return false;
-            return place.types.some((t: string) => ALLOWED_GOOGLE_TYPES.includes(t));
-        });
 
-        const results = filteredResults.map((place: any) => {
-            // Find specific type for food_kind
-            const matchedType = place.types.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+        const filtered = rawResults
+            .filter((p: any) => p.types && p.types.some((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)))
+            .map((p: any) => {
+                const matchedType = p.types.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+                let thumb = null;
+                // New Places API photo reference
+                if (p.photos && p.photos.length > 0) {
+                    thumb = `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
+                }
+                return {
+                    google_place_id: p.id,
+                    name: p.displayName?.text || p.formattedAddress,
+                    formatted_address: p.formattedAddress,
+                    location: { lat: p.location?.latitude, lng: p.location?.longitude },
+                    rating: p.rating,
+                    user_ratings_total: p.userRatingCount,
+                    thumbnail_img: thumb,
+                    food_kind: matchedType,
+                    // null-safe generativeSummary
+                    description: p.generativeSummary?.overview?.text?.text || null,
+                    photos: p.photos
+                };
+            });
 
-            // Construct thumbnail URL
-            let thumb = null;
-            if (place.photos && place.photos.length > 0) {
-                // New API uses photo names like "places/PLACE_ID/photos/PHOTO_ID"
-                // Need to fetch using "https://places.googleapis.com/v1/{name}/media?key=KEY&maxHeightPx=400&maxWidthPx=400"
-                // But wait, the previous implementation used the old Places API photo reference.
-                // New API returns `name` resource string for photos.
-                thumb = `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
-            }
+        res.json(filtered);
 
-            return {
-                google_place_id: place.id, // New API uses 'id', not 'place_id' (but they allow both references usually? Actually 'id' is standard now)
-                name: place.displayName?.text || place.formattedAddress,
-                formatted_address: place.formattedAddress,
-                location: { lat: place.location?.latitude, lng: place.location?.longitude },
-                rating: place.rating,
-                user_ratings_total: place.userRatingCount,
-                thumbnail_img: thumb,
-                food_kind: matchedType,
-                description: place.generativeSummary?.overview?.text?.text, // New API structure
-                photos: place.photos // Pass through for import logic
-            };
-        });
-
-        res.json(results);
-    } catch (error) {
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.error("Google Search Timeout");
+            return res.status(504).json({ error: "Search timed out" });
+        }
         console.error("Google search error:", error);
         res.status(500).json({ error: "Failed to search Google Places" });
+    } finally {
+        clearTimeout(timeout);
     }
 });
 
-// POST /api/shops/import-google
 router.post("/import-google", async (req, res) => {
     try {
-        console.log("[ImportGoogle] Received request body:", JSON.stringify(req.body, null, 2));
-
         const place = req.body;
-        if (!place || !place.google_place_id || !place.name) {
-            console.error("[ImportGoogle] Invalid payload");
-            return res.status(400).json({ error: "Invalid place data" });
+        if (!place?.google_place_id || !place?.name) {
+            return res.status(400).json({ error: "Invalid data" });
         }
 
-        // Check if exists
-        console.log("[ImportGoogle] Checking existing shop for id:", place.google_place_id);
+        // Check exists
         const existing = await db.select().from(shops).where(eq(shops.google_place_id, place.google_place_id)).limit(1);
-        if (existing.length > 0) {
-            console.log("[ImportGoogle] Found existing shop:", existing[0].id);
-            return res.json(existing[0]);
-        }
+        if (existing.length > 0) return res.json(existing[0]);
 
-        // Data Preparation
-        let thumbnail_img = place.thumbnail_img; // Already constructed in search
-
-        // Parse address region
+        // Region Parse (TODO: improve robust parsing)
         let address_region = null;
         if (place.formatted_address) {
-            const parts = place.formatted_address.split(" ");
-            address_region = parts.slice(0, 3).join(" ");
+            address_region = place.formatted_address.split(" ").slice(0, 3).join(" ");
         }
 
-        // Values from search result
-        const description = place.description || null;
-        const food_kind = place.food_kind || null;
-
-        console.log("[ImportGoogle] Inserting new shop...");
         const newShopId = await db.insert(shops).values({
             name: place.name,
             google_place_id: place.google_place_id,
             address_full: place.formatted_address,
             address_region: address_region,
-            // New Places API returns location as { latitude, longitude } mapped to { lat, lng } in search
             lat: place.location?.lat,
             lon: place.location?.lng,
-            thumbnail_img: thumbnail_img,
-            description: description, // Insert description from generativeSummary
-            food_kind: food_kind, // Insert mapped food_kind
-            status: 2, // Open
+            thumbnail_img: place.thumbnail_img,
+            description: place.description,
+            food_kind: place.food_kind,
+            status: 2,
             country_code: 'KR',
             visibility: true
         }).returning({ id: shops.id });
 
-        console.log("[ImportGoogle] Insert response:", JSON.stringify(newShopId));
-
-        if (!newShopId || newShopId.length === 0) {
-            throw new Error("Failed to insert shop (no ID returned)");
-        }
+        if (!newShopId[0]) throw new Error("Insert failed");
 
         const created = await db.select().from(shops).where(eq(shops.id, newShopId[0].id)).limit(1);
-        console.log("[ImportGoogle] Fetched created shop:", created[0]);
         res.json(created[0]);
-
     } catch (error) {
-        console.error("Import Google Shop error details:", error);
+        console.error("Import Google error:", error);
         res.status(500).json({ error: "Failed to import shop" });
     }
 });

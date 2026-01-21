@@ -240,8 +240,8 @@ const RankingListItem = ({ item }: { item: ListItem }) => {
 
             {/* Main Info */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between mb-1">
-                    <h3 className="font-bold text-base truncate pr-2">{shop.name}</h3>
+                <div className="flex items-start justify-between mb-1 gap-2">
+                    <h3 className="font-bold text-base line-clamp-2 leading-tight">{shop.name}</h3>
                     {(() => {
                         // Map tier to string code
                         const tierMap: Record<number, string> = { 1: 'good', 2: 'good', 3: 'ok', 4: 'bad' };
@@ -249,7 +249,7 @@ const RankingListItem = ({ item }: { item: ListItem }) => {
 
                         return (
                             <span className={cn(
-                                "font-bold text-sm",
+                                "font-bold text-sm whitespace-nowrap flex-shrink-0 min-w-[3rem] text-right mt-0.5",
                                 satisfaction === 'good' ? "text-orange-600" : "text-gray-500"
                             )}>
                                 {t(`write.basic.${satisfaction}`)}
