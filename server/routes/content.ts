@@ -49,18 +49,8 @@ router.get("/feed", async (req, res) => {
             .leftJoin(users, eq(content.user_id, users.id))
             .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
 
-        // Fetch Current User's Taste Profile for 'popular' personalization
-        let myScores: any = null;
-        if (currentUserId && (filter === 'popular' || filter === '')) {
-            const me = await db.select({ taste_result: users.taste_result })
-                .from(users)
-                .where(eq(users.id, currentUserId))
-                .limit(1);
-            if (me.length > 0 && me[0].taste_result) {
-                const tr = me[0].taste_result as any;
-                if (tr.scores) myScores = tr.scores;
-            }
-        }
+        // Fetch Current User's Taste Profile for 'popular' personalization - REMOVED (User requested logic removal)
+        // let myScores: any = null;
 
         // Apply Filters
         const whereConditions = [
@@ -108,20 +98,11 @@ router.get("/feed", async (req, res) => {
                             ))
                         )
                     ) <= 10
+            ) <= 10
                 `);
             }
-        } else if ((filter === 'popular' || filter === '') && myScores) {
-            // Fix: Taste Match Safety
-            const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
-            const distillSQL = axes.map(axis => {
-                const myVal = Number(myScores[axis] || 0);
-                // Safe casting and coalescing
-                return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
-            }).join(' + ');
-
-            whereConditions.push(sql`(${users.taste_result} IS NOT NULL)`);
-            whereConditions.push(sql`(${sql.raw(distillSQL)}) <= 17.83`);
         }
+        // else if ((filter === 'popular' || filter === '') && myScores) { ... } // Removed logic
 
         const feedItems = await query
             .where(and(...whereConditions))
