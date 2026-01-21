@@ -319,6 +319,10 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const [originalUrl, setOriginalUrl] = useState<string>('');
     const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
+    // Pinch Zoom Refs
+    const pinchStartDist = useRef<number | null>(null);
+    const startScaleRef = useRef<number>(1);
+
     // Constants
     const CROP_SIZE = 300;
     const OUTPUT_SIZE = 1080;
@@ -371,6 +375,40 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
         };
     };
 
+    const updateScale = (newScale: number) => {
+        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+        setScale(newScale);
+
+        // Re-clamp position for new scale
+        const { maxX, maxY } = getBoundaries(newScale);
+        setPosition(prev => ({
+            x: Math.max(-maxX, Math.min(maxX, prev.x)),
+            y: Math.max(-maxY, Math.min(maxY, prev.y))
+        }));
+    };
+
+    // Touch Handling for Pinch
+    const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+            startScaleRef.current = scale;
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchStartDist.current !== null) {
+            const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+            const ratio = currentDist / pinchStartDist.current;
+            updateScale(startScaleRef.current * ratio);
+        }
+    };
+
     const handlePan = (e: React.PointerEvent) => {
         if (e.buttons !== 1) return;
         const { maxX, maxY } = getBoundaries(scale);
@@ -420,6 +458,8 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             <div
                 className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#111] touch-none"
                 onPointerMove={handlePan}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
             >
                 {/* Image Layer - Centered by Flex */}
                 {originalUrl && imgDims && (
@@ -460,16 +500,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
                         min={MIN_SCALE}
                         max={MAX_SCALE}
                         step={0.01}
-                        onValueChange={(vals) => {
-                            const newScale = vals[0];
-                            setScale(newScale);
-                            // Re-clamp position for new scale
-                            const { maxX, maxY } = getBoundaries(newScale);
-                            setPosition(prev => ({
-                                x: Math.max(-maxX, Math.min(maxX, prev.x)),
-                                y: Math.max(-maxY, Math.min(maxY, prev.y))
-                            }));
-                        }}
+                        onValueChange={(vals) => updateScale(vals[0])}
                         className="flex-1"
                     />
                     <span className="text-xs text-white/50">확대</span>
