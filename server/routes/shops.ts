@@ -343,12 +343,18 @@ router.get("/:id/reviews", async (req, res) => {
 
             if (myScores) {
                 const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
-                const distSQL = axes.map(axis => {
-                    const myVal = Number(myScores[axis] || 0);
-                    return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
-                }).join(' + ');
 
-                query = query.orderBy(asc(sql.raw(`(${distSQL})`)), desc(content.created_at));
+                // Construct distance SQL safely using Drizzle's sql template tag
+                const distChunks = axes.map(axis => {
+                    const myVal = Number(myScores[axis] || 0);
+                    // users.taste_result is a JSONB column. ->> gets text, cast to float.
+                    // We use sql tag to ensure column reference is handled correctly.
+                    return sql`power(COALESCE((${users.taste_result}->'scores'->>${axis})::float, 0) - ${myVal}, 2)`;
+                });
+
+                const distSum = sql.join(distChunks, sql` + `);
+
+                query = query.orderBy(asc(distSum), desc(content.created_at));
             } else {
                 query = query.orderBy(desc(content.created_at));
             }

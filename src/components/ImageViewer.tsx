@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Assuming cn exists
@@ -25,13 +26,19 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
     // Refs for Gesture Handling
     const containerRef = useRef<HTMLDivElement>(null);
     const pinchStartDist = useRef<number | null>(null);
+    const pinchStartCenter = useRef<{ x: number, y: number } | null>(null);
     const startScaleRef = useRef<number>(1);
+    const startPanRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+
+    // Pan Motion Values (separate from dismissal y)
+    // Actually, let's use manual state for x/y translation during zoom to avoid conflict with 'y' dismissal motion value
+    const [translation, setTranslation] = useState({ x: 0, y: 0 });
 
     // Animation Controls
     const [direction, setDirection] = useState(0);
     const controls = useAnimation();
-    const y = useMotionValue(0);
-    const opacity = useTransform(y, [-200, 0, 200], [0.5, 1, 0.5]);
+    const dismissY = useMotionValue(0); // Renamed from y to avoid confusion
+    const opacity = useTransform(dismissY, [-200, 0, 200], [0.5, 1, 0.5]);
 
     // Slide Variants
     const variants = {
@@ -51,33 +58,69 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
         })
     };
 
-    // --- Touch Handlers for Pinch Zoom ---
+    // --- Touch Handlers for Pinch Zoom & Pan ---
     const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
         const dx = t1.clientX - t2.clientX;
         const dy = t1.clientY - t2.clientY;
         return Math.sqrt(dx * dx + dy * dy);
     };
 
+    const getTouchCenter = (t1: React.Touch, t2: React.Touch) => {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    };
+
     const handleTouchStart = (e: React.TouchEvent) => {
         if (e.touches.length === 2) {
-            pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            pinchStartDist.current = getTouchDist(t1, t2);
+            pinchStartCenter.current = getTouchCenter(t1, t2);
             startScaleRef.current = scale;
+            startPanRef.current = translation;
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length === 2 && pinchStartDist.current !== null) {
-            const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+        if (e.touches.length === 2 && pinchStartDist.current !== null && pinchStartCenter.current !== null) {
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+
+            // 1. Calculate Scale
+            const currentDist = getTouchDist(t1, t2);
             const ratio = currentDist / pinchStartDist.current;
-            const newScale = Math.max(1, startScaleRef.current * ratio); // Min scale 1
+            const newScale = Math.max(1, startScaleRef.current * ratio);
+
+            // 2. Calculate Pan (Center Delta)
+            const currentCenter = getTouchCenter(t1, t2);
+            const dx = currentCenter.x - pinchStartCenter.current.x;
+            const dy = currentCenter.y - pinchStartCenter.current.y;
+
+            // Combine with initial pan if we supported sticky zoom, but for elastic zoom usually we start from 0
+            // However, if we wanted to support "lift one finger, place it back", we'd need sticky.
+            // But elastic zoom resets on end. So startPanRef is likely {0,0}.
+
+            setTranslation({
+                x: startPanRef.current.x + dx,
+                y: startPanRef.current.y + dy
+            });
             setScale(newScale);
         }
     };
 
-    const handleTouchEnd = () => {
-        pinchStartDist.current = null;
-        if (scale < 1) setScale(1); // Elastic bounce back if under-zoomed
-        if (scale > 3) setScale(3); // Max zoom cap
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (e.touches.length < 2) {
+            pinchStartDist.current = null;
+            pinchStartCenter.current = null;
+
+            // Elastic Snap Back
+            if (scale > 1) {
+                setScale(1);
+                setTranslation({ x: 0, y: 0 }); // Reset position too
+            }
+        }
     };
 
     // --- Swipe Navigation ---
@@ -87,6 +130,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
             setDirection(newDirection);
             setIndex(newIndex);
             setScale(1); // Reset zoom on change
+            setTranslation({ x: 0, y: 0 });
         }
     };
 
@@ -107,13 +151,15 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
             } else if (swipePower > swipeThreshold && index > 0) {
                 paginate(-1);
             }
-            controls.start({ y: 0 }); // Snap back vertical drag
+            // Reset position
+            dismissY.set(0);
+            controls.start({ x: 0, y: 0 }); // Just in case, though we drive Y with value
         }
     };
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
@@ -160,13 +206,20 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
                         {/* Draggable Wrapper for Dismiss/Swipe */}
                         <motion.div
                             // Elastic Zoom Logic:
-                            // If zoomed (scale > 1), we disable the standard drag (x/y) to prevent dismiss/swipe interference.
-                            // Since we are implementing a "Temporary Zoom" (elastic snap back on release),
-                            // the drag for dismiss/swipe should only be active when not zoomed.
-                            drag={scale > 1 ? false : true} // Disable dismiss/swipe drag if zoomed
-                            dragConstraints={scale > 1 ? undefined : { top: 0, bottom: 0, left: 0, right: 0 }} // Elastic drag for dismiss
-                            dragElastic={0.2} // Elasticity for dismiss
-                            style={{ x: 0, y, scale }}
+                            // When zoomed (scale > 1), we disable standard 'drag' gesture to allow our manual 'translation' state to drive x/y directly via style.
+                            // When not zoomed, we enable standard 'drag="y"' or 'true' for dismiss/swipe.
+                            drag={scale > 1 ? false : true}
+                            dragConstraints={scale > 1 ? undefined : { top: 0, bottom: 0, left: 0, right: 0 }}
+                            dragElastic={0.2}
+                            // We combine dismissY (motion value) with manual translation (state)
+                            // Since they are exclusive (one active when zoomed, one when not), we can just sum them or switch them.
+                            // But translation is {x,y} and dismissY is Y only. x is handled by slide variants or swipe.
+                            // Actually, better to just bind style to the merged values.
+                            style={{
+                                x: translation.x,
+                                y: scale > 1 ? translation.y : dismissY, // Use dismissY when not zoomed for gesture support
+                                scale
+                            }}
                             onDragEnd={handleDragEnd}
                             className="absolute w-full h-full flex items-center justify-center"
                         >
@@ -217,6 +270,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
                     )}
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 };
