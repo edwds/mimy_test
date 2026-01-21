@@ -3,6 +3,26 @@ import { ShopCard } from './ShopCard';
 import { motion, PanInfo, useAnimation, useDragControls } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { prefetchReviewSnippet, snippetCache } from '@/components/discovery/SelectedShopCard';
+
+// Wrapper to handle individual review fetching
+const ShopCardWithReview = ({ shop, onSave }: { shop: any, onSave?: (id: number) => void }) => {
+    const [reviewSnippet, setReviewSnippet] = useState<any>(snippetCache.get(shop.id) || null);
+
+    useEffect(() => {
+        if (!reviewSnippet) {
+            const fetchData = async () => {
+                await prefetchReviewSnippet(shop.id);
+                if (snippetCache.has(shop.id)) {
+                    setReviewSnippet(snippetCache.get(shop.id));
+                }
+            };
+            fetchData();
+        }
+    }, [shop.id]);
+
+    return <ShopCard shop={shop} onSave={onSave} reviewSnippet={reviewSnippet} />;
+};
 
 interface Props {
     shops: any[];
@@ -124,10 +144,9 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 ) : (
                     displayedShops.map((shop) => (
                         <div key={shop.id} className="mb-4">
-                            <ShopCard
+                            <ShopCardWithReview
                                 shop={shop}
                                 onSave={onSave}
-                                onReserve={() => alert(t('discovery.bottom_sheet.reserve_alert'))}
                             />
                         </div>
                     ))

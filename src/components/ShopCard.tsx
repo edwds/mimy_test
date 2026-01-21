@@ -22,11 +22,20 @@ interface ShopCardProps {
     onReserve?: (shopId: number) => void; // Optional catchtable link
     onClick?: (shopId: number) => void; // Optional click handler for entire card
     hideActions?: boolean;
+    reviewSnippet?: {
+        id: number;
+        text: string;
+        user: {
+            nickname: string;
+            profile_image?: string | null;
+            cluster_name?: string;
+        };
+    } | null;
 }
 
 import { useNavigate } from 'react-router-dom';
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions }) => {
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions, reviewSnippet }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
 
@@ -123,8 +132,36 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                 )}
             </div>
 
-            {/* Saved Footer (Conditional) */}
-            {shop.is_saved && shop.saved_at && (
+            {/* Review Snippet (Priority over Saved Footer if both exist, or stack? User said "at bottom") */}
+            {/* Let's stack them or prioritize. Review snippet is usually more dynamic context. */}
+            {reviewSnippet && (
+                <div className="bg-gray-50 px-4 py-3 border-t border-border">
+                    <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-1.5 mb-0.5">
+                                <span className="text-xs font-bold text-gray-900 truncate">
+                                    {reviewSnippet.user.nickname}
+                                </span>
+                                {reviewSnippet.user.cluster_name && (
+                                    <span className="text-xs text-orange-500 font-medium truncate">
+                                        {reviewSnippet.user.cluster_name}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                                {reviewSnippet.text}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Saved Footer (Conditional) - Only show if no review snippet OR if we want both? */}
+            {/* User request didn't specify removing saved footer. But "Review 1개 노출" implies this is the footer. */}
+            {/* Let's show BELOW review if both exist? Or replace? */}
+            {/* If I saved it, the save date is metadata. The review is content. */}
+            {/* Let's stack them for now, but ensure it looks okay. */}
+            {!reviewSnippet && shop.is_saved && shop.saved_at && (
                 <div className="bg-muted/30 px-4 py-3 border-t border-border flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
                         {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}

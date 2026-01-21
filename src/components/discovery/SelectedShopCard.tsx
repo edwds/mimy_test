@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShopCard } from '../ShopCard';
 import { X } from 'lucide-react';
 import { motion, PanInfo } from 'framer-motion';
+import { API_BASE_URL } from '@/lib/api';
 
 interface Props {
     shop: any;
@@ -37,6 +38,31 @@ const variants = {
     }
 };
 
+export const snippetCache = new Map<number, any>();
+
+// Exportable fetcher
+export const prefetchReviewSnippet = async (shopId: number) => {
+    if (snippetCache.has(shopId)) return;
+
+    try {
+        const userId = localStorage.getItem('mimy_user_id');
+        let url = `${API_BASE_URL}/api/shops/${shopId}/reviews?page=1&limit=1&sort=similar`;
+        if (userId) url += `&user_id=${userId}`;
+
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.length > 0) {
+                snippetCache.set(shopId, data[0]);
+            } else {
+                snippetCache.set(shopId, null);
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+};
+
 export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onReserve, onNext, onPrev, direction = 'next' }) => {
     // Swipe Handler
     const handleDragEnd = (_: any, info: PanInfo) => {
@@ -52,6 +78,33 @@ export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onRes
             onPrev?.();
         }
     };
+
+    // Fetch best review
+    const [reviewSnippet, setReviewSnippet] = useState<any>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchBestReview = async () => {
+            if (!shop || !shop.id) return;
+
+            // Check Cache first
+            if (snippetCache.has(shop.id)) {
+                setReviewSnippet(snippetCache.get(shop.id));
+                return;
+            }
+
+            setReviewSnippet(null);
+
+            // Use the shared fetch logic, then update state
+            await prefetchReviewSnippet(shop.id);
+
+            if (isMounted) {
+                setReviewSnippet(snippetCache.get(shop.id) || null);
+            }
+        };
+        fetchBestReview(); // Placeholder logic moved to next step
+        return () => { isMounted = false; };
+    }, [shop.id]);
 
     return (
         <motion.div
@@ -70,7 +123,7 @@ export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onRes
         // Ensure padding for safe area if needed, though 'bottom-6' usually covers it. 
         // We adding marginBottom safe area manually if needed.
         >
-            <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+            <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden">
                 {/* Close Button - absolute top right */}
                 <button
                     onClick={(e) => {
@@ -89,6 +142,7 @@ export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onRes
                             shop={shop}
                             onSave={onSave}
                             onReserve={onReserve}
+                            reviewSnippet={reviewSnippet}
                         />
                     </div>
                 </div>

@@ -10,7 +10,7 @@ import { MapContainer } from '@/components/MapContainer';
 import { Capacitor } from '@capacitor/core';
 import { ShopBottomSheet } from '@/components/ShopBottomSheet';
 import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOverlay'; // Import Overlay
-import { SelectedShopCard } from '@/components/discovery/SelectedShopCard';
+import { SelectedShopCard, prefetchReviewSnippet } from '@/components/discovery/SelectedShopCard';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
 
@@ -333,6 +333,26 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         setSelectedShopId(null); // Deselect individual shop if any
         // We probably don't need to change map center, user wants to see the cluster context.
     };
+
+    // Prefetch neighbor review snippets
+    useEffect(() => {
+        if (!selectedShopId || shops.length === 0) return;
+
+        const currentIndex = shops.findIndex(s => s.id === selectedShopId);
+        if (currentIndex === -1) return;
+
+        // Prefetch range: prev 2, next 3
+        const start = Math.max(0, currentIndex - 2);
+        const end = Math.min(shops.length, currentIndex + 4);
+
+        for (let i = start; i < end; i++) {
+            if (i === currentIndex) continue; // Current is already fetching
+            const shop = shops[i];
+            if (shop && shop.id) {
+                prefetchReviewSnippet(shop.id);
+            }
+        }
+    }, [selectedShopId, shops]);
 
     return (
         <div className="relative h-full w-full overflow-hidden">
