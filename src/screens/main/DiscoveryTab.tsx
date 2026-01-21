@@ -33,6 +33,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const { t } = useTranslation();
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
+    const prevShopsRef = useRef<any[]>([]); // Store previous shops state
 
     // Map & Sheet State
     const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
@@ -296,13 +297,34 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Override handleSearchSelect to use new logic
     const handleSearchSelect = (shop: any) => {
-        // Add if missing
+        // 1. Save current state if not already in a "search view" mode
+        // If prevShopsRef is empty, it means we are in the "base" state.
+        if (prevShopsRef.current.length === 0 && shops.length > 0) {
+            prevShopsRef.current = shops;
+        }
+
+        // 2. Add if missing
         if (!shops.find(s => s.id === shop.id)) {
             setShops(prev => [shop, ...prev]);
         }
+
+        // 3. Center Map
+        if (shop.lat && shop.lon) {
+            setMapCenter([shop.lat, shop.lon]);
+        }
+
         handleSelectShop(shop.id);
         setIsSearching(false);
         setViewingCluster(false);
+    };
+
+    const handleCloseShop = () => {
+        setSelectedShopId(null);
+        // Restore list if we have a saved state
+        if (prevShopsRef.current.length > 0) {
+            setShops(prevShopsRef.current);
+            prevShopsRef.current = [];
+        }
     };
 
     // Override handleSwipeNavigation
@@ -361,7 +383,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <MapContainer
                     shops={shops}
                     onMarkerClick={handleSelectShop}
-                    onMapClick={() => setSelectedShopId(null)}
+                    onMapClick={handleCloseShop}
                     center={mapCenter} // Don't force center to selected shop anymore
                     isActive={isActive}
                     selectedShopId={selectedShopId}
@@ -377,7 +399,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     <SelectedShopCard
                         key={selectedShopId} // Key change triggers animation
                         shop={shops.find(s => s.id === selectedShopId)}
-                        onClose={() => setSelectedShopId(null)}
+                        onClose={handleCloseShop}
                         onSave={handleSave}
                         onReserve={() => alert(t('discovery.bottom_sheet.reserve_alert'))}
                         onNext={() => handleSwipeNavigation('next')}

@@ -12,6 +12,7 @@ export const AdminScreen = () => {
     const navigate = useNavigate();
 
     const [selectedTable, setSelectedTable] = useState<'shops' | 'content'>('shops');
+    const [importMode, setImportMode] = useState<'overwrite' | 'append'>('overwrite');
     const [file, setFile] = useState<File | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -44,6 +45,7 @@ export const AdminScreen = () => {
         formData.append('file', file);
         if (user) formData.append('userId', user.id.toString());
         formData.append('table', selectedTable);
+        formData.append('mode', importMode);
 
         // Simulate progress purely for UI feedback since it's a single POST
         const progressInterval = setInterval(() => {
@@ -136,6 +138,58 @@ export const AdminScreen = () => {
                             <Database size={18} />
                             {t('admin.content')}
                         </button>
+                    </div>
+                </section>
+
+                {/* Import Mode Selection */}
+                <section className={cn("space-y-3", isUpdating && "opacity-50 pointer-events-none")}>
+                    <h2 className="text-[15px] font-bold text-gray-900 ml-1">
+                        Import Mode
+                    </h2>
+                    <div className="bg-white rounded-2xl p-2 border border-gray-100 flex flex-col gap-1">
+                        <label className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors",
+                            importMode === 'overwrite' ? "bg-primary/5 border border-primary/20" : "hover:bg-gray-50 border border-transparent"
+                        )}>
+                            <input
+                                type="radio"
+                                name="importMode"
+                                value="overwrite"
+                                checked={importMode === 'overwrite'}
+                                onChange={() => setImportMode('overwrite')}
+                                className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
+                            />
+                            <div className="flex flex-col">
+                                <span className={cn("font-bold text-sm", importMode === 'overwrite' ? "text-primary" : "text-gray-900")}>
+                                    처음부터 만들기 (Reset)
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    전체 지우고 추가
+                                </span>
+                            </div>
+                        </label>
+
+                        <label className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors",
+                            importMode === 'append' ? "bg-primary/5 border border-primary/20" : "hover:bg-gray-50 border border-transparent"
+                        )}>
+                            <input
+                                type="radio"
+                                name="importMode"
+                                value="append"
+                                checked={importMode === 'append'}
+                                onChange={() => setImportMode('append')}
+                                className="w-5 h-5 text-primary border-gray-300 focus:ring-primary"
+                            />
+                            <div className="flex flex-col">
+                                <span className={cn("font-bold text-sm", importMode === 'append' ? "text-primary" : "text-gray-900")}>
+                                    뒤에 추가하기 (Append)
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    현재 마지막 행을 확인하고 다음부터 추가
+                                </span>
+                            </div>
+                        </label>
                     </div>
                 </section>
 

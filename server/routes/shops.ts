@@ -190,6 +190,22 @@ router.get("/:id", async (req, res) => {
 });
 
 
+// Cache cluster data
+let clusterMap: Map<string, string> | null = null;
+try {
+    const clusterPath = path.join(process.cwd(), 'server/data/cluster.json');
+    if (fs.existsSync(clusterPath)) {
+        const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
+        clusterMap = new Map(clusterData.map(c => [c.cluster_id, c.cluster_name]));
+    } else {
+        console.warn("server/data/cluster.json not found, using empty map");
+        clusterMap = new Map();
+    }
+} catch (e) {
+    console.warn("Failed to load cluster data:", e);
+    clusterMap = new Map();
+}
+
 // GET /api/shops/:id/reviews
 router.get("/:id/reviews", async (req, res) => {
     try {
@@ -218,7 +234,7 @@ router.get("/:id/reviews", async (req, res) => {
                 nickname: users.nickname,
                 profile_image: users.profile_image,
                 taste_cluster: users.taste_cluster,
-                cluster_name: users.taste_cluster, // Map for ContentCard
+                cluster_name: users.taste_cluster, // Placeholder
                 taste_result: users.taste_result
             },
             rank: users_ranking.rank
@@ -245,9 +261,6 @@ router.get("/:id/reviews", async (req, res) => {
             const vS = viewerResult?.scores;
 
             if (vS) {
-                // Euclidean Distance: sum((a_i - b_i)^2)
-                // We extract scores from JSONB for each review author
-                // AXIS: boldness, acidity, richness, experimental, spiciness, sweetness, umami
                 const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
 
                 const distanceSql = sql.join(
@@ -269,32 +282,11 @@ router.get("/:id/reviews", async (req, res) => {
                 query = query.orderBy(desc(content.created_at));
             }
         } else {
-            // Default: Popular (Newest for now per spec "Inki is newest")
             query = query.orderBy(desc(content.created_at));
         }
 
         // 3. Execute & Pagination
         const reviews = await query.limit(limit).offset(offset);
-
-        // 4. Enrich (Optional: Like counts, etc. if needed later, keeping it simple for now)
-        // Similar to feed, we might want stats. adhering to "Review List" requirements.
-
-        // Read cluster data for name mapping
-        // Note: In a real app key-value cache or DB table is better.
-        // Assuming we can read it once or cache it.
-        // For now, let's just map it if we have the ID.
-        // Since we can't easily import JSON with strict TS settings sometimes, we'll try reading or use a helper if available.
-        // But to keep it simple within this file scope without top-level quirks:
-
-        // Actually, let's just do it in the map loop if we can load the data.
-        // Or better, let's assume the ID is what we have and we need to fetch the name.
-        // Let's rely on `users` table potentially having it? No, schema says `taste_cluster` is varchar(50) and user usually only stores ID or Name?
-        // Memory says users.taste_cluster stores ID.
-
-        // Let's load the file at the top or here.
-        const clusterPath = path.join(process.cwd(), 'server/data/cluster.json');
-        const clusterData = JSON.parse(fs.readFileSync(clusterPath, 'utf-8')) as Array<{ cluster_id: string, cluster_name: string }>;
-        const clusterMap = new Map(clusterData.map(c => [c.cluster_id, c.cluster_name]));
 
         // Fetch Shop Info for POI enrichment
         const shopInfo = await db.select().from(shops).where(eq(shops.id, shopId)).limit(1);
@@ -304,7 +296,7 @@ router.get("/:id/reviews", async (req, res) => {
             id: r.id,
             user: {
                 ...r.user,
-                cluster_name: r.user.taste_cluster ? (clusterMap.get(r.user.taste_cluster) || r.user.taste_cluster) : undefined
+                cluster_name: r.user.taste_cluster ? (clusterMap?.get(r.user.taste_cluster) || r.user.taste_cluster) : undefined
             },
             text: r.text,
             images: r.img,
@@ -323,10 +315,8 @@ router.get("/:id/reviews", async (req, res) => {
 
         res.json(result);
 
-
-
     } catch (error) {
-        console.error("Shop reviews error:", error);
+        console.error(`[ShopReviewsError] shopId: ${req.params.id}, userId: ${req.query.user_id}, Error:`, error);
         res.status(500).json({ error: "Failed to fetch shop reviews" });
     }
 });

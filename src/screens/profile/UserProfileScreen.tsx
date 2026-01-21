@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Grid, List, Loader2, ArrowLeft } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
@@ -265,16 +264,18 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         fetchLists();
     }, [userId, user?.id, activeTab]);
 
-    // Scroll & Header Logic
+    // Header & Scroll Logic
+    const [headerHeight, setHeaderHeight] = useState(0);
+    const measureHeader = (node: HTMLDivElement | null) => {
+        if (node) setHeaderHeight(node.offsetHeight);
+    };
+
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollPositions = useRef<{ [key: string]: number }>({});
-
-    // Header is always visible now to prevent issues
     const [isHeaderVisible] = useState(true);
 
     const handleScroll = () => {
-        // Keep scroll position tracking for tab switching if needed, 
-        // but removed auto-hide header logic.
+        // Keep scroll handler for future extensions
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -282,7 +283,6 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             scrollPositions.current[activeTab] = containerRef.current.scrollTop;
         }
         setActiveTab(newTab);
-        // setIsHeaderVisible(true); // Removed
         requestAnimationFrame(() => {
             if (containerRef.current) {
                 const savedPos = scrollPositions.current[newTab] || 0;
@@ -291,8 +291,6 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         });
     };
 
-
-
     if (!user && !loadingUser) return <div>{t('profile.user_not_found')}</div>;
 
     return (
@@ -300,6 +298,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
             {/* Header */}
             <div
+                ref={measureHeader}
                 className={cn(
                     "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-4 pb-2 transition-transform duration-300 flex items-center gap-2",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
@@ -339,11 +338,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 className="flex-1 overflow-y-auto"
                 data-scroll-container="true"
                 onScroll={handleScroll}
+                style={{ paddingTop: headerHeight }}
             >
                 {/* Top Area */}
                 <div
-                    className={cn("p-5 pb-2 relative", !Capacitor.isNativePlatform() && "pt-20")}
-                    style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 6rem)' } : undefined}
+                    className={cn("p-5 pb-2 relative")}
                 >
                     <div className="flex justify-between items-start mb-6">
                         {/* Info */}
