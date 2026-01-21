@@ -9,6 +9,7 @@ import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
+import { ImageViewer } from '@/components/ImageViewer';
 
 interface ShopDetail {
     id: number;
@@ -42,6 +43,10 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
     const [sort, setSort] = useState<'popular' | 'similar'>('similar');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Image Viewer State
+    const [showViewer, setShowViewer] = useState(false);
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -375,7 +380,14 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                             <div className="overflow-x-auto no-scrollbar px-6">
                                 <div className="grid grid-rows-2 grid-flow-col gap-2 w-max">
                                     {latestPhotos.map((img, i) => (
-                                        <div key={i} className="w-32 h-32 rounded-xl overflow-hidden bg-gray-100 border border-gray-100">
+                                        <div
+                                            key={i}
+                                            className="w-32 h-32 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer active:opacity-90 transition-opacity"
+                                            onClick={() => {
+                                                setViewerIndex(i);
+                                                setShowViewer(true);
+                                            }}
+                                        >
                                             <img src={img} className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                     ))}
@@ -471,6 +483,13 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                     {/* Floating Reserve Button (appear on scroll if needed, but for now buttons are at top of sheet) */}
                 </div>
             </div>
+
+            <ImageViewer
+                images={latestPhotos}
+                initialIndex={viewerIndex}
+                isOpen={showViewer}
+                onClose={() => setShowViewer(false)}
+            />
         </div>
     );
 };

@@ -149,6 +149,8 @@ export interface ContentCardProps {
 }
 
 
+import { ImageViewer } from './ImageViewer';
+
 export const ContentCard = ({
     user,
     content,
@@ -175,6 +177,10 @@ export const ContentCard = ({
 
     const [isFollowing, setIsFollowing] = useState(!!user.is_following);
     const [followLoading, setFollowLoading] = useState(false);
+
+    // Image Viewer State
+    const [showViewer, setShowViewer] = useState(false);
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     // Sync if prop changes (e.g. refetch)
     useEffect(() => {
@@ -600,24 +606,45 @@ export const ContentCard = ({
             {/* Image Display */}
             {
                 content.images && content.images.length > 0 && (
-                    content.images.length === 1 ? (
-                        <div className="px-5 mb-4">
-                            <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative">
-                                <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
-                            {content.images.map((img, idx) => (
+                    <>
+                        {content.images.length === 1 ? (
+                            <div className="px-5 mb-4">
                                 <div
-                                    key={idx}
-                                    className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative"
+                                    className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative cursor-pointer active:opacity-95 transition-opacity"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setViewerIndex(0);
+                                        setShowViewer(true);
+                                    }}
                                 >
-                                    <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+                                    <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
                                 </div>
-                            ))}
-                        </div>
-                    )
+                            </div>
+                        ) : (
+                            <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
+                                {content.images.map((img, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative cursor-pointer active:opacity-95 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setViewerIndex(idx);
+                                            setShowViewer(true);
+                                        }}
+                                    >
+                                        <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <ImageViewer
+                            images={content.images}
+                            initialIndex={viewerIndex}
+                            isOpen={showViewer}
+                            onClose={() => setShowViewer(false)}
+                        />
+                    </>
                 )
             }
 

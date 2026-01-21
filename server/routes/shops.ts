@@ -519,9 +519,10 @@ router.post("/import-google", async (req, res) => {
 
         const created = await db.select().from(shops).where(eq(shops.id, newShopId[0].id)).limit(1);
         res.json(created[0]);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Import Google error:", error);
-        res.status(500).json({ error: "Failed to import shop" });
+        const errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        res.status(500).json({ error: "Failed to import shop", details: errorDetails });
     }
 });
 
