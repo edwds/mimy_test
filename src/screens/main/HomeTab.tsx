@@ -28,7 +28,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const [hasInitialFetch, setHasInitialFetch] = useState(false);
     const { user: currentUser, loading: isUserLoading } = useUser();
     const [activeChip, setActiveChip] = useState("popular");
-    const [userLocation] = useState<{ lat: number, lon: number } | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -55,11 +55,43 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         if (newChip === activeChip) return;
 
         if (newChip === 'near') {
-            alert(t('home.coming_soon')); // "Coming soon..."
+            handleNearFilter();
             return;
         }
 
         performChipSwitch(newChip);
+    };
+
+    const handleNearFilter = () => {
+        if (!navigator.geolocation) {
+            alert(t('discovery.alerts.no_gps'));
+            return;
+        }
+
+        setLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                // Update location state - confusingly named userLocation in original code was unused state?
+                // Let's actually use a ref or state for this specific fetch context, 
+                // but checking original code line 31: const [userLocation] = useState<{ lat: number, lon: number } | null>(null);
+                // It was constant null. We need to update it.
+                // Since I cannot change the `const [userLocation]` line easily without a large block replacement,
+                // and `userLocation` is used in `fetchFeed`, I should probably fix that definition first or pass coords directly.
+
+                // WAIT, I need to see if I can easily update the userLocation state definition.
+                // Line 31: const [userLocation] = useState... -> const [userLocation, setUserLocation] = useState...
+                // I will do that in a separate chunk.
+                setUserLocation({ lat: latitude, lon: longitude });
+                setLoading(false); // Reset loading so useEffect can trigger fetch
+                performChipSwitch('near');
+            },
+            (error) => {
+                console.error(error);
+                setLoading(false);
+                alert(t('discovery.alerts.location_error'));
+            }
+        );
     };
 
     const performChipSwitch = (newChip: string) => {
@@ -114,14 +146,11 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             // Add Filter Params
             let filterParams = `&filter=${activeChip}`;
             if (activeChip === 'near') {
-                if (userLocation || (activeChip === 'near' && userLocation)) {
-                    // logic redundancy but safe
-                    // If we are calling fetchFeed(1) inside geolocation callback we might pass it explicitly?
-                    // Relying on state is fine if we wait for state update.
-                    if (userLocation) {
-                        filterParams += `&lat=${userLocation.lat}&lon=${userLocation.lon}`;
-                    }
+                if (!userLocation) {
+                    setLoading(false);
+                    return;
                 }
+                filterParams += `&lat=${userLocation.lat}&lon=${userLocation.lon}`;
             }
 
             const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}${filterParams}`, {
@@ -165,7 +194,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                 fetchFeed(1);
             }
         }
-    }, [currentUser?.id, isUserLoading, isEnabled, activeChip, items.length, hasInitialFetch]);
+    }, [currentUser?.id, isUserLoading, isEnabled, activeChip, items.length, hasInitialFetch, userLocation]);
 
 
     // Double-tap refresh listener

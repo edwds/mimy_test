@@ -242,12 +242,30 @@
         "shared_count": "함께 <strong>{{count}}</strong>곳을 저장했어요!",
         "menu": {
             "change_id": "ID 변경하기",
+            "edit_profile": "프로필 수정",
             "retake_quiz": "입맛 퀴즈 다시하기",
             "report": "오류 제보하기",
             "logout": "로그아웃하기",
             "logout_confirm": "정말 로그아웃 하시겠습니까?",
             "quiz_confirm": "퀴즈를 다시 진행하면 취향 프로필이 업데이트됩니다. 계속하시겠습니까?",
             "coming_soon": "준비 중입니다!"
+        },
+        "settings": {
+            "title": "설정",
+            "section_account": "계정",
+            "section_usage": "서비스 이용",
+            "section_info": "서비스 정보",
+            "school_company": "학교/회사 등록",
+            "neighborhood": "동네 등록",
+            "notifications": "알림 설정",
+            "blocked_users": "차단 관리",
+            "suggestions": "서비스 개선 제안",
+            "about": "서비스 소개",
+            "notices": "공지사항",
+            "terms": "서비스 이용약관",
+            "privacy": "개인정보처리 방침",
+            "opensource": "오픈소스 라이브러리",
+            "version": "버전 정보"
         },
         "id_sheet": {
             "title": "ID 변경하기",

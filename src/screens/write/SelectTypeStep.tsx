@@ -1,5 +1,5 @@
 import React from 'react';
-import { Utensils, PenLine, X } from 'lucide-react';
+import { Utensils, PenLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -31,29 +31,15 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                 )}
             >
                 {/* Mobile Handle */}
-                <div className="flex justify-center mb-6 sm:hidden pointer-events-none">
-                    <div className="w-12 h-1.5 bg-[var(--color-border)] rounded-full" />
-                </div>
-
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8 px-1">
-                    <h2 className="text-2xl font-bold tracking-tight">
-                        {t('write.select.title')}
-                    </h2>
-                    {/* PC Close Button */}
-                    <button
-                        onClick={onClose}
-                        className="hidden sm:flex p-2 rounded-full hover:bg-[var(--color-gray-50)] transition-colors text-[var(--color-text-tertiary)]"
-                    >
-                        <X size={20} />
-                    </button>
+                <div className="flex justify-center sm:hidden pointer-events-none">
+                    <div className="w-12 h-8 bg-[var(--color-border)] rounded-full" />
                 </div>
 
                 {/* List Items */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                     <button
                         onClick={() => onSelect('review')}
-                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-[var(--color-gray-50)] active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-[var(--color-border)]"
+                        className="group w-full flex items-center mb-8"
                     >
                         {/* Icon Circle */}
                         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-5 shrink-0 group-hover:scale-110 transition-transform">
@@ -72,7 +58,7 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
 
                     <button
                         onClick={() => onSelect('post')}
-                        className="group w-full flex items-center p-4 rounded-[24px] hover:bg-[var(--color-gray-50)] active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-[var(--color-border)]"
+                        className="group w-full flex items-center rounded-[24px]"
                     >
                         {/* Icon Circle */}
                         <div className="w-14 h-14 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mr-5 shrink-0 group-hover:scale-110 transition-transform">
@@ -80,7 +66,7 @@ export const SelectTypeStep: React.FC<Props> = ({ isOpen, onClose, onSelect }) =
                         </div>
                         {/* Text */}
                         <div className="flex-1 text-left">
-                            <h3 className="text-[17px] font-bold mb-0.5 group-hover:text-blue-500 transition-colors">
+                            <h3 className="text-[17px] font-bold mb-0.5">
                                 {t('write.select.post.title')}
                             </h3>
                             <p className="text-[15px] text-[var(--color-text-secondary)] font-medium">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-// import { Search } from 'lucide-react'; 
 import { Locate, Heart, Search } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 // Let's keep the Search button overlay if possible, or just the map.
 // The Plan said: "Replace current list view with... MapContainer + ShopBottomSheet".
 // I will keep the header overlay logic but adapt it.
@@ -10,7 +10,7 @@ import { MapContainer } from '@/components/MapContainer';
 import { Capacitor } from '@capacitor/core';
 import { ShopBottomSheet } from '@/components/ShopBottomSheet';
 import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOverlay'; // Import Overlay
-import { SelectedShopCard, prefetchReviewSnippet } from '@/components/discovery/SelectedShopCard';
+import { SelectedShopCard } from '@/components/discovery/SelectedShopCard';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
 
@@ -31,6 +31,8 @@ interface Props {
 
 export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnabled = true }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
@@ -251,7 +253,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
 
-    // Helper: Calculate distance (Haversine)
     const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371; // km
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -264,19 +265,50 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         return R * c;
     };
 
+    // Sync URL -> State
+    useEffect(() => {
+        const sid = searchParams.get('selectedShop');
+        if (sid) {
+            const id = parseInt(sid);
+            if (!isNaN(id) && id !== selectedShopId) {
+                // If shop exists in current list, select it.
+                // If not, maybe we should fetch it? For now assume it's in the list or will be fetched.
+                // But wait, if we share a link, shops array might be empty initially until fetch.
+                // That's a separate issue (deeplink). For now just set ID if available.
+                setSelectedShopId(id);
+                // Also center map if shop is found
+                const s = shops.find(x => x.id === id);
+                if (s && s.lat && s.lon) {
+                    setMapCenter([s.lat, s.lon]);
+                }
+            }
+        } else {
+            if (selectedShopId !== null) {
+                setSelectedShopId(null);
+            }
+        }
+    }, [searchParams, shops]);
+
     const handleSelectShop = (shopId: number | null) => {
         if (!shopId) {
-            setSelectedShopId(null);
+            // Close logic is handled by handleCloseShop usually, but if called directly:
+            handleCloseShop();
             return;
         }
 
+        const currentSid = searchParams.get('selectedShop');
+        const isReplacing = !!currentSid;
+
+        // Update URL
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('selectedShop', shopId.toString());
+
+        navigate({ search: newParams.toString() }, { replace: isReplacing });
+
+        // Logic below purely for optimization/sorting (visual), state will be synced by effect eventually,
+        // but updating local state immediately feels snappier.
         const selected = shops.find(s => s.id === shopId);
         if (selected && selected.lat && selected.lon) {
-            // Sort shops by distance to selected
-            // Keep current selected at index 0? Or just sort all?
-            // User said: "Sort list again based on the currently picked shop".
-            // So index 0 = selected, index 1 = closest, etc.
-
             const sorted = [...shops].sort((a, b) => {
                 if (a.id === selected.id) return -1;
                 if (b.id === selected.id) return 1;
@@ -287,11 +319,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 const distB = getDistance(selected.lat!, selected.lon!, b.lat, b.lon);
                 return distA - distB;
             });
-
             setShops(sorted);
-            setSelectedShopId(shopId);
-        } else {
-            setSelectedShopId(shopId);
         }
     };
 
@@ -319,7 +347,15 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     };
 
     const handleCloseShop = () => {
-        setSelectedShopId(null);
+        // Go back to remove the query param if it exists, simulating a "Close" via navigation
+        const currentSid = searchParams.get('selectedShop');
+        if (currentSid) {
+            navigate(-1);
+        } else {
+            // Fallback just in case
+            setSelectedShopId(null);
+        }
+
         // Restore list if we have a saved state
         if (prevShopsRef.current.length > 0) {
             setShops(prevShopsRef.current);
@@ -347,6 +383,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         if (nextShop.lat && nextShop.lon) {
             setMapCenter([nextShop.lat, nextShop.lon]);
         }
+
+        // Update URL (Replace history for carousel navigation)
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('selectedShop', nextShop.id.toString());
+        navigate({ search: newParams.toString() }, { replace: true });
     };
 
     const handleClusterClick = (clusterShops: any[]) => {
@@ -357,24 +398,40 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     };
 
     // Prefetch neighbor review snippets
+    // Batch fetch review snippets
     useEffect(() => {
-        if (!selectedShopId || shops.length === 0) return;
+        if (shops.length === 0) return;
 
-        const currentIndex = shops.findIndex(s => s.id === selectedShopId);
-        if (currentIndex === -1) return;
+        // Find shops needing snippets
+        const shopsToFetch = shops.filter(s => s.reviewSnippet === undefined).map(s => s.id);
+        if (shopsToFetch.length === 0) return;
 
-        // Prefetch range: prev 2, next 3
-        const start = Math.max(0, currentIndex - 2);
-        const end = Math.min(shops.length, currentIndex + 4);
+        const fetchBatch = async () => {
+            try {
+                const userId = localStorage.getItem('mimy_user_id');
+                const res = await fetch(`${API_BASE_URL}/api/shops/batch-reviews`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shopIds: shopsToFetch, userId })
+                });
 
-        for (let i = start; i < end; i++) {
-            if (i === currentIndex) continue; // Current is already fetching
-            const shop = shops[i];
-            if (shop && shop.id) {
-                prefetchReviewSnippet(shop.id);
+                if (res.ok) {
+                    const snippetMap = await res.json();
+                    setShops(prev => prev.map(shop => {
+                        if (snippetMap[shop.id] !== undefined) {
+                            return { ...shop, reviewSnippet: snippetMap[shop.id] };
+                        }
+                        return shop;
+                    }));
+                }
+            } catch (e) {
+                console.error("Batch review fetch failed", e);
             }
-        }
-    }, [selectedShopId, shops]);
+        };
+
+        // Debounce slightly or just call
+        fetchBatch();
+    }, [shops.length]); // Trig only when length changes (new page loaded)
 
     return (
         <div className="relative h-full w-full overflow-hidden">
@@ -420,16 +477,16 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             {/* Top Search Overlay */}
             <div
                 className="absolute left-6 right-6 z-10 flex flex-col gap-2 items-center"
-                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 2.5rem)' : '1.5rem' }}
+                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.75rem)' : '1.5rem' }}
             >
                 <div
                     onClick={() => setIsSearching(true)}
-                    className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-border/50 cursor-pointer active:scale-98 transition-transform"
+                    className="w-full bg-background/95 backdrop-blur shadow-lg rounded-full px-2 py-2 flex items-center gap-2 border border-border/50 cursor-pointer active:scale-98 transition-transform"
                 >
-                    <span className="text-muted-foreground text-sm flex-1">{t('discovery.search_placeholder')}</span>
-                    <div className="bg-primary/10 p-1.5 rounded-full">
-                        <Search className="w-4 h-4 text-primary" />
+                    <div className="p-1 rounded-full">
+                        <Search className="w-4 h-4 text-muted-foreground" />
                     </div>
+                    <span className="text-muted-foreground text-sm flex-1">{t('discovery.search_placeholder')}</span>
                 </div>
 
                 {/* Search Here Button */}
@@ -446,7 +503,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             {/* Map Controls */}
             <div
                 className="absolute right-4 z-10 flex flex-col gap-3"
-                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 8rem)' : '8rem' }}
+                style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 6.25rem)' : '8rem' }}
             >
                 <button
                     onClick={handleCurrentLocation}

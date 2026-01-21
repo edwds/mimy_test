@@ -1,8 +1,10 @@
 import React from 'react';
 import { MapPin, Calendar, Bookmark } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
-import { formatVisitDate } from '@/lib/utils';
+import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
+import { useUser } from '@/context/UserContext';
+
+import { useNavigate } from 'react-router-dom';
 
 // Define Props interface based on the user's requirements and DB schema
 interface ShopCardProps {
@@ -29,15 +31,15 @@ interface ShopCardProps {
             nickname: string;
             profile_image?: string | null;
             cluster_name?: string;
+            taste_result?: any;
         };
     } | null;
 }
 
-import { useNavigate } from 'react-router-dom';
-
 export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions, reviewSnippet }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { user: currentUser } = useUser();
 
 
 
@@ -143,9 +145,20 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                                     {reviewSnippet.user.nickname}
                                 </span>
                                 {reviewSnippet.user.cluster_name && (
-                                    <span className="text-xs text-orange-500 font-medium truncate">
-                                        {reviewSnippet.user.cluster_name}
-                                    </span>
+                                    (() => {
+                                        const matchScore = (currentUser && (currentUser as any).taste_result?.scores && reviewSnippet.user.taste_result?.scores)
+                                            ? calculateTasteMatch((currentUser as any).taste_result.scores, reviewSnippet.user.taste_result.scores)
+                                            : null;
+
+                                        return (
+                                            <span className={cn(
+                                                "text-xs font-medium truncate",
+                                                getTasteBadgeStyle(matchScore)
+                                            )}>
+                                                {reviewSnippet.user.cluster_name}
+                                            </span>
+                                        );
+                                    })()
                                 )}
                             </div>
                             <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">

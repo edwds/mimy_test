@@ -42,6 +42,19 @@ router.get("/feed", async (req, res) => {
             .leftJoin(users, eq(content.user_id, users.id))
             .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
 
+        // Fetch Current User's Taste Profile if filtering by popular (default) to personalize
+        let myScores: any = null;
+        if (currentUserId && (filter === 'popular' || filter === '')) {
+            const me = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, currentUserId)).limit(1);
+            if (me.length > 0 && me[0].taste_result) {
+                // Parse scores from jsonb
+                const tr = me[0].taste_result as any;
+                if (tr.scores) {
+                    myScores = tr.scores;
+                }
+            }
+        }
+
         // Apply Filters
         const whereConditions = [
             eq(content.is_deleted, false),
@@ -71,6 +84,27 @@ router.get("/feed", async (req, res) => {
                     eq(likes.user_id, currentUserId)
                 )
             );
+
+        } else if ((filter === 'popular' || filter === '') && myScores) {
+            // Apply Taste Match Filter (>= 70% Match)
+            // 70% match approx sumSqDiff <= 17.83 (Gaussian sigma=5)
+            // Axes: boldness, acidity, richness, experimental, spiciness, sweetness, umami
+            const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+
+            // Build raw SQL for distance calculation
+            // (user.score - my.score)^2 + ...
+            const distillSQL = axes.map(axis => {
+                const myVal = Number(myScores[axis] || 0);
+                // Extract value from JSON path: taste_result->'scores'->>axis
+                // We assume users.taste_result is structured as { scores: { ... } }
+                return `power(COALESCE((${users.taste_result}->'scores'->>'${axis}')::float, 0) - ${myVal}, 2)`;
+            }).join(' + ');
+
+            // Filter where sum of squared diffs <= 17.83
+            // Also ensure the user HAS a taste result
+            whereConditions.push(sql`(${users.taste_result} IS NOT NULL)`);
+            whereConditions.push(sql`(${sql.raw(distillSQL)}) <= 17.83`);
+
         } else if (filter === 'near') {
             if (!userLat || !userLon) {
                 // If location missing, fallback to popular or empty? 
@@ -106,7 +140,7 @@ router.get("/feed", async (req, res) => {
                                 sin(radians(${userLat})) * sin(radians(${shops.lat}))
                             ))
                         )
-                    ) <= 10
+                    ) <= 5
                 `);
             }
         }

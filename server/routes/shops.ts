@@ -58,26 +58,86 @@ router.get("/discovery", async (req, res) => {
         // Or handle in frontend. Let's try to handle it here if passed.
         const userId = req.headers['x-user-id'];
 
-        if (userId) {
-            const uid = parseInt(userId as string);
-            const enriched = await Promise.all(results.map(async (shop) => {
-                const saved = await db.select().from(users_wantstogo)
-                    .where(and(
-                        eq(users_wantstogo.user_id, uid),
-                        eq(users_wantstogo.shop_id, shop.id),
-                        eq(users_wantstogo.is_deleted, false)
-                    ))
-                    .limit(1);
-                return {
-                    ...shop,
-                    is_saved: saved.length > 0,
-                    saved_at: saved.length > 0 ? saved[0].created_at : null
-                };
-            }));
-            return res.json(enriched);
-        }
+        const uid = userId ? parseInt(userId as string) : 0;
 
-        res.json(results);
+        // Fetch User Taste Result for Similarity Sorting
+        const requestingUser = await db.select({ taste_result: users.taste_result })
+            .from(users)
+            .where(eq(users.id, uid))
+            .limit(1);
+        const viewerResult = requestingUser[0]?.taste_result as any;
+        const vS = viewerResult?.scores;
+
+        const enriched = await Promise.all(results.map(async (shop) => {
+            // 1. Check Saved Status
+            const saved = await db.select().from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, uid),
+                    eq(users_wantstogo.shop_id, shop.id),
+                    eq(users_wantstogo.is_deleted, false)
+                ))
+                .limit(1);
+
+            // 2. Fetch Best Review Snippet
+            // Logic mirrors GET /:id/reviews but limited to 1 and optimized
+            let reviewQuery = db.select({
+                id: content.id,
+                text: content.text,
+                images: content.img,
+                created_at: content.created_at,
+                review_prop: content.review_prop,
+                user: {
+                    id: users.id,
+                    nickname: users.nickname,
+                    profile_image: users.profile_image,
+                    taste_cluster: users.taste_cluster,
+                    taste_result: users.taste_result
+                }
+            })
+                .from(content)
+                .innerJoin(users, eq(content.user_id, users.id))
+                .where(and(
+                    eq(content.type, 'review'),
+                    eq(content.is_deleted, false),
+                    eq(content.visibility, true),
+                    sql`(${content.review_prop}::jsonb)->>'shop_id' = ${shop.id.toString()}::text`
+                ))
+                .$dynamic();
+
+            if (vS) {
+                const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+                const distanceSql = sql.join(
+                    axes.map(axis => {
+                        const viewerVal = vS[axis] || 0;
+                        return sql`power(
+                                coalesce((${users.taste_result}->'scores'->>${sql.raw(`'${axis}'`)})::int, 0) - ${viewerVal}, 
+                                2
+                            )`;
+                    }),
+                    sql` + `
+                );
+                reviewQuery = reviewQuery.orderBy(asc(sql`(${distanceSql})`), desc(content.created_at));
+            } else {
+                reviewQuery = reviewQuery.orderBy(desc(content.created_at));
+            }
+
+            const reviews = await reviewQuery.limit(1);
+            const reviewSnippet = reviews.length > 0 ? {
+                ...reviews[0],
+                user: {
+                    ...reviews[0].user,
+                    cluster_name: reviews[0].user.taste_cluster
+                }
+            } : null;
+
+            return {
+                ...shop,
+                is_saved: saved.length > 0,
+                saved_at: saved.length > 0 ? saved[0].created_at : null,
+                reviewSnippet: reviewSnippet
+            };
+        }));
+        return res.json(enriched);
     } catch (error) {
         console.error("Discovery feed error:", error);
         res.status(500).json({ error: "Failed to fetch discovery feed" });

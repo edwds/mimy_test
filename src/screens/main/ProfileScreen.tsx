@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, X, Loader2 } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -24,7 +24,7 @@ interface ProfileScreenProps {
 export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user, loading, refreshUser, logout } = useUser();
+    const { user, loading, refreshUser } = useUser();
     const [searchParams] = useSearchParams();
 
     // Tabs
@@ -37,18 +37,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     }, [searchParams]);
 
     // Menu & Sheets
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isIdSheetOpen, setIsIdSheetOpen] = useState(false);
-    const [isTasteSheetOpen, setIsTasteSheetOpen] = useState(false);
-
-    const [newId, setNewId] = useState('');
-    const [savingId, setSavingId] = useState(false);
-
-    const menuRef = useRef<HTMLDivElement>(null);
-
     // Data
     const [contents, setContents] = useState<any[]>([]);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [isTasteSheetOpen, setIsTasteSheetOpen] = useState(false);
 
     const [lists, setLists] = useState<any[]>([]);
     const [loadingLists, setLoadingLists] = useState(false);
@@ -132,18 +124,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         fetchSaved();
     }, [user?.id, activeTab]);
 
-    // Close menu on outside click
-    useEffect(() => {
-        const onPointerDown = (event: PointerEvent) => {
-            const target = event.target as Node;
-            if (menuRef.current && !menuRef.current.contains(target)) setIsMenuOpen(false);
-        };
 
-        if (isMenuOpen) {
-            window.addEventListener('pointerdown', onPointerDown, { capture: true });
-        }
-        return () => window.removeEventListener('pointerdown', onPointerDown, { capture: true } as any);
-    }, [isMenuOpen]);
 
     const handleScroll = () => {
         onSmartScroll();
@@ -162,57 +143,6 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             const savedPos = scrollPositions.current[newTab] ?? 0;
             el2.scrollTo({ top: savedPos, behavior: 'auto' });
         });
-    };
-
-    const handleLogout = () => {
-        if (window.confirm(t('profile.menu.logout_confirm'))) {
-            logout();
-            navigate('/login');
-        }
-    };
-
-    const handleRetakeQuiz = () => {
-        if (window.confirm(t('profile.menu.quiz_confirm'))) {
-            navigate('/quiz/intro');
-        }
-    };
-
-    const handleReport = () => {
-        alert(t('profile.menu.coming_soon'));
-        setIsMenuOpen(false);
-    };
-
-    const openIdSheet = () => {
-        setNewId(user?.account_id || '');
-        setIsIdSheetOpen(true);
-        setIsMenuOpen(false);
-    };
-
-    const handleSaveId = async () => {
-        if (!user || !newId.trim()) return;
-
-        setSavingId(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ account_id: newId }),
-            });
-
-            if (response.ok) {
-                await refreshUser();
-                setIsIdSheetOpen(false);
-                alert(t('profile.id_sheet.success'));
-            } else {
-                const err = await response.json();
-                alert(err.error || t('profile.id_sheet.fail'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert(t('profile.id_sheet.error'));
-        } finally {
-            setSavingId(false);
-        }
     };
 
     const handleUnsave = async (shopId: number) => {
@@ -282,49 +212,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 title={`@${user.account_id}`}
                 isVisible={isHeaderVisible}
                 rightAction={
-                    <div className="relative">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-muted"
-                            onClick={() => setIsMenuOpen((v) => !v)}
-                        >
-                            <Settings className="text-foreground" />
-                        </Button>
-
-                        {isMenuOpen && (
-                            <div
-                                ref={menuRef}
-                                className="absolute right-0 top-10 w-48 bg-popover border border-border rounded-lg shadow-lg py-1 z-[100] animate-in fade-in zoom-in-95 duration-200"
-                            >
-                                <button
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                    onClick={openIdSheet}
-                                >
-                                    {t('profile.menu.change_id')}
-                                </button>
-                                <button
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                    onClick={handleRetakeQuiz}
-                                >
-                                    {t('profile.menu.retake_quiz')}
-                                </button>
-                                <button
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors"
-                                    onClick={handleReport}
-                                >
-                                    {t('profile.menu.report')}
-                                </button>
-                                <div className="h-px bg-border my-1" />
-                                <button
-                                    className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-destructive/10 transition-colors"
-                                    onClick={handleLogout}
-                                >
-                                    {t('profile.menu.logout')}
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full hover:bg-muted"
+                        onClick={() => navigate('/profile/settings')}
+                    >
+                        <Settings className="text-foreground" />
+                    </Button>
                 }
             />
 
@@ -536,47 +431,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 </div>
             </main>
 
-            {/* ID Sheet */}
-            {isIdSheetOpen && (
-                <>
-                    <div
-                        className="fixed inset-0 bg-black/50 z-50 animate-in fade-in duration-200"
-                        onClick={() => setIsIdSheetOpen(false)}
-                    />
 
-                    <div className="fixed bottom-0 left-0 right-0 bg-background rounded-t-xl z-50 p-6 animate-in slide-in-from-bottom duration-300 shadow-lg">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold">{t('profile.id_sheet.title')}</h3>
-                            <button onClick={() => setIsIdSheetOpen(false)} className="p-2 -mr-2 text-muted-foreground">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">{t('profile.id_sheet.label')}</label>
-                                <input
-                                    type="text"
-                                    value={newId}
-                                    onChange={(e) => setNewId(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
-                                    className="w-full border-b border-border py-2 text-xl bg-transparent focus:outline-none focus:border-primary font-mono"
-                                    autoFocus
-                                    placeholder={t('profile.id_sheet.placeholder')}
-                                />
-                                <p className="text-xs text-muted-foreground">{t('profile.id_sheet.helper')}</p>
-                            </div>
-
-                            <Button
-                                className="w-full h-12 text-lg mt-4"
-                                onClick={handleSaveId}
-                                disabled={savingId || !newId || newId === user.account_id}
-                            >
-                                {savingId ? <Loader2 className="animate-spin" /> : t('profile.id_sheet.save')}
-                            </Button>
-                        </div>
-                    </div>
-                </>
-            )}
 
             <TasteProfileSheet
                 isOpen={isTasteSheetOpen}
@@ -584,7 +439,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 data={user ? { cluster_name: user.cluster_name || '', cluster_tagline: user.cluster_tagline || '' } : null}
                 userId={user?.id}
             />
-        </div>
+        </div >
     );
 };
 

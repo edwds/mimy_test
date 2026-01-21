@@ -242,12 +242,30 @@
         "shared_count": "You tracked <strong>{{count}}</strong> places together!",
         "menu": {
             "change_id": "Change ID",
+            "edit_profile": "Edit Profile",
             "retake_quiz": "Retake Taste Quiz",
             "report": "Report Issue",
             "logout": "Log out",
             "logout_confirm": "Are you sure you want to logout?",
             "quiz_confirm": "Retaking the quiz will update your taste profile. Continue?",
             "coming_soon": "Coming soon!"
+        },
+        "settings": {
+            "title": "Settings",
+            "section_account": "Account",
+            "section_usage": "Usage",
+            "section_info": "Info",
+            "school_company": "School/Company",
+            "neighborhood": "Neighborhood",
+            "notifications": "Notifications",
+            "blocked_users": "Blocked Users",
+            "suggestions": "Suggestions",
+            "about": "About Service",
+            "notices": "Notices",
+            "terms": "Terms of Service",
+            "privacy": "Privacy Policy",
+            "opensource": "Open Source Licenses",
+            "version": "Version Info"
         },
         "id_sheet": {
             "title": "Change ID",

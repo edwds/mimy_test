@@ -136,6 +136,11 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 style={{
                     pointerEvents: 'auto'
                 }}
+                onPointerDown={(e) => {
+                    if (snapState !== 'full') {
+                        dragControls.start(e);
+                    }
+                }}
             >
                 {displayedShops.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">

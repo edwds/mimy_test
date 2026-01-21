@@ -10,6 +10,9 @@ const config: CapacitorConfig = {
       serverClientId: '519194261404-c5j54jrinkd3r1b3acnop4sbdk9jituq.apps.googleusercontent.com',
       forceCodeForRefreshToken: true
     }
+  },
+  ios: {
+    allowsBackForwardNavigationGestures: true
   }
 };
 

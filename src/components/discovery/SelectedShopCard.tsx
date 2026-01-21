@@ -83,6 +83,13 @@ export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onRes
     const [reviewSnippet, setReviewSnippet] = useState<any>(null);
 
     useEffect(() => {
+        // If shop object already has the snippet (from batch fetch), use it immediately
+        if (shop.reviewSnippet) {
+            setReviewSnippet(shop.reviewSnippet);
+            return;
+        }
+
+        // Fallback: If not present, try cache or fetch indvidually (legacy safety)
         let isMounted = true;
         const fetchBestReview = async () => {
             if (!shop || !shop.id) return;
@@ -95,16 +102,16 @@ export const SelectedShopCard: React.FC<Props> = ({ shop, onClose, onSave, onRes
 
             setReviewSnippet(null);
 
-            // Use the shared fetch logic, then update state
+            // Only fetch if explicitly needed
             await prefetchReviewSnippet(shop.id);
 
             if (isMounted) {
                 setReviewSnippet(snippetCache.get(shop.id) || null);
             }
         };
-        fetchBestReview(); // Placeholder logic moved to next step
+        fetchBestReview();
         return () => { isMounted = false; };
-    }, [shop.id]);
+    }, [shop.id, shop.reviewSnippet]);
 
     return (
         <motion.div
