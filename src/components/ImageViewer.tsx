@@ -34,6 +34,18 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
     // Actually, let's use manual state for x/y translation during zoom to avoid conflict with 'y' dismissal motion value
     const [translation, setTranslation] = useState({ x: 0, y: 0 });
 
+    // Prevent body scroll when open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
     // Animation Controls
     const [direction, setDirection] = useState(0);
     const controls = useAnimation();
@@ -43,7 +55,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
     // Slide Variants
     const variants = {
         enter: (direction: number) => ({
-            x: direction > 0 ? 1000 : -1000,
+            x: direction === 0 ? 0 : (direction > 0 ? 1000 : -1000),
             opacity: 0
         }),
         center: {
@@ -57,6 +69,9 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
             opacity: 0
         })
     };
+
+    // Flag for instant vs spring transition
+    const [isPinching, setIsPinching] = useState(false);
 
     // --- Touch Handlers for Pinch Zoom & Pan ---
     const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
@@ -74,6 +89,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (e.touches.length === 2) {
+            setIsPinching(true);
             const t1 = e.touches[0];
             const t2 = e.touches[1];
             pinchStartDist.current = getTouchDist(t1, t2);
@@ -98,10 +114,6 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
             const dx = currentCenter.x - pinchStartCenter.current.x;
             const dy = currentCenter.y - pinchStartCenter.current.y;
 
-            // Combine with initial pan if we supported sticky zoom, but for elastic zoom usually we start from 0
-            // However, if we wanted to support "lift one finger, place it back", we'd need sticky.
-            // But elastic zoom resets on end. So startPanRef is likely {0,0}.
-
             setTranslation({
                 x: startPanRef.current.x + dx,
                 y: startPanRef.current.y + dy
@@ -111,15 +123,15 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (e.touches.length < 2) {
+        // If we were pinching and now have fewer than 2 fingers, stop pinching and snap back
+        if (isPinching && e.touches.length < 2) {
+            setIsPinching(false);
             pinchStartDist.current = null;
             pinchStartCenter.current = null;
 
             // Elastic Snap Back
-            if (scale > 1) {
-                setScale(1);
-                setTranslation({ x: 0, y: 0 }); // Reset position too
-            }
+            setScale(1);
+            setTranslation({ x: 0, y: 0 });
         }
     };
 
@@ -136,7 +148,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
 
     // --- Dismiss Logic ---
     const handleDragEnd = (_: any, info: any) => {
-        if (scale > 1.1) return; // Don't dismiss if zoomed logic overrides (though we disable drag usually)
+        if (scale > 1.1) return; // Should not happen if drag is disabled, but safety check
 
         // Vertical Swipe to Close
         if (Math.abs(info.offset.y) > 150 && Math.abs(info.velocity.y) > 200) {
@@ -153,7 +165,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
             }
             // Reset position
             dismissY.set(0);
-            controls.start({ x: 0, y: 0 }); // Just in case, though we drive Y with value
+            controls.start({ x: 0, y: 0 });
         }
     };
 
@@ -167,9 +179,9 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    style={{ backgroundColor: `rgba(0, 0, 0, ${0.9})` }} // We can use motion value here too if we want dynamic dimming on drag
+                    style={{ backgroundColor: `rgba(0, 0, 0, ${0.9})` }}
                     className="fixed inset-0 z-[9999] flex items-center justify-center touch-none"
-                    onClick={onClose} // Close on backdrop click
+                    onClick={onClose}
                 >
                     {/* Dynamic Opacity Background Layer for Drag Dismiss Effect */}
                     <motion.div
@@ -198,48 +210,52 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
                     <motion.div
                         ref={containerRef}
                         className="relative w-full h-full flex items-center justify-center overflow-hidden"
-                        onClick={(e) => e.stopPropagation()} // Prevent closing on image click
+                        onClick={(e) => e.stopPropagation()}
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                     >
-                        {/* Draggable Wrapper for Dismiss/Swipe */}
+                        {/* 1. Zoom & Pan Layer (Controlled via Animate for Elastic Snap) */}
                         <motion.div
-                            // Elastic Zoom Logic:
-                            // When zoomed (scale > 1), we disable standard 'drag' gesture to allow our manual 'translation' state to drive x/y directly via style.
-                            // When not zoomed, we enable standard 'drag="y"' or 'true' for dismiss/swipe.
-                            drag={scale > 1 ? false : true}
-                            dragConstraints={scale > 1 ? undefined : { top: 0, bottom: 0, left: 0, right: 0 }}
-                            dragElastic={0.2}
-                            // We combine dismissY (motion value) with manual translation (state)
-                            // Since they are exclusive (one active when zoomed, one when not), we can just sum them or switch them.
-                            // But translation is {x,y} and dismissY is Y only. x is handled by slide variants or swipe.
-                            // Actually, better to just bind style to the merged values.
-                            style={{
+                            animate={{
+                                scale: scale,
                                 x: translation.x,
-                                y: scale > 1 ? translation.y : dismissY, // Use dismissY when not zoomed for gesture support
-                                scale
+                                y: translation.y
                             }}
-                            onDragEnd={handleDragEnd}
+                            transition={
+                                isPinching
+                                    ? { type: "tween", duration: 0 } // Instant response during pinch
+                                    : { type: "spring", stiffness: 300, damping: 30 } // Elastic snap back
+                            }
                             className="absolute w-full h-full flex items-center justify-center"
                         >
-                            <AnimatePresence initial={false} custom={direction} mode='popLayout'>
-                                <motion.img
-                                    key={index}
-                                    src={images[index]}
-                                    custom={direction}
-                                    variants={variants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={{
-                                        x: { type: "spring", stiffness: 300, damping: 30 },
-                                        opacity: { duration: 0.2 }
-                                    }}
-                                    className="max-w-full max-h-full object-contain pointer-events-none select-none shadow-2xl absolute"
-                                    draggable={false}
-                                />
-                            </AnimatePresence>
+                            {/* 2. Drag/Dismiss Layer (Active only when not zoomed) */}
+                            <motion.div
+                                drag={scale > 1.05 ? false : true} // Disable drag when significantly zoomed
+                                dragElastic={0.2}
+                                dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+                                style={{ y: dismissY }}
+                                onDragEnd={handleDragEnd}
+                                className="w-full h-full flex items-center justify-center"
+                            >
+                                <AnimatePresence initial={false} custom={direction} mode='popLayout'>
+                                    <motion.img
+                                        key={index}
+                                        src={images[index]}
+                                        custom={direction}
+                                        variants={variants}
+                                        initial="enter"
+                                        animate="center"
+                                        exit="exit"
+                                        transition={{
+                                            x: { type: "spring", stiffness: 300, damping: 30 },
+                                            opacity: { duration: 0.2 }
+                                        }}
+                                        className="max-w-full max-h-full object-contain pointer-events-none select-none shadow-2xl absolute"
+                                        draggable={false}
+                                    />
+                                </AnimatePresence>
+                            </motion.div>
                         </motion.div>
                     </motion.div>
 
