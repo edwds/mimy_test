@@ -10,7 +10,9 @@ import { MapContainer } from '@/components/MapContainer';
 import { Capacitor } from '@capacitor/core';
 import { ShopBottomSheet } from '@/components/ShopBottomSheet';
 import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOverlay'; // Import Overlay
+import { SelectedShopCard } from '@/components/discovery/SelectedShopCard';
 import { cn } from '@/lib/utils';
+import { AnimatePresence } from 'framer-motion';
 
 const getSessionSeed = () => {
     let seed = sessionStorage.getItem('discovery_seed');
@@ -246,23 +248,83 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
     };
 
-    const handleSearchSelect = (shop: any) => {
-        // 1. Add to shops if not present (or update)
-        setShops(prev => {
-            const exists = prev.find(s => s.id === shop.id);
-            if (exists) return prev;
-            return [shop, ...prev]; // Add to top
-        });
+    const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
 
-        // 2. Select & Center
-        setSelectedShopId(shop.id);
-        if (shop.lat && shop.lon) {
-            setMapCenter([shop.lat, shop.lon]);
+    // Helper: Calculate distance (Haversine)
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
+    const handleSelectShop = (shopId: number | null) => {
+        if (!shopId) {
+            setSelectedShopId(null);
+            return;
         }
 
-        // 3. Close Overlay
+        const selected = shops.find(s => s.id === shopId);
+        if (selected && selected.lat && selected.lon) {
+            // Sort shops by distance to selected
+            // Keep current selected at index 0? Or just sort all?
+            // User said: "Sort list again based on the currently picked shop".
+            // So index 0 = selected, index 1 = closest, etc.
+
+            const sorted = [...shops].sort((a, b) => {
+                if (a.id === selected.id) return -1;
+                if (b.id === selected.id) return 1;
+                if (!a.lat || !a.lon) return 1;
+                if (!b.lat || !b.lon) return -1;
+
+                const distA = getDistance(selected.lat!, selected.lon!, a.lat, a.lon);
+                const distB = getDistance(selected.lat!, selected.lon!, b.lat, b.lon);
+                return distA - distB;
+            });
+
+            setShops(sorted);
+            setSelectedShopId(shopId);
+        } else {
+            setSelectedShopId(shopId);
+        }
+    };
+
+    // Override handleSearchSelect to use new logic
+    const handleSearchSelect = (shop: any) => {
+        // Add if missing
+        if (!shops.find(s => s.id === shop.id)) {
+            setShops(prev => [shop, ...prev]);
+        }
+        handleSelectShop(shop.id);
         setIsSearching(false);
         setViewingCluster(false);
+    };
+
+    // Override handleSwipeNavigation
+    const handleSwipeNavigation = (direction: 'next' | 'prev') => {
+        if (!selectedShopId || shops.length === 0) return;
+        const currentIndex = shops.findIndex(s => s.id === selectedShopId);
+        if (currentIndex === -1) return;
+
+        let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+        // Bounded check
+        if (nextIndex >= shops.length) nextIndex = 0; // Cycle? Or stop?
+        if (nextIndex < 0) nextIndex = shops.length - 1;
+
+        setSlideDirection(direction);
+
+        const nextShop = shops[nextIndex];
+        setSelectedShopId(nextShop.id); // Triggers re-render with new key
+
+        if (nextShop.lat && nextShop.lon) {
+            setMapCenter([nextShop.lat, nextShop.lon]);
+        }
     };
 
     const handleClusterClick = (clusterShops: any[]) => {
@@ -278,13 +340,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             <div className="absolute inset-0 z-0">
                 <MapContainer
                     shops={shops}
-                    onMarkerClick={setSelectedShopId}
+                    onMarkerClick={handleSelectShop}
                     onMapClick={() => setSelectedShopId(null)}
-                    center={
-                        (selectedShopId && shops.find(s => s.id === selectedShopId))
-                            ? [shops.find(s => s.id === selectedShopId).lat!, shops.find(s => s.id === selectedShopId).lon!]
-                            : mapCenter
-                    }
+                    center={mapCenter} // Don't force center to selected shop anymore
                     isActive={isActive}
                     selectedShopId={selectedShopId}
                     bottomSheetOffset={selectedShopId ? window.innerHeight * 0.1 : 0}
@@ -293,12 +351,29 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 />
             </div>
 
-            {/* Bottom Sheet Overlay */}
-            <ShopBottomSheet
-                shops={shops}
-                selectedShopId={selectedShopId}
-                onSave={handleSave}
-            />
+            {/* Bottom Sheet or Floating Card */}
+            <AnimatePresence mode="popLayout" custom={slideDirection}>
+                {selectedShopId && shops.find(s => s.id === selectedShopId) ? (
+                    <SelectedShopCard
+                        key={selectedShopId} // Key change triggers animation
+                        shop={shops.find(s => s.id === selectedShopId)}
+                        onClose={() => setSelectedShopId(null)}
+                        onSave={handleSave}
+                        onReserve={() => alert(t('discovery.bottom_sheet.reserve_alert'))}
+                        onNext={() => handleSwipeNavigation('next')}
+                        onPrev={() => handleSwipeNavigation('prev')}
+                        direction={slideDirection}
+                    />
+                ) : null}
+            </AnimatePresence>
+
+            {!selectedShopId && (
+                <ShopBottomSheet
+                    shops={shops}
+                    selectedShopId={null}
+                    onSave={handleSave}
+                />
+            )}
 
             {/* Top Search Overlay */}
             <div

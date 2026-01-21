@@ -1,6 +1,6 @@
 import * as maptilersdk from '@maptiler/sdk';
 import "@maptiler/sdk/dist/maptiler-sdk.css";
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 
 interface Shop {
     id: number;
@@ -83,7 +83,8 @@ const createMarkerElement = (shop: Shop, isSelected: boolean) => {
     label.style.fontWeight = '600';
     label.style.color = '#333';
     label.style.whiteSpace = 'nowrap';
-    label.style.pointerEvents = 'none';
+    label.style.pointerEvents = 'auto'; // Make label clickable
+    label.style.cursor = 'pointer';
     label.style.transition = 'opacity 0.2s';
 
     container.appendChild(label);
@@ -203,6 +204,35 @@ export const MapContainer = ({
         }
     }, [shops]);
 
+    // Pre-calculate positions to ensure stability
+    const shopPositions = useMemo(() => {
+        const positions = new Map<number, [number, number]>();
+        const positionCounts = new Map<string, number>();
+
+        // Sort by ID to ensure deterministic order regardless of input array order (or selection status)
+        const sortedShops = [...shops].sort((a, b) => a.id - b.id);
+
+        sortedShops.forEach(shop => {
+            if (!shop.lat || !shop.lon) return;
+
+            const key = `${shop.lat},${shop.lon}`;
+            const count = positionCounts.get(key) || 0;
+            positionCounts.set(key, count + 1);
+
+            if (count === 0) {
+                positions.set(shop.id, [shop.lon, shop.lat]);
+            } else {
+                const radius = 0.00015;
+                const angle = count * (2 * Math.PI / 8);
+                const newLat = shop.lat + radius * Math.sin(angle);
+                const newLon = shop.lon + radius * Math.cos(angle);
+                positions.set(shop.id, [newLon, newLat]);
+            }
+        });
+
+        return positions;
+    }, [shops]); // Only recalculate if shops list changes
+
     // Marker Render Loop
     useEffect(() => {
         if (!map.current) return;
@@ -214,13 +244,17 @@ export const MapContainer = ({
             // Track IDs we want to keep
             const newMarkerIds = new Set<string>();
 
-            // Helper to add/update marker
             const renderMarker = (shopId: number, lat: number, lon: number) => {
-                const id = `shop-${shopId}`;
+                const id = String(shopId);
                 newMarkerIds.add(id);
+
+                // Use pre-calculated position
+                const pos = shopPositions.get(shopId);
+                const [finalLon, finalLat] = pos || [lon, lat];
 
                 const shop = shops.find(s => s.id === shopId);
                 if (!shop) return;
+
 
                 if (!markers.current.has(id)) {
                     // Create New Marker
@@ -237,7 +271,7 @@ export const MapContainer = ({
                         anchor: 'center'
                     });
 
-                    marker.setLngLat([lon, lat]).addTo(currentMap);
+                    marker.setLngLat([finalLon, finalLat]).addTo(currentMap);
                     markers.current.set(id, marker);
                 } else {
                     // Update Existing
@@ -253,7 +287,7 @@ export const MapContainer = ({
                     }
                     // For selected marker, ensure position serves correct if we manually added it
                     if (isSelected) {
-                        marker.setLngLat([lon, lat]);
+                        marker.setLngLat([finalLon, finalLat]);
                     }
                 }
             };
