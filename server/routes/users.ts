@@ -35,9 +35,12 @@ router.get("/leaderboard", async (req, res) => {
 
         // Determine Type
         let type = 'OVERALL';
-        if (filter === 'company') type = 'COMPANY';
-        // 'neighborhood' in previous implementation was just 'OVERALL' with higher limit
-        // so we stick to 'OVERALL' unless we implement neighborhood logic.
+        // If filter is 'company', use COMPANY type
+        if (filter === 'company') {
+            type = 'COMPANY';
+        }
+        // If filter is 'neighborhood', use OVERALL type (for now, as per refresh script)
+        // Ensure default is OVERALL
 
         if (filter === 'company' || filter === 'neighborhood') {
             limit = 100;
