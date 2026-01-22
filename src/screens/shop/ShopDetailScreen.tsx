@@ -24,6 +24,7 @@ interface ShopDetail {
     lon?: number;
     catchtable_ref?: string;
     is_saved?: boolean;
+    shop_user_match_score?: number | null;
 }
 
 interface ShopDetailProps {
@@ -305,12 +306,21 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                     <div className="px-6 py-8">
                         {/* Title Section (Name + Kind) */}
                         <div className="flex justify-between items-start mb-4">
-                            <h1 className="text-2xl font-bold text-gray-900 flex-1 leading-tight mr-2">
-                                {shop.name}
-                                <span className="text-sm text-gray-400 font-normal ml-2 align-middle">
-                                    {shop.food_kind || 'Restaurant'}
-                                </span>
-                            </h1>
+                            <div className="flex-1 mr-2">
+                                <h1 className="text-2xl font-bold text-gray-900 leading-tight flex items-center flex-wrap gap-2">
+                                    {shop.name}
+                                    <span className="text-sm text-gray-400 font-normal align-middle">
+                                        {shop.food_kind || 'Restaurant'}
+                                    </span>
+                                    {/* Match Score Badge */}
+                                    {shop.shop_user_match_score != null && (
+                                        <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap">
+                                            <span>Match</span>
+                                            <span>{shop.shop_user_match_score}%</span>
+                                        </span>
+                                    )}
+                                </h1>
+                            </div>
                         </div>
 
                         {/* Address & Desc (Moved Up) */}

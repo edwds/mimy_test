@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { shops, users_wantstogo, content, users, users_ranking, clusters } from "../db/schema.js";
 import { ilike, or, eq, sql, and, desc, asc, not, inArray } from "drizzle-orm";
 import { calculateShopMatchScore, TasteScores } from "../utils/match.js";
+import { getShopMatchScores } from "../utils/enricher.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -172,60 +173,7 @@ router.get("/discovery", async (req, res) => {
         });
 
         // 3. Batch Calculate Match Score
-        const matchScoresMap = new Map<number, number | null>();
-        if (viewerScores && shopIds.length > 0) {
-            try {
-                const matchRows = await db.execute(sql.raw(`
-                    WITH eligible AS (
-                        SELECT user_id, count(*) as cnt 
-                        FROM users_ranking 
-                        GROUP BY user_id 
-                        HAVING count(*) >= 100
-                    )
-                    SELECT 
-                        (c.review_prop->>'shop_id')::int as shop_id,
-                        u.id as user_id,
-                        u.taste_result,
-                        ur.rank,
-                        e.cnt as total_cnt
-                    FROM content c
-                    JOIN eligible e ON c.user_id = e.user_id
-                    JOIN users u ON c.user_id = u.id
-                    JOIN users_ranking ur ON ur.user_id = u.id AND ur.shop_id = (c.review_prop->>'shop_id')::int
-                    WHERE c.type = 'review'
-                      AND c.is_deleted = false
-                      AND (c.review_prop->>'shop_id')::int IN (${shopIds.join(',')})
-                `));
-
-                const shopReviewersMap = new Map<number, any[]>();
-
-                // Group by shop
-                matchRows.rows.forEach((row: any) => {
-                    const sid = Number(row.shop_id);
-                    if (!shopReviewersMap.has(sid)) shopReviewersMap.set(sid, []);
-
-                    const tResult = typeof row.taste_result === 'string' ? JSON.parse(row.taste_result) : row.taste_result;
-
-                    shopReviewersMap.get(sid)?.push({
-                        userId: row.user_id,
-                        rankPosition: row.rank,
-                        totalRankedCount: row.total_cnt,
-                        tasteScores: tResult?.scores || null
-                    });
-                });
-
-                // Compute scores
-                shopIds.forEach(sid => {
-                    const reviewers = shopReviewersMap.get(sid) || [];
-                    const score = calculateShopMatchScore(viewerScores, reviewers);
-                    matchScoresMap.set(sid, score);
-                });
-
-            } catch (err) {
-                console.error("Match score calculation error:", err);
-                // Fail silently, map will yield null
-            }
-        }
+        const matchScoresMap = await getShopMatchScores(shopIds, uid);
 
         const enriched = results.map(shop => ({
             ...shop,
@@ -328,7 +276,20 @@ router.get("/search", async (req, res) => {
             ))
             .limit(20);
 
-        res.json(results);
+
+        const userIdHeader = req.headers['x-user-id'];
+        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+
+        // Enrich with Match Score
+        const shopIds = results.map(s => s.id);
+        const matchScoresMap = await getShopMatchScores(shopIds, uid);
+
+        const enriched = results.map(shop => ({
+            ...shop,
+            shop_user_match_score: matchScoresMap.get(shop.id) || null
+        }));
+
+        res.json(enriched);
     } catch (error) {
         console.error("Shop search error:", error);
         res.status(500).json({ error: "Failed to search shops" });
@@ -344,7 +305,18 @@ router.get("/:id", async (req, res) => {
         const results = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
         if (results.length === 0) return res.status(404).json({ error: "Shop not found" });
 
-        res.json(results[0]);
+        const userIdHeader = req.headers['x-user-id'];
+        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+
+        const shopData = results[0];
+
+        // Enrich with Match Score
+        const matchScoresMap = await getShopMatchScores([id], uid);
+
+        res.json({
+            ...shopData,
+            shop_user_match_score: matchScoresMap.get(id) || null
+        });
     } catch (error) {
         console.error("Shop details error:", error);
         res.status(500).json({ error: "Failed to fetch shop details" });

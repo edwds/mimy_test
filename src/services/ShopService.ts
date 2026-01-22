@@ -2,12 +2,16 @@ import { API_BASE_URL } from '@/lib/api';
 
 export const ShopService = {
     search: async (query: string) => {
-        const response = await fetch(`${API_BASE_URL}/api/shops/search?q=${encodeURIComponent(query)}`);
+        const userId = localStorage.getItem("mimy_user_id");
+        const headers: HeadersInit = userId ? { 'x-user-id': userId } : {};
+        const response = await fetch(`${API_BASE_URL}/api/shops/search?q=${encodeURIComponent(query)}`, { headers });
         if (!response.ok) throw new Error('Failed to search shops');
         return response.json();
     },
     getById: async (id: number) => {
-        const response = await fetch(`${API_BASE_URL}/api/shops/${id}`);
+        const userId = localStorage.getItem("mimy_user_id");
+        const headers: HeadersInit = userId ? { 'x-user-id': userId } : {};
+        const response = await fetch(`${API_BASE_URL}/api/shops/${id}`, { headers });
         if (!response.ok) throw new Error('Failed to fetch shop');
         return response.json();
     },

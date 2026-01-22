@@ -37,7 +37,9 @@ export const UserService = {
 
     getSavedShops: async (userId: number | string) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${userId}/saved_shops`);
+            const currentUserId = localStorage.getItem("mimy_user_id");
+            const headers: HeadersInit = currentUserId ? { 'x-user-id': currentUserId } : {};
+            const response = await fetch(`${API_BASE_URL}/api/users/${userId}/saved_shops`, { headers });
             if (response.ok) {
                 return await response.json();
             }

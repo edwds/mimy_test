@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking } from "../db/schema.js";
 import { eq, and, desc, sql, ilike, isNotNull } from "drizzle-orm";
+import { getShopMatchScores } from "../utils/enricher.js";
 
 const router = Router();
 
@@ -268,10 +269,18 @@ router.get("/:id/saved_shops", async (req, res) => {
             ))
             .orderBy(desc(users_wantstogo.created_at));
 
-        // Enrich with is_saved=true (since we are fetching saved list)
+        // Enrich with Match Score
+        const userIdHeader = req.headers['x-user-id'];
+        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+
+        const shopIds = savedShops.map(s => s.id);
+        const matchScoresMap = await getShopMatchScores(shopIds, uid);
+
+        // Enrich with is_saved=true and match_score
         const enriched = savedShops.map(shop => ({
             ...shop,
-            is_saved: true
+            is_saved: true,
+            shop_user_match_score: matchScoresMap.get(shop.id) || null
         }));
 
         res.json(enriched);
