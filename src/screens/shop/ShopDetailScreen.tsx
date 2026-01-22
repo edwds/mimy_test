@@ -4,7 +4,7 @@ import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Che
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
-import { cn } from '@/lib/utils';
+import { cn, scoreToTasteRatingStep } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
@@ -322,8 +322,8 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                                 }}
                                                 className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap"
                                             >
-                                                <span>Match</span>
-                                                <span>{shop.shop_user_match_score}%</span>
+                                                <span>Taste Rating</span>
+                                                <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
                                             </button>
                                             <div
                                                 id="detail-match-tooltip"

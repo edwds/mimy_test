@@ -199,7 +199,8 @@
             "saved": "Saved",
             "save": "Save",
             "saved_date": "Saved:",
-            "record": "Record"
+            "record": "Record",
+            "match_tooltip": "This is a personalized score based on reviews from people with similar tastes. (3.00 = Neutral)"
         }
     },
     "vs_card": {

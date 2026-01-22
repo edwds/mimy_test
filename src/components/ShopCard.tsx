@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, Calendar, Bookmark } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
+import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
 
 import { useNavigate } from 'react-router-dom';
@@ -97,8 +97,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                                         }}
                                         className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5"
                                     >
-                                        <span>Match</span>
-                                        <span>{shop.shop_user_match_score}%</span>
+                                        <span>Taste Rating</span>
+                                        <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
                                     </button>
                                     <div
                                         id={`tooltip-${shop.id}`}

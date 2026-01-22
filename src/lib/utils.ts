@@ -96,6 +96,35 @@ export const calculateTasteMatch = (myScores: TasteScores, targetScores: TasteSc
     return Math.round(similarity);
 };
 
+// ----------------------------------------------------------------------------
+// Taste Rating Conversion (0-100 Score -> 1.00-5.00 Rating)
+// Anchor: 50 Score = 3.00 Rating (Neutral)
+// ----------------------------------------------------------------------------
+
+export function scoreToTasteRatingRaw(score: number): number {
+    // Clamp score to [0, 100]
+    const clamped = Math.max(0, Math.min(100, score));
+    // Linear mapping: 0->1, 50->3, 100->5
+    // Formula: 1 + (score / 25)
+    return 1 + (clamped / 25);
+}
+
+export function scoreToTasteRatingStep(score: number, step: number = 0.05): number {
+    const raw = scoreToTasteRatingRaw(score);
+    // Snap to nearest step (e.g., 0.05)
+    // precision correction: multiply by inverse of step, round, then divide
+    // easier: round(raw / step) * step
+    const snapped = Math.round(raw / step) * step;
+    // Fix floating point artifacts (e.g. 3.0000000004) -> 3.00
+    return parseFloat(snapped.toFixed(2));
+}
+
+// Optional: 2-decimal rounding without step snapping
+export function scoreToTasteRating2(score: number): number {
+    const raw = scoreToTasteRatingRaw(score);
+    return Math.round(raw * 100) / 100;
+}
+
 export const getTasteBadgeStyle = (score: number | null) => {
     if (score === null) return "text-gray-400";
 

@@ -26,6 +26,8 @@ interface VsHistoryItem {
 export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfileSheetProps) => {
     const [isVisible, setIsVisible] = useState(false);
     const [history, setHistory] = useState<VsHistoryItem[]>([]);
+    const [hateHistory, setHateHistory] = useState<{ id: number; item: string; selection: 'EAT' | 'NOT_EAT' }[]>([]);
+    const [activeTab, setActiveTab] = useState<'balance' | 'dislike'>('balance');
     const [loading, setLoading] = useState(false);
 
     // Visibility Animation
@@ -38,13 +40,18 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
         }
     }, [isOpen]);
 
-    // Data Fetching (Prefetch)
+    // Data Fetching
     useEffect(() => {
         if (userId) {
             setLoading(true);
-            fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/vs/history?user_id=${userId}`)
-                .then(res => res.json())
-                .then(data => setHistory(Array.isArray(data) ? data : []))
+            Promise.all([
+                fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/vs/history?user_id=${userId}`).then(res => res.json()),
+                fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/hate/history?user_id=${userId}`).then(res => res.json())
+            ])
+                .then(([vsData, hateData]) => {
+                    setHistory(Array.isArray(vsData) ? vsData : []);
+                    setHateHistory(Array.isArray(hateData) ? hateData : []);
+                })
                 .catch(err => console.error(err))
                 .finally(() => setLoading(false));
         }
@@ -84,7 +91,7 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
             {/* The "Spotify" Card */}
             <div
                 className={cn(
-                    `relative w-full max-w-sm aspect-[4/5] ${bgColor} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 transform`,
+                    `relative w-full max-w-sm aspect-[2/3] ${bgColor} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 transform`,
                     isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-90 opacity-0 translate-y-10"
                 )}
             >
@@ -102,53 +109,82 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 {/* Content Container */}
                 <div className="flex-1 flex flex-col p-8 z-10 text-white relative">
 
-                    {/* Header: User Info / "Album Art" */}
-                    <div className="flex items-center gap-3 mb-auto">
-                        <div className="w-12 h-12 rounded-xl bg-white/20 shadow-inner flex items-center justify-center overflow-hidden backdrop-blur-md border border-white/10">
-                            {/* Ideally user profile image here, or cluster icon */}
-                            <span className="text-2xl">😋</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Taste Profile</span>
-                            <span className="text-lg font-bold leading-none">{data?.cluster_name || "Unknown"}</span>
-                        </div>
-                    </div>
-
-                    {/* Main Body: The "Lyrics" / Tagline */}
-                    <div className="my-8">
-                        <h2 className="text-4xl font-black leading-[1.15] tracking-tight drop-shadow-sm font-display">
+                    {/* Main Content: Name & Tagline */}
+                    <div className="flex-1 flex flex-col justify-center text-center">
+                        <span className="text-xl font-bold opacity-80 mb-2">{data?.cluster_name || "Unknown"}</span>
+                        <h2 className="text-2xl font-black leading-[1.4] tracking-tight">
                             "{data?.cluster_tagline || 'Discovering your unique taste journey.'}"
                         </h2>
                     </div>
 
-                    {/* Footer: VS History Preview or Logo */}
-                    <div className="mt-auto pt-6 border-t border-white/20">
-                        {/* VS History Mini-List (Scrollable if many) */}
-                        {(loading || history.length > 0) ? (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between text-xs font-medium opacity-60 uppercase tracking-wider mb-2">
-                                    <span>Balance Game History</span>
-                                    <span>mimichelin</span>
-                                </div>
-                                <div className="max-h-[120px] overflow-y-auto space-y-2 pr-1 scrollbar-hide">
-                                    {history.map(item => (
-                                        <div key={item.id} className="flex items-center justify-between text-xs bg-black/20 rounded-lg p-2.5 backdrop-blur-sm border border-white/5">
-                                            <span className={cn(item.selected_value === 'A' ? "text-white font-bold" : "text-white/50")}>{item.item_a}</span>
-                                            <span className="opacity-30 mx-2 text-[10px]">vs</span>
-                                            <span className={cn(item.selected_value === 'B' ? "text-white font-bold" : "text-white/50")}>{item.item_b}</span>
+                    {/* Divider */}
+                    <div className="w-full h-px bg-white/20 my-6 shrink-0" />
+
+                    {/* Footer: Tabs & Lists */}
+                    <div className="flex-[1.5] flex flex-col min-h-0">
+                        {/* Tabs */}
+                        <div className="flex items-center gap-6 mb-4 shrink-0 px-1">
+                            <button
+                                onClick={() => setActiveTab('balance')}
+                                className={cn(
+                                    "text-sm font-bold transition-colors relative pb-1",
+                                    activeTab === 'balance' ? "text-white opacity-100" : "text-white/50 hover:text-white/80"
+                                )}
+                            >
+                                Balance Game
+                                {activeTab === 'balance' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('dislike')}
+                                className={cn(
+                                    "text-sm font-bold transition-colors relative pb-1",
+                                    activeTab === 'dislike' ? "text-white opacity-100" : "text-white/50 hover:text-white/80"
+                                )}
+                            >
+                                Dislikes
+                                {activeTab === 'dislike' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
+                                )}
+                            </button>
+                        </div>
+
+                        {/* List Content */}
+                        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide mask-image-b">
+                            {loading ? (
+                                <div className="text-white/50 text-sm py-4">Loading...</div>
+                            ) : (
+                                <>
+                                    {activeTab === 'balance' && (
+                                        <div className="space-y-2 pb-4">
+                                            {history.length > 0 ? history.map(item => (
+                                                <div key={item.id} className="flex items-center justify-between text-xs bg-black/20 rounded-lg p-3 backdrop-blur-sm border border-white/5">
+                                                    <span className={cn(item.selected_value === 'A' ? "text-white font-bold" : "text-white/50")}>{item.item_a}</span>
+                                                    <span className="opacity-30 mx-2 text-[10px]">vs</span>
+                                                    <span className={cn(item.selected_value === 'B' ? "text-white font-bold" : "text-white/50")}>{item.item_b}</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-white/50 text-sm py-2">No history yet.</div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 opacity-80">
-                                {/* Mimy Logo Placeholder */}
-                                <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
-                                    <span className="text-black font-black text-[10px]">M</span>
-                                </div>
-                                <span className="font-bold tracking-wide">Mimy</span>
-                            </div>
-                        )}
+                                    )}
+
+                                    {activeTab === 'dislike' && (
+                                        <div className="flex flex-wrap gap-2 content-start pb-4">
+                                            {hateHistory.filter(h => h.selection === 'NOT_EAT').length > 0 ? hateHistory.filter(h => h.selection === 'NOT_EAT').map((item, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-red-500/20 text-white px-3 py-1.5 rounded-full text-xs font-medium border border-red-500/30">
+                                                    <span>🚫</span>
+                                                    <span>{item.item}</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-white/50 text-sm py-2">No dislikes recorded.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
