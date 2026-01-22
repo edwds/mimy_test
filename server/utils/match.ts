@@ -128,8 +128,12 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
     // 6. Map back to 0-100
     // score_raw is in approx [-1, 1] (influenced by prior 0).
     // map [-1, 1] -> [0, 100]
-    const finalScore = Math.round(50 * (scoreRaw + 1));
+    // map [-1, 1] -> [0, 100]
+    const finalScore = 50 * (scoreRaw + 1);
+
+    // Keep 1 decimal place precision
+    const preciseScore = Math.round(finalScore * 10) / 10;
 
     // Clamp just in case
-    return Math.max(0, Math.min(100, finalScore));
+    return Math.max(0, Math.min(100, preciseScore));
 };
