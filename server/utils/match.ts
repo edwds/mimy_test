@@ -36,8 +36,8 @@ export interface MatchOptions {
 }
 
 export const calculateShopMatchScore = (viewerScores: TasteScores | null, reviewers: ReviewerSignal[], options?: MatchOptions): number | null => {
-    const POWER = options?.power ?? 2.0;
-    const ALPHA = options?.alpha ?? 5.0; // Bayesian prior weight
+    const POWER = options?.power ?? 4.0;
+    const ALPHA = options?.alpha ?? 1.0; // Bayesian prior weight
     const MIN_REVIEWERS = options?.minReviewers ?? 3;
     const MU_0 = 0.0;   // Neutral prior mean
 
