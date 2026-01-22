@@ -163,37 +163,47 @@ router.get("/:id", async (req, res) => {
 
         // Stats Counts
         // Stats Counts & Is Following (Parallel)
-        const [contentCountRes, followerCountRes, followingCountRes, isFollowingRes] = await Promise.all([
+        // Stats Counts
+        // Wrapped in transaction to enforce "no parallel workers" setting to avoid "parallel worker failed to initialize" error
+        const { contentCount, followerCount, followingCount, isFollowingRes } = await db.transaction(async (tx) => {
+            // Disable parallel workers for this transaction
+            await tx.execute(sql`SET LOCAL max_parallel_workers_per_gather = 0`);
+
             // 1. Content Count
-            db.select({ count: sql<number>`count(*)` })
+            const contentCountRes = await tx.select({ count: sql<number>`count(*)` })
                 .from(content)
-                .where(and(eq(content.user_id, id), eq(content.is_deleted, false))),
+                .where(and(eq(content.user_id, id), eq(content.is_deleted, false)));
 
             // 2. Follower Count
-            db.select({ count: sql<number>`count(*)` })
+            const followerCountRes = await tx.select({ count: sql<number>`count(*)` })
                 .from(users_follow)
-                .where(eq(users_follow.following_id, id)),
+                .where(eq(users_follow.following_id, id));
 
             // 3. Following Count
-            db.select({ count: sql<number>`count(*)` })
+            const followingCountRes = await tx.select({ count: sql<number>`count(*)` })
                 .from(users_follow)
-                .where(eq(users_follow.follower_id, id)),
+                .where(eq(users_follow.follower_id, id));
 
             // 4. Is Following Check
-            (async () => {
-                if (!viewerId) return false;
-                const check = await db.select().from(users_follow)
+            let isFollowing = false;
+            if (viewerId) {
+                const check = await tx.select().from(users_follow)
                     .where(and(
                         eq(users_follow.follower_id, viewerId),
                         eq(users_follow.following_id, id)
                     )).limit(1);
-                return check.length > 0;
-            })()
-        ]);
+                isFollowing = check.length > 0;
+            }
 
-        const contentCount = Number(contentCountRes[0]?.count || 0);
-        const followerCount = Number(followerCountRes[0]?.count || 0);
-        const followingCount = Number(followingCountRes[0]?.count || 0);
+            return {
+                contentCount: Number(contentCountRes[0]?.count || 0),
+                followerCount: Number(followerCountRes[0]?.count || 0),
+                followingCount: Number(followingCountRes[0]?.count || 0),
+                isFollowingRes: isFollowing
+            };
+        });
+
+
 
         res.json({
             ...userData,

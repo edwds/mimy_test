@@ -100,23 +100,42 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose }: ImageView
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length === 2 && pinchStartDist.current !== null && pinchStartCenter.current !== null) {
+        if (e.touches.length === 2 && pinchStartDist.current !== null && pinchStartCenter.current !== null && containerRef.current) {
             const t1 = e.touches[0];
             const t2 = e.touches[1];
 
             // 1. Calculate Scale
             const currentDist = getTouchDist(t1, t2);
-            const ratio = currentDist / pinchStartDist.current;
-            const newScale = Math.max(1, startScaleRef.current * ratio);
+            const rawRatio = currentDist / pinchStartDist.current;
+            const newScale = Math.max(1, startScaleRef.current * rawRatio);
 
-            // 2. Calculate Pan (Center Delta)
+            // 2. Calculate Pan (Pivot Correction)
+            // Goal: Keep the point under the pinch center stationary relative to the screen
             const currentCenter = getTouchCenter(t1, t2);
-            const dx = currentCenter.x - pinchStartCenter.current.x;
-            const dy = currentCenter.y - pinchStartCenter.current.y;
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // Offsets from screen center
+            const startOffset = {
+                x: pinchStartCenter.current.x - centerX,
+                y: pinchStartCenter.current.y - centerY
+            };
+            const currentOffset = {
+                x: currentCenter.x - centerX,
+                y: currentCenter.y - centerY
+            };
+
+            // Effective ratio for this step
+            const effectiveRatio = newScale / startScaleRef.current;
+
+            // Formula: T_new = Offset_cur - (Offset_start - T_start) * Ratio
+            const newTx = currentOffset.x - (startOffset.x - startPanRef.current.x) * effectiveRatio;
+            const newTy = currentOffset.y - (startOffset.y - startPanRef.current.y) * effectiveRatio;
 
             setTranslation({
-                x: startPanRef.current.x + dx,
-                y: startPanRef.current.y + dy
+                x: newTx,
+                y: newTy
             });
             setScale(newScale);
         }
