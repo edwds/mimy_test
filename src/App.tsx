@@ -22,6 +22,7 @@ import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
+import { AdminMatchScreen } from '@/screens/admin/AdminMatchScreen';
 import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { UserProvider } from '@/context/UserContext';
@@ -101,6 +102,7 @@ function App() {
                             <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
                             <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
                             <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
+                            <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />
 
                             {/* Redirect old user profile link to new one */}
                             <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />

@@ -314,10 +314,25 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     </span>
                                     {/* Match Score Badge */}
                                     {shop.shop_user_match_score != null && (
-                                        <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap">
-                                            <span>Match</span>
-                                            <span>{shop.shop_user_match_score}%</span>
-                                        </span>
+                                        <div className="relative inline-block z-10 align-middle">
+                                            <button
+                                                onClick={() => {
+                                                    const el = document.getElementById('detail-match-tooltip');
+                                                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                                }}
+                                                className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap"
+                                            >
+                                                <span>Match</span>
+                                                <span>{shop.shop_user_match_score}%</span>
+                                            </button>
+                                            <div
+                                                id="detail-match-tooltip"
+                                                className="absolute left-0 top-full mt-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
+                                            >
+                                                {t('discovery.shop_card.match_tooltip')}
+                                                <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                            </div>
+                                        </div>
                                     )}
                                 </h1>
                             </div>

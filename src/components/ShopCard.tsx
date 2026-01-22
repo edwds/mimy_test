@@ -78,7 +78,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                     <div>
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap relative">
                             <h3 className="text-xl font-bold text-foreground">{shop.name}</h3>
                             {shop.food_kind && (
                                 <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
@@ -87,10 +87,28 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                             )}
                             {/* Match Score Badge */}
                             {shop.shop_user_match_score != null && (
-                                <span className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5">
-                                    <span>Match</span>
-                                    <span>{shop.shop_user_match_score}%</span>
-                                </span>
+                                <div className="relative z-10">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Toggle tooltip logic handled by state
+                                            const el = document.getElementById(`tooltip-${shop.id}`);
+                                            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                        }}
+                                        className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5"
+                                    >
+                                        <span>Match</span>
+                                        <span>{shop.shop_user_match_score}%</span>
+                                    </button>
+                                    <div
+                                        id={`tooltip-${shop.id}`}
+                                        className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {t('discovery.shop_card.match_tooltip')}
+                                        <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
+                                    </div>
+                                </div>
                             )}
                         </div>
                         {shop.description && (

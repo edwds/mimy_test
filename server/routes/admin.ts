@@ -7,6 +7,8 @@ import { eq, sql, and } from "drizzle-orm";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+import { calculateShopMatchScore, calculateTasteMatch } from "../utils/match.js";
+
 const ADMIN_EMAIL = "soonmyung@catchtable.co.kr";
 
 router.post("/update-db", upload.single("file"), async (req, res) => {
@@ -148,6 +150,95 @@ router.post("/update-db", upload.single("file"), async (req, res) => {
 });
 
 export default router;
+
+router.post("/match/simulate", async (req, res) => {
+    try {
+        const { shopId, viewerId, options } = req.body;
+        // options: { power, alpha, minReviewers }
+
+        if (!shopId || !viewerId) {
+            return res.status(400).json({ error: "Missing shopId or viewerId" });
+        }
+
+        // 1. Fetch Viewer Taste
+        const viewerRes = await db.select({ taste_result: users.taste_result })
+            .from(users)
+            .where(eq(users.id, viewerId))
+            .limit(1);
+
+        if (viewerRes.length === 0 || !viewerRes[0].taste_result) {
+            return res.json({ error: "Viewer has no taste profile" });
+        }
+        const viewerScores = (viewerRes[0].taste_result as any).scores;
+
+        // 2. Fetch Reviewers
+        // Replicating logic from enricher.ts roughly but with more debug info
+        const rows = await db.execute(sql.raw(`
+            SELECT 
+                u.id as user_id, 
+                u.nickname,
+                u.taste_cluster,
+                u.taste_result,
+                ur.rank,
+                (SELECT count(*) FROM users_ranking WHERE user_id = u.id) as total_cnt
+            FROM content c
+            JOIN users u ON c.user_id = u.id
+            JOIN users_ranking ur ON ur.user_id = u.id AND ur.shop_id = (c.review_prop->>'shop_id')::int
+            WHERE c.type = 'review'
+              AND c.is_deleted = false
+              AND (c.review_prop->>'shop_id')::int = ${shopId}
+        `));
+
+        const reviewers = rows.rows.map((row: any) => {
+            const tResult = typeof row.taste_result === 'string' ? JSON.parse(row.taste_result) : row.taste_result;
+            return {
+                userId: row.user_id,
+                nickname: row.nickname,
+                rankPosition: row.rank,
+                totalRankedCount: Number(row.total_cnt),
+                tasteScores: tResult?.scores || null
+            };
+        });
+
+        const debugInfo = reviewers.map((r: any) => {
+            if (!r.tasteScores) return { ...r, eligible: false, reason: "No taste scores" };
+            if (r.totalRankedCount < 100) return { ...r, eligible: false, reason: "Rank count < 100" };
+
+            // Calculate components
+            const match = calculateTasteMatch(viewerScores, r.tasteScores);
+            const power = options?.power ?? 2;
+            const weight = Math.pow(match / 100, power);
+
+            let percentile = 1.0;
+            if (r.totalRankedCount > 1) {
+                percentile = 1.0 - ((r.rankPosition - 1) / (r.totalRankedCount - 1));
+            }
+            const satisfaction = (2 * percentile) - 1;
+
+            return {
+                ...r,
+                eligible: true,
+                match_score: match,
+                weight: weight,
+                satisfaction: satisfaction,
+                percentile: percentile
+            };
+        });
+
+        const score = calculateShopMatchScore(viewerScores, reviewers, options);
+
+        res.json({
+            score,
+            reviewers: debugInfo,
+            viewerScores,
+            params: options
+        });
+
+    } catch (error: any) {
+        console.error("Simulation error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 async function recalculateRankings() {
     console.log("Recalculating user rankings...");
