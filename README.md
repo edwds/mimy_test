@@ -115,7 +115,16 @@ npm run server
 - **Profile Setup**: 닉네임, 프로필 이미지, ID 설정 (ID 중복 확인)
 - **Localization**: 온보딩 전 과정 다국어(ko, en) 지원
 
-### **2. 미식 성향 분석 (Quiz)**
+### **2. Shop User Match Score (New)**
+- **정의**: 사용자가 특정 상점을 좋아할 확률(0~100%)을 예측하는 점수
+- **로직**:
+  - 신뢰할 수 있는 리뷰어(100개 이상 평가)의 만족도와, 뷰어와의 미식 성향 일치도를 가중 평균하여 산출
+  - **Taste Match**: 뷰어와 리뷰어의 미식 성향(7가지 축) 간의 RBF Kernel 유사도
+  - **Satisfaction**: 리뷰어의 해당 상점 랭킹 백분위 (상위 1위 = 100점)
+  - **Shrinkage**: 데이터가 적을 때 50점(중립)으로 수렴하도록 보정 (Bayesian Averaging)
+- **UI**: `DiscoveryTab` 등의 상점 카드에 "Match XX%" 뱃지로 노출
+
+### **3. 미식 성향 분석 (Quiz)**
 - 12개의 문항을 통해 사용자의 식성향을 분석
 - **128 Taste Clusters**: 128가지의 정교한 미식 캐릭터(Cluster) 분류
 - **Euclidean Matching**: 유저 간 미식 성향 일치도 분석 및 매칭

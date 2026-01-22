@@ -18,6 +18,7 @@ interface ShopCardProps {
         is_saved?: boolean; // From backend enrich
         saved_at?: string; // If saved, when it was saved
         catchtable_ref?: string;
+        shop_user_match_score?: number | null;
     };
     onSave?: (shopId: number) => void;
     onWrite?: (shopId: number) => void;
@@ -77,11 +78,18 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="text-xl font-bold text-foreground">{shop.name}</h3>
                             {shop.food_kind && (
                                 <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
                                     {shop.food_kind}
+                                </span>
+                            )}
+                            {/* Match Score Badge */}
+                            {shop.shop_user_match_score != null && (
+                                <span className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5">
+                                    <span>Match</span>
+                                    <span>{shop.shop_user_match_score}%</span>
                                 </span>
                             )}
                         </div>

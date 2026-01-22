@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface TasteProfileSheetProps {
     isOpen: boolean;
@@ -22,6 +24,8 @@ interface VsHistoryItem {
 }
 
 export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfileSheetProps) => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const [isVisible, setIsVisible] = useState(false);
     const [history, setHistory] = useState<VsHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);

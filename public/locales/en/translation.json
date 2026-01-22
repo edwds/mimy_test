@@ -255,7 +255,25 @@
             "logout": "Log out",
             "logout_confirm": "Are you sure you want to logout?",
             "quiz_confirm": "Retaking the quiz will update your taste profile. Continue?",
-            "coming_soon": "Coming soon!"
+            "coming_soon": "Coming soon!",
+            "manage_vs": "Manage Preferences",
+            "manage_hate": "Manage Dislikes"
+        },
+        "manage": {
+            "vs": {
+                "title": "Manage Preferences",
+                "empty": "No preferences selected yet.",
+                "vote_more": "Vote on more foods",
+                "item_a": "A",
+                "item_b": "B"
+            },
+            "hate": {
+                "title": "Manage Dislikes",
+                "empty": "No disliked foods registered.",
+                "vote_more": "Check more foods",
+                "eat": "Eat",
+                "not_eat": "Don't Eat"
+            }
         },
         "settings": {
             "title": "Settings",

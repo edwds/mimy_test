@@ -22,6 +22,8 @@ import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
+import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
+import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { UserProvider } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -96,6 +98,8 @@ function App() {
                             <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
                             <Route path="/shop/:shopId" element={<ProtectedRoute><RedirectToShop /></ProtectedRoute>} />
+                            <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
+                            <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
                             <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
 
                             {/* Redirect old user profile link to new one */}

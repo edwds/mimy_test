@@ -114,6 +114,14 @@ export const SettingsScreen = () => {
                         onClick={handleRetakeQuiz}
                     />
                     <MenuItem
+                        label={t('profile.menu.manage_vs')}
+                        onClick={() => navigate('/profile/manage/vs')}
+                    />
+                    <MenuItem
+                        label={t('profile.menu.manage_hate')}
+                        onClick={() => navigate('/profile/manage/hate')}
+                    />
+                    <MenuItem
                         label={t('profile.settings.school_company')}
                         onClick={() => handleMockAction(t('profile.settings.school_company'))}
                     />
