@@ -27,6 +27,7 @@ export interface ReviewerSignal {
     rankPosition: number;
     totalRankedCount: number; // Must be >= 100 for eligibility
     tasteScores: TasteScores | null;
+    satisfactionTier?: number; // 2=Good, 1=OK, 0=Bad. Optional for backward compatibility.
 }
 
 export interface MatchOptions {
@@ -64,8 +65,42 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
         }
 
         // 3. Satisfaction Signal S in [-1, +1]
-        // Map [0, 1] -> [-1, 1]
-        const satisfaction = (2 * percentile) - 1;
+        // Old Logic: Map [0, 1] -> [-1, 1] purely based on rank
+        // New Logic: Use Tier if available to set baseline range.
+
+        let satisfaction = 0;
+
+        if (r.satisfactionTier !== undefined) {
+            // Tier Logic
+            // Tier 2 (Good): [0.3, 1.0]
+            // Tier 1 (OK):   [-0.2, 0.2]
+            // Tier 0 (Bad):  [-1.0, -0.3]
+
+            switch (r.satisfactionTier) {
+                case 2: // Good
+                    // rank 1 -> 1.0, rank N -> 0.3
+                    satisfaction = 0.3 + (0.7 * percentile);
+                    break;
+                case 1: // OK
+                    // rank 1 -> 0.2, rank N -> -0.2
+                    satisfaction = -0.2 + (0.4 * percentile);
+                    break;
+                case 0: // Bad
+                    // rank 1 -> -0.3, rank N -> -1.0
+                    // Note: higher rank (more percentile) means "better" bad, so closer to -0.3?
+                    // Or rank 1 (best of bad) = -0.3, rank N (worst of bad) = -1.0.
+                    // Percentile 1.0 is "best rank".
+                    satisfaction = -1.0 + (0.7 * percentile);
+                    break;
+                default:
+                    // Fallback to pure rank if tier is weird
+                    satisfaction = (2 * percentile) - 1;
+            }
+
+        } else {
+            // Legacy Fallback
+            satisfaction = (2 * percentile) - 1;
+        }
 
         // 4. Weight W using Taste Match
         if (!viewerScores || !r.tasteScores) {

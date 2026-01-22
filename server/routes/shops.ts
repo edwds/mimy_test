@@ -363,7 +363,7 @@ router.get("/:id/reviews", async (req, res) => {
                 eq(content.type, 'review'),
                 eq(content.is_deleted, false),
                 eq(content.visibility, true),
-                sql`(${content.review_prop}::jsonb)->>'shop_id' = ${shopId.toString()}::text`
+                sql`${content.review_prop}->>'shop_id' = ${shopId.toString()}`
             ));
 
         // 2. Sorting

@@ -39,6 +39,7 @@ export async function getShopMatchScores(shopIds: number[], viewerId: number): P
                 u.id as user_id,
                 u.taste_result,
                 ur.rank,
+                ur.satisfaction_tier, 
                 e.cnt as total_cnt
             FROM content c
             JOIN eligible e ON c.user_id = e.user_id
@@ -61,7 +62,8 @@ export async function getShopMatchScores(shopIds: number[], viewerId: number): P
                 userId: row.user_id,
                 rankPosition: row.rank,
                 totalRankedCount: row.total_cnt,
-                tasteScores: tResult?.scores || null
+                tasteScores: tResult?.scores || null,
+                satisfactionTier: row.satisfaction_tier !== undefined ? Number(row.satisfaction_tier) : undefined
             });
         });
 

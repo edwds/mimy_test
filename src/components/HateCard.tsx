@@ -70,9 +70,6 @@ export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose
             `}>
                 <div className="p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-lg text-foreground">
-                            {t('hate_card.title')}
-                        </h3>
                         {/* Close Button */}
                         <button
                             onClick={(e) => {

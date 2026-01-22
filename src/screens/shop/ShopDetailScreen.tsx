@@ -127,6 +127,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
             setReviews(prev => reset ? data : [...prev, ...data]);
         } catch (err) {
             console.error(err);
+            setHasMore(false); // Stop infinite scroll on error
         } finally {
             setLoadingReviews(false);
         }
