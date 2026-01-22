@@ -314,3 +314,17 @@ export const hate_result = pgTable('hate_result', {
     unique_hate_vote: unique().on(table.user_id, table.prop_id),
     hate_prop_idx: index('idx_hate_result_prop').on(table.prop_id),
 }));
+
+// --- Caching Domain ---
+export const leaderboard = pgTable('leaderboard', {
+    id: serial('id').primaryKey(),
+    type: varchar('type', { length: 20 }).notNull(), // 'OVERALL', 'COMPANY', 'NEIGHBORHOOD'
+    key: varchar('key', { length: 100 }), // Optional subtype key (e.g., 'Seoul', 'Gangnam')
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    rank: integer('rank').notNull(),
+    score: integer('score').notNull(),
+    stats: jsonb('stats'), // { content_count, received_likes }
+    created_at: timestamp('created_at').defaultNow(),
+}, (table) => ({
+    type_idx: index('idx_leaderboard_type').on(table.type, table.key),
+}));

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking } from "../db/schema.js";
+import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard } from "../db/schema.js";
 import { eq, and, desc, sql, ilike, isNotNull } from "drizzle-orm";
 import { getShopMatchScores } from "../utils/enricher.js";
 
@@ -26,21 +26,27 @@ router.get("/check-handle", async (req, res) => {
 });
 
 // GET /leaderboard
+// GET /leaderboard
 router.get("/leaderboard", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const filter = (req.query.filter as string) || '';
         let limit = parseInt(req.query.limit as string) || 20;
 
-        // Requirement: "회사" and "지역" should show up to 100
+        // Determine Type
+        let type = 'OVERALL';
+        if (filter === 'company') type = 'COMPANY';
+        // 'neighborhood' in previous implementation was just 'OVERALL' with higher limit
+        // so we stick to 'OVERALL' unless we implement neighborhood logic.
+
         if (filter === 'company' || filter === 'neighborhood') {
             limit = 100;
         }
 
         const offset = (page - 1) * limit;
 
-        // 1. Base Selection
-        let query = db.select({
+        // Query Cache
+        const cachedLeaderboard = await db.select({
             id: users.id,
             nickname: users.nickname,
             account_id: users.account_id,
@@ -48,58 +54,31 @@ router.get("/leaderboard", async (req, res) => {
             profile_image: users.profile_image,
             cluster_name: clusters.name,
             taste_result: users.taste_result,
-            stats: {
-                content_count: sql<number>`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`,
-                received_likes: sql<number>`(
-                    select count(*) 
-                    from ${likes} 
-                    join ${content} on ${likes}.target_id = ${content}.id 
-                    where ${content}.user_id = ${users}.id 
-                    and ${likes}.target_type = 'content' 
-                    and ${content}.is_deleted = false
-                )`
-            }
+            rank: leaderboard.rank,
+            score: leaderboard.score,
+            stats: leaderboard.stats
         })
-            .from(users)
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
-            .$dynamic();
-
-        // 2. Apply Filters
-        if (filter === 'company') {
-            query = query.where(ilike(users.email, '%@catchtable.co.kr'));
-        }
-
-        // 3. Sorting & Execution
-        const leaderboard = await query
-            .orderBy(desc(sql`(select count(*) from ${content} where ${content.user_id} = ${users.id} and ${content}.is_deleted = false)`))
+            .from(leaderboard)
+            .innerJoin(users, eq(leaderboard.user_id, users.id))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
+            .where(eq(leaderboard.type, type))
+            .orderBy(leaderboard.rank)
             .limit(limit)
             .offset(offset);
 
-        // Map to score
-        const result = leaderboard.map((u, i) => {
-            const contentScore = Number(u.stats.content_count) * 5;
-            const likeScore = Number(u.stats.received_likes) * 3;
-            return {
-                rank: 0, // Will assign after sort
-                user: {
-                    id: u.id,
-                    nickname: u.nickname,
-                    account_id: u.account_id,
-                    profile_image: u.profile_image,
-                    cluster_name: u.cluster_name,
-                    taste_result: u.taste_result
-                },
-                score: contentScore + likeScore
-            };
-        });
-
-        // Re-sort by actual calculated score since SQL sort was just heuristic
-        result.sort((a, b) => b.score - a.score);
-
-        // Re-assign rank
-        result.forEach((item, index) => {
-            item.rank = offset + index + 1;
-        });
+        // Map to response format
+        const result = cachedLeaderboard.map(row => ({
+            rank: row.rank,
+            user: {
+                id: row.id,
+                nickname: row.nickname,
+                account_id: row.account_id,
+                profile_image: row.profile_image,
+                cluster_name: row.cluster_name,
+                taste_result: row.taste_result
+            },
+            score: row.score
+        }));
 
         res.json(result);
 
