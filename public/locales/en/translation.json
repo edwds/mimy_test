@@ -207,6 +207,13 @@
         "retry": "Retry ({{count}})",
         "next_question": "Next Question"
     },
+    "hate_card": {
+        "title": "Do you eat this?",
+        "eat": "Eat",
+        "not_eat": "Don't Eat",
+        "retry": "Retry ({{count}})",
+        "next_question": "Next Question"
+    },
     "leaderboard": {
         "title": "Leaderboard",
         "points": "Points",

@@ -207,6 +207,13 @@
         "retry": "다시하기 ({{count}})",
         "next_question": "다른 질문 받기"
     },
+    "hate_card": {
+        "title": "이 음식, 드시나요?",
+        "eat": "먹는다",
+        "not_eat": "안먹는다",
+        "retry": "다시하기 ({{count}})",
+        "next_question": "다른 질문 받기"
+    },
     "leaderboard": {
         "title": "랭킹",
         "points": "Points",

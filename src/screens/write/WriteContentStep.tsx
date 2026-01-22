@@ -182,13 +182,26 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             .filter(m => m.status === 'complete' && m.url)
             .map(m => m.url!);
 
+        // Handle pending link if user didn't click 'Add'
+        let finalLinks = [...links];
+        if (showLinkInput && linkUrl.trim()) {
+            let url = linkUrl.trim();
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+            finalLinks.push({
+                title: linkTitle.trim() || url,
+                url: url
+            });
+        }
+
         onNext({
             text,
             images: validImages,
             companions: selectedUsers.map(u => u.id),
             keywords,
             visitDate,
-            links
+            links: finalLinks
         });
     };
 

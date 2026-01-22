@@ -296,3 +296,21 @@ export const vs_result = pgTable('vs_result', {
     unique_vote: unique().on(table.user_id, table.prop_id),
     prop_idx: index('idx_vs_result_prop').on(table.prop_id),
 }));
+
+export const hate_prop = pgTable('hate_prop', {
+    id: serial('id').primaryKey(),
+    item: text('item').notNull(),
+    category: text('category'),
+    created_at: timestamp('created_at').defaultNow(),
+});
+
+export const hate_result = pgTable('hate_result', {
+    id: serial('id').primaryKey(),
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    prop_id: integer('prop_id').notNull().references(() => hate_prop.id, { onDelete: 'cascade' }),
+    selection: varchar('selection', { length: 10 }).notNull(), // 'EAT', 'NOT_EAT'
+    created_at: timestamp('created_at').defaultNow(),
+}, (table) => ({
+    unique_hate_vote: unique().on(table.user_id, table.prop_id),
+    hate_prop_idx: index('idx_hate_result_prop').on(table.prop_id),
+}));

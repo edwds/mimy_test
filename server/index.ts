@@ -10,6 +10,7 @@ import { QuizManager } from "./utils/quiz.js";
 import shopRoutes from "./routes/shops.js";
 import contentRoutes from "./routes/content.js";
 import vsRoutes from "./routes/vs.js";
+import hateRoutes from "./routes/hate.js";
 import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use("/api/quiz", quizRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/vs", vsRoutes);
+app.use("/api/hate", hateRoutes);
 app.use("/api/admin", adminRoutes);
 
 import importRoutes from "./routes/import.js";

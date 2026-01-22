@@ -5,6 +5,7 @@ import { useSmartScroll } from '@/hooks/useSmartScroll';
 import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
+import { HateCard } from '@/components/HateCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
@@ -22,7 +23,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const { t } = useTranslation();
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
-    const [vsItems, setVsItems] = useState<any[]>([]); // New State
+    const [interstitialItems, setInterstitialItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [hasInitialFetch, setHasInitialFetch] = useState(false);
@@ -214,24 +215,38 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         }
     }, [refreshTrigger]);
 
-    // Fetch VS candidates
+    // Fetch Interstitial candidates (VS & Hate)
     useEffect(() => {
         if (currentUser?.id) {
-            fetch(`${API_BASE_URL}/api/vs/candidates?user_id=${currentUser.id}`)
+            console.log("Fetching interstitial candidates for user:", currentUser.id);
+            const fetchVs = fetch(`${API_BASE_URL}/api/vs/candidates?user_id=${currentUser.id}`)
                 .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        setVsItems(data);
-                    }
-                })
-                .catch(err => console.error("Failed to fetch VS", err));
+                .catch(err => {
+                    console.error("Failed to fetch VS candidates", err);
+                    return [];
+                });
+
+            const fetchHate = fetch(`${API_BASE_URL}/api/hate/candidates?user_id=${currentUser.id}`)
+                .then(res => res.json())
+                .catch(err => {
+                    console.error("Failed to fetch Hate candidates", err);
+                    return [];
+                });
+
+            Promise.all([fetchVs, fetchHate])
+                .then(([vsData, hateData]) => {
+                    console.log("Interstitial Data:", { vsData, hateData });
+                    const vs = Array.isArray(vsData) ? vsData.map((item: any) => ({ ...item, type: 'vs' })) : [];
+                    const hate = Array.isArray(hateData) ? hateData.map((item: any) => ({ ...item, type: 'hate' })) : [];
+                    // Combine and shuffle
+                    const combined = [...vs, ...hate].sort(() => Math.random() - 0.5);
+                    console.log("Combined Interstitials:", combined);
+                    setInterstitialItems(combined);
+                });
         }
     }, [currentUser?.id, refreshTrigger]);
 
-    const handleVote = async (id: number, selection: 'A' | 'B') => {
-        // Optimistic update: Do NOT remove from list immediately. User wants to see the result.
-        // setVsItems(prev => prev.filter(item => item.id !== id));
-
+    const handleVsVote = async (id: number, selection: 'A' | 'B') => {
         try {
             if (currentUser?.id) {
                 await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
@@ -245,18 +260,33 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         }
     };
 
-    const [hiddenVsIndices, setHiddenVsIndices] = useState<Set<number>>(new Set());
+    const handleHateVote = async (id: number, selection: 'EAT' | 'NOT_EAT') => {
+        try {
+            if (currentUser?.id) {
+                await fetch(`${API_BASE_URL}/api/hate/${id}/vote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser.id, selection })
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
-    const handleCloseVs = (index: number) => {
-        setHiddenVsIndices(prev => {
+
+    const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
+
+    const handleCloseBonus = (index: number) => {
+        setHiddenBonusIndices(prev => {
             const next = new Set(prev);
             next.add(index);
             return next;
         });
     };
 
-    const handleNextVs = (id: number) => {
-        setVsItems(prev => prev.filter(item => item.id !== id));
+    const handleNextBonus = (id: number) => {
+        setInterstitialItems(prev => prev.filter(item => item.id !== id));
     };
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
@@ -362,9 +392,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         // Calculate injection index (0-based index of VS card to show)
                         // Show after 3rd (index 2), 6th (index 5), 9th (index 8) item.
                         // (index + 1) % 3 === 0
-                        const showVsCard = (index + 1) % 3 === 0;
-                        const vsCardIndex = ((index + 1) / 3) - 1;
-                        const vsItem = vsItems[vsCardIndex]; // Use state vsItems
+                        const showBonusCard = (index + 1) % 3 === 0;
+                        const bonusCardIndex = ((index + 1) / 3) - 1;
+                        const bonusItem = interstitialItems[bonusCardIndex];
 
                         return (
                             <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined} className="mb-8">
@@ -375,17 +405,28 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                 />
                                 <div className="bg-muted" />
 
-                                {showVsCard && vsItem && vsCardIndex < 3 && !hiddenVsIndices.has(vsCardIndex) && (
+                                {showBonusCard && bonusItem && !hiddenBonusIndices.has(bonusCardIndex) && (
                                     <div className="mt-8">
-                                        <VsCard
-                                            id={vsItem.id}
-                                            itemA={vsItem.item_a}
-                                            itemB={vsItem.item_b}
-                                            index={vsCardIndex}
-                                            onVote={handleVote}
-                                            onClose={() => handleCloseVs(vsCardIndex)}
-                                            onNext={() => handleNextVs(vsItem.id)}
-                                        />
+                                        {bonusItem.type === 'vs' ? (
+                                            <VsCard
+                                                id={bonusItem.id}
+                                                itemA={bonusItem.item_a}
+                                                itemB={bonusItem.item_b}
+                                                index={bonusCardIndex}
+                                                onVote={handleVsVote}
+                                                onClose={() => handleCloseBonus(bonusCardIndex)}
+                                                onNext={() => handleNextBonus(bonusItem.id)}
+                                            />
+                                        ) : (
+                                            <HateCard
+                                                id={bonusItem.id}
+                                                item={bonusItem.item}
+                                                index={bonusCardIndex}
+                                                onVote={handleHateVote}
+                                                onClose={() => handleCloseBonus(bonusCardIndex)}
+                                                onNext={() => handleNextBonus(bonusItem.id)}
+                                            />
+                                        )}
                                     </div>
                                 )}
                             </div>
