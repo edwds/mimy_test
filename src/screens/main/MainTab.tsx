@@ -11,6 +11,7 @@ import { HomeTab } from './HomeTab';
 import { LeaderboardTab } from './LeaderboardTab';
 import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
+import { SwipeableOverlay } from '@/components/SwipeableOverlay';
 
 const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
 
@@ -111,19 +112,19 @@ export const MainTab = () => {
                     return (
                         <>
                             {viewUserId && (
-                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                <SwipeableOverlay key="profile">
                                     <UserProfileScreen userId={viewUserId} />
-                                </div>
+                                </SwipeableOverlay>
                             )}
                             {viewListUserId && (
-                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                <SwipeableOverlay key="list">
                                     <ListDetailScreen userIdProp={viewListUserId} />
-                                </div>
+                                </SwipeableOverlay>
                             )}
                             {viewShopId && (
-                                <div className="absolute inset-0 z-[100] bg-background animate-in slide-in-from-right duration-200">
+                                <SwipeableOverlay key="shop">
                                     <ShopDetailScreen shopIdProp={viewShopId} />
-                                </div>
+                                </SwipeableOverlay>
                             )}
                         </>
                     );

@@ -52,6 +52,30 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
         return () => clearTimeout(timer);
     }, [query]);
 
+    // Handle Browser Back (Swipe Back) to close overlay
+    useEffect(() => {
+        // Push a state to history so that "Back" action can catch it
+        window.history.pushState({ overlay: 'discovery-search' }, '');
+
+        const handlePopState = () => {
+            onClose();
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+            // If the overlay is closing but the history state is still ours (user didn't use back button),
+            // we should conceptually pop it. But checking history state is unreliable.
+            // Safest: The close button should trigger history.back() instead of direct onClose.
+        };
+    }, []);
+
+    const handleBack = () => {
+        // Trigger browser back, which fires popstate, which calls onClose
+        window.history.back();
+    };
+
     const handleItemClick = async (item: any) => {
         onSelect(item);
     };
@@ -66,7 +90,7 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
                 style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
             >
                 <button
-                    onClick={onClose}
+                    onClick={handleBack}
                     className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors mr-2"
                 >
                     <ChevronLeft size={24} />
@@ -95,6 +119,7 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
             <div
                 className="flex-1 overflow-y-auto px-4 py-4"
                 style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+                data-scroll-container="true"
             >
                 {loading ? (
                     <div className="space-y-4">

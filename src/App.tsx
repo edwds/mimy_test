@@ -121,18 +121,18 @@ const StartRoute = () => {
 
 const RedirectToMainUser = () => {
     const { userId } = useParams();
-    return <Navigate to={`/main?viewUser=${userId}`} replace />;
+    return <Navigate to={`/main?viewUser=${userId}`} />;
 };
 
 const RedirectToShop = () => {
     const { shopId } = useParams();
-    return <Navigate to={`/main?viewShop=${shopId}`} replace />;
+    return <Navigate to={`/main?viewShop=${shopId}`} />;
 };
 
 const RedirectToList = () => {
     const { userId } = useParams();
     const [searchParams] = useSearchParams();
-    return <Navigate to={`/main?viewListUser=${userId}&${searchParams.toString()}`} replace />;
+    return <Navigate to={`/main?viewListUser=${userId}&${searchParams.toString()}`} />;
 };
 
 // PublicHome removed as it's replaced by explicit /start route

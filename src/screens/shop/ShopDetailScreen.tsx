@@ -300,6 +300,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
             <div
                 onScroll={(e) => scrollY.set(e.currentTarget.scrollTop)}
                 className="flex-1 overflow-y-auto z-10 no-scrollbar relative pt-[24vh]"
+                data-scroll-container="true"
             >
                 <div className="min-h-screen bg-background rounded-t-[32px] shadow-[-0_-4px_20px_rgba(0,0,0,0.1)] relative overflow-hidden">
 

@@ -150,6 +150,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 style={{
                     pointerEvents: 'auto'
                 }}
+                data-scroll-container={snapState === 'full' ? "true" : undefined}
                 onPointerDown={(e) => {
                     if (snapState !== 'full') {
                         dragControls.start(e);
