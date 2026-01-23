@@ -7,10 +7,21 @@ import { prefetchReviewSnippet, snippetCache } from '@/components/discovery/Sele
 
 // Wrapper to handle individual review fetching
 const ShopCardWithReview = ({ shop, onSave }: { shop: any, onSave?: (id: number) => void }) => {
-    const [reviewSnippet, setReviewSnippet] = useState<any>(snippetCache.get(shop.id) || null);
+    // Initialize with prop if available, or cache, or null
+    const [reviewSnippet, setReviewSnippet] = useState<any>(shop.reviewSnippet || snippetCache.get(shop.id) || null);
 
     useEffect(() => {
-        if (!reviewSnippet) {
+        // If we have a snippet from props, ensure it's in the cache for future use
+        if (shop.reviewSnippet && !snippetCache.has(shop.id)) {
+            snippetCache.set(shop.id, shop.reviewSnippet);
+        }
+
+        // If we still don't have a snippet (and it wasn't explicitly null from prop), try to fetch
+        // Note: We need to be careful not to fetch if shop.reviewSnippet is explicitly null (meaning no review exists)
+        // Check if 'reviewSnippet' property exists in shop object to distinguish "undefined" vs "null"
+        const hasSnippetProp = 'reviewSnippet' in shop;
+
+        if (!reviewSnippet && !hasSnippetProp && !snippetCache.has(shop.id)) {
             const fetchData = async () => {
                 await prefetchReviewSnippet(shop.id);
                 if (snippetCache.has(shop.id)) {
@@ -18,8 +29,11 @@ const ShopCardWithReview = ({ shop, onSave }: { shop: any, onSave?: (id: number)
                 }
             };
             fetchData();
+        } else if (shop.reviewSnippet !== undefined && reviewSnippet !== shop.reviewSnippet) {
+            // Sync if prop updates
+            setReviewSnippet(shop.reviewSnippet);
         }
-    }, [shop.id]);
+    }, [shop.id, shop.reviewSnippet, reviewSnippet]);
 
     return <ShopCard shop={shop} onSave={onSave} reviewSnippet={reviewSnippet} />;
 };
