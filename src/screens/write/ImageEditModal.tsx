@@ -336,19 +336,25 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const [originalUrl, setOriginalUrl] = useState<string>('');
     const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
-    // Zoom/Pan Refs
+    // Zoom/Pan Refs (Gesture logic)
     const pinchStartDist = useRef<number | null>(null);
     const startScaleRef = useRef<number>(1);
 
+    // State Tracking Refs (To avoid stale closures)
+    const latestScale = useRef(scale);
+    const latestPosition = useRef(position);
 
+    // Sync refs with state
+    useEffect(() => {
+        latestScale.current = scale;
+        latestPosition.current = position;
+    }, [scale, position]);
 
     // Constants
     const CROP_SIZE = 300;
     const OUTPUT_SIZE = 1080;
     const MIN_SCALE = 1;
     const MAX_SCALE = 5; // Allow more zoom for rotation compensation
-
-
 
     // Load original image & dimensions
     useEffect(() => {
@@ -425,8 +431,10 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             const t2 = e.touches[1];
             pinchStartDist.current = getTouchDist(t1, t2);
             pinchStartCenter.current = getTouchCenter(t1, t2);
-            startScaleRef.current = scale;
-            startPanRef.current = position;
+
+            // Use latest ref values instead of closure state
+            startScaleRef.current = latestScale.current;
+            startPanRef.current = latestPosition.current;
         } else if (e.touches.length === 1) {
             // Pan Start
             lastTouchPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -485,11 +493,16 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             const dx = e.touches[0].clientX - lastTouchPos.current.x;
             const dy = e.touches[0].clientY - lastTouchPos.current.y;
 
-            const { maxX, maxY } = getBoundaries(scale);
-            setPosition(prev => ({
-                x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
-                y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
-            }));
+            const currentScale = latestScale.current;
+            const { maxX, maxY } = getBoundaries(currentScale);
+
+            const nextPos = {
+                x: Math.max(-maxX, Math.min(maxX, latestPosition.current.x + dx)),
+                y: Math.max(-maxY, Math.min(maxY, latestPosition.current.y + dy))
+            };
+
+            setPosition(nextPos);
+            latestPosition.current = nextPos; // Sync immediately
 
             lastTouchPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
@@ -522,12 +535,16 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             const dx = e.clientX - lastMousePos.current.x;
             const dy = e.clientY - lastMousePos.current.y;
 
-            const { maxX, maxY } = getBoundaries(scale);
+            const currentScale = latestScale.current;
+            const { maxX, maxY } = getBoundaries(currentScale);
 
-            setPosition(prev => ({
-                x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
-                y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
-            }));
+            const nextPos = {
+                x: Math.max(-maxX, Math.min(maxX, latestPosition.current.x + dx)),
+                y: Math.max(-maxY, Math.min(maxY, latestPosition.current.y + dy))
+            };
+
+            setPosition(nextPos);
+            latestPosition.current = nextPos; // Sync immediately
 
             lastMousePos.current = { x: e.clientX, y: e.clientY };
         }
