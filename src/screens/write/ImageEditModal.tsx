@@ -319,7 +319,7 @@ const DraggableItem = ({
                 value={item.imgText || ''}
                 onChange={(e) => onTextChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent py-2 text-center text-text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-transparent py-2 text-center text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
             />
         </Reorder.Item>
     );

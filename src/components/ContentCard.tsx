@@ -857,6 +857,14 @@ export const ContentCard = ({
                 onClose={() => setShowComments(false)}
                 contentId={content.id}
             />
+
+            <ImageViewer
+                images={content.images}
+                initialIndex={viewerIndex}
+                isOpen={showViewer}
+                onClose={() => setShowViewer(false)}
+                imgTexts={content.img_texts}
+            />
         </div >
     );
 };
