@@ -15,7 +15,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
     const [index, setIndex] = useState(initialIndex);
     const [scale, setScale] = useState(1);
 
-    // Reset index when opening with new initialIndex
+    // Reset when opening
     useEffect(() => {
         if (isOpen) {
             setIndex(initialIndex);
@@ -23,16 +23,26 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
         }
     }, [isOpen, initialIndex]);
 
-    // Refs for Gesture Handling
+    // Refs
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const startPanRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+    // Touch/Pinch State
+    const pinchStartDist = useRef<number | null>(null);
+    const pinchStartCenter = useRef<{ x: number, y: number } | null>(null);
     const startScaleRef = useRef<number>(1);
+    const startPanRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
 
-    // Pan Motion Values (separate from dismissal y)
+    // Mouse/Pan State
+    const isDraggingRef = useRef(false);
+    const lastMousePos = useRef<{ x: number, y: number } | null>(null);
+
+    // Pan Motion Values
     const [translation, setTranslation] = useState({ x: 0, y: 0 });
 
-    // Prevent body scroll when open
+    // Flag for instant transitions during gesture
+    const [isGesturing, setIsGesturing] = useState(false);
+
+    // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -50,7 +60,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
     const dismissY = useMotionValue(0);
     const opacity = useTransform(dismissY, [-200, 0, 200], [0.5, 1, 0.5]);
 
-    // Slide Variants
+    // Variants
     const variants = {
         enter: (direction: number) => ({
             x: direction === 0 ? 0 : (direction > 0 ? 1000 : -1000),
@@ -68,106 +78,123 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
         })
     };
 
-    // Flag for instant vs spring transition
-    const [isPinching, setIsPinching] = useState(false);
+    // --- Touch Handlers (Mobile Pinch/Pan) ---
+    const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
 
-    // --- Pointer Events Handlers for Pinch Zoom & Pan (PC & Mobile Unified) ---
-    const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
-    const prevPinchInfo = useRef<{ dist: number, center: { x: number, y: number } } | null>(null);
+    const getTouchCenter = (t1: React.Touch, t2: React.Touch) => {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    };
 
-    const handlePointerDown = (e: React.PointerEvent) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        if (activePointers.current.size === 2) {
-            setIsPinching(true);
-            const points = Array.from(activePointers.current.values());
-            const p1 = points[0];
-            const p2 = points[1];
-            prevPinchInfo.current = {
-                dist: Math.hypot(p1.x - p2.x, p1.y - p2.y),
-                center: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
-            };
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            setIsGesturing(true);
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            pinchStartDist.current = getTouchDist(t1, t2);
+            pinchStartCenter.current = getTouchCenter(t1, t2);
             startScaleRef.current = scale;
             startPanRef.current = translation;
         }
     };
 
-    const handlePointerMove = (e: React.PointerEvent) => {
-        const prev = activePointers.current.get(e.pointerId);
-        if (!prev) return;
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchStartDist.current !== null && pinchStartCenter.current !== null && containerRef.current) {
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
 
-        const current = { x: e.clientX, y: e.clientY };
-        activePointers.current.set(e.pointerId, current);
+            // 1. Calculate new scale
+            const currentDist = getTouchDist(t1, t2);
+            const rawRatio = currentDist / pinchStartDist.current;
+            const newScale = Math.max(1, startScaleRef.current * rawRatio);
 
-        const points = Array.from(activePointers.current.values());
+            // 2. Calculate Pivot Pan
+            const currentCenter = getTouchCenter(t1, t2);
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
 
-        // 1. Pinch Zoom (2 fingers)
-        if (points.length === 2) {
-            const p1 = points[0];
-            const p2 = points[1];
-            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-            const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+            // Offsets from center
+            const startOffset = {
+                x: pinchStartCenter.current.x - centerX,
+                y: pinchStartCenter.current.y - centerY
+            };
+            const currentOffset = {
+                x: currentCenter.x - centerX,
+                y: currentCenter.y - centerY
+            };
 
-            if (prevPinchInfo.current) {
-                // Scale
-                const zoomRatio = dist / prevPinchInfo.current.dist;
-                const newScale = Math.max(1, startScaleRef.current * zoomRatio);
+            const effectiveRatio = newScale / startScaleRef.current;
+            const newTx = currentOffset.x - (startOffset.x - startPanRef.current.x) * effectiveRatio;
+            const newTy = currentOffset.y - (startOffset.y - startPanRef.current.y) * effectiveRatio;
 
-                // Pan (Move center)
-                const dx = center.x - prevPinchInfo.current.center.x;
-                const dy = center.y - prevPinchInfo.current.center.y;
-
-                if (newScale > 1) {
-                    setTranslation(prev => ({
-                        x: prev.x + dx,
-                        y: prev.y + dy
-                    }));
-                }
-                setScale(newScale);
-            }
-            prevPinchInfo.current = { dist, center };
-        }
-        // 2. Pan (1 finger/mouse) - ONLY when zoomed
-        else if (points.length === 1 && scale > 1) {
-            const dx = current.x - prev.x;
-            const dy = current.y - prev.y;
-            setTranslation(prev => ({
-                x: prev.x + dx,
-                y: prev.y + dy
-            }));
+            setTranslation({ x: newTx, y: newTy });
+            setScale(newScale);
         }
     };
 
-    const handlePointerUp = (e: React.PointerEvent) => {
-        activePointers.current.delete(e.pointerId);
-        e.currentTarget.releasePointerCapture(e.pointerId);
-
-        if (activePointers.current.size < 2) {
-            setIsPinching(false);
-            prevPinchInfo.current = null;
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (isGesturing && e.touches.length < 2) {
+            setIsGesturing(false);
+            pinchStartDist.current = null;
+            pinchStartCenter.current = null;
             if (scale < 1) setScale(1);
         }
     };
 
-    // Double Click to Zoom
+    // --- Mouse Handlers (PC Pan & Generic Double Click) ---
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (scale > 1) {
+            isDraggingRef.current = true;
+            lastMousePos.current = { x: e.clientX, y: e.clientY };
+            setIsGesturing(true); // Disable spring for smooth drag
+            e.preventDefault(); // Prevent text selection
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDraggingRef.current && lastMousePos.current && scale > 1) {
+            const dx = e.clientX - lastMousePos.current.x;
+            const dy = e.clientY - lastMousePos.current.y;
+
+            setTranslation(prev => ({
+                x: prev.x + dx,
+                y: prev.y + dy
+            }));
+
+            lastMousePos.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        lastMousePos.current = null;
+        setIsGesturing(false);
+    };
+
     const handleDoubleClick = () => {
         if (scale > 1) {
             setScale(1);
             setTranslation({ x: 0, y: 0 });
         } else {
             setScale(2.5);
-            setTranslation({ x: 0, y: 0 }); // Center zoom for simplicity
+            setTranslation({ x: 0, y: 0 });
         }
     };
 
-    // --- Swipe Navigation ---
+    // --- Navigation ---
     const paginate = (newDirection: number) => {
         const newIndex = index + newDirection;
         if (newIndex >= 0 && newIndex < images.length) {
             setDirection(newDirection);
             setIndex(newIndex);
-            setScale(1); // Reset zoom on change
+            setScale(1);
             setTranslation({ x: 0, y: 0 });
         }
     };
@@ -189,7 +216,6 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
             } else if (swipePower > swipeThreshold && index > 0) {
                 paginate(-1);
             }
-            // Reset position
             dismissY.set(0);
             controls.start({ x: 0, y: 0 });
         }
@@ -206,10 +232,9 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     style={{ backgroundColor: `rgba(0, 0, 0, ${0.9})` }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center touch-none"
+                    className="fixed inset-0 z-[9999] flex items-center justify-center touch-none select-none"
                     onClick={onClose}
                 >
-                    {/* Dynamic Opacity Background Layer for Drag Dismiss Effect */}
                     <motion.div
                         className="absolute inset-0 bg-black"
                         style={{ opacity }}
@@ -237,14 +262,17 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                         ref={containerRef}
                         className="relative w-full h-full flex items-center justify-center overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
+                        // Touch Events
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        // Mouse Events
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
                         onDoubleClick={handleDoubleClick}
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerCancel={handlePointerUp}
-                        onPointerLeave={handlePointerUp}
                     >
-                        {/* 1. Zoom & Pan Layer (Controlled via Animate for Elastic Snap) */}
                         <motion.div
                             animate={{
                                 scale: scale,
@@ -252,15 +280,14 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                                 y: translation.y
                             }}
                             transition={
-                                isPinching
-                                    ? { type: "tween", duration: 0 } // Instant response during pinch
-                                    : { type: "spring", stiffness: 300, damping: 30 } // Elastic snap back
+                                isGesturing
+                                    ? { type: "tween", duration: 0 }
+                                    : { type: "spring", stiffness: 300, damping: 30 }
                             }
                             className="absolute w-full h-full flex items-center justify-center"
                         >
-                            {/* 2. Drag/Dismiss Layer (Active only when not zoomed) */}
                             <motion.div
-                                drag={scale > 1.05 ? false : true} // Disable drag when significantly zoomed
+                                drag={scale > 1.05 ? false : true}
                                 dragElastic={0.2}
                                 dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
                                 style={{ y: dismissY }}
@@ -288,7 +315,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                         </motion.div>
                     </motion.div>
 
-                    {/* Navigation Buttons (Desktop/Overlay) */}
+                    {/* Nav Buttons */}
                     {images.length > 1 && (
                         <>
                             <button
@@ -314,7 +341,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                         </>
                     )}
 
-                    {/* Caption Overlay */}
+                    {/* Caption */}
                     {imgTexts && imgTexts[index] && (
                         <div className="absolute bottom-0 left-0 right-0 p-6 pb-12 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-50">
                             <p className="text-white text-base md:text-lg text-center max-w-3xl mx-auto drop-shadow-md font-medium">

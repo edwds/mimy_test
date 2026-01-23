@@ -335,6 +335,10 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const [originalUrl, setOriginalUrl] = useState<string>('');
     const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
+    // Zoom/Pan Refs
+    const pinchStartDist = useRef<number | null>(null);
+    const startScaleRef = useRef<number>(1);
+
 
 
     // Constants
@@ -342,6 +346,18 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const OUTPUT_SIZE = 1080;
     const MIN_SCALE = 1;
     const MAX_SCALE = 5; // Allow more zoom for rotation compensation
+
+    const updateScale = (newScale: number) => {
+        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+        setScale(newScale);
+
+        // Re-clamp position for new scale
+        const { maxX, maxY } = getBoundaries(newScale);
+        setPosition(prev => ({
+            x: Math.max(-maxX, Math.min(maxX, prev.x)),
+            y: Math.max(-maxY, Math.min(maxY, prev.y))
+        }));
+    };
 
     // Load original image & dimensions
     useEffect(() => {
@@ -392,78 +408,57 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
 
 
 
-    // Pointer Handling
-    const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
-    const prevPinchInfo = useRef<{ dist: number, center: { x: number, y: number } } | null>(null);
+    // --- Touch Handlers (Mobile Pinch) ---
+    const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
 
-    const handlePointerDown = (e: React.PointerEvent) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        if (activePointers.current.size === 2) {
-            const points = Array.from(activePointers.current.values());
-            const p1 = points[0];
-            const p2 = points[1];
-            prevPinchInfo.current = {
-                dist: Math.hypot(p1.x - p2.x, p1.y - p2.y),
-                center: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
-            };
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+            startScaleRef.current = scale;
         }
     };
 
-    const handlePointerMove = (e: React.PointerEvent) => {
-        const prev = activePointers.current.get(e.pointerId);
-        if (!prev) return;
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchStartDist.current !== null) {
+            const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+            const ratio = currentDist / pinchStartDist.current;
+            updateScale(startScaleRef.current * ratio);
+        }
+    };
 
-        const current = { x: e.clientX, y: e.clientY };
-        activePointers.current.set(e.pointerId, current);
+    // --- Mouse Handlers (PC Pan) ---
+    const isDraggingRef = useRef(false);
+    const lastMousePos = useRef<{ x: number, y: number } | null>(null);
 
-        const points = Array.from(activePointers.current.values());
+    const handleMouseDown = (e: React.MouseEvent) => {
+        isDraggingRef.current = true;
+        lastMousePos.current = { x: e.clientX, y: e.clientY };
+        e.preventDefault();
+    };
 
-        if (points.length === 2) {
-            // Pinch Zoom & Pan
-            const p1 = points[0];
-            const p2 = points[1];
-            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-            const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDraggingRef.current && lastMousePos.current) {
+            const dx = e.clientX - lastMousePos.current.x;
+            const dy = e.clientY - lastMousePos.current.y;
 
-            if (prevPinchInfo.current) {
-                // Zoom
-                const zoomRatio = dist / prevPinchInfo.current.dist;
-                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * zoomRatio));
-                setScale(newScale);
-
-                // Pan (Move center)
-                const dx = center.x - prevPinchInfo.current.center.x;
-                const dy = center.y - prevPinchInfo.current.center.y;
-
-                const { maxX, maxY } = getBoundaries(newScale);
-                setPosition(prev => ({
-                    x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
-                    y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
-                }));
-            }
-
-            prevPinchInfo.current = { dist, center };
-        } else if (points.length === 1 && activePointers.current.size === 1) {
-            // Single Finger Pan
-            const dx = current.x - prev.x;
-            const dy = current.y - prev.y;
             const { maxX, maxY } = getBoundaries(scale);
 
             setPosition(prev => ({
                 x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
                 y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
             }));
+
+            lastMousePos.current = { x: e.clientX, y: e.clientY };
         }
     };
 
-    const handlePointerUp = (e: React.PointerEvent) => {
-        activePointers.current.delete(e.pointerId);
-        e.currentTarget.releasePointerCapture(e.pointerId);
-        if (activePointers.current.size < 2) {
-            prevPinchInfo.current = null;
-        }
+    const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        lastMousePos.current = null;
     };
 
     // Calculate dimensions for standard "Cover" fit in 300px box
@@ -504,11 +499,12 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             {/* Editor Area */}
             <div
                 className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#111] touch-none"
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                onPointerLeave={handlePointerUp}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
             >
                 {/* Image Layer - Centered by Flex */}
                 {originalUrl && imgDims && (
