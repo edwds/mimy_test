@@ -94,6 +94,7 @@ export interface ContentCardProps {
         id: number;
         text: string;
         images: string[];
+        img_texts?: string[]; // Add caption support
         created_at: string;
         type?: string;
 
@@ -618,6 +619,11 @@ export const ContentCard = ({
                                     }}
                                 >
                                     <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
+                                    {content.img_texts?.[0] && (
+                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
+                                            <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[0]}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -633,6 +639,11 @@ export const ContentCard = ({
                                         }}
                                     >
                                         <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+                                        {content.img_texts?.[idx] && (
+                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
+                                                <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[idx]}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

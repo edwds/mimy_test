@@ -110,6 +110,7 @@ export const content = pgTable('content', {
     type: varchar('type', { length: 20 }).notNull(), // 'review', 'post'
     img: jsonb('img'),
     video: jsonb('video'),
+    img_text: jsonb('img_text'), // Array of strings equivalent to images
     text: text('text'),
     review_prop: jsonb('review_prop'), // { shop_id, visit_date, companions, satisfaction }
     keyword: jsonb('keyword'),

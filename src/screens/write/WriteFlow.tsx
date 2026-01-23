@@ -69,7 +69,7 @@ export const WriteFlow = () => {
         setStep('WRITE_CONTENT');
     };
 
-    const handleContentNext = async (contentData: { text: string; images: string[]; companions?: number[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => {
+    const handleContentNext = async (contentData: { text: string; images: string[]; imgText?: string[]; companions?: number[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => {
         try {
             if (!currentUserId) {
                 alert("Login required");
@@ -90,7 +90,8 @@ export const WriteFlow = () => {
                     satisfaction: basicInfo?.satisfaction
                 } : undefined,
                 keyword: contentData.keywords || [],
-                link_json: contentData.links || []
+                link_json: contentData.links || [],
+                img_text: contentData.imgText || []
             };
 
             await ContentService.create(payload);

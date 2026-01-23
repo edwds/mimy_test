@@ -137,7 +137,7 @@ router.get("/discovery", async (req, res) => {
         const rawSnippets = await db.execute(sql.raw(`
             WITH ranked_reviews AS (
                 SELECT 
-                    c.id, c.text, c.img, c.created_at, c.review_prop,
+                    c.id, c.text, c.img, c.img_text, c.created_at, c.review_prop,
                     u.id as user_id, u.nickname, u.profile_image, u.taste_cluster, u.taste_result,
                     (c.review_prop->>'shop_id')::int as shop_id,
                     ROW_NUMBER() OVER (
@@ -158,7 +158,8 @@ router.get("/discovery", async (req, res) => {
             snippetsMap.set(Number(row.shop_id), {
                 id: row.id,
                 text: row.text,
-                images: row.img, // Drizzle/pg driver usually parses json, but check if string
+                images: row.img,
+                img_texts: row.img_text || [],
                 created_at: row.created_at,
                 review_prop: row.review_prop,
                 user: {
@@ -341,6 +342,7 @@ router.get("/:id/reviews", async (req, res) => {
             user_id: content.user_id,
             text: content.text,
             img: content.img,
+            img_text: content.img_text,
             created_at: content.created_at,
             review_prop: content.review_prop,
             keyword: content.keyword,
@@ -409,6 +411,7 @@ router.get("/:id/reviews", async (req, res) => {
             },
             text: r.text,
             images: r.img,
+            img_texts: r.img_text || [],
             created_at: r.created_at,
             review_prop: r.review_prop,
             poi: {

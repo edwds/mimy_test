@@ -56,7 +56,7 @@ export const processImageToSquare = (file: File, size = 1080): Promise<Blob> => 
  * @param size The target width/height (default 1080px).
  * @returns Promise resolving to a Blob.
  */
-export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: number, scale: number }, size = 1080): Promise<Blob> => {
+export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: number, scale: number, rotation?: number }, size = 1080): Promise<Blob> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = URL.createObjectURL(file);
@@ -75,30 +75,6 @@ export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: nu
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, size, size);
 
-            // User's crop values are relative to the "preview" container size usually.
-            // We need to map them to the actual image size.
-            // However, usually crop UIs work by showing the image in a container and giving offsets.
-            // A simple approach:
-            // The user sees the image at 'scale' within a square box.
-            // 'x' and 'y' are the offsets of the image center relative to the box center, or similar.
-            // Let's assume standard CSS transform values: translate(x, y) scale(scale).
-
-            // To reproduce exactly what the user saw in a 1080x1080 canvas:
-            // 1. Center logic.
-            // 2. Apply scale.
-            // 3. Apply translation.
-
-            // However, the input image likely has different aspect ratio.
-            // The "base" fit was "cover" or "contain".
-            // Let's assume the UI initialized with "contain" or "cover" and the user adjusted from there.
-
-            // Let's standardize: 
-            // The input crop parameters (x, y, scale) are percentages or pixels relative to the *output size*.
-            // e.g. x=0, y=0, scale=1 means centered, covering the square.
-
-            // Strategy:
-            // Draw image into canvas with transforms.
-
             const minDim = Math.min(img.width, img.height);
             // Base scale to cover the square
             const baseScale = size / minDim;
@@ -109,15 +85,27 @@ export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: nu
             const w = img.width * finalScale;
             const h = img.height * finalScale;
 
-            // Center position
+            // Center position (Destination center)
             const centerX = size / 2;
             const centerY = size / 2;
 
-            // Apply offset (x, y are in pixels relative to the 1080px canvas)
-            const drawX = centerX - (w / 2) + crop.x;
-            const drawY = centerY - (h / 2) + crop.y;
+            // Save context state
+            ctx.save();
 
-            ctx.drawImage(img, drawX, drawY, w, h);
+            // 1. Move to the center of where the image should be drawn
+            //    (Canvas Center + Pan Offset is the new center of the image)
+            ctx.translate(centerX + crop.x, centerY + crop.y);
+
+            // 2. Rotate around this center
+            if (crop.rotation) {
+                ctx.rotate((crop.rotation * Math.PI) / 180);
+            }
+
+            // 3. Draw image centered at the origin (0,0 after translate)
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+            // Restore context
+            ctx.restore();
 
             canvas.toBlob((blob) => {
                 if (blob) {

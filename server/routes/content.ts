@@ -35,6 +35,7 @@ router.get("/feed", async (req, res) => {
             created_at: content.created_at,
             review_prop: content.review_prop,
             keyword: content.keyword,
+            img_text: content.img_text,
             user: {
                 id: users.id,
                 nickname: users.nickname,
@@ -361,6 +362,7 @@ router.get("/feed", async (req, res) => {
                 },
                 text: item.text,
                 images: item.img || [],
+                img_texts: item.img_text || [],
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,
@@ -388,7 +390,7 @@ router.get("/feed", async (req, res) => {
 // POST /api/content (Create Review/Post)
 router.post("/", async (req, res) => {
     try {
-        const { user_id, type, text, img, video, review_prop, keyword, link_json } = req.body;
+        const { user_id, type, text, img, video, review_prop, keyword, link_json, img_text } = req.body;
 
         if (!user_id || !type) {
             return res.status(400).json({ error: "user_id and type are required" });
@@ -402,7 +404,8 @@ router.post("/", async (req, res) => {
             video,
             review_prop,
             keyword,
-            link_json
+            link_json,
+            img_text
         }).returning();
 
         res.json(result[0]);
@@ -551,6 +554,7 @@ router.get("/user/:userId", async (req, res) => {
             created_at: content.created_at,
             review_prop: content.review_prop,
             keyword: content.keyword,
+            img_text: content.img_text,
             user: {
                 id: users.id,
                 nickname: users.nickname,
@@ -747,6 +751,7 @@ router.get("/user/:userId", async (req, res) => {
                 },
                 text: item.text,
                 images: item.img || [],
+                img_texts: item.img_text || [],
                 created_at: item.created_at,
                 type: item.type,
                 review_prop: enrichedProp,

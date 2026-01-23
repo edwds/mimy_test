@@ -10,7 +10,7 @@ interface ImageEditModalProps {
     files: File[];
     isOpen: boolean;
     onClose: () => void;
-    onEditingComplete: (files: File[], originalFirstFile?: File) => void;
+    onEditingComplete: (files: File[], originalFirstFile?: File, imgTexts?: string[]) => void;
 }
 
 interface ProcessingItem {
@@ -19,6 +19,7 @@ interface ProcessingItem {
     previewUrl: string;
     blob: Blob | null;
     status: 'pending' | 'processing' | 'ready' | 'uploading' | 'done' | 'error';
+    imgText?: string;
 }
 
 export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: ImageEditModalProps) => {
@@ -103,8 +104,10 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
 
         // Pass the original file of the first item to preserve EXIF data
         const originalFirstFile = items.length > 0 ? items[0].file : undefined;
+        // Extract texts
+        const imgTexts = items.map(i => i.imgText || "");
 
-        onEditingComplete(finalFiles, originalFirstFile);
+        onEditingComplete(finalFiles, originalFirstFile, imgTexts);
         onClose();
     };
 
@@ -138,7 +141,6 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
             {/* Main View */}
             {!editingItem && (
                 <>
-
                     <div
                         className="flex items-center justify-between px-4 pb-4 bg-black/50 text-white z-10"
                         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
@@ -163,9 +165,9 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                 <p>사진 불러오는 중...</p>
                             </div>
                         ) : (
-                            <div className="w-full flex flex-col items-center h-full justify-center">
-                                <div className="text-white/50 text-sm text-center">
-                                    사진을 선택해서 편집하거나 순서를 변경하세요
+                            <div className="w-full flex flex-col items-center h-full justify-center pb-20">
+                                <div className="text-white/50 text-base text-center">
+                                    사진을 크롭하거나 순서를 변경할 수 있어요
                                 </div>
 
                                 <Reorder.Group
@@ -190,6 +192,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                             onDelete={() => handleDeleteItem(item.id)}
                                             onMoveLeft={() => moveItem(index, -1)}
                                             onMoveRight={() => moveItem(index, 1)}
+                                            onTextChange={(val) => setItems(prev => prev.map(i => i.id === item.id ? { ...i, imgText: val } : i))}
                                             isFirst={index === 0}
                                             isLast={index === items.length - 1}
                                         />
@@ -197,8 +200,6 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                 </Reorder.Group>
                             </div>
                         )}
-
-
                     </div>
                 </>
             )}
@@ -228,6 +229,7 @@ const DraggableItem = ({
     onDelete,
     onMoveLeft,
     onMoveRight,
+    onTextChange,
     isFirst,
     isLast
 }: {
@@ -240,6 +242,7 @@ const DraggableItem = ({
     onDelete: () => void,
     onMoveLeft: () => void,
     onMoveRight: () => void,
+    onTextChange: (val: string) => void,
     isFirst: boolean,
     isLast: boolean
 }) => {
@@ -250,62 +253,74 @@ const DraggableItem = ({
             value={item}
             dragListener={false} // Disable auto drag to allow scroll
             dragControls={controls}
-            className={`relative flex-shrink-0 w-[240px] h-[240px] rounded-xl overflow-hidden shadow-2xl border ${isSelected ? 'border-primary ring-2 ring-primary z-10' : 'border-white/10'}`}
+            className={`relative flex-shrink-0 flex flex-col items-center gap-2`}
             onClick={onSelect}
             style={{ touchAction: 'pan-x' }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
         >
-            <div ref={domRef} className="w-full h-full relative">
-                <img src={item.previewUrl} alt="preview" className="w-full h-full object-cover pointer-events-none select-none opacity-80" />
+            <div className={`relative w-[240px] h-[240px] rounded-xl overflow-hidden shadow-2xl border ${isSelected ? 'border-primary ring-2 ring-primary z-10' : 'border-white/10'}`}>
+                <div ref={domRef} className="w-full h-full relative">
+                    <img src={item.previewUrl} alt="preview" className="w-full h-full object-cover pointer-events-none select-none opacity-80" />
 
-                {/* Index Badge */}
-                <div className="absolute top-2 left-2 bg-black/50 rounded-full w-6 h-6 flex items-center justify-center text-xs text-white">
-                    {index + 1}
-                </div>
+                    {/* Index Badge */}
+                    <div className="absolute top-2 left-2 bg-black/50 rounded-full w-6 h-6 flex items-center justify-center text-xs text-white">
+                        {index + 1}
+                    </div>
 
-                {/* Delete Button (Top Right) */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-sm transition-colors"
-                >
-                    <X size={16} />
-                </button>
+                    {/* Delete Button (Top Right) */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-sm transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
 
-                {/* Center Edit Button & Overlay (Visible when selected) */}
-                {isSelected && (
-                    <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center gap-4 pointer-events-none">
-                        {/* Edit Button - Enable pointer events */}
+                    {/* Center Edit Button & Overlay (Visible when selected) */}
+                    {isSelected && (
+                        <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center gap-4 pointer-events-none">
+                            {/* Edit Button - Enable pointer events */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                                className="pointer-events-auto bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 border border-white/20 transition-all active:scale-95"
+                            >
+                                <Crop size={16} />
+                                편집
+                            </button>
+
+                        </div>
+                    )}
+
+                    {/* Reorder Buttons (Bottom) */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 flex justify-between items-end bg-gradient-to-t from-black/80 to-transparent pt-8">
                         <button
-                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                            className="pointer-events-auto bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 border border-white/20 transition-all active:scale-95"
+                            onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
+                            disabled={isFirst}
+                            className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
                         >
-                            <Crop size={16} />
-                            편집
+                            <ChevronLeft size={20} />
                         </button>
 
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
+                            disabled={isLast}
+                            className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        >
+                            <ChevronRight size={20} />
+                        </button>
                     </div>
-                )}
-
-                {/* Reorder Buttons (Bottom) - Always visible or only selected? User said "image bottom < > buttons". Let's make them always visible or partially visible */}
-                <div className="absolute bottom-0 left-0 right-0 p-2 flex justify-between items-end bg-gradient-to-t from-black/80 to-transparent pt-8">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
-                        disabled={isFirst}
-                        className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
-                        disabled={isLast}
-                        className={`p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors ${isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
-                    >
-                        <ChevronRight size={20} />
-                    </button>
                 </div>
-
             </div>
+
+            {/* Attached Caption Input */}
+            <input
+                type="text"
+                maxLength={20}
+                placeholder="메뉴 이름을 적어주세요"
+                value={item.imgText || ''}
+                onChange={(e) => onTextChange(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full bg-transparent py-2 text-center text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
+            />
         </Reorder.Item>
     );
 };
@@ -314,6 +329,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem, onCancel: () => void, onSave: (id: string, blob: Blob) => void, onDelete: () => void }) => {
     const [scale, setScale] = useState(1);
+    const [rotation, setRotation] = useState(0);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
     const [originalUrl, setOriginalUrl] = useState<string>('');
@@ -327,7 +343,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const CROP_SIZE = 300;
     const OUTPUT_SIZE = 1080;
     const MIN_SCALE = 1;
-    const MAX_SCALE = 3;
+    const MAX_SCALE = 5; // Allow more zoom for rotation compensation
 
     // Load original image & dimensions
     useEffect(() => {
@@ -351,7 +367,8 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             const scaledPos = {
                 x: position.x * ratio,
                 y: position.y * ratio,
-                scale: scale
+                scale: scale,
+                rotation: rotation
             };
 
             const newBlob = await processImageWithCrop(item.file, scaledPos, OUTPUT_SIZE);
@@ -433,8 +450,8 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
         return {
             width: imgDims.w * currentScale,
             height: imgDims.h * currentScale,
-            transform: `translate(${position.x}px, ${position.y}px)`, // Centered by flex, then offset
-            transition: 'width 0.1s, height 0.1s' // Smooth zoom
+            transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
+            transition: 'width 0.1s, height 0.1s, transform 0.1s'
         };
     };
 
@@ -494,16 +511,16 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             {/* Controls */}
             <div className="p-8 pb-12 bg-black/90 z-10">
                 <div className="flex items-center gap-4">
-                    <span className="text-xs text-white/50">축소</span>
+                    <span className="text-xs text-white/50 w-8 text-right">-45°</span>
                     <Slider
-                        value={[scale]}
-                        min={MIN_SCALE}
-                        max={MAX_SCALE}
-                        step={0.01}
-                        onValueChange={(vals) => updateScale(vals[0])}
+                        value={[rotation]}
+                        min={-45}
+                        max={45}
+                        step={1}
+                        onValueChange={(vals) => setRotation(vals[0])}
                         className="flex-1"
                     />
-                    <span className="text-xs text-white/50">확대</span>
+                    <span className="text-xs text-white/50 w-8">45°</span>
                 </div>
                 <div className="flex justify-between items-center mt-4 px-4">
                     <button
@@ -513,7 +530,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
                         <X size={20} /> 취소
                     </button>
                     <button
-                        onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }}
+                        onClick={() => { setScale(1); setRotation(0); setPosition({ x: 0, y: 0 }); }}
                         className="text-white/50 flex flex-col items-center gap-1 text-[10px] hover:text-white transition-colors"
                     >
                         <RotateCcw size={20} /> 초기화

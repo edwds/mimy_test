@@ -12,7 +12,7 @@ import { UserSelectModal } from './UserSelectModal';
 import exifr from 'exifr';
 
 interface Props {
-    onNext: (content: { text: string; images: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
+    onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
     onBack: () => void;
     mode: 'review' | 'post';
     shop?: any;
@@ -25,6 +25,7 @@ interface MediaItem {
     url?: string;
     status: 'uploading' | 'complete' | 'error';
     progress: number;
+    caption?: string;
 }
 
 const UploadingThumbnail = ({ file, error }: { file?: File, progress: number, error?: boolean }) => {
@@ -87,7 +88,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         e.target.value = '';
     };
 
-    const handleEditingComplete = (files: File[], originalFirstFile?: File) => {
+    const handleEditingComplete = (files: File[], originalFirstFile?: File, imgTexts?: string[]) => {
         setIsEditModalOpen(false);
         setPendingFiles([]);
 
@@ -115,16 +116,17 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             });
         }
 
-        uploadFiles(files);
+        uploadFiles(files, imgTexts);
     };
 
-    const uploadFiles = async (files: File[]) => {
+    const uploadFiles = async (files: File[], captions?: string[]) => {
         // Create placeholders in order
-        const newItems: MediaItem[] = files.map(file => ({
+        const newItems: MediaItem[] = files.map((file, index) => ({
             id: Math.random().toString(36).substr(2, 9),
             file,
             status: 'uploading',
-            progress: 0
+            progress: 0,
+            caption: captions ? captions[index] : undefined
         }));
 
         setMediaItems(prev => [...prev, ...newItems]);
@@ -178,9 +180,9 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
     const handleSubmit = () => {
         // Extract only completed URLs, in order
-        const validImages = mediaItems
-            .filter(m => m.status === 'complete' && m.url)
-            .map(m => m.url!);
+        // Extract only completed URLs, in order
+        const validMedia = mediaItems.filter(m => m.status === 'complete' && m.url);
+        const validImages = validMedia.map(m => m.url!);
 
         // Handle pending link if user didn't click 'Add'
         let finalLinks = [...links];
@@ -198,6 +200,9 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         onNext({
             text,
             images: validImages,
+            imgText: validMedia.map(m => m.caption || ""), // Pass empty string if no caption to maintain index alignment? Or just pass potentially smaller array? 
+            // Better to align with images:
+            // The constraint is parallel arrays.
             companions: selectedUsers.map(u => u.id),
             keywords,
             visitDate,
