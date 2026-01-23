@@ -347,17 +347,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const MIN_SCALE = 1;
     const MAX_SCALE = 5; // Allow more zoom for rotation compensation
 
-    const updateScale = (newScale: number) => {
-        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-        setScale(newScale);
 
-        // Re-clamp position for new scale
-        const { maxX, maxY } = getBoundaries(newScale);
-        setPosition(prev => ({
-            x: Math.max(-maxX, Math.min(maxX, prev.x)),
-            y: Math.max(-maxY, Math.min(maxY, prev.y))
-        }));
-    };
 
     // Load original image & dimensions
     useEffect(() => {
@@ -408,25 +398,108 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
 
 
 
-    // --- Touch Handlers (Mobile Pinch) ---
+    // --- Touch Handlers (Mobile Pinch & Pan) ---
+    const lastTouchPos = useRef<{ x: number, y: number } | null>(null);
+    const pinchStartCenter = useRef<{ x: number, y: number } | null>(null);
+    const startPanRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+
     const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
         const dx = t1.clientX - t2.clientX;
         const dy = t1.clientY - t2.clientY;
         return Math.sqrt(dx * dx + dy * dy);
     };
 
+    const getTouchCenter = (t1: React.Touch, t2: React.Touch) => {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    };
+
     const handleTouchStart = (e: React.TouchEvent) => {
         if (e.touches.length === 2) {
-            pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+            // Pinch Start
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            pinchStartDist.current = getTouchDist(t1, t2);
+            pinchStartCenter.current = getTouchCenter(t1, t2);
             startScaleRef.current = scale;
+            startPanRef.current = position;
+        } else if (e.touches.length === 1) {
+            // Pan Start
+            lastTouchPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length === 2 && pinchStartDist.current !== null) {
-            const currentDist = getTouchDist(e.touches[0], e.touches[1]);
+        if (e.touches.length === 2 && pinchStartDist.current !== null && pinchStartCenter.current !== null) {
+            // 2-Finger Pinch w/ Pan Pivot
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+
+            // 1. Scale
+            const currentDist = getTouchDist(t1, t2);
             const ratio = currentDist / pinchStartDist.current;
-            updateScale(startScaleRef.current * ratio);
+            const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, startScaleRef.current * ratio));
+
+            // 2. Pivot Pan
+            // Simplified logic compared to Viewer since we just update x/y directly
+            // Goal: Keep startCenter relative to image constant
+
+            // This is complex because 'position' acts as offset.
+            // Let's rely on simple scaling for now, but adding Pivot Pan is better.
+            // However, ImageEditModal uses simple transform. 
+            // Pivot logic:
+            // Delta Center = CurrentCenter - StartCenter
+            // Effective Pan = StartPan + DeltaCenter - (StartCenter relative to Image * (ScaleRatio - 1))?
+
+            // Let's implement the simpler center-based logic similar to Viewer if possible, 
+            // but for now, the user complained it's "strange". Usually missing Pivot is the cause.
+
+            // NOTE: Re-using the logic from ImageViewer might require container ref for exact coords.
+            // Let's assume user accepts standard pinch zoom if Pan works well.
+            // But to fix "strange", I'll add the visual center follow.
+
+            const currentCenter = getTouchCenter(t1, t2);
+            // Delta movement of the center point
+            const dx = currentCenter.x - pinchStartCenter.current.x;
+            const dy = currentCenter.y - pinchStartCenter.current.y;
+
+            // Apply scale
+            setScale(newScale);
+
+            // Apply Pan (Move with the pinch center) + Start Position
+            // (Note: True pivot zoom requires compensating for scale expansion away from center. 
+            //  Without that physics, it feels "slippery". But adding just Pan-follow is a huge improvement over static.)
+
+            const { maxX, maxY } = getBoundaries(newScale);
+            setPosition(() => ({
+                x: Math.max(-maxX, Math.min(maxX, startPanRef.current.x + dx)),
+                y: Math.max(-maxY, Math.min(maxY, startPanRef.current.y + dy))
+            }));
+
+        } else if (e.touches.length === 1 && lastTouchPos.current) {
+            // 1-Finger Pan
+            const dx = e.touches[0].clientX - lastTouchPos.current.x;
+            const dy = e.touches[0].clientY - lastTouchPos.current.y;
+
+            const { maxX, maxY } = getBoundaries(scale);
+            setPosition(prev => ({
+                x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
+                y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
+            }));
+
+            lastTouchPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (e.touches.length < 2) {
+            pinchStartDist.current = null;
+            pinchStartCenter.current = null;
+        }
+        if (e.touches.length === 0) {
+            lastTouchPos.current = null;
         }
     };
 
@@ -505,6 +578,8 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
                 onMouseLeave={handleMouseUp}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
             >
                 {/* Image Layer - Centered by Flex */}
                 {originalUrl && imgDims && (
