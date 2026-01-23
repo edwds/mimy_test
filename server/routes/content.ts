@@ -831,4 +831,77 @@ router.delete("/:id/like", async (req, res) => {
     }
 });
 
+// GET /api/content/:id/comments
+router.get("/:id/comments", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        if (!contentId) return res.status(400).json({ error: "Invalid content ID" });
+
+        const commentsList = await db.select({
+            id: comments.id,
+            content_id: comments.content_id,
+            text: comments.text,
+            created_at: comments.created_at,
+            parent_id: comments.parent_id,
+            user: {
+                id: users.id,
+                nickname: users.nickname,
+                profile_image: users.profile_image
+            }
+        })
+            .from(comments)
+            .leftJoin(users, eq(comments.user_id, users.id))
+            .where(and(
+                eq(comments.content_id, contentId),
+                eq(comments.is_deleted, false)
+            ))
+            .orderBy(desc(comments.created_at));
+
+        res.json(commentsList);
+    } catch (error) {
+        console.error("Fetch comments error:", error);
+        res.status(500).json({ error: "Failed to fetch comments" });
+    }
+});
+
+// POST /api/content/:id/comments
+router.post("/:id/comments", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id, text, parent_id, mention_user_id } = req.body;
+
+        if (!contentId || !user_id || !text) {
+            return res.status(400).json({ error: "Missing parameters" });
+        }
+
+        const result = await db.insert(comments).values({
+            content_id: contentId,
+            user_id,
+            text,
+            parent_id: parent_id || null,
+            mention_user_id: mention_user_id || null
+        }).returning();
+
+        // Fetch user info for immediate display
+        const user = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            profile_image: users.profile_image
+        })
+            .from(users)
+            .where(eq(users.id, user_id))
+            .limit(1);
+
+        const newComment = {
+            ...result[0],
+            user: user[0] || { nickname: 'Unknown', profile_image: null }
+        };
+
+        res.json(newComment);
+    } catch (error) {
+        console.error("Create comment error:", error);
+        res.status(500).json({ error: "Failed to create comment" });
+    }
+});
+
 export default router;
