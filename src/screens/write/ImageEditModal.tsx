@@ -319,7 +319,7 @@ const DraggableItem = ({
                 value={item.imgText || ''}
                 onChange={(e) => onTextChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent py-2 text-center text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-transparent py-2 text-center text-text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
             />
         </Reorder.Item>
     );
@@ -335,9 +335,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const [originalUrl, setOriginalUrl] = useState<string>('');
     const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
-    // Pinch Zoom Refs
-    const pinchStartDist = useRef<number | null>(null);
-    const startScaleRef = useRef<number>(1);
+
 
     // Constants
     const CROP_SIZE = 300;
@@ -392,48 +390,80 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
         };
     };
 
-    const updateScale = (newScale: number) => {
-        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-        setScale(newScale);
 
-        // Re-clamp position for new scale
-        const { maxX, maxY } = getBoundaries(newScale);
-        setPosition(prev => ({
-            x: Math.max(-maxX, Math.min(maxX, prev.x)),
-            y: Math.max(-maxY, Math.min(maxY, prev.y))
-        }));
-    };
 
-    // Touch Handling for Pinch
-    const getTouchDist = (t1: React.Touch, t2: React.Touch) => {
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-    };
+    // Pointer Handling
+    const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
+    const prevPinchInfo = useRef<{ dist: number, center: { x: number, y: number } } | null>(null);
 
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (e.touches.length === 2) {
-            pinchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
-            startScaleRef.current = scale;
+    const handlePointerDown = (e: React.PointerEvent) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (activePointers.current.size === 2) {
+            const points = Array.from(activePointers.current.values());
+            const p1 = points[0];
+            const p2 = points[1];
+            prevPinchInfo.current = {
+                dist: Math.hypot(p1.x - p2.x, p1.y - p2.y),
+                center: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
+            };
         }
     };
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (e.touches.length === 2 && pinchStartDist.current !== null) {
-            const currentDist = getTouchDist(e.touches[0], e.touches[1]);
-            const ratio = currentDist / pinchStartDist.current;
-            updateScale(startScaleRef.current * ratio);
+    const handlePointerMove = (e: React.PointerEvent) => {
+        const prev = activePointers.current.get(e.pointerId);
+        if (!prev) return;
+
+        const current = { x: e.clientX, y: e.clientY };
+        activePointers.current.set(e.pointerId, current);
+
+        const points = Array.from(activePointers.current.values());
+
+        if (points.length === 2) {
+            // Pinch Zoom & Pan
+            const p1 = points[0];
+            const p2 = points[1];
+            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+            const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+
+            if (prevPinchInfo.current) {
+                // Zoom
+                const zoomRatio = dist / prevPinchInfo.current.dist;
+                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * zoomRatio));
+                setScale(newScale);
+
+                // Pan (Move center)
+                const dx = center.x - prevPinchInfo.current.center.x;
+                const dy = center.y - prevPinchInfo.current.center.y;
+
+                const { maxX, maxY } = getBoundaries(newScale);
+                setPosition(prev => ({
+                    x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
+                    y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
+                }));
+            }
+
+            prevPinchInfo.current = { dist, center };
+        } else if (points.length === 1 && activePointers.current.size === 1) {
+            // Single Finger Pan
+            const dx = current.x - prev.x;
+            const dy = current.y - prev.y;
+            const { maxX, maxY } = getBoundaries(scale);
+
+            setPosition(prev => ({
+                x: Math.max(-maxX, Math.min(maxX, prev.x + dx)),
+                y: Math.max(-maxY, Math.min(maxY, prev.y + dy))
+            }));
         }
     };
 
-    const handlePan = (e: React.PointerEvent) => {
-        if (e.buttons !== 1) return;
-        const { maxX, maxY } = getBoundaries(scale);
-
-        setPosition(prev => ({
-            x: Math.max(-maxX, Math.min(maxX, prev.x + e.movementX)),
-            y: Math.max(-maxY, Math.min(maxY, prev.y + e.movementY))
-        }));
+    const handlePointerUp = (e: React.PointerEvent) => {
+        activePointers.current.delete(e.pointerId);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+        if (activePointers.current.size < 2) {
+            prevPinchInfo.current = null;
+        }
     };
 
     // Calculate dimensions for standard "Cover" fit in 300px box
@@ -474,9 +504,11 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             {/* Editor Area */}
             <div
                 className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#111] touch-none"
-                onPointerMove={handlePan}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onPointerLeave={handlePointerUp}
             >
                 {/* Image Layer - Centered by Flex */}
                 {originalUrl && imgDims && (
@@ -512,14 +544,21 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             <div className="p-8 pb-12 bg-black/90 z-10">
                 <div className="flex items-center gap-4">
                     <span className="text-xs text-white/50 w-8 text-right">-45°</span>
-                    <Slider
-                        value={[rotation]}
-                        min={-45}
-                        max={45}
-                        step={1}
-                        onValueChange={(vals) => setRotation(vals[0])}
-                        className="flex-1"
-                    />
+                    <div className="relative flex-1 py-4">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/50 z-0" />
+                        <Slider
+                            value={[rotation]}
+                            min={-45}
+                            max={45}
+                            step={1}
+                            onValueChange={(vals) => {
+                                let val = vals[0];
+                                if (Math.abs(val) < 3) val = 0;
+                                setRotation(val);
+                            }}
+                            className="relative z-10"
+                        />
+                    </div>
                     <span className="text-xs text-white/50 w-8">45°</span>
                 </div>
                 <div className="flex justify-between items-center mt-4 px-4">
