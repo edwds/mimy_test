@@ -37,5 +37,20 @@ export const ShopService = {
         });
         if (!response.ok) throw new Error('Failed to import shop');
         return response.json();
+    },
+    toggleSave: async (shopId: number) => {
+        const userId = localStorage.getItem("mimy_user_id");
+        if (!userId) throw new Error("User not logged in");
+
+        const response = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': userId
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to toggle save');
+        return response.json();
     }
 };

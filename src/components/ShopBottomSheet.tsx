@@ -106,7 +106,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             dragControls={dragControls}
             dragListener={false} // Only allow drag from specific areas
             dragMomentum={false} // Prevent overshooting
-            dragConstraints={{ top: 110 }} // Match full variant roughly
+            dragConstraints={{ top: 0 }} // Allow full range, snap back prevents getting stuck
             dragElastic={0.05} // Stiffer resistance
             onDragEnd={handleDragEnd}
             className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform rounded-t-3xl`}
@@ -123,7 +123,10 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 </div>
 
                 {/* Header */}
-                <div className="flex justify-between items-center mb-0 px-5 pb-4">
+                <div
+                    className="flex justify-between items-center mb-0 px-5 pb-4"
+                    onPointerDown={(e) => dragControls.start(e)}
+                >
                     <h2 className="text-lg font-bold">
                         {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
                     </h2>
@@ -143,6 +146,8 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 }}
                 data-scroll-container={snapState === 'full' ? "true" : undefined}
                 onPointerDown={(e) => {
+                    // Allow dragging content only if not full (e.g. peek/half state)
+                    // Or if we are at the very top and pulling down? (Hard to detect reliably without blocking scroll)
                     if (snapState !== 'full') {
                         dragControls.start(e);
                     }
