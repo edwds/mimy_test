@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -70,7 +70,10 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
             {canExpand && (
                 <button
                     type="button"
-                    onClick={() => setExpanded(v => !v)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setExpanded(v => !v);
+                    }}
                     className="mt-2 text-[13px] font-semibold text-gray-600 hover:text-gray-900"
                 >
                     {expanded ? '접기' : '더보기'}
@@ -192,16 +195,65 @@ export const ContentCard = ({
         setIsFollowing(!!user.is_following);
     }, [content.stats, content.poi?.is_bookmarked, user.is_following]);
 
-    const handleLike = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!currentUser) return; // or show login
+
+
+    // Double Tap Like Logic
+    const lastTapRef = useRef<number>(0);
+    const [showHeart, setShowHeart] = useState(false);
+    const [heartIndex, setHeartIndex] = useState<number | null>(null);
+    const [heartPos, setHeartPos] = useState<{ x: number, y: number } | null>(null);
+    const [heartTarget, setHeartTarget] = useState<'image' | 'text'>('image');
+    const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const onSmartTap = (e: React.MouseEvent, idx: number, type: 'image' | 'text' = 'image') => {
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+
+        if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+            // Double Tap Detected
+            if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+                blurTimeoutRef.current = null;
+            }
+
+            // Calculate Position
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            setHeartPos({ x, y });
+            setHeartTarget(type);
+            const targetIdx = idx;
+
+            setHeartIndex(targetIdx);
+            setShowHeart(true);
+            setTimeout(() => setShowHeart(false), 1000);
+
+            if (!isLiked) {
+                handleToggleLike();
+            }
+        } else {
+            // Single Tap Candidate
+            if (type === 'image') {
+                blurTimeoutRef.current = setTimeout(() => {
+                    setViewerIndex(idx);
+                    setShowViewer(true);
+                    blurTimeoutRef.current = null;
+                }, DOUBLE_TAP_DELAY);
+            }
+        }
+        lastTapRef.current = now;
+    };
+
+    const handleToggleLike = async () => {
+        if (!currentUser) return;
 
         // Optimistic Update
         const prevLiked = isLiked;
         const prevCount = likeCount;
 
         setIsLiked(!prevLiked);
-        setLikeCount(prev => prevLiked ? prev - 1 : prev + 1);
+        setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
         try {
             const method = prevLiked ? 'DELETE' : 'POST';
@@ -210,12 +262,18 @@ export const ContentCard = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: currentUser.id })
             });
-        } catch (error) {
-            // Revert
+        } catch (e) {
+            // Rollback
             setIsLiked(prevLiked);
             setLikeCount(prevCount);
-            console.error("Like failed", error);
+            console.error("Like failed", e);
         }
+    };
+
+    // Wire up existing handleLike to use new logic
+    const handleLike = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        handleToggleLike();
     };
 
     const handleFollow = async (e: React.MouseEvent) => {
@@ -554,7 +612,28 @@ export const ContentCard = ({
 
 
             {/* Text Body */}
-            {content.text && <ContentBody text={content.text} maxLines={10} />}
+            {content.text && (
+                <div
+                    onClick={(e) => { e.stopPropagation(); onSmartTap(e, 0, 'text'); }}
+                    className="relative"
+                >
+                    <ContentBody text={content.text} maxLines={10} />
+                    <AnimatePresence>
+                        {showHeart && heartTarget === 'text' && heartPos && (
+                            <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1.2, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
+                                className="absolute z-20 pointer-events-none"
+                            >
+                                <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-xl opacity-80" strokeWidth={1} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
 
 
 
@@ -614,11 +693,26 @@ export const ContentCard = ({
                                     className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative cursor-pointer active:opacity-95 transition-opacity"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setViewerIndex(0);
-                                        setShowViewer(true);
+                                        onSmartTap(e, 0, 'image');
                                     }}
                                 >
                                     <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
+
+                                    {/* Double Tap Heart Overlay */}
+                                    <AnimatePresence>
+                                        {showHeart && heartTarget === 'image' && heartIndex === 0 && heartPos && (
+                                            <motion.div
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1.2, opacity: 1 }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                                style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
+                                                className="absolute z-20 pointer-events-none"
+                                            >
+                                                <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                     {content.img_texts?.[0] && (
                                         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/50 to-transparent pt-8">
                                             <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[0]}</span>
@@ -634,11 +728,26 @@ export const ContentCard = ({
                                         className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative cursor-pointer active:opacity-95 transition-opacity"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setViewerIndex(idx);
-                                            setShowViewer(true);
+                                            onSmartTap(e, idx, 'image');
                                         }}
                                     >
                                         <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+
+                                        {/* Double Tap Heart Overlay */}
+                                        <AnimatePresence>
+                                            {showHeart && heartTarget === 'image' && heartIndex === idx && heartPos && (
+                                                <motion.div
+                                                    initial={{ scale: 0, opacity: 0 }}
+                                                    animate={{ scale: 1.2, opacity: 1 }}
+                                                    exit={{ scale: 0, opacity: 0 }}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                                    style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
+                                                    className="absolute z-20 pointer-events-none"
+                                                >
+                                                    <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                         {content.img_texts?.[idx] && (
                                             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
                                                 <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[idx]}</span>
