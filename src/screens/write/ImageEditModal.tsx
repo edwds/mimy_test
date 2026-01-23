@@ -332,6 +332,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const [rotation, setRotation] = useState(0);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isGesturing, setIsGesturing] = useState(false);
     const [originalUrl, setOriginalUrl] = useState<string>('');
     const [imgDims, setImgDims] = useState<{ w: number, h: number } | null>(null);
 
@@ -417,6 +418,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     };
 
     const handleTouchStart = (e: React.TouchEvent) => {
+        setIsGesturing(true);
         if (e.touches.length === 2) {
             // Pinch Start
             const t1 = e.touches[0];
@@ -500,6 +502,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
         }
         if (e.touches.length === 0) {
             lastTouchPos.current = null;
+            setIsGesturing(false);
         }
     };
 
@@ -510,6 +513,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const handleMouseDown = (e: React.MouseEvent) => {
         isDraggingRef.current = true;
         lastMousePos.current = { x: e.clientX, y: e.clientY };
+        setIsGesturing(true);
         e.preventDefault();
     };
 
@@ -532,6 +536,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
     const handleMouseUp = () => {
         isDraggingRef.current = false;
         lastMousePos.current = null;
+        setIsGesturing(false);
     };
 
     // Calculate dimensions for standard "Cover" fit in 300px box
@@ -549,7 +554,7 @@ const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem
             width: imgDims.w * currentScale,
             height: imgDims.h * currentScale,
             transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
-            transition: 'width 0.1s, height 0.1s, transform 0.1s'
+            transition: isGesturing ? 'none' : 'width 0.1s, height 0.1s, transform 0.1s'
         };
     };
 
