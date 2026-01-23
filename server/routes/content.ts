@@ -42,7 +42,12 @@ router.get("/feed", async (req, res) => {
                 account_id: users.account_id,
                 profile_image: users.profile_image,
                 cluster_name: clusters.name,
-                taste_result: users.taste_result
+                taste_result: users.taste_result,
+                ranking_count: sql<number>`(
+                    SELECT COUNT(*) 
+                    FROM ${users_ranking} 
+                    WHERE ${users_ranking.user_id} = ${users.id}
+                )`
             },
             link_json: content.link_json,
         })

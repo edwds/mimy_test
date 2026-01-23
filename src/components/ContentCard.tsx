@@ -10,6 +10,16 @@ import { CommentSheet } from './CommentSheet';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
+const getRankingTier = (rank: number, total: number | undefined) => {
+    if (!total || total < 50) return null;
+    const percentage = (rank / total) * 100;
+    const tiers = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+    for (const tier of tiers) {
+        if (percentage <= tier) return `Top ${tier}%`;
+    }
+    return null; // Or 'Top 100%' if preferred, but spec implied stopping at 90
+};
+
 type ContentBodyProps = {
     text: string;
     maxLines?: number;
@@ -55,11 +65,11 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
     }, [lineHeightPx, maxLines]);
 
     return (
-        <div className={cn('px-5 mb-3', className)}>
+        <div className={cn('px-5 mb-4', className)}>
             <div
                 ref={ref}
                 className={cn(
-                    'text-lg leading-relaxed text-gray-800 whitespace-pre-wrap break-words',
+                    'text-base text-gray-800 whitespace-pre-wrap break-words',
                     !expanded && canExpand && 'overflow-hidden'
                 )}
                 style={!expanded && canExpand ? { maxHeight } : undefined}
@@ -91,6 +101,7 @@ export interface ContentCardProps {
         profile_image: string | null;
         cluster_name?: string;
         taste_result?: { scores: Record<string, number> };
+        ranking_count?: number;
         is_following?: boolean;
     };
     content: {
@@ -402,9 +413,9 @@ export const ContentCard = ({
     return (
         <div className="bg-white">
             {/* Header */}
-            <div className="flex items-center px-5 py-4 gap-3">
+            <div className="flex px-5 py-4 gap-3 items-start">
                 <div
-                    className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0 cursor-pointer active:opacity-80"
+                    className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0 cursor-pointer active:opacity-80 mt-0.5"
                     onClick={handleUserClick}
                 >
                     {user.profile_image ? (
@@ -414,30 +425,124 @@ export const ContentCard = ({
                     )}
                 </div>
 
-                <div className="flex flex-col min-w-0 cursor-pointer active:opacity-80" onClick={handleUserClick}>
-                    <span className="font-bold text-base text-gray-900 leading-tight truncate">
-                        {user.nickname}
-                    </span>
-                    {user.cluster_name && (
-                        (() => {
-                            const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
-                                ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
-                                : null;
+                <div className="flex flex-col min-w-0 flex-1 cursor-pointer active:opacity-80 text-left" onClick={handleUserClick}>
+                    {/* Row 1: Nickname & Cluster */}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-base text-gray-900 leading-tight truncate shrink-0">
+                            {user.nickname}
+                        </span>
+                        {user.cluster_name && (
+                            (() => {
+                                const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
+                                    ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
+                                    : null;
 
-                            return (
-                                <span className={cn(
-                                    "text-xs font-medium transition-colors mt-0.5",
-                                    getTasteBadgeStyle(matchScore)
-                                )}>
-                                    {user.cluster_name}
-                                </span>
-                            );
-                        })()
+                                return (
+                                    <span className={cn(
+                                        "text-[11px] font-medium px-1.5 py-0.5 rounded-md shrink-0",
+                                        getTasteBadgeStyle(matchScore)
+                                    )}>
+                                        {user.cluster_name}
+                                    </span>
+                                );
+                            })()
+                        )}
+                    </div>
+
+                    {/* Row 2: Visit Info (Max 2 lines) */}
+                    {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
+                        <div className="text-[13px] text-gray-500 font-normal leading-snug mt-1 line-clamp-2">
+                            {i18n.language === 'ko' ? (
+                                <>
+                                    {/* Korean: [Companions]와/과 함께 [Shop]을/를 [Date] [N번째] 방문 */}
+                                    {companionUsers && companionUsers.length > 0 && (
+                                        <span>
+                                            {(() => {
+                                                const MAX = 3;
+                                                const overflow = companionUsers.length - MAX;
+                                                if (overflow > 0) {
+                                                    const display = companionUsers.slice(0, MAX);
+                                                    const others = t('write.content.and_others', { count: overflow });
+                                                    return (
+                                                        <>
+                                                            {display.map((u, i) => (
+                                                                <span key={i}>{u.nickname}, </span>
+                                                            ))}
+                                                            {appendJosa(others, '와/과')}
+                                                            {' '}{t('content.visit_info.with')}
+                                                        </>
+                                                    );
+                                                }
+                                                return (
+                                                    <>
+                                                        {companionUsers.map((u, i) => (
+                                                            <span key={i}>
+                                                                {i < companionUsers.length - 1
+                                                                    ? `${u.nickname}, `
+                                                                    : appendJosa(u.nickname, '와/과')}
+                                                            </span>
+                                                        ))}
+                                                        {' '}{t('content.visit_info.with')}
+                                                    </>
+                                                );
+                                            })()}
+                                        </span>
+                                    )}
+
+                                    {shopName && (
+                                        <span className="shrink-0">
+                                            {' '}{appendJosa(shopName, '을/를')}
+                                        </span>
+                                    )}
+
+                                    {content.review_prop?.visit_date && (
+                                        <span className="shrink-0">{' '}{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                    )}
+
+                                    {typeof visitCount === 'number' && visitCount >= 2 && (
+                                        <span className="shrink-0">{' '}{visitCount}{t('content.visit_info.nth')}</span>
+                                    )}
+
+                                    {shopName && <span className="shrink-0">{' '}{t('content.visit_info.visited')}</span>}
+                                </>
+                            ) : (
+                                <>
+                                    {/* English: Visited [Shop Name] [Date] ([Nth] visit) with [Companions] */}
+                                    {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
+                                    {shopName && <span className="shrink-0">{' '}{shopName}</span>}
+                                    {content.review_prop?.visit_date && (
+                                        <span className="shrink-0">{' '}{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                    )}
+                                    {typeof visitCount === 'number' && visitCount >= 2 && (
+                                        <span className="shrink-0">
+                                            {' '}({visitCount}{visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : 'th'} {t('content.visit_info.nth')})
+                                        </span>
+                                    )}
+                                    {companionUsers && companionUsers.length > 0 && (
+                                        <span className="shrink-0">
+                                            {' '}{t('content.visit_info.with')}{' '}
+                                            {companionUsers.map((u, i) => (
+                                                <span key={i}>
+                                                    {u.nickname}{i < companionUsers.length - 1 ? ', ' : ''}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Post Keywords (if not review) */}
+                            {!shopName && contextText && (
+                                <span>{contextText}</span>
+                            )}
+                        </div>
                     )}
+
+                    {/* Row 3: Satisfaction & Ranking */}
                 </div>
 
                 {/* More / Menu Button */}
-                <div className="relative ml-auto flex items-center gap-2">
+                <div className="relative ml-auto flex items-center gap-2 flex-shrink-0 mt-0.5">
                     {showActions && currentUser?.id !== user.id && (
                         <button
                             type="button"
@@ -514,122 +619,123 @@ export const ContentCard = ({
                 </div>
             </div>
 
-            {/* Visit Info & Companions Block */}
-            {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
-                <div className="px-5 mb-3">
-                    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-black font-medium leading-tight">
-                        {i18n.language === 'ko' ? (
-                            <>
-                                {/* Korean: [Companions]와/과 함께 [Shop]을/를 [Date] [N번째] 방문 */}
-                                {companionUsers && companionUsers.length > 0 && (
-                                    <span>
-                                        {(() => {
-                                            const MAX = 3;
-                                            const overflow = companionUsers.length - MAX;
-                                            if (overflow > 0) {
-                                                const display = companionUsers.slice(0, MAX);
-                                                const others = t('write.content.and_others', { count: overflow });
-                                                return (
-                                                    <>
-                                                        {display.map((u, i) => (
-                                                            <span key={i}>{u.nickname}, </span>
-                                                        ))}
-                                                        {appendJosa(others, '와/과')}
-                                                        {' '}{t('content.visit_info.with')}
-                                                    </>
-                                                );
-                                            }
-                                            return (
-                                                <>
-                                                    {companionUsers.map((u, i) => (
-                                                        <span key={i}>
-                                                            {i < companionUsers.length - 1
-                                                                ? `${u.nickname}, `
-                                                                : appendJosa(u.nickname, '와/과')}
-                                                        </span>
-                                                    ))}
-                                                    {' '}{t('content.visit_info.with')}
-                                                </>
-                                            );
-                                        })()}
-                                    </span>
-                                )}
+            {/* Image Display */}
+            {
+                content.images && content.images.length > 0 && (
+                    <>
+                        {content.images.length === 1 ? (
+                            <div className="px-5 mb-4">
+                                <div
+                                    className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative cursor-pointer active:opacity-95 transition-opacity"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSmartTap(e, 0, 'image');
+                                    }}
+                                >
+                                    <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
 
-                                {shopName && (
-                                    <span className="shrink-0">
-                                        {appendJosa(shopName, '을/를')}
-                                    </span>
-                                )}
-
-                                {content.review_prop?.visit_date && (
-                                    <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
-                                )}
-
-                                {typeof visitCount === 'number' && visitCount >= 2 && (
-                                    <span className="shrink-0">{visitCount}{t('content.visit_info.nth')}</span>
-                                )}
-
-                                {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
-                            </>
+                                    {/* Double Tap Heart Overlay */}
+                                    <AnimatePresence>
+                                        {showHeart && heartTarget === 'image' && heartIndex === 0 && heartPos && (
+                                            <motion.div
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1.2, opacity: 1 }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                                style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
+                                                className="absolute z-20 pointer-events-none"
+                                            >
+                                                <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                    {content.img_texts?.[0] && (
+                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/50 to-transparent pt-8">
+                                            <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[0]}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         ) : (
-                            <>
-                                {/* English: Visited [Shop Name] [Date] ([Nth] visit) with [Companions] */}
-                                {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
-                                {shopName && <span className="shrink-0">{shopName}</span>}
-                                {content.review_prop?.visit_date && (
-                                    <span className="shrink-0">{formatVisitDate(content.review_prop.visit_date, t)}</span>
-                                )}
-                                {typeof visitCount === 'number' && visitCount >= 2 && (
-                                    <span className="shrink-0">
-                                        ({visitCount}{visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : 'th'} {t('content.visit_info.nth')})
-                                    </span>
-                                )}
-                                {companionUsers && companionUsers.length > 0 && (
-                                    <span className="shrink-0">
-                                        {t('content.visit_info.with')}{' '}
-                                        {companionUsers.map((u, i) => (
-                                            <span key={i}>
-                                                {u.nickname}{i < companionUsers.length - 1 ? ', ' : ''}
-                                            </span>
-                                        ))}
-                                    </span>
-                                )}
-                            </>
+                            <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
+                                {content.images.map((img, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex-shrink-0 w-[310px] h-[310px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative cursor-pointer active:opacity-95 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSmartTap(e, idx, 'image');
+                                        }}
+                                    >
+                                        <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
+
+                                        {/* Double Tap Heart Overlay */}
+                                        <AnimatePresence>
+                                            {showHeart && heartTarget === 'image' && heartIndex === idx && heartPos && (
+                                                <motion.div
+                                                    initial={{ scale: 0, opacity: 0 }}
+                                                    animate={{ scale: 1.2, opacity: 1 }}
+                                                    exit={{ scale: 0, opacity: 0 }}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                                    style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
+                                                    className="absolute z-20 pointer-events-none"
+                                                >
+                                                    <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                        {content.img_texts?.[idx] && (
+                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
+                                                <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[idx]}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         )}
 
-                        {/* Post Keywords (if not review) */}
-                        {!shopName && contextText && (
-                            <span>{contextText}</span>
-                        )}
+                        <ImageViewer
+                            images={content.images}
+                            initialIndex={viewerIndex}
+                            isOpen={showViewer}
+                            onClose={() => setShowViewer(false)}
+                        />
+                    </>
+                )
+            }
 
-                        {/* Satisfaction & Ranking */}
-                        {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
-                            <>
-                                <span className="text-gray-300">·</span>
-                                {satisfaction && (
-                                    <span className={cn(
-                                        "font-bold",
-                                        satisfaction === 'good' ? "text-orange-600" : "text-gray-500"
-                                    )}>
-                                        {t(`write.basic.${satisfaction}`)}
-                                    </span>
-                                )}
-                                {typeof rank === 'number' && rank > 0 && (
+            {/* Satisfaction & Ranking (Between Image and Text) */}
+            {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
+                <div className="px-5 mb-2 mt-2 flex items-center gap-2 text-[13px]">
+                    {satisfaction && (
+                        <span className={cn(
+                            "font-bold px-2 py-0.5 rounded-full border border-current text-xs",
+                            satisfaction === 'good' ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
+                        )}>
+                            {t(`write.basic.${satisfaction}`)}
+                        </span>
+                    )}
+                    {typeof rank === 'number' && rank > 0 && (
+                        <span className="font-bold text-gray-800 flex items-center gap-1">
+                            {(() => {
+                                const tier = getRankingTier(rank, user.ranking_count);
+                                return tier ? (
                                     <>
-                                        {satisfaction && <span className="text-gray-300">·</span>}
-                                        <span className="font-bold text-sm text-black inline-flex items-center gap-0.5">
-                                            <span className="text-[7pt]">🏆</span>
-                                            {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
-                                        </span>
+                                        <span className="text-[10px] text-orange-600 bg-orange-50 px-1 rounded border border-orange-100">{tier}</span>
+                                        <span className="text-xs">🏆</span>
+                                        {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
                                     </>
-                                )}
-                            </>
-                        )}
-                    </div>
+                                ) : (
+                                    <>
+                                        <span className="text-xs">🏆</span>
+                                        {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
+                                    </>
+                                );
+                            })()}
+                        </span>
+                    )}
                 </div>
             )}
-
-
 
             {/* Text Body */}
             {content.text && (
@@ -655,11 +761,9 @@ export const ContentCard = ({
                 </div>
             )}
 
-
-
             {/* Link Display */}
             {content.link_json && content.link_json.length > 0 && (
-                <div className="px-5 mb-3 space-y-1">
+                <div className="px-5 mb-4 space-y-1">
                     {content.link_json.map((link: any, idx: number) => {
                         const url = link.url.toLowerCase();
                         let Icon = LinkIcon;
@@ -703,90 +807,7 @@ export const ContentCard = ({
                 </div>
             )}
 
-            {/* Image Display */}
-            {
-                content.images && content.images.length > 0 && (
-                    <>
-                        {content.images.length === 1 ? (
-                            <div className="px-5 mb-4">
-                                <div
-                                    className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 relative cursor-pointer active:opacity-95 transition-opacity"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSmartTap(e, 0, 'image');
-                                    }}
-                                >
-                                    <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
 
-                                    {/* Double Tap Heart Overlay */}
-                                    <AnimatePresence>
-                                        {showHeart && heartTarget === 'image' && heartIndex === 0 && heartPos && (
-                                            <motion.div
-                                                initial={{ scale: 0, opacity: 0 }}
-                                                animate={{ scale: 1.2, opacity: 1 }}
-                                                exit={{ scale: 0, opacity: 0 }}
-                                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                                                style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
-                                                className="absolute z-20 pointer-events-none"
-                                            >
-                                                <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                    {content.img_texts?.[0] && (
-                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/50 to-transparent pt-8">
-                                            <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[0]}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex overflow-x-auto px-5 gap-2 no-scrollbar mb-4 snap-x snap-mandatory">
-                                {content.images.map((img, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex-shrink-0 w-[300px] h-[300px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center relative cursor-pointer active:opacity-95 transition-opacity"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onSmartTap(e, idx, 'image');
-                                        }}
-                                    >
-                                        <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
-
-                                        {/* Double Tap Heart Overlay */}
-                                        <AnimatePresence>
-                                            {showHeart && heartTarget === 'image' && heartIndex === idx && heartPos && (
-                                                <motion.div
-                                                    initial={{ scale: 0, opacity: 0 }}
-                                                    animate={{ scale: 1.2, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                                                    style={{ left: heartPos.x, top: heartPos.y, marginLeft: -48, marginTop: -48 }}
-                                                    className="absolute z-20 pointer-events-none"
-                                                >
-                                                    <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl" strokeWidth={1} />
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                        {content.img_texts?.[idx] && (
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
-                                                <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[idx]}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <ImageViewer
-                            images={content.images}
-                            initialIndex={viewerIndex}
-                            isOpen={showViewer}
-                            onClose={() => setShowViewer(false)}
-                        />
-                    </>
-                )
-            }
 
             {/* Shop Info Card */}
             {
@@ -929,7 +950,7 @@ export const ContentCard = ({
                         >
                             <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
                         </motion.div>
-                        {likeCount > 0 && <span className="text-sm font-medium">{likeCount}</span>}
+                        {likeCount > 0 && <span className="text-base font-medium">{likeCount}</span>}
                     </motion.button>
 
                     <button
@@ -939,7 +960,7 @@ export const ContentCard = ({
                         aria-label="Open comments"
                     >
                         <MessageCircle size={20} />
-                        {commentCount > 0 && <span className="text-sm font-medium">{commentCount}</span>}
+                        {commentCount > 0 && <span className="text-base font-medium">{commentCount}</span>}
                     </button>
 
                     <button
@@ -960,7 +981,7 @@ export const ContentCard = ({
                         {content.stats.comments > content.preview_comments.length && (
                             <button
                                 onClick={handleOpenComments}
-                                className="text-gray-500 text-xs font-medium mb-1 hover:text-gray-800"
+                                className="text-gray-500 text-sm font-medium hover:text-gray-800"
                             >
                                 {t('content.view_all_comments', { count: content.stats.comments })}
                             </button>

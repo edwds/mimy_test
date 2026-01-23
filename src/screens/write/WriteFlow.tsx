@@ -20,6 +20,7 @@ export const WriteFlow = () => {
     const [type, setType] = useState<'review' | 'post'>(initialType || 'review');
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const [basicInfo, setBasicInfo] = useState<{ satisfaction: string; visitDate: string; companions: any[] } | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initial Step Logic
     const [step, setStep] = useState<'TYPE_SELECT' | 'SEARCH_SHOP' | 'BASIC_INFO' | 'WRITE_CONTENT' | 'RANKING' | 'LOADING'>(() => {
@@ -70,6 +71,8 @@ export const WriteFlow = () => {
     };
 
     const handleContentNext = async (contentData: { text: string; images: string[]; imgText?: string[]; companions?: number[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             if (!currentUserId) {
                 alert("Login required");
@@ -108,6 +111,7 @@ export const WriteFlow = () => {
         } catch (error) {
             console.error(error);
             alert(t('discovery.alerts.save_failed'));
+            setIsSubmitting(false);
         }
     };
 
@@ -150,6 +154,7 @@ export const WriteFlow = () => {
                     shop={selectedShop}
                     satisfaction={basicInfo?.satisfaction}
                     onNext={handleContentNext}
+                    isSubmitting={isSubmitting}
                     onBack={() => {
                         if (type === 'review') {
                             setStep('BASIC_INFO');

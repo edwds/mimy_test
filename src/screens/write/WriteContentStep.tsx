@@ -17,6 +17,7 @@ interface Props {
     mode: 'review' | 'post';
     shop?: any;
     satisfaction?: string;
+    isSubmitting?: boolean;
 }
 
 interface MediaItem {
@@ -54,9 +55,11 @@ const UploadingThumbnail = ({ file, error }: { file?: File, progress: number, er
     );
 };
 
-export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, satisfaction }) => {
+export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, satisfaction, isSubmitting = false }) => {
     const { t } = useTranslation();
     const [text, setText] = useState('');
+
+
 
     // Unified Media State
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -287,7 +290,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </div>
                 <Button
                     onClick={handleSubmit}
-                    disabled={isUploading || !isValid}
+                    disabled={isUploading || !isValid || isSubmitting}
                     className={cn(
                         "rounded-full px-4 font-bold transition-all",
                         isValid
