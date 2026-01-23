@@ -775,4 +775,60 @@ router.get("/user/:userId", async (req, res) => {
     }
 });
 
+// POST /api/content/:id/like
+router.post("/:id/like", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body;
+
+        if (!contentId || !user_id) {
+            return res.status(400).json({ error: "Missing parameters" });
+        }
+
+        const existing = await db.select().from(likes)
+            .where(and(
+                eq(likes.target_type, 'content'),
+                eq(likes.target_id, contentId),
+                eq(likes.user_id, user_id)
+            )).limit(1);
+
+        if (existing.length === 0) {
+            await db.insert(likes).values({
+                target_type: 'content',
+                target_id: contentId,
+                user_id
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Like error:", error);
+        res.status(500).json({ error: "Failed to like" });
+    }
+});
+
+// DELETE /api/content/:id/like
+router.delete("/:id/like", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body;
+
+        if (!contentId || !user_id) {
+            return res.status(400).json({ error: "Missing parameters" });
+        }
+
+        await db.delete(likes)
+            .where(and(
+                eq(likes.target_type, 'content'),
+                eq(likes.target_id, contentId),
+                eq(likes.user_id, user_id)
+            ));
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Unlike error:", error);
+        res.status(500).json({ error: "Failed to unlike" });
+    }
+});
+
 export default router;

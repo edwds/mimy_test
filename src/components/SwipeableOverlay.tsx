@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { motion, useAnimation, PanInfo } from 'framer-motion';
+import { motion, useAnimation, PanInfo, useDragControls } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 export const SwipeableOverlay = ({ children, onBack, className }: Props) => {
     const navigate = useNavigate();
     const controls = useAnimation();
+    const dragControls = useDragControls();
 
     const handleDragEnd = async (_: any, info: PanInfo) => {
         const x = info.offset.x;
@@ -42,13 +43,10 @@ export const SwipeableOverlay = ({ children, onBack, className }: Props) => {
             initial={{ x: '100%' }}
             animate={controls}
             exit={{ x: '100%' }}
-            // We use simple slide-in animation on mount. 
-            // Note: Framer motion `animate` runs on mount. 
-            // To mimic the CSS `animate-in` we saw: `slide-in-from-right`.
-            // We'll set initial x: '100%' and animate to 0.
-
             drag="x"
-            dragConstraints={{ left: 0 }} // Don't allow drag to left
+            dragControls={dragControls}
+            dragListener={false} // Disable auto drag from anywhere
+            dragConstraints={{ left: 0 }}
             dragElastic={{ left: 0, right: 0.1 }}
             onDragEnd={handleDragEnd}
             style={{
@@ -60,8 +58,11 @@ export const SwipeableOverlay = ({ children, onBack, className }: Props) => {
             }}
             className={className}
         >
-            {/* Edge Hit Slop - invisible area to ensure edge grab is easy */}
-            <div className="absolute left-0 top-0 bottom-0 w-6 z-[110]" />
+            {/* Edge Hit Slop - only this area initiates drag */}
+            <div
+                className="absolute left-0 top-0 bottom-0 w-8 z-[110] cursor-grab active:cursor-grabbing touch-none"
+                onPointerDown={(e) => dragControls.start(e)}
+            />
             {children}
         </motion.div>
     );
