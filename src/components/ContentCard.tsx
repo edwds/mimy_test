@@ -10,14 +10,14 @@ import { CommentSheet } from './CommentSheet';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
-const getRankingTier = (rank: number, total: number | undefined) => {
+const getRankingTier = (rank: number, total: number | undefined): number | null => {
     if (!total || total < 50) return null;
     const percentage = (rank / total) * 100;
     const tiers = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90];
     for (const tier of tiers) {
-        if (percentage <= tier) return `Top ${tier}%`;
+        if (percentage <= tier) return tier;
     }
-    return null; // Or 'Top 100%' if preferred, but spec implied stopping at 90
+    return null;
 };
 
 type ContentBodyProps = {
@@ -69,7 +69,7 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
             <div
                 ref={ref}
                 className={cn(
-                    'text-base text-gray-800 whitespace-pre-wrap break-words',
+                    'text-base text-gray-800 whitespace-pre-wrap break-words leading-relaxed',
                     !expanded && canExpand && 'overflow-hidden'
                 )}
                 style={!expanded && canExpand ? { maxHeight } : undefined}
@@ -716,18 +716,24 @@ export const ContentCard = ({
                         </span>
                     )}
                     {typeof rank === 'number' && rank > 0 && (
-                        <span className="font-bold text-gray-800 flex items-center gap-1">
+                        <span className="font-medium text-xs text-gray-800 flex items-center gap-1">
                             {(() => {
                                 const tier = getRankingTier(rank, user.ranking_count);
-                                return tier ? (
+                                // Trophy Logic: Top 5% OR Top 10 Ranks
+                                const isTop5Percent = user.ranking_count && user.ranking_count >= 50 && ((rank / user.ranking_count) * 100 <= 5);
+                                const showTrophy = isTop5Percent || rank <= 10;
+
+                                return (
                                     <>
-                                        <span className="text-[10px] text-orange-600 bg-orange-50 px-1 rounded border border-orange-100">{tier}</span>
-                                        <span className="text-xs">🏆</span>
-                                        {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="text-xs">🏆</span>
+                                        {tier && (
+                                            <>
+                                                <span className="text-xs font-bold whitespace-nowrap">
+                                                    {t('common.top')} {tier}%
+                                                </span>
+                                                <span className="text-xs text-gray-300 mx-0.5">|</span>
+                                            </>
+                                        )}
+                                        {showTrophy && <span className="text-xs font-light">🏆</span>}
                                         {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
                                     </>
                                 );

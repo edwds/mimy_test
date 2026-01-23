@@ -4,7 +4,8 @@
         "start": "Start",
         "confirm": "Confirm",
         "vs": "VS",
-        "write": "Write"
+        "write": "Write",
+        "top": "Top"
     },
     "nav": {
         "home": "Home",
