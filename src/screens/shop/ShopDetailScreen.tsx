@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check, Share } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -228,14 +228,14 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                 {/* Header Title */}
                 <motion.div
-                    className="absolute inset-0 flex items-center justify-center z-20"
+                    className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
                     style={{
                         opacity: headerTitleOpacity,
                         y: headerTitleY,
                         paddingTop: Capacitor.isNativePlatform() ? 'env(safe-area-inset-top)' : 0
                     }}
                 >
-                    <span className="font-bold text-lg text-black truncate max-w-[60%]">
+                    <span className="font-bold text-lg text-black truncate max-w-full px-24">
                         {shop.name}
                     </span>
                 </motion.div>
@@ -304,7 +304,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                 <div className="min-h-screen bg-background rounded-t-[32px] shadow-[-0_-4px_20px_rgba(0,0,0,0.1)] relative overflow-hidden">
 
                     {/* Shop Info & Actions */}
-                    <div className="px-6 py-8">
+                    <div className="px-6 pt-8">
                         {/* Title Section (Name + Kind) */}
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex-1 mr-2">
@@ -355,59 +355,71 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         </div>
 
                         {/* Actions Row */}
-                        {/* Actions Row */}
-                        <div className="flex gap-3 mb-4">
-                            <button
-                                onClick={() => {
-                                    // Use specific destination approach
-                                    // If lat/lon exists, use them. Fallback to address.
-                                    const dest = (shop.lat && shop.lon)
-                                        ? `${shop.lat},${shop.lon}`
-                                        : encodeURIComponent(shop.address_full || shop.name);
-                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
-                                }}
-                                className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
-                            >
-                                <MapPin size={18} />
-                                {t('shop.directions', 'Directions')}
-                            </button>
+                        {/* Actions: Sub (Directions, Reservation, Share) + Main (Save) */}
+                        <div className="flex flex-col gap-3 mb-8">
+                            {/* Sub Actions Row */}
+                            <div className="flex gap-2.5">
+                                <button
+                                    onClick={() => {
+                                        const dest = (shop.lat && shop.lon)
+                                            ? `${shop.lat},${shop.lon}`
+                                            : encodeURIComponent(shop.address_full || shop.name);
+                                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                                    }}
+                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
+                                >
+                                    <MapPin size={16} />
+                                    {t('shop.directions', 'Directions')}
+                                </button>
 
-                            <button
-                                onClick={() => {
-                                    if (shop.catchtable_ref) {
-                                        window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                                    } else {
-                                        alert("예약 링크가 없습니다.");
-                                    }
-                                }}
-                                className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
-                            >
-                                <Calendar size={18} />
-                                {t('shop.reservation', 'Reservation')}
-                            </button>
+                                <button
+                                    onClick={() => {
+                                        if (shop.catchtable_ref) {
+                                            window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
+                                        } else {
+                                            alert("예약 링크가 없습니다.");
+                                        }
+                                    }}
+                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
+                                >
+                                    <Calendar size={16} />
+                                    {t('shop.reservation', 'Reservation')}
+                                </button>
 
+                                <button
+                                    onClick={() => {
+                                        if (navigator.share) {
+                                            navigator.share({
+                                                title: shop.name,
+                                                text: shop.description || shop.address_full,
+                                                url: window.location.href
+                                            }).catch(console.error);
+                                        } else {
+                                            navigator.clipboard.writeText(window.location.href);
+                                            alert("링크가 복사되었습니다.");
+                                        }
+                                    }}
+                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
+                                >
+                                    <Share size={16} />
+                                    {t('shop.share', 'Share')}
+                                </button>
+                            </div>
+
+                            {/* Main Action: Save (Wants to go) */}
                             <button
                                 onClick={handleBookmark}
                                 className={cn(
-                                    "flex-1 h-12 rounded-2xl border flex items-center justify-center gap-2 font-bold transition-colors active:scale-[0.98]",
+                                    "w-full h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-lg",
                                     shop.is_saved
-                                        ? "bg-red-50 border-red-200 text-red-500"
-                                        : "bg-gray-50 border-gray-200 text-gray-900"
+                                        ? "bg-red-50 border border-red-100 text-red-500"
+                                        : "bg-primary text-white border border-primary"
                                 )}
                             >
-                                <Bookmark size={18} className={cn(shop.is_saved && "fill-current")} />
+                                <Bookmark size={20} className={cn(shop.is_saved && "fill-current")} />
                                 {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
                             </button>
                         </div>
-
-                        {/* Write Button (Style from Profile) */}
-                        <button
-                            onClick={() => navigate(`/write?type=review&shop_id=${shop.id}`)}
-                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors"
-                        >
-                            <span className="font-semibold text-sm">기록하기</span>
-                        </button>
-
                     </div>
 
                     <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />

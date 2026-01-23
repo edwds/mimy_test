@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShopCard } from './ShopCard';
 import { motion, PanInfo, useAnimation, useDragControls } from 'framer-motion';
-import { X } from 'lucide-react';
+// import { X } from 'lucide-react'; // Removed unused
 import { useTranslation } from 'react-i18next';
 import { prefetchReviewSnippet, snippetCache } from '@/components/discovery/SelectedShopCard';
 
@@ -67,9 +67,9 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
     // Handle Snap State Changes
     useEffect(() => {
         const variants = {
-            peek: { y: "calc(100% - 130px)" },
+            peek: { y: "calc(100% - 130px)" }, // Peek height
             half: { y: "50%" },
-            full: { y: "0%" }
+            full: { y: "calc(env(safe-area-inset-top) + 110px)" } // Stop below search bar
         };
         controls.start(variants[snapState]);
     }, [snapState, controls]);
@@ -78,6 +78,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         const velocity = info.velocity.y;
         const currentY = sheetRef.current?.getBoundingClientRect().y || 0;
         const screenH = window.innerHeight;
+        // Adjust ratio calc since full is not 0
         const ratio = currentY / screenH;
 
         // Velocity threshold for flicks
@@ -90,7 +91,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         } else {
             // Position based snapping
             if (ratio > 0.8) setSnapState('peek');
-            else if (ratio > 0.35) setSnapState('half');
+            else if (ratio > 0.4) setSnapState('half'); // slightly higher threshold
             else setSnapState('full');
         }
     };
@@ -105,11 +106,10 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             dragControls={dragControls}
             dragListener={false} // Only allow drag from specific areas
             dragMomentum={false} // Prevent overshooting
-            dragConstraints={{ top: 0 }}
+            dragConstraints={{ top: 110 }} // Match full variant roughly
             dragElastic={0.05} // Stiffer resistance
             onDragEnd={handleDragEnd}
-            className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform transition-[border-radius] duration-300 ${snapState === 'full' ? 'rounded-none pt-[env(safe-area-inset-top)]' : 'rounded-t-3xl'
-                }`}
+            className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform rounded-t-3xl`}
             style={{ touchAction: 'none' }}
         >
             {/* Draggable Area Container */}
@@ -119,7 +119,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             >
                 {/* Handle Bar */}
                 <div className="pt-3 pb-2 flex justify-center w-full">
-                    <div className={`w-12 h-1.5 bg-gray-300 rounded-full transition-opacity duration-300 ${snapState === 'full' ? 'opacity-0' : 'opacity-100'}`} />
+                    <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
                 </div>
 
                 {/* Header */}
@@ -127,16 +127,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                     <h2 className="text-lg font-bold">
                         {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
                     </h2>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation(); // Don't trigger drag
-                            setSnapState('peek');
-                        }}
-                        className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                        onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
-                    >
-                        <X size={20} />
-                    </button>
+                    {/* Close button removed as requested */}
                 </div>
             </div>
 

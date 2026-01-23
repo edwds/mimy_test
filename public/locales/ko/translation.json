@@ -208,7 +208,8 @@
         "reservation": "예약하기",
         "saved": "저장됨",
         "wants_to_go": "가고싶어요",
-        "directions": "길찾기"
+        "directions": "길찾기",
+        "share": "공유하기"
     },
     "vs_card": {
         "title": "더 선호하는 맛은?",

@@ -704,7 +704,7 @@ export const ContentCard = ({
                                             )}
                                         </AnimatePresence>
                                         {content.img_texts?.[idx] && (
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pt-8">
+                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/30 to-transparent pt-6">
                                                 <span className="text-white text-sm font-medium drop-shadow-md">{content.img_texts[idx]}</span>
                                             </div>
                                         )}
@@ -727,7 +727,7 @@ export const ContentCard = ({
             {/* Satisfaction & Ranking (Merged Badge) */}
             {/* Satisfaction & Ranking (Merged Badge) */}
             {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
-                <div className="px-5 mb-2 mt-2 flex items-center gap-2 text-[13px]">
+                <div className="px-4 mb-2 mt-2 flex items-center gap-2 text-[13px]">
                     {/* Badge: Satisfaction + Tier */}
                     {(satisfaction || (user.ranking_count && user.ranking_count >= 50)) && (
                         <span className={cn(
@@ -822,10 +822,10 @@ export const ContentCard = ({
                                 href={link.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 py-0.5 hover:underline decoration-orange-300 underline-offset-2 transition-all group"
+                                className="flex items-center gap-1 py-0.5 hover:underline decoration-orange-300 underline-offset-2 transition-all group"
                             >
-                                <div className="flex-shrink-0 flex items-center justify-center w-5">
-                                    {label ? label : <Icon size={18} className="text-orange-600 transition-transform group-hover:scale-110" />}
+                                <div className="flex-shrink-0 flex items-center justify-center">
+                                    {label ? label : <Icon size={14} className="text-orange-600" />}
                                 </div>
                                 <span className="text-sm text-orange-600 leading-normal truncate font-medium">
                                     {link.title || link.url}
