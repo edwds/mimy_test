@@ -136,6 +136,8 @@ export interface ContentCardProps {
             visit_count?: number;
             is_bookmarked?: boolean;
             catchtable_ref?: string;
+            lat?: number;
+            lon?: number;
         };
 
         stats: {
@@ -166,6 +168,23 @@ export interface ContentCardProps {
 
 import { ImageViewer } from './ImageViewer';
 
+const getDistanceText = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c;
+
+    if (d < 1) {
+        return `${Math.round((d * 1000) / 100) * 100}m`;
+    }
+    return `${d.toFixed(1)}km`;
+};
+
 export const ContentCard = ({
     user,
     content,
@@ -175,7 +194,7 @@ export const ContentCard = ({
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
-    const { user: currentUser, optimisticLikes, toggleOptimisticLike } = useUser();
+    const { user: currentUser, optimisticLikes, toggleOptimisticLike, coordinates } = useUser();
 
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
@@ -856,6 +875,12 @@ export const ContentCard = ({
 
                             <div className="text-[12px] text-gray-500 truncate mt-0.5">
                                 {shopAddress || 'Location Info'}
+                                {coordinates && content.poi?.lat && content.poi?.lon && (
+                                    <>
+                                        <span className="mx-1 opacity-30">|</span>
+                                        <span>{getDistanceText(coordinates.lat, coordinates.lon, content.poi.lat, content.poi.lon)}</span>
+                                    </>
+                                )}
                             </div>
                         </div>
 

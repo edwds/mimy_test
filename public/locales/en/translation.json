@@ -204,6 +204,12 @@
             "match_tooltip": "This is a personalized score based on reviews from people with similar tastes. (3.00 = Neutral)"
         }
     },
+    "shop": {
+        "reservation": "Reservation",
+        "saved": "Saved",
+        "wants_to_go": "Wants to go",
+        "directions": "Directions"
+    },
     "vs_card": {
         "title": "Which taste do you prefer?",
         "retry": "Retry ({{count}})",

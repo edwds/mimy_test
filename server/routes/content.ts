@@ -354,7 +354,9 @@ router.get("/feed", async (req, res) => {
                         satisfaction: enrichedProp.satisfaction,
                         visit_count: visitCount,
                         is_bookmarked: isSaved, // Consistent with stats
-                        catchtable_ref: shop.catchtable_ref
+                        catchtable_ref: shop.catchtable_ref,
+                        lat: shop.lat,
+                        lon: shop.lon
                     };
                 }
             }
@@ -566,7 +568,12 @@ router.get("/user/:userId", async (req, res) => {
                 account_id: users.account_id,
                 profile_image: users.profile_image,
                 cluster_name: clusters.name,
-                taste_result: users.taste_result
+                taste_result: users.taste_result,
+                ranking_count: sql<number>`(
+                    SELECT COUNT(*) 
+                    FROM ${users_ranking} 
+                    WHERE ${users_ranking.user_id} = ${users.id}
+                )`
             },
             link_json: content.link_json
         })
@@ -743,7 +750,9 @@ router.get("/user/:userId", async (req, res) => {
                         satisfaction: enrichedProp.satisfaction,
                         visit_count: visitCount,
                         is_bookmarked: isSaved,
-                        catchtable_ref: shop.catchtable_ref
+                        catchtable_ref: shop.catchtable_ref,
+                        lat: shop.lat,
+                        lon: shop.lon
                     };
                 }
             }

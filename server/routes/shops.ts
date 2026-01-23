@@ -351,7 +351,12 @@ router.get("/:id/reviews", async (req, res) => {
                 nickname: users.nickname,
                 profile_image: users.profile_image,
                 taste_cluster: users.taste_cluster,
-                taste_result: users.taste_result
+                taste_result: users.taste_result,
+                ranking_count: sql<number>`(
+                    SELECT COUNT(*) 
+                    FROM ${users_ranking} 
+                    WHERE ${users_ranking.user_id} = ${users.id}
+                )`
             },
             rank: users_ranking.rank
         })

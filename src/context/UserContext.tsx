@@ -28,6 +28,7 @@ interface UserContextType {
     logout: () => void;
     optimisticLikes: Record<number, boolean>;
     toggleOptimisticLike: (contentId: number, isLiked: boolean) => void;
+    coordinates: { lat: number; lon: number } | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -35,6 +36,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
 
     const fetchUserData = async () => {
         const userId = UserService.getUserId();
@@ -44,8 +46,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 if (userData) {
                     setUser(userData);
                 } else {
-                    // Failed to load user (e.g. 404 or persistent error)
-                    // Force logout to prevent stuck state
                     console.warn("Failed to load user data, logging out.");
                     localStorage.removeItem("mimy_user_id");
                     setUser(null);
@@ -53,10 +53,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 }
             } catch (error) {
                 console.error("Failed to fetch user in context", error);
-                // On exception, we might want to retry or just let loading finish. 
-                // But for safety if it's a critical error:
-                // For now, let's assume transient errors shouldn't logout, 
-                // but null result (from Service) is typically a hard fail in current logic.
             }
         } else {
             setUser(null);
@@ -66,6 +62,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         fetchUserData();
+
+        // Initial Geolocation Fetch
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setCoordinates({
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    });
+                },
+                (err) => console.log('Geolocation init error:', err),
+                { timeout: 5000, enableHighAccuracy: false }
+            );
+        }
     }, []);
 
     const refreshUser = async () => {
@@ -92,7 +102,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <UserContext.Provider value={{ user, loading, refreshUser, login, logout, optimisticLikes, toggleOptimisticLike }}>
+        <UserContext.Provider value={{ user, loading, refreshUser, login, logout, optimisticLikes, toggleOptimisticLike, coordinates }}>
             {children}
         </UserContext.Provider>
     );

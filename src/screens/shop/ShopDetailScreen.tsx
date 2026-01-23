@@ -195,6 +195,8 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
     const headerTitleY = useTransform(scrollY, [180, 240], [20, 0]);
     const headerTitleOpacity = useTransform(scrollY, [200, 240], [0, 1]);
     const buttonColor = useTransform(scrollY, [180, 240], ["#ffffff", "#000000"]);
+    // Fix: Reactive pointer events based on scroll position
+    const headerPointerEvents = useTransform(scrollY, (y) => y > 220 ? 'auto' : 'none');
 
     if (loading) return <div className="min-h-screen bg-white" />;
 
@@ -256,10 +258,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         onClick={handleBookmark}
                         style={{
                             opacity: headerTitleOpacity,
-                            pointerEvents: headerTitleOpacity.get() < 0.5 ? 'none' : 'auto', // Note: .get() might not start reactive in render, but standard motion usage usually handles this via style visibility or we rely on z-index context if needed. 
-                            // Better: use a transform or just opacity. If it relies on pointer-events, motion value needs a listener or use `display`.
-                            // React framer-motion doesn't easily map motion value to boolean for conditional rendering efficiently without state.
-                            // However, we can just leave it there. If opacity is 0, user likely won't click it accidentally if it's small, or we can use `display: headerTitleOpacity.to(v => v < 0.1 ? 'none' : 'block')`.
+                            pointerEvents: headerPointerEvents,
                             color: buttonColor
                         }}
                         className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center mr-[-4px]"
@@ -356,7 +355,23 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         </div>
 
                         {/* Actions Row */}
+                        {/* Actions Row */}
                         <div className="flex gap-3 mb-4">
+                            <button
+                                onClick={() => {
+                                    // Use specific destination approach
+                                    // If lat/lon exists, use them. Fallback to address.
+                                    const dest = (shop.lat && shop.lon)
+                                        ? `${shop.lat},${shop.lon}`
+                                        : encodeURIComponent(shop.address_full || shop.name);
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                                }}
+                                className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+                            >
+                                <MapPin size={18} />
+                                {t('shop.directions', 'Directions')}
+                            </button>
+
                             <button
                                 onClick={() => {
                                     if (shop.catchtable_ref) {
@@ -365,7 +380,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                         alert("예약 링크가 없습니다.");
                                     }
                                 }}
-                                className="flex-1 h-12 rounded-2xl bg-black text-white font-bold flex items-center justify-center gap-2"
+                                className="flex-1 h-12 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 font-bold flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
                             >
                                 <Calendar size={18} />
                                 {t('shop.reservation', 'Reservation')}
@@ -376,8 +391,8 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                 className={cn(
                                     "flex-1 h-12 rounded-2xl border flex items-center justify-center gap-2 font-bold transition-colors active:scale-[0.98]",
                                     shop.is_saved
-                                        ? "bg-red-50 border-red-100 text-red-500"
-                                        : "bg-gray-50 border-gray-100 text-gray-900"
+                                        ? "bg-red-50 border-red-200 text-red-500"
+                                        : "bg-gray-50 border-gray-200 text-gray-900"
                                 )}
                             >
                                 <Bookmark size={18} className={cn(shop.is_saved && "fill-current")} />
@@ -388,7 +403,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         {/* Write Button (Style from Profile) */}
                         <button
                             onClick={() => navigate(`/write?type=review&shop_id=${shop.id}`)}
-                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors"
+                            className="w-full py-2.5 px-4 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 transition-colors"
                         >
                             <span className="font-semibold text-sm">기록하기</span>
                         </button>
