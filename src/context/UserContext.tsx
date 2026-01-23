@@ -26,6 +26,8 @@ interface UserContextType {
     refreshUser: () => Promise<void>;
     login: (userId: string) => Promise<void>;
     logout: () => void;
+    optimisticLikes: Record<number, boolean>;
+    toggleOptimisticLike: (contentId: number, isLiked: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -80,8 +82,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
     };
 
+    const [optimisticLikes, setOptimisticLikes] = useState<Record<number, boolean>>({});
+
+    const toggleOptimisticLike = (contentId: number, isLiked: boolean) => {
+        setOptimisticLikes(prev => ({
+            ...prev,
+            [contentId]: isLiked
+        }));
+    };
+
     return (
-        <UserContext.Provider value={{ user, loading, refreshUser, login, logout }}>
+        <UserContext.Provider value={{ user, loading, refreshUser, login, logout, optimisticLikes, toggleOptimisticLike }}>
             {children}
         </UserContext.Provider>
     );

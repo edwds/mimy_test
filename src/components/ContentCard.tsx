@@ -164,13 +164,18 @@ export const ContentCard = ({
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
-    const { user: currentUser } = useUser();
+    const { user: currentUser, optimisticLikes, toggleOptimisticLike } = useUser();
 
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
 
-    // Local State for Optimistic Updates
-    const [isLiked, setIsLiked] = useState(content.stats.is_liked);
+    // Determine initial state: favour optimistic state if present, otherwise server state
+    const serverIsLiked = content.stats.is_liked;
+    const hasOptimistic = typeof optimisticLikes[content.id] === 'boolean';
+    const effectiveIsLiked = hasOptimistic ? optimisticLikes[content.id] : serverIsLiked;
+
+    // We still use local state for immediate animation, syncing with effective state
+    const [isLiked, setIsLiked] = useState(effectiveIsLiked);
     const [likeCount, setLikeCount] = useState(content.stats.likes);
     const [commentCount, setCommentCount] = useState(content.stats.comments);
     const [isPoiBookmarked, setIsPoiBookmarked] = useState(!!content.poi?.is_bookmarked); // Add local state
@@ -186,14 +191,24 @@ export const ContentCard = ({
     const [showViewer, setShowViewer] = useState(false);
     const [viewerIndex, setViewerIndex] = useState(0);
 
-    // Sync if prop changes (e.g. refetch)
+    // Sync if prop changes (e.g. refetch) or optimistic state changes
     useEffect(() => {
-        setIsLiked(content.stats.is_liked);
-        setLikeCount(content.stats.likes);
+        const currentOptimistic = optimisticLikes[content.id];
+        const currentEffective = typeof currentOptimistic === 'boolean' ? currentOptimistic : content.stats.is_liked;
+
+        setIsLiked(!!currentEffective);
+
+        // Adjust count based on the difference between server state and effective state
+        let adjustment = 0;
+        if (typeof currentOptimistic === 'boolean' && currentOptimistic !== content.stats.is_liked) {
+            adjustment = currentOptimistic ? 1 : -1;
+        }
+        setLikeCount(content.stats.likes + adjustment);
+
         setCommentCount(content.stats.comments);
         setIsPoiBookmarked(!!content.poi?.is_bookmarked); // Sync prop
         setIsFollowing(!!user.is_following);
-    }, [content.stats, content.poi?.is_bookmarked, user.is_following]);
+    }, [content.stats, content.poi?.is_bookmarked, user.is_following, optimisticLikes, content.id]);
 
 
 
@@ -252,8 +267,12 @@ export const ContentCard = ({
         const prevLiked = isLiked;
         const prevCount = likeCount;
 
-        setIsLiked(!prevLiked);
-        setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
+        const newLiked = !prevLiked;
+        setIsLiked(newLiked);
+        setLikeCount(newLiked ? prevCount + 1 : prevCount - 1);
+
+        // Update global optimistic stores
+        toggleOptimisticLike(content.id, newLiked);
 
         try {
             const method = prevLiked ? 'DELETE' : 'POST';
@@ -266,6 +285,7 @@ export const ContentCard = ({
             // Rollback
             setIsLiked(prevLiked);
             setLikeCount(prevCount);
+            toggleOptimisticLike(content.id, !!prevLiked); // Revert optimistic
             console.error("Like failed", e);
         }
     };
