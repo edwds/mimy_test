@@ -33,8 +33,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
     const startPanRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
 
     // Mouse/Pan State
-    const isDraggingRef = useRef(false);
-    const lastMousePos = useRef<{ x: number, y: number } | null>(null);
+
 
     // Pan Motion Values
     const [translation, setTranslation] = useState({ x: 0, y: 0 });
@@ -140,53 +139,18 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (isGesturing && e.touches.length < 2) {
+        if (e.touches.length < 2) {
             setIsGesturing(false);
             pinchStartDist.current = null;
             pinchStartCenter.current = null;
-            if (scale < 1) setScale(1);
-        }
-    };
 
-    // --- Mouse Handlers (PC Pan & Generic Double Click) ---
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (scale > 1) {
-            isDraggingRef.current = true;
-            lastMousePos.current = { x: e.clientX, y: e.clientY };
-            setIsGesturing(true); // Disable spring for smooth drag
-            e.preventDefault(); // Prevent text selection
-        }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isDraggingRef.current && lastMousePos.current && scale > 1) {
-            const dx = e.clientX - lastMousePos.current.x;
-            const dy = e.clientY - lastMousePos.current.y;
-
-            setTranslation(prev => ({
-                x: prev.x + dx,
-                y: prev.y + dy
-            }));
-
-            lastMousePos.current = { x: e.clientX, y: e.clientY };
-        }
-    };
-
-    const handleMouseUp = () => {
-        isDraggingRef.current = false;
-        lastMousePos.current = null;
-        setIsGesturing(false);
-    };
-
-    const handleDoubleClick = () => {
-        if (scale > 1) {
+            // Elastic Snap-back: Always return to 1x and center
             setScale(1);
             setTranslation({ x: 0, y: 0 });
-        } else {
-            setScale(2.5);
-            setTranslation({ x: 0, y: 0 });
         }
     };
+
+
 
     // --- Navigation ---
     const paginate = (newDirection: number) => {
@@ -263,15 +227,11 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                         className="relative w-full h-full flex items-center justify-center overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                         // Touch Events
+                        // Touch Events
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
-                        // Mouse Events
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        onDoubleClick={handleDoubleClick}
+                        onTouchCancel={handleTouchEnd}
                     >
                         <motion.div
                             animate={{
