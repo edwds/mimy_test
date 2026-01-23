@@ -705,41 +705,45 @@ export const ContentCard = ({
             }
 
             {/* Satisfaction & Ranking (Between Image and Text) */}
+            {/* Satisfaction & Ranking (Merged Badge) */}
+            {/* Satisfaction & Ranking (Merged Badge) */}
             {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
                 <div className="px-5 mb-2 mt-2 flex items-center gap-2 text-[13px]">
-                    {satisfaction && (
+                    {/* Badge: Satisfaction + Tier */}
+                    {(satisfaction || (user.ranking_count && user.ranking_count >= 50)) && (
                         <span className={cn(
-                            "font-bold px-2 py-0.5 rounded-full border border-current text-xs",
+                            "font-bold px-2 py-0.5 rounded-full border border-current text-xs flex items-center gap-1",
                             satisfaction === 'good' ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
                         )}>
-                            {t(`write.basic.${satisfaction}`)}
-                        </span>
-                    )}
-                    {typeof rank === 'number' && rank > 0 && (
-                        <span className="font-medium text-xs text-gray-800 flex items-center gap-1">
-                            {(() => {
-                                const tier = getRankingTier(rank, user.ranking_count);
-                                // Trophy Logic: Top 5% OR Top 10 Ranks
-                                const isTop5Percent = user.ranking_count && user.ranking_count >= 50 && ((rank / user.ranking_count) * 100 <= 5);
-                                const showTrophy = isTop5Percent || rank <= 10;
+                            {satisfaction && t(`write.basic.${satisfaction}`)}
 
-                                return (
-                                    <>
-                                        {tier && (
-                                            <>
-                                                <span className="text-xs font-bold whitespace-nowrap">
-                                                    {t('common.top')} {tier}%
-                                                </span>
-                                                <span className="text-xs text-gray-300 mx-0.5">|</span>
-                                            </>
-                                        )}
-                                        {showTrophy && <span className="text-xs font-light">🏆</span>}
-                                        {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
-                                    </>
-                                );
+                            {/* Separator if both exist */}
+                            {satisfaction && typeof rank === 'number' && rank > 0 && (() => {
+                                const tier = getRankingTier(rank, user.ranking_count);
+                                return tier ? <span className="opacity-30 mx-0.5">|</span> : null;
+                            })()}
+
+                            {/* Tier Info */}
+                            {typeof rank === 'number' && rank > 0 && (() => {
+                                const tier = getRankingTier(rank, user.ranking_count);
+                                return tier ? (
+                                    <span>{t('common.top')} {tier}%</span>
+                                ) : null;
                             })()}
                         </span>
                     )}
+
+                    {/* Rank (Outside Badge) */}
+                    {typeof rank === 'number' && rank > 0 && (() => {
+                        const isTop5Percent = user.ranking_count && user.ranking_count >= 50 && ((rank / user.ranking_count) * 100 <= 5);
+                        const showTrophy = isTop5Percent || rank <= 10;
+                        return (
+                            <span className="font-medium text-xs text-gray-800 flex items-center gap-1">
+                                {showTrophy && <span className="font-light">🏆</span>}
+                                {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
+                            </span>
+                        );
+                    })()}
                 </div>
             )}
 
