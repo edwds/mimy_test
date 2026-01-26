@@ -23,6 +23,11 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
     const [isGoogleMode, setIsGoogleMode] = useState(false);
     const [region, setRegion] = useState('서울');
+    const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+    const [regionInput, setRegionInput] = useState('');
+
+    const [selectedGoogleShop, setSelectedGoogleShop] = useState<any>(null);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchSaved = async () => {
@@ -56,13 +61,34 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
         return () => clearTimeout(timer);
     }, [query]);
 
-    const handleGoogleSearch = async () => {
-        if (!query) return;
+    const handleOpenGoogleSearch = () => {
+        // Pre-fill with current query + region for re-search, or just region if it's the first time
+        if (isGoogleMode) {
+            setRegionInput(`${query} ${region}`.trim());
+        } else {
+            setRegionInput(region);
+        }
+        setIsRegionModalOpen(true);
+    };
+
+    const handleConfirmGoogleSearch = async () => {
+        if (!query && !regionInput) return;
         setLoading(true);
+        setIsRegionModalOpen(false);
+
         try {
-            const data = await ShopService.searchGoogle(query, region);
-            setGoogleResults(data);
-            setIsGoogleMode(true);
+            // If in Google Mode, we treat the input as the full query
+            if (isGoogleMode) {
+                setQuery(regionInput);
+                setRegion('');
+                const data = await ShopService.searchGoogle(regionInput, '');
+                setGoogleResults(data);
+            } else {
+                setRegion(regionInput);
+                const data = await ShopService.searchGoogle(query, regionInput);
+                setGoogleResults(data);
+                setIsGoogleMode(true);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -72,17 +98,24 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
     const handleItemClick = async (item: any) => {
         if (isGoogleMode) {
-            setLoading(true);
-            try {
-                const shop = await ShopService.importGoogleShop(item);
-                onSelect(shop);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
+            setSelectedGoogleShop(item);
+            setIsConfirmModalOpen(true);
         } else {
             onSelect(item);
+        }
+    };
+
+    const confirmGoogleShopSelection = async () => {
+        if (!selectedGoogleShop) return;
+        setIsConfirmModalOpen(false);
+        setLoading(true);
+        try {
+            const shop = await ShopService.importGoogleShop(selectedGoogleShop);
+            onSelect(shop);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -92,27 +125,46 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
             {/* Header */}
-            <div
-                className="pl-4 pr-8 pb-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors"
-                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
-            >
-                <button
-                    onClick={onBack}
-                    className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
+            {/* Header */}
+            {!isGoogleMode && (
+                <div
+                    className="pl-4 pr-8 pb-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors"
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
                 >
-                    <ChevronLeft size={24} />
-                </button>
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                        className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl text-foreground placeholder:text-muted-foreground"
-                        placeholder={t('write.search.placeholder')}
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        autoFocus
-                    />
+                    <button
+                        onClick={onBack}
+                        className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl text-foreground placeholder:text-muted-foreground"
+                            placeholder={t('write.search.placeholder')}
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Google Mode Header (Minimal) */}
+            {isGoogleMode && (
+                <div
+                    className="pl-4 pr-4 pb-3 flex items-center justify-between bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors"
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+                >
+                    <button
+                        onClick={() => setIsGoogleMode(false)}
+                        className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-1"
+                    >
+                        <ChevronLeft size={24} />
+                        <span className="text-lg font-bold">Google Maps 검색 결과</span>
+                    </button>
+                </div>
+            )}
 
             {/* Results */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -135,11 +187,11 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 <div className="px-1 py-1">
                                     <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
                                         <MapPin size={16} />
-                                        <span className="font-semibold">Google Maps 검색 결과 ({region})</span>
+                                        <span className="font-semibold">{query} {region ? `(${region})` : ''}</span>
                                     </div>
                                 </div>
                             )}
-                            <ul className="space-y-3">
+                            <ul className="space-y-3 pb-6">
                                 {displayItems.map((shop, idx) => (
                                     <li key={shop.id || shop.google_place_id || idx}>
                                         <button
@@ -178,6 +230,16 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                         </button>
                                     </li>
                                 ))}
+                                {/* Footer Button for Google Search */}
+                                <li>
+                                    <button
+                                        onClick={handleOpenGoogleSearch}
+                                        className="w-full flex items-center justify-center gap-2 p-4 text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-2xl transition-all mt-2 border border-dashed border-border"
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        <span className="text-sm font-medium">원하는 결과가 없나요? Google Maps에서 찾기</span>
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                     ) : (
@@ -192,24 +254,13 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
                             <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
                                 {!isGoogleMode && (
-                                    <>
-                                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 h-11 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                                            <input
-                                                className="flex-1 bg-transparent border-none text-sm outline-none placeholder:text-gray-400"
-                                                placeholder="지역 (예: 서울, 부산, 강남)"
-                                                value={region}
-                                                onChange={(e) => setRegion(e.target.value)}
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={handleGoogleSearch}
-                                            className="w-full h-11 bg-white border border-gray-200 shadow-sm rounded-xl text-sm font-bold text-gray-900 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors active:scale-95"
-                                        >
-                                            <MapPin className="w-4 h-4 text-blue-500" />
-                                            Google Maps에서 찾기
-                                        </button>
-                                    </>
+                                    <button
+                                        onClick={handleOpenGoogleSearch}
+                                        className="w-full h-11 bg-white border border-gray-200 shadow-sm rounded-xl text-sm font-bold text-gray-900 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors active:scale-95"
+                                    >
+                                        <MapPin className="w-4 h-4 text-blue-500" />
+                                        Google Maps에서 찾기
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -265,6 +316,83 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     </div>
                 )}
             </div>
+
+            {/* Region Input Modal */}
+            {isRegionModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsRegionModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-zinc-900 w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold mb-1 text-center">어디서 찾을까요?</h3>
+                        <p className="text-sm text-gray-500 text-center mb-4">
+                            지역 키워드를 추가해서 검색해주세요<br />
+                            <span className="text-xs text-gray-400">(예: 서울, 도쿄, 강남구, 신주쿠)</span>
+                        </p>
+
+                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 h-11 mb-4 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                            <input
+                                className="flex-1 bg-transparent border-none text-sm outline-none placeholder:text-gray-400 text-foreground"
+                                placeholder="지역 입력"
+                                value={regionInput}
+                                onChange={(e) => setRegionInput(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleConfirmGoogleSearch();
+                                }}
+                            />
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsRegionModalOpen(false)}
+                                className="flex-1 h-11 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleConfirmGoogleSearch}
+                                className="flex-1 h-11 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            >
+                                검색
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Google Shop Confirmation Modal */}
+            {isConfirmModalOpen && selectedGoogleShop && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsConfirmModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-zinc-900 w-full max-w-xs rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                                <MapPin className="w-8 h-8 text-blue-500" />
+                            </div>
+                            <h3 className="text-xl font-bold mb-2 break-keep">{selectedGoogleShop.name}</h3>
+                            <p className="text-sm text-gray-500 break-keep">
+                                {selectedGoogleShop.formatted_address || selectedGoogleShop.vicinity}
+                            </p>
+                            <p className="text-sm font-medium text-blue-600 mt-2">이 장소가 맞나요?</p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsConfirmModalOpen(false)}
+                                className="flex-1 h-12 rounded-xl text-sm font-bold bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                            >
+                                아니요
+                            </button>
+                            <button
+                                onClick={confirmGoogleShopSelection}
+                                className="flex-1 h-12 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            >
+                                네, 맞아요
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
