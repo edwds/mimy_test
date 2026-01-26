@@ -118,7 +118,7 @@ async function fetchFeedContent(params: {
                             sin(radians(${userLat})) * sin(radians(${shops.lat}))
                         ))
                     )
-                ) <= 10
+                ) <= 5
             `);
         }
     }
@@ -362,6 +362,40 @@ async function fetchFeedContent(params: {
     });
 }
 
+// Helper: Enrich base feed with live stats (Likes/Comments Counts) - For ALL users
+async function enrichFeedWithLiveStats(feed: any[]) {
+    if (feed.length === 0) return feed;
+
+    const contentIds = feed.map(i => i.id);
+
+    // Fetch Live Counts
+    const likeCountMap = new Map<number, number>();
+    const commentCountMap = new Map<number, number>();
+
+    const likesRes = await db.select({
+        target_id: likes.target_id, count: sql<number>`count(*)`
+    }).from(likes)
+        .where(and(eq(likes.target_type, 'content'), inArray(likes.target_id, contentIds)))
+        .groupBy(likes.target_id);
+    likesRes.forEach(r => likeCountMap.set(r.target_id, Number(r.count)));
+
+    const commentsRes = await db.select({
+        content_id: comments.content_id, count: sql<number>`count(*)`
+    }).from(comments)
+        .where(and(inArray(comments.content_id, contentIds), eq(comments.is_deleted, false)))
+        .groupBy(comments.content_id);
+    commentsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
+
+    return feed.map(item => ({
+        ...item,
+        stats: {
+            ...item.stats,
+            likes: likeCountMap.get(item.id) || 0,
+            comments: commentCountMap.get(item.id) || 0
+        }
+    }));
+}
+
 // Helper: Enrich base feed with user-specific data (Is Liked, Is Saved, Is Following)
 async function enrichFeedWithUserStatus(feed: any[], userId: number) {
     if (feed.length === 0) return feed;
@@ -453,13 +487,16 @@ router.get("/feed", async (req, res) => {
 
             // 1. Get Base Data (Cached or Fresh)
             // Note: We fetch with user_id=null to get "clean" data for cache
-            const baseFeed = await getOrSetCache(cacheKey, async () => {
+            let baseFeed = await getOrSetCache(cacheKey, async () => {
                 return fetchFeedContent({
                     page, limit, filter, lat: null, lon: null, user_id: null
                 });
             }, 300); // 5 min TTL
 
-            // 2. Enrich if User
+            // 2. Enrich with Live Stats (Likes/Comments Counts) - ALWAYS
+            baseFeed = await enrichFeedWithLiveStats(baseFeed);
+
+            // 3. Enrich if User
             if (currentUserId && baseFeed.length > 0) {
                 const enriched = await enrichFeedWithUserStatus(baseFeed, currentUserId);
                 return res.json(enriched);
