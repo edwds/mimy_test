@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { shared_links, users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import crypto from 'crypto';
 import { ListService } from "../services/ListService.js";
 import { getOrSetCache } from "../redis.js";
@@ -17,6 +17,28 @@ router.post("/list", async (req, res) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        // 1. Check if same link exists
+        // We use raw SQL for JSONB comparison because Drizzle query builder for JSON can be verbose
+        // Assuming config has structure { userId, type, value }
+        const existing = await db.select().from(shared_links)
+            .where(
+                and(
+                    eq(shared_links.user_id, userId),
+                    sql`config ->> 'type' = ${type}`,
+                    value ? sql`config ->> 'value' = ${value}` : sql`config ->> 'value' IS NULL OR config ->> 'value' = ''`
+                )
+            )
+            .limit(1);
+
+        if (existing.length > 0) {
+            // Return existing code
+            return res.json({
+                code: existing[0].code,
+                url: `/s/${existing[0].code}`
+            });
+        }
+
+        // 2. Create new if not exists
         const code = crypto.randomBytes(6).toString('hex'); // 12 chars
 
         const newLink = await db.insert(shared_links).values({

@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate, useLocation } from 'react-rout
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2, Calendar, Bookmark, Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, WEB_BASE_URL } from '@/lib/api';
 import { ShopService } from '@/services/ShopService';
 import { UserService } from '@/services/UserService';
 import { cn } from '@/lib/utils';
@@ -123,7 +123,8 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
         if (code) {
             // If we are already on a shared page, just share the current URL
-            shareUrl = window.location.href;
+            // BUT for Native App, window.location.href is capacitor://... so we must force web url
+            shareUrl = `${WEB_BASE_URL}/s/${code}`;
         } else if (userId) {
             // Create a new share link
             try {
@@ -140,7 +141,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
                 if (res.ok) {
                     const { url } = await res.json();
-                    shareUrl = window.location.origin + url;
+                    shareUrl = WEB_BASE_URL + url;
                 } else {
                     return;
                 }
