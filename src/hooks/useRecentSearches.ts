@@ -21,31 +21,27 @@ export const useRecentSearches = () => {
         if (!keyword || keyword.trim().length === 0) return;
         const trimmed = keyword.trim();
 
-        setRecentSearches((prev) => {
-            // Remove duplicates and add to front
-            const filtered = prev.filter((item) => item !== trimmed);
-            const newList = [trimmed, ...filtered].slice(0, MAX_ITEMS);
+        // Use synchronous update logic to ensure localStorage is written 
+        // even if the component unmounts immediately after this call.
+        const filtered = recentSearches.filter((item) => item !== trimmed);
+        const newList = [trimmed, ...filtered].slice(0, MAX_ITEMS);
 
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
-            } catch (error) {
-                console.error('Failed to save recent searches:', error);
-            }
-
-            return newList;
-        });
+        setRecentSearches(newList);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
+        } catch (error) {
+            console.error('Failed to save recent searches:', error);
+        }
     };
 
     const removeSearch = (keyword: string) => {
-        setRecentSearches((prev) => {
-            const newList = prev.filter((item) => item !== keyword);
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
-            } catch (error) {
-                console.error('Failed to update recent searches:', error);
-            }
-            return newList;
-        });
+        const newList = recentSearches.filter((item) => item !== keyword);
+        setRecentSearches(newList);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
+        } catch (error) {
+            console.error('Failed to update recent searches:', error);
+        }
     };
 
     const clearSearches = () => {

@@ -217,3 +217,16 @@ const MyComponent = () => {
 - **Deferred User Creation**: 소셜 로그인 이탈 시 불완전한 데이터 생성을 방지하기 위한 가입 지연 로직 적용
 - **Reseeded Clusters**: 128개의 고유 식별자를 가진 클러스터 데이터 재구축 및 샘플 유저 생성
 - **Match Scoring**: 리더보드 등에서 유기적인 취향 매칭 점수 계산 로직 적용
+
+### **5. 구글 지도 검색 통합 (Google Maps Integration)**
+- 로컬 DB 검색 결과가 없을 때 구글 지도 API를 통해 검색 확장
+- 검색 영역(Region) 설정을 통한 정확도 향상
+- `SearchShopStep`에서 검색어 유지 및 재검색 UX 개선
+
+### **6. 이미지 뷰어 개선 (ImageViewer)**
+- **Pinch-to-Zoom Fix**: 줌 제스처 해제 시 의도치 않은 스와이프 방지 (Scroll Lock)
+- **Fluid Animation**: `framer-motion` 기반의 자연스러운 제스처 인터랙션
+
+### **7. 검색 및 리더보드 최적화**
+- **Recent Searches**: 디스커버리 탭에 최근 검색어(LocalStorage) 기능 추가 (Swipeable Chips)
+- **Instant Leaderboard Update**: 콘텐츠 작성 시 즉각적인 랭킹 산출 및 내 리스트 갱신 (Cache Invalidation Strategy)
