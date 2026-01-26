@@ -5,6 +5,7 @@ import { shops, users_wantstogo, content, users, users_ranking, clusters } from 
 import { ilike, or, eq, sql, and, desc, asc, not, inArray } from "drizzle-orm";
 import { calculateShopMatchScore, TasteScores } from "../utils/match.js";
 import { getShopMatchScores } from "../utils/enricher.js";
+import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -48,44 +49,66 @@ router.get("/discovery", async (req, res) => {
         const hasBBox = Number.isFinite(rawMinLat) && Number.isFinite(rawMaxLat) &&
             Number.isFinite(rawMinLon) && Number.isFinite(rawMaxLon);
 
-        let query = db.select({
-            id: shops.id,
-            name: shops.name,
-            description: shops.description,
-            address_full: shops.address_full,
-            thumbnail_img: shops.thumbnail_img,
-            kind: shops.kind,
-            lat: shops.lat,
-            lon: shops.lon,
-            catchtable_ref: shops.catchtable_ref
-        }).from(shops).$dynamic();
+        // Cache Key for generic discovery (no bbox, or bucketed bbox? BBox makes it hard. Skip cache if bbox present)
+        const canCache = !hasBBox;
+        const cacheKey = `discovery:seed:${seed}:page:${page}:limit:${limit}`;
 
-        if (hasBBox) {
-            query = query.where(and(
-                sql`${shops.lat} >= ${rawMinLat}`,
-                sql`${shops.lat} <= ${rawMaxLat}`,
-                sql`${shops.lon} >= ${rawMinLon}`,
-                sql`${shops.lon} <= ${rawMaxLon}`
-            ));
+        // TODO: Switch to secure session/token auth to get uid
+        const userIdHeader = req.headers['x-user-id'];
+        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+
+        const fetchDiscovery = async () => {
+            let query = db.select({
+                id: shops.id,
+                name: shops.name,
+                description: shops.description,
+                address_full: shops.address_full,
+                thumbnail_img: shops.thumbnail_img,
+                kind: shops.kind,
+                lat: shops.lat,
+                lon: shops.lon,
+                catchtable_ref: shops.catchtable_ref
+            }).from(shops).$dynamic();
+
+            if (hasBBox) {
+                query = query.where(and(
+                    sql`${shops.lat} >= ${rawMinLat}`,
+                    sql`${shops.lat} <= ${rawMaxLat}`,
+                    sql`${shops.lon} >= ${rawMinLon}`,
+                    sql`${shops.lon} <= ${rawMaxLon}`
+                ));
+            }
+
+            // Consistent Sort
+            const results = await query
+                .orderBy(sql`md5(${shops.id}::text || ${seed})`)
+                .limit(limit)
+                .offset((page - 1) * limit);
+
+            if (results.length === 0) return [];
+
+            // Note: We only cache the "Base List". Enrichment (Saved, Snippets) should ideally be separate or cached carefully.
+            // But since snippets depend on "viewerScores" (personalization), we cannot cache snippets globally if we use viewer scores.
+            // If uid=0, it's safe.
+            // If uid > 0, we should fetch base list from cache, then enrich.
+            return results;
+        };
+
+        let baseResults;
+        if (canCache) {
+            baseResults = await getOrSetCache(cacheKey, fetchDiscovery, 3600);
+        } else {
+            baseResults = await fetchDiscovery();
         }
 
-        // Consistent Sort
-        const results = await query
-            .orderBy(sql`md5(${shops.id}::text || ${seed})`)
-            .limit(limit)
-            .offset((page - 1) * limit);
-
-        if (results.length === 0) {
+        if (baseResults.length === 0) {
             return res.json([]);
         }
 
-        // --- Enrichment (Batching) ---
-        // TODO: Switch to secure session/token auth
-        const userIdHeader = req.headers['x-user-id'];
-        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
-        const shopIds = results.map(s => s.id);
+        // --- Enrichment (Dynamic Part) ---
+        const shopIds = baseResults.map(s => s.id);
 
-        // 1. Batch Check Saved Status
+        // 1. Batch Check Saved Status (User Specific)
         const savedSet = new Set<number>();
         const savedAtMap = new Map<number, Date>();
 
@@ -176,7 +199,7 @@ router.get("/discovery", async (req, res) => {
         // 3. Batch Calculate Match Score
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
 
-        const enriched = results.map(shop => ({
+        const enriched = baseResults.map(shop => ({
             ...shop,
             is_saved: savedSet.has(shop.id),
             saved_at: savedAtMap.get(shop.id) || null,
@@ -239,6 +262,16 @@ router.post("/:id/save", async (req, res) => {
                 isSaved = true;
             }
         });
+
+        // Invalidate Shop Cache (if we cached shop stats) - Currently we cache shop details but not user-specific save status in generic shop cache (unless we add save count).
+        // But we DO cache Shop Details in the next step.
+        // We should invalidate 'shop:{id}'.
+        if (redis) {
+            await redis.del(`shop:${shopId}`);
+            // Also if we cache Discovery, we might need to invalidate? 
+            // Discovery cache is generic (no user status), so it's fine.
+            // But if we cache "saved count" in Discovery (we don't for now), we would need invalidation.
+        }
 
         res.json({ success: true, is_saved: isSaved });
     } catch (error) {
@@ -303,13 +336,19 @@ router.get("/:id", async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        const results = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
-        if (results.length === 0) return res.status(404).json({ error: "Shop not found" });
-
         const userIdHeader = req.headers['x-user-id'];
         const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
 
-        const shopData = results[0];
+        const cacheKey = `shop:${id}`;
+
+        // Cache only the STATIC shop data. 
+        // Match score is dynamic (depends on uid), so we fetch it separately.
+        const shopData = await getOrSetCache(cacheKey, async () => {
+            const results = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
+            return results.length > 0 ? results[0] : null;
+        }, 3600); // 1 Hour
+
+        if (!shopData) return res.status(404).json({ error: "Shop not found" });
 
         // Enrich with Match Score
         const matchScoresMap = await getShopMatchScores([id], uid);
@@ -336,99 +375,113 @@ router.get("/:id/reviews", async (req, res) => {
 
         if (isNaN(shopId)) return res.status(400).json({ error: "Invalid Shop ID" });
 
-        // 1. Base Query
-        let query = db.select({
-            id: content.id,
-            user_id: content.user_id,
-            text: content.text,
-            img: content.img,
-            img_text: content.img_text,
-            created_at: content.created_at,
-            review_prop: content.review_prop,
-            keyword: content.keyword,
-            user: {
-                id: users.id,
-                nickname: users.nickname,
-                profile_image: users.profile_image,
-                taste_cluster: users.taste_cluster,
-                taste_result: users.taste_result,
-                ranking_count: sql<number>`(
-                    SELECT COUNT(*) 
-                    FROM ${users_ranking} 
-                    WHERE ${users_ranking.user_id} = ${users.id}
-                )`
-            },
-            rank: users_ranking.rank
-        })
-            .from(content)
-            .innerJoin(users, eq(content.user_id, users.id))
-            .leftJoin(users_ranking, and(
-                eq(users_ranking.user_id, content.user_id),
-                eq(users_ranking.shop_id, shopId)
-            ))
-            .where(and(
-                eq(content.type, 'review'),
-                eq(content.is_deleted, false),
-                eq(content.visibility, true),
-                sql`${content.review_prop}->>'shop_id' = ${shopId.toString()}`
-            ));
+        // If sort is 'similar' and we have userId, it's personalized -> SKIP Cache
+        // Else (default sort or no user), we can cache.
+        const canCache = !(sort === 'similar' && userId);
+        const cacheKey = `shop:${shopId}:reviews:${sort}:page:${page}:limit:${limit}`;
 
-        // 2. Sorting
-        if (sort === 'similar' && userId) {
-            const me = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, userId)).limit(1);
-            const myScores = (me[0]?.taste_result as any)?.scores;
+        const fetchReviews = async () => {
+            // 1. Base Query
+            let query = db.select({
+                id: content.id,
+                user_id: content.user_id,
+                text: content.text,
+                img: content.img,
+                img_text: content.img_text,
+                created_at: content.created_at,
+                review_prop: content.review_prop,
+                keyword: content.keyword,
+                user: {
+                    id: users.id,
+                    nickname: users.nickname,
+                    profile_image: users.profile_image,
+                    taste_cluster: users.taste_cluster,
+                    taste_result: users.taste_result,
+                    ranking_count: sql<number>`(
+                        SELECT COUNT(*) 
+                        FROM ${users_ranking} 
+                        WHERE ${users_ranking.user_id} = ${users.id}
+                    )`
+                },
+                rank: users_ranking.rank
+            })
+                .from(content)
+                .innerJoin(users, eq(content.user_id, users.id))
+                .leftJoin(users_ranking, and(
+                    eq(users_ranking.user_id, content.user_id),
+                    eq(users_ranking.shop_id, shopId)
+                ))
+                .where(and(
+                    eq(content.type, 'review'),
+                    eq(content.is_deleted, false),
+                    eq(content.visibility, true),
+                    sql`${content.review_prop}->>'shop_id' = ${shopId.toString()}`
+                )).$dynamic();
 
-            if (myScores) {
-                const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+            // 2. Sorting
+            if (sort === 'similar' && userId) {
+                const me = await db.select({ taste_result: users.taste_result }).from(users).where(eq(users.id, userId)).limit(1);
+                const myScores = (me[0]?.taste_result as any)?.scores;
 
-                // Construct distance SQL safely using Drizzle's sql template tag
-                const distChunks = axes.map(axis => {
-                    const myVal = Number(myScores[axis] || 0);
-                    // users.taste_result is a JSONB column. ->> gets text, cast to float.
-                    // We use sql tag to ensure column reference is handled correctly.
-                    return sql`power(COALESCE((${users.taste_result}->'scores'->>${axis})::float, 0) - ${myVal}, 2)`;
-                });
+                if (myScores) {
+                    const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
 
-                const distSum = sql.join(distChunks, sql` + `);
+                    // Construct distance SQL safely using Drizzle's sql template tag
+                    const distChunks = axes.map(axis => {
+                        const myVal = Number(myScores[axis] || 0);
+                        // users.taste_result is a JSONB column. ->> gets text, cast to float.
+                        // We use sql tag to ensure column reference is handled correctly.
+                        return sql`power(COALESCE((${users.taste_result}->'scores'->>${axis})::float, 0) - ${myVal}, 2)`;
+                    });
 
-                query = query.orderBy(asc(distSum), desc(content.created_at));
+                    const distSum = sql.join(distChunks, sql` + `);
+
+                    query = query.orderBy(asc(distSum), desc(content.created_at));
+                } else {
+                    query = query.orderBy(desc(content.created_at));
+                }
             } else {
+                // TODO: 'popular' currently defaults to newest; implement like/count based sort if needed
                 query = query.orderBy(desc(content.created_at));
             }
+
+            const reviews = await query.limit(limit).offset(offset);
+
+            // Fetch Shop (minimal) for POI
+            const shopInfo = await db.select({
+                id: shops.id, name: shops.name, address_full: shops.address_full, thumbnail_img: shops.thumbnail_img, catchtable_ref: shops.catchtable_ref
+            }).from(shops).where(eq(shops.id, shopId)).limit(1);
+            const currentShop = shopInfo[0] || { id: shopId, name: 'Unknown', address_full: '', thumbnail_img: '' };
+
+            return reviews.map(r => ({
+                id: r.id,
+                user: {
+                    ...r.user,
+                    cluster_name: getClusterName(r.user.taste_cluster)
+                },
+                text: r.text,
+                images: r.img,
+                img_texts: r.img_text || [],
+                created_at: r.created_at,
+                review_prop: r.review_prop,
+                poi: {
+                    shop_id: currentShop.id,
+                    shop_name: currentShop.name,
+                    shop_address: currentShop.address_full,
+                    thumbnail_img: currentShop.thumbnail_img,
+                    rank: r.rank,
+                    satisfaction: (r.review_prop as any)?.satisfaction
+                },
+                keyword: r.keyword,
+            }));
+        };
+
+        let result;
+        if (canCache) {
+            result = await getOrSetCache(cacheKey, fetchReviews, 1800); // 30 min
         } else {
-            // TODO: 'popular' currently defaults to newest; implement like/count based sort if needed
-            query = query.orderBy(desc(content.created_at));
+            result = await fetchReviews();
         }
-
-        const reviews = await query.limit(limit).offset(offset);
-
-        // Fetch Shop (minimal) for POI
-        const shopInfo = await db.select({
-            id: shops.id, name: shops.name, address_full: shops.address_full, thumbnail_img: shops.thumbnail_img, catchtable_ref: shops.catchtable_ref
-        }).from(shops).where(eq(shops.id, shopId)).limit(1);
-        const currentShop = shopInfo[0] || { id: shopId, name: 'Unknown', address_full: '', thumbnail_img: '' };
-
-        const result = reviews.map(r => ({
-            id: r.id,
-            user: {
-                ...r.user,
-                cluster_name: getClusterName(r.user.taste_cluster)
-            },
-            text: r.text,
-            images: r.img,
-            img_texts: r.img_text || [],
-            created_at: r.created_at,
-            review_prop: r.review_prop,
-            poi: {
-                shop_id: currentShop.id,
-                shop_name: currentShop.name,
-                shop_address: currentShop.address_full,
-                thumbnail_img: currentShop.thumbnail_img,
-                rank: r.rank,
-                satisfaction: (r.review_prop as any)?.satisfaction
-            },
-            keyword: r.keyword,
-        }));
 
         res.json(result);
     } catch (error) {

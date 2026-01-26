@@ -2,391 +2,445 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters, users_follow } from "../db/schema.js";
 import { eq, desc, and, sql, count, inArray, gt, gte, ne, lte } from "drizzle-orm";
+import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 
 const router = Router();
 
 // Helper for standardized rank key
 const getRankKey = (userId: number, shopId: number) => `${userId}:${shopId}`;
 
+// Helper: Fetch Feed Content (Pure Logic)
+async function fetchFeedContent(params: {
+    page: number, limit: number, filter: string,
+    lat: number | null, lon: number | null, user_id: number | null
+}) {
+    const { page, limit, filter, lat: userLat, lon: userLon, user_id: currentUserId } = params;
+    const offset = (page - 1) * limit;
+
+    // 1. Fetch Content + User Info
+    let query = db.select({
+        id: content.id,
+        user_id: content.user_id,
+        type: content.type,
+        text: content.text,
+        img: content.img,
+        created_at: content.created_at,
+        review_prop: content.review_prop,
+        keyword: content.keyword,
+        img_text: content.img_text,
+        user: {
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            cluster_name: clusters.name,
+            taste_result: users.taste_result,
+            ranking_count: sql<number>`(
+                SELECT COUNT(*) 
+                FROM ${users_ranking} 
+                WHERE ${users_ranking.user_id} = ${users.id}
+            )`
+        },
+        link_json: content.link_json,
+    })
+        .from(content)
+        .leftJoin(users, eq(content.user_id, users.id))
+        .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
+
+    const whereConditions = [
+        eq(content.is_deleted, false),
+        eq(content.visibility, true)
+    ];
+
+    if (filter === 'follow') {
+        if (!currentUserId) return [];
+        query = query.innerJoin(users_follow,
+            and(
+                eq(users_follow.follower_id, currentUserId),
+                eq(users_follow.following_id, content.user_id)
+            )
+        );
+    } else if (filter === 'like') {
+        if (!currentUserId) return [];
+        query = query.innerJoin(likes,
+            and(
+                eq(likes.target_type, 'content'),
+                eq(likes.target_id, content.id),
+                eq(likes.user_id, currentUserId)
+            )
+        );
+    } else if (filter === 'near') {
+        if (userLat === null || userLon === null) {
+            return [];
+        } else {
+            query = query.innerJoin(shops,
+                sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shops.id}`
+            );
+            const R = 6371;
+            whereConditions.push(sql`
+                (
+                    ${R} * acos(
+                        least(1.0, greatest(-1.0, 
+                            cos(radians(${userLat})) * cos(radians(${shops.lat})) * 
+                            cos(radians(${shops.lon}) - radians(${userLon})) + 
+                            sin(radians(${userLat})) * sin(radians(${shops.lat}))
+                        ))
+                    )
+                ) <= 10
+            `);
+        }
+    }
+
+    const feedItems = await query
+        .where(and(...whereConditions))
+        .orderBy(desc(content.created_at))
+        .limit(limit)
+        .offset(offset);
+
+    if (feedItems.length === 0) {
+        return [];
+    }
+
+    // 2. Collection & Batching
+    const shopIds = new Set<number>();
+    const userIds = new Set<number>();
+    const companionIds = new Set<number>();
+    const contentIds = feedItems.map(i => i.id);
+
+    feedItems.forEach(item => {
+        if (item.type === 'review' && item.review_prop) {
+            const prop = item.review_prop as any;
+            if (prop.shop_id) {
+                shopIds.add(Number(prop.shop_id));
+                userIds.add(item.user_id);
+            }
+            if (prop.companions && Array.isArray(prop.companions)) {
+                prop.companions.forEach((cid: number) => companionIds.add(cid));
+            }
+        }
+    });
+
+    const shopMap = new Map();
+    const rankMap = new Map<string, number>();
+    const companionMap = new Map<number, any>();
+    const visitCountMap = new Map<number, number>();
+
+    // 3. Batch Fetching
+    if (shopIds.size > 0 || companionIds.size > 0) {
+        const sIds = Array.from(shopIds);
+        const uIds = Array.from(userIds);
+        const cIds = Array.from(companionIds);
+
+        if (sIds.length > 0) {
+            const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
+            shopList.forEach(s => shopMap.set(s.id, s));
+
+            const rankings = await db.select().from(users_ranking)
+                .where(and(
+                    inArray(users_ranking.user_id, uIds),
+                    inArray(users_ranking.shop_id, sIds)
+                ));
+            rankings.forEach(r => rankMap.set(getRankKey(r.user_id, r.shop_id), r.rank));
+
+            if (contentIds.length > 0) {
+                const contentIdList = contentIds.join(',');
+                const rawVisits = await db.execute(sql.raw(`
+                    WITH ranks AS (
+                        SELECT 
+                            id,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY user_id, (review_prop->>'shop_id')::int 
+                                ORDER BY created_at ASC
+                            ) as visit_num
+                        FROM content
+                        WHERE is_deleted = false 
+                          AND type = 'review'
+                          AND user_id IN (${uIds.join(',')})
+                          AND (review_prop->>'shop_id')::int IN (${sIds.join(',')})
+                    )
+                    SELECT id, visit_num FROM ranks WHERE id IN (${contentIdList})
+                 `));
+
+                rawVisits.rows.forEach((row: any) => {
+                    visitCountMap.set(Number(row.id), Number(row.visit_num));
+                });
+            }
+        }
+
+        if (cIds.length > 0) {
+            const companions = await db.select({
+                id: users.id, nickname: users.nickname, profile_image: users.profile_image
+            }).from(users).where(inArray(users.id, cIds));
+            companions.forEach(c => companionMap.set(c.id, c));
+        }
+    }
+
+    // 3.5 Interactions (Likes, Comments, Saved) - USER SPECIFIC PART
+    const likeCountMap = new Map<number, number>();
+    const commentCountMap = new Map<number, number>();
+    const likedSet = new Set<number>();
+    const savedShopSet = new Set<number>();
+    const followingAuthorSet = new Set<number>();
+
+    if (contentIds.length > 0) {
+        const likesRes = await db.select({
+            target_id: likes.target_id, count: sql<number>`count(*)`
+        }).from(likes)
+            .where(and(eq(likes.target_type, 'content'), inArray(likes.target_id, contentIds)))
+            .groupBy(likes.target_id);
+        likesRes.forEach(r => likeCountMap.set(r.target_id, Number(r.count)));
+
+        const commentsRes = await db.select({
+            content_id: comments.content_id, count: sql<number>`count(*)`
+        }).from(comments)
+            .where(and(inArray(comments.content_id, contentIds), eq(comments.is_deleted, false)))
+            .groupBy(comments.content_id);
+        commentsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
+
+        if (currentUserId) {
+            const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
+                .where(and(
+                    eq(likes.target_type, 'content'),
+                    eq(likes.user_id, currentUserId),
+                    inArray(likes.target_id, contentIds)
+                ));
+            myLikes.forEach(l => likedSet.add(l.target_id));
+
+            if (shopIds.size > 0) {
+                const mySaved = await db.select({ shop_id: users_wantstogo.shop_id }).from(users_wantstogo)
+                    .where(and(
+                        eq(users_wantstogo.user_id, currentUserId),
+                        inArray(users_wantstogo.shop_id, Array.from(shopIds)),
+                        eq(users_wantstogo.is_deleted, false)
+                    ));
+                mySaved.forEach(s => savedShopSet.add(s.shop_id));
+            }
+
+            if (userIds.size > 0) {
+                const follows = await db.select({ following_id: users_follow.following_id }).from(users_follow)
+                    .where(and(
+                        eq(users_follow.follower_id, currentUserId),
+                        inArray(users_follow.following_id, Array.from(userIds))
+                    ));
+                follows.forEach(f => followingAuthorSet.add(f.following_id));
+            }
+        }
+    }
+
+    // 3.6 Preview Comments
+    const previewCommentsMap = new Map<number, any[]>();
+    if (contentIds.length > 0) {
+        const rawComments = await db.execute(sql.raw(`
+            WITH ranked_comments AS (
+                SELECT 
+                    c.id, c.content_id, c.text, c.created_at,
+                    u.nickname, u.profile_image,
+                    ROW_NUMBER() OVER (PARTITION BY c.content_id ORDER BY c.created_at DESC) as rn
+                FROM comments c
+                LEFT JOIN users u ON c.user_id = u.id
+                WHERE c.content_id IN (${contentIds.join(',')})
+                  AND c.is_deleted = false
+            )
+            SELECT * FROM ranked_comments WHERE rn <= 2 ORDER BY created_at DESC
+         `));
+
+        rawComments.rows.forEach((row: any) => {
+            const cid = Number(row.content_id);
+            const list = previewCommentsMap.get(cid) || [];
+            list.push({
+                id: row.id,
+                content_id: cid,
+                text: row.text,
+                created_at: row.created_at,
+                user: { nickname: row.nickname, profile_image: row.profile_image }
+            });
+            previewCommentsMap.set(cid, list);
+        });
+    }
+
+    // 4. Enrich & Respond
+    return feedItems.map(item => {
+        let enrichedProp = item.review_prop as any;
+        let poi = undefined;
+
+        if (item.type === 'review' && enrichedProp?.shop_id) {
+            const sid = Number(enrichedProp.shop_id);
+            const shop = shopMap.get(sid);
+            const rank = rankMap.get(getRankKey(item.user_id, sid));
+            const visitCount = visitCountMap.get(item.id) || 1;
+            const isSaved = savedShopSet.has(sid);
+
+            let displayCompanions = [];
+            if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
+                displayCompanions = enrichedProp.companions
+                    .map((cid: number) => companionMap.get(cid))
+                    .filter(Boolean);
+            }
+
+            if (shop) {
+                enrichedProp = {
+                    ...enrichedProp,
+                    shop_name: shop.name,
+                    shop_address: shop.address_region || shop.address_full,
+                    thumbnail_img: shop.thumbnail_img,
+                    rank: rank || null,
+                    visit_count: visitCount,
+                    companions_info: displayCompanions
+                };
+
+                poi = {
+                    shop_id: sid,
+                    shop_name: shop.name,
+                    shop_address: shop.address_region || shop.address_full,
+                    thumbnail_img: shop.thumbnail_img,
+                    rank: rank || null,
+                    satisfaction: enrichedProp.satisfaction,
+                    visit_count: visitCount,
+                    is_bookmarked: isSaved,
+                    catchtable_ref: shop.catchtable_ref,
+                    lat: shop.lat,
+                    lon: shop.lon
+                };
+            }
+        }
+
+        return {
+            id: item.id,
+            user: {
+                ...(item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null }),
+                is_following: followingAuthorSet.has(item.user_id)
+            },
+            text: item.text,
+            images: item.img || [],
+            img_texts: item.img_text || [],
+            created_at: item.created_at,
+            type: item.type,
+            review_prop: enrichedProp,
+            keyword: item.keyword || [],
+            link_json: item.link_json || [],
+            poi,
+            stats: {
+                likes: likeCountMap.get(item.id) || 0,
+                comments: commentCountMap.get(item.id) || 0,
+                is_liked: likedSet.has(item.id),
+                is_saved: poi?.is_bookmarked || false
+            },
+            preview_comments: previewCommentsMap.get(item.id) || []
+        };
+    });
+}
+
+// Helper: Enrich base feed with user-specific data (Is Liked, Is Saved, Is Following)
+async function enrichFeedWithUserStatus(feed: any[], userId: number) {
+    if (feed.length === 0) return feed;
+
+    // Extract IDs
+    const contentIds = feed.map(i => i.id);
+    const shopIds = new Set<number>();
+    const authorIds = new Set<number>();
+
+    feed.forEach(item => {
+        if (item.poi && item.poi.shop_id) shopIds.add(item.poi.shop_id);
+        if (item.user && item.user.id) authorIds.add(item.user.id);
+    });
+
+    // Fetch Statuses
+    const likedSet = new Set<number>();
+    const savedShopSet = new Set<number>();
+    const followingSet = new Set<number>();
+
+    // 1. Likes
+    const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
+        .where(and(
+            eq(likes.target_type, 'content'),
+            eq(likes.user_id, userId),
+            inArray(likes.target_id, contentIds)
+        ));
+    myLikes.forEach(l => likedSet.add(l.target_id));
+
+    // 2. Saved
+    if (shopIds.size > 0) {
+        const mySaved = await db.select({ shop_id: users_wantstogo.shop_id }).from(users_wantstogo)
+            .where(and(
+                eq(users_wantstogo.user_id, userId),
+                inArray(users_wantstogo.shop_id, Array.from(shopIds)),
+                eq(users_wantstogo.is_deleted, false)
+            ));
+        mySaved.forEach(s => savedShopSet.add(s.shop_id));
+    }
+
+    // 3. Following
+    if (authorIds.size > 0) {
+        const follows = await db.select({ following_id: users_follow.following_id }).from(users_follow)
+            .where(and(
+                eq(users_follow.follower_id, userId),
+                inArray(users_follow.following_id, Array.from(authorIds))
+            ));
+        follows.forEach(f => followingSet.add(f.following_id));
+    }
+
+    // Patch
+    return feed.map(item => ({
+        ...item,
+        user: {
+            ...item.user,
+            is_following: followingSet.has(item.user.id)
+        },
+        poi: item.poi ? {
+            ...item.poi,
+            is_bookmarked: savedShopSet.has(item.poi.shop_id)
+        } : undefined,
+        stats: {
+            ...item.stats,
+            is_liked: likedSet.has(item.id),
+            is_saved: item.poi ? savedShopSet.has(item.poi.shop_id) : false
+        }
+    }));
+}
+
 // GET /api/content/feed
 router.get("/feed", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
-        const offset = (page - 1) * limit;
         const filter = (req.query.filter as string) || 'popular';
 
-        // Validation for location
+        // Location
         const rawLat = parseFloat(req.query.lat as string);
         const rawLon = parseFloat(req.query.lon as string);
         const userLat = Number.isFinite(rawLat) ? rawLat : null;
         const userLon = Number.isFinite(rawLon) ? rawLon : null;
 
-        // TODO: Replace with secure session/token auth
         const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
 
-        // 1. Fetch Content + User Info
-        let query = db.select({
-            id: content.id,
-            user_id: content.user_id,
-            type: content.type,
-            text: content.text,
-            img: content.img,
-            created_at: content.created_at,
-            review_prop: content.review_prop,
-            keyword: content.keyword,
-            img_text: content.img_text,
-            user: {
-                id: users.id,
-                nickname: users.nickname,
-                account_id: users.account_id,
-                profile_image: users.profile_image,
-                cluster_name: clusters.name,
-                taste_result: users.taste_result,
-                ranking_count: sql<number>`(
-                    SELECT COUNT(*) 
-                    FROM ${users_ranking} 
-                    WHERE ${users_ranking.user_id} = ${users.id}
-                )`
-            },
-            link_json: content.link_json,
-        })
-            .from(content)
-            .leftJoin(users, eq(content.user_id, users.id))
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `);
+        // Caching Logic: Only for global feed (popular)
+        const isGlobal = (filter === 'popular' || filter === '') && !userLat; // popular doesn't use location currently in code, but checking safety
 
-        // Fetch Current User's Taste Profile for 'popular' personalization - REMOVED (User requested logic removal)
-        // let myScores: any = null;
+        if (isGlobal) {
+            const cacheKey = `feed:global:${page}`;
 
-        // Apply Filters
-        const whereConditions = [
-            eq(content.is_deleted, false),
-            eq(content.visibility, true)
-        ];
-
-        if (filter === 'follow') {
-            if (!currentUserId) return res.json([]);
-            // Fix: Reassign query for explicit join
-            query = query.innerJoin(users_follow,
-                and(
-                    eq(users_follow.follower_id, currentUserId),
-                    eq(users_follow.following_id, content.user_id)
-                )
-            );
-        } else if (filter === 'like') {
-            if (!currentUserId) return res.json([]);
-            // Fix: Reassign query
-            query = query.innerJoin(likes,
-                and(
-                    eq(likes.target_type, 'content'),
-                    eq(likes.target_id, content.id),
-                    eq(likes.user_id, currentUserId)
-                )
-            );
-        } else if (filter === 'near') {
-            if (userLat === null || userLon === null) {
-                // Spec fallback: return empty if location missing for 'near'
-                return res.json([]);
-            } else {
-                // Fix: 10km radius
-                query = query.innerJoin(shops,
-                    sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shops.id}`
-                );
-
-                const R = 6371;
-                whereConditions.push(sql`
-                    (
-                        ${R} * acos(
-                            least(1.0, greatest(-1.0, 
-                                cos(radians(${userLat})) * cos(radians(${shops.lat})) * 
-                                cos(radians(${shops.lon}) - radians(${userLon})) + 
-                                sin(radians(${userLat})) * sin(radians(${shops.lat}))
-                            ))
-                        )
-                    ) <= 10
-            ) <= 10
-                `);
-            }
-        }
-        // else if ((filter === 'popular' || filter === '') && myScores) { ... } // Removed logic
-
-        const feedItems = await query
-            .where(and(...whereConditions))
-            .orderBy(desc(content.created_at))
-            .limit(limit)
-            .offset(offset);
-
-        if (feedItems.length === 0) {
-            return res.json([]);
-        }
-
-        // 2. Collection & Batching
-        const shopIds = new Set<number>();
-        const userIds = new Set<number>();
-        const companionIds = new Set<number>();
-        const contentIds = feedItems.map(i => i.id);
-
-        feedItems.forEach(item => {
-            if (item.type === 'review' && item.review_prop) {
-                const prop = item.review_prop as any;
-                if (prop.shop_id) {
-                    shopIds.add(Number(prop.shop_id));
-                    userIds.add(item.user_id);
-                }
-                if (prop.companions && Array.isArray(prop.companions)) {
-                    prop.companions.forEach((cid: number) => companionIds.add(cid));
-                }
-            }
-        });
-
-        const shopMap = new Map();
-        const rankMap = new Map<string, number>();
-        const companionMap = new Map<number, any>();
-        const visitCountMap = new Map<number, number>(); // ContentID -> Count
-
-        // 3. Batch Fetching
-        if (shopIds.size > 0 || companionIds.size > 0) {
-            const sIds = Array.from(shopIds);
-            const uIds = Array.from(userIds);
-            const cIds = Array.from(companionIds);
-
-            if (sIds.length > 0) {
-                // Shops
-                const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
-                shopList.forEach(s => shopMap.set(s.id, s));
-
-                // Rankings (User-Shop pairs)
-                const rankings = await db.select().from(users_ranking)
-                    .where(and(
-                        inArray(users_ranking.user_id, uIds),
-                        inArray(users_ranking.shop_id, sIds)
-                    ));
-                rankings.forEach(r => rankMap.set(getRankKey(r.user_id, r.shop_id), r.rank));
-
-                // Visit Counts (N+1 Fix: Window Function / Subquery)
-                // We need to know: For each content item (which represents a visit), what was its ordinal number?
-                // "Rank of this content among all reviews by this user for this shop, ordered by created_at"
-                if (contentIds.length > 0) {
-                    const visitranks = await db.execute(sql`
-                        WITH ranks AS (
-                            SELECT 
-                                id,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY user_id, (review_prop->>'shop_id')::int 
-                                    ORDER BY created_at ASC
-                                ) as visit_num
-                            FROM ${content}
-                            WHERE is_deleted = false 
-                              AND type = 'review'
-                              -- optimization: filter only relevant users/shops if dataset is huge, 
-                              -- but global partition is safer for correctness if missing items
-                              AND user_id IN ${uIds}
-                              AND (review_prop->>'shop_id')::int IN ${sIds}
-                        )
-                        SELECT id, visit_num FROM ranks WHERE id IN ${contentIds}
-                     `);
-                    // Drizzle execute returns weird raw structure depending on driver. 
-                    // Safe way with array params in template literal might be tricky in pure sql tag.
-                    // Let's use simpler query builder or raw string mapping.
-                    // The above `IN ${uIds}` might not expand correctly in standard Drizzle sql tag without `sql.raw`.
-                    // Let's rely on a simpler aggregation if the above is risky.
-
-                    // Safer Approach with Drizzle Query Builder using sql<T>:
-                    // Hard to do complex Window in QB. Let's use formatting for IDs.
-                    const contentIdList = contentIds.join(',');
-                    // Only fetch for relevant items to save DB load
-
-                    const rawVisits = await db.execute(sql.raw(`
-                        WITH ranks AS (
-                            SELECT 
-                                id,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY user_id, (review_prop->>'shop_id')::int 
-                                    ORDER BY created_at ASC
-                                ) as visit_num
-                            FROM content
-                            WHERE is_deleted = false 
-                              AND type = 'review'
-                              AND user_id IN (${uIds.join(',')})
-                              AND (review_prop->>'shop_id')::int IN (${sIds.join(',')})
-                        )
-                        SELECT id, visit_num FROM ranks WHERE id IN (${contentIdList})
-                     `));
-
-                    rawVisits.rows.forEach((row: any) => {
-                        visitCountMap.set(Number(row.id), Number(row.visit_num));
-                    });
-                }
-            }
-
-            // Companions
-            if (cIds.length > 0) {
-                const companions = await db.select({
-                    id: users.id, nickname: users.nickname, profile_image: users.profile_image
-                }).from(users).where(inArray(users.id, cIds));
-                companions.forEach(c => companionMap.set(c.id, c));
-            }
-        }
-
-        // 3.5 Interactions (Likes, Comments, Saved)
-        const likeCountMap = new Map<number, number>();
-        const commentCountMap = new Map<number, number>();
-        const likedSet = new Set<number>();
-        const savedShopSet = new Set<number>();
-
-        if (contentIds.length > 0) {
-            // Counts
-            const likesRes = await db.select({
-                target_id: likes.target_id, count: sql<number>`count(*)`
-            }).from(likes)
-                .where(and(eq(likes.target_type, 'content'), inArray(likes.target_id, contentIds)))
-                .groupBy(likes.target_id);
-            likesRes.forEach(r => likeCountMap.set(r.target_id, Number(r.count)));
-
-            const commentsRes = await db.select({
-                content_id: comments.content_id, count: sql<number>`count(*)`
-            }).from(comments)
-                .where(and(inArray(comments.content_id, contentIds), eq(comments.is_deleted, false)))
-                .groupBy(comments.content_id);
-            commentsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
-
-            // User Specific Status
-            if (currentUserId) {
-                const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
-                    .where(and(
-                        eq(likes.target_type, 'content'),
-                        eq(likes.user_id, currentUserId),
-                        inArray(likes.target_id, contentIds)
-                    ));
-                myLikes.forEach(l => likedSet.add(l.target_id));
-
-                if (shopIds.size > 0) {
-                    const mySaved = await db.select({ shop_id: users_wantstogo.shop_id }).from(users_wantstogo)
-                        .where(and(
-                            eq(users_wantstogo.user_id, currentUserId),
-                            inArray(users_wantstogo.shop_id, Array.from(shopIds)),
-                            eq(users_wantstogo.is_deleted, false)
-                        ));
-                    mySaved.forEach(s => savedShopSet.add(s.shop_id));
-                }
-            }
-        }
-
-        // 3.6 Preview Comments (N+1 Fix: Row Number Limit)
-        const previewCommentsMap = new Map<number, any[]>();
-        if (contentIds.length > 0) {
-            const rawComments = await db.execute(sql.raw(`
-                WITH ranked_comments AS (
-                    SELECT 
-                        c.id, c.content_id, c.text, c.created_at,
-                        u.nickname, u.profile_image,
-                        ROW_NUMBER() OVER (PARTITION BY c.content_id ORDER BY c.created_at DESC) as rn
-                    FROM comments c
-                    LEFT JOIN users u ON c.user_id = u.id
-                    WHERE c.content_id IN (${contentIds.join(',')})
-                      AND c.is_deleted = false
-                )
-                SELECT * FROM ranked_comments WHERE rn <= 2 ORDER BY created_at DESC
-             `));
-
-            rawComments.rows.forEach((row: any) => {
-                const cid = Number(row.content_id);
-                const list = previewCommentsMap.get(cid) || [];
-                // Transform back to simple object
-                list.push({
-                    id: row.id,
-                    content_id: cid,
-                    text: row.text,
-                    created_at: row.created_at,
-                    user: { nickname: row.nickname, profile_image: row.profile_image }
+            // 1. Get Base Data (Cached or Fresh)
+            // Note: We fetch with user_id=null to get "clean" data for cache
+            const baseFeed = await getOrSetCache(cacheKey, async () => {
+                return fetchFeedContent({
+                    page, limit, filter, lat: null, lon: null, user_id: null
                 });
-                previewCommentsMap.set(cid, list);
-            });
-        }
+            }, 300); // 5 min TTL
 
-        // 3.8 Follow Status
-        const followingAuthorSet = new Set<number>();
-        if (currentUserId && userIds.size > 0) {
-            const follows = await db.select({ following_id: users_follow.following_id }).from(users_follow)
-                .where(and(
-                    eq(users_follow.follower_id, currentUserId),
-                    inArray(users_follow.following_id, Array.from(userIds))
-                ));
-            follows.forEach(f => followingAuthorSet.add(f.following_id));
-        }
-
-        // 4. Enrich & Respond
-        const result = feedItems.map(item => {
-            let enrichedProp = item.review_prop as any;
-            let poi = undefined;
-
-            if (item.type === 'review' && enrichedProp?.shop_id) {
-                const sid = Number(enrichedProp.shop_id);
-                const shop = shopMap.get(sid);
-                const rank = rankMap.get(getRankKey(item.user_id, sid));
-                const visitCount = visitCountMap.get(item.id) || 1;
-                const isSaved = savedShopSet.has(sid);
-
-                let displayCompanions = [];
-                if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
-                    displayCompanions = enrichedProp.companions
-                        .map((cid: number) => companionMap.get(cid))
-                        .filter(Boolean);
-                }
-
-                if (shop) {
-                    enrichedProp = {
-                        ...enrichedProp,
-                        shop_name: shop.name,
-                        shop_address: shop.address_region || shop.address_full,
-                        thumbnail_img: shop.thumbnail_img,
-                        rank: rank || null,
-                        visit_count: visitCount,
-                        companions_info: displayCompanions
-                    };
-
-                    poi = {
-                        shop_id: sid,
-                        shop_name: shop.name,
-                        shop_address: shop.address_region || shop.address_full,
-                        thumbnail_img: shop.thumbnail_img,
-                        rank: rank || null,
-                        satisfaction: enrichedProp.satisfaction,
-                        visit_count: visitCount,
-                        is_bookmarked: isSaved, // Consistent with stats
-                        catchtable_ref: shop.catchtable_ref,
-                        lat: shop.lat,
-                        lon: shop.lon
-                    };
-                }
+            // 2. Enrich if User
+            if (currentUserId && baseFeed.length > 0) {
+                const enriched = await enrichFeedWithUserStatus(baseFeed, currentUserId);
+                return res.json(enriched);
             }
 
-            return {
-                id: item.id,
-                user: {
-                    ...(item.user || { id: item.user_id, nickname: 'Unknown', account_id: 'unknown', profile_image: null }),
-                    is_following: followingAuthorSet.has(item.user_id)
-                },
-                text: item.text,
-                images: item.img || [],
-                img_texts: item.img_text || [],
-                created_at: item.created_at,
-                type: item.type,
-                review_prop: enrichedProp,
-                keyword: item.keyword || [],
-                link_json: item.link_json || [],
-                poi,
-                stats: {
-                    likes: likeCountMap.get(item.id) || 0,
-                    comments: commentCountMap.get(item.id) || 0,
-                    is_liked: likedSet.has(item.id),
-                    is_saved: poi?.is_bookmarked || false // Fix: Correctly reflect saved status
-                },
-                preview_comments: previewCommentsMap.get(item.id) || []
-            };
-        });
-
-        res.json(result);
+            return res.json(baseFeed);
+        } else {
+            // Dynamic Feed (No Cache)
+            const result = await fetchFeedContent({
+                page, limit, filter, lat: userLat, lon: userLon, user_id: currentUserId
+            });
+            res.json(result);
+        }
 
     } catch (error) {
         console.error("Feed error:", error);
@@ -414,6 +468,20 @@ router.post("/", async (req, res) => {
             link_json,
             img_text
         }).returning();
+
+        // Invalidation Strategy
+        // 1. Invalidate Global Feed (New post appears)
+        await invalidatePattern('feed:global:*');
+
+        // 2. Invalidate User Lists (User's count/content changed)
+        await invalidatePattern(`lists:${user_id}*`);
+
+        // 3. Invalidate Shop Reviews if it's a review
+        if (type === 'review' && review_prop?.shop_id) {
+            const sid = review_prop.shop_id;
+            await invalidatePattern(`shop:${sid}:reviews:*`);
+            // Also invalidate shop stats if cached?
+        }
 
         res.json(result[0]);
     } catch (error) {
@@ -496,6 +564,12 @@ router.post("/ranking/apply", async (req, res) => {
         });
 
         res.json({ success: true, shop_id, satisfaction_tier: new_tier });
+
+        // Invalidate User Lists (Ranking changed)
+        await invalidatePattern(`lists:${user_id}*`);
+
+        // Invalidate Shop Reviews (Ranks changed)
+        await invalidatePattern(`shop:${shop_id}:reviews:*`);
     } catch (error) {
         console.error("Ranking apply error:", error);
         res.status(500).json({ error: "Failed to apply ranking" });

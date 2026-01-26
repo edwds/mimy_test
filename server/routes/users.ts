@@ -3,6 +3,7 @@ import { db } from "../db/index.js";
 import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard } from "../db/schema.js";
 import { eq, and, desc, sql, ilike, isNotNull } from "drizzle-orm";
 import { getShopMatchScores } from "../utils/enricher.js";
+import { getOrSetCache } from "../redis.js";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.get("/check-handle", async (req, res) => {
 
 // GET /leaderboard
 // GET /leaderboard
+// GET /leaderboard
 router.get("/leaderboard", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
@@ -39,49 +41,50 @@ router.get("/leaderboard", async (req, res) => {
         if (filter === 'company') {
             type = 'COMPANY';
         }
-        // If filter is 'neighborhood', use OVERALL type (for now, as per refresh script)
-        // Ensure default is OVERALL
 
         if (filter === 'company' || filter === 'neighborhood') {
             limit = 100;
         }
 
         const offset = (page - 1) * limit;
+        const cacheKey = `leaderboard:${type}:${limit}:${page}`;
 
-        // Query Cache
-        const cachedLeaderboard = await db.select({
-            id: users.id,
-            nickname: users.nickname,
-            account_id: users.account_id,
-            email: users.email,
-            profile_image: users.profile_image,
-            cluster_name: clusters.name,
-            taste_result: users.taste_result,
-            rank: leaderboard.rank,
-            score: leaderboard.score,
-            stats: leaderboard.stats
-        })
-            .from(leaderboard)
-            .innerJoin(users, eq(leaderboard.user_id, users.id))
-            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
-            .where(eq(leaderboard.type, type))
-            .orderBy(leaderboard.rank)
-            .limit(limit)
-            .offset(offset);
+        const result = await getOrSetCache(cacheKey, async () => {
+            // Query Cache
+            const cachedLeaderboard = await db.select({
+                id: users.id,
+                nickname: users.nickname,
+                account_id: users.account_id,
+                email: users.email,
+                profile_image: users.profile_image,
+                cluster_name: clusters.name,
+                taste_result: users.taste_result,
+                rank: leaderboard.rank,
+                score: leaderboard.score,
+                stats: leaderboard.stats
+            })
+                .from(leaderboard)
+                .innerJoin(users, eq(leaderboard.user_id, users.id))
+                .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
+                .where(eq(leaderboard.type, type))
+                .orderBy(leaderboard.rank)
+                .limit(limit)
+                .offset(offset);
 
-        // Map to response format
-        const result = cachedLeaderboard.map(row => ({
-            rank: row.rank,
-            user: {
-                id: row.id,
-                nickname: row.nickname,
-                account_id: row.account_id,
-                profile_image: row.profile_image,
-                cluster_name: row.cluster_name,
-                taste_result: row.taste_result
-            },
-            score: row.score
-        }));
+            // Map to response format
+            return cachedLeaderboard.map(row => ({
+                rank: row.rank,
+                user: {
+                    id: row.id,
+                    nickname: row.nickname,
+                    account_id: row.account_id,
+                    profile_image: row.profile_image,
+                    cluster_name: row.cluster_name,
+                    taste_result: row.taste_result
+                },
+                score: row.score
+            }));
+        }, 3600); // 1 hour TTL
 
         res.json(result);
 
@@ -374,88 +377,94 @@ router.post("/:id/follow", async (req, res) => {
 router.get("/:id/lists", async (req, res) => {
     try {
         const id = parseInt(req.params.id);
+        const cacheKey = `lists:${id}`;
 
-        const user = await db.select({
-            id: users.id,
-            nickname: users.nickname,
-            profile_image: users.profile_image
-        }).from(users).where(eq(users.id, id)).limit(1);
+        const lists = await getOrSetCache(cacheKey, async () => {
+            const user = await db.select({
+                id: users.id,
+                nickname: users.nickname,
+                profile_image: users.profile_image
+            }).from(users).where(eq(users.id, id)).limit(1);
 
-        if (user.length === 0) return res.status(404).json({ error: "User not found" });
-        const userInfo = user[0];
+            if (user.length === 0) return null;
+            const userInfo = user[0];
 
-        const lists: any[] = [];
+            const resultLists: any[] = [];
 
-        // 1. Overall Ranking (Top 100)
-        const overallCountRes = await db.select({ count: sql<number>`count(*)` })
-            .from(users_ranking)
-            .where(eq(users_ranking.user_id, id));
+            // 1. Overall Ranking (Top 100)
+            const overallCountRes = await db.select({ count: sql<number>`count(*)` })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, id));
 
-        const overallCount = Number(overallCountRes[0]?.count || 0);
+            const overallCount = Number(overallCountRes[0]?.count || 0);
 
-        const latestUpdateRes = await db.select({ updated_at: users_ranking.updated_at })
-            .from(users_ranking)
-            .where(eq(users_ranking.user_id, id))
-            .orderBy(desc(users_ranking.updated_at))
-            .limit(1);
-        const lastUpdated = latestUpdateRes[0]?.updated_at || new Date();
+            const latestUpdateRes = await db.select({ updated_at: users_ranking.updated_at })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, id))
+                .orderBy(desc(users_ranking.updated_at))
+                .limit(1);
+            const lastUpdated = latestUpdateRes[0]?.updated_at || new Date();
 
-        if (overallCount >= 10) {
-            lists.push({
-                id: 'overall',
-                type: 'OVERALL',
-                title: '전체 랭킹',
-                count: Math.min(overallCount, 100),
-                updated_at: lastUpdated,
-                author: userInfo
-            });
-        }
+            if (overallCount >= 10) {
+                resultLists.push({
+                    id: 'overall',
+                    type: 'OVERALL',
+                    title: '전체 랭킹',
+                    count: Math.min(overallCount, 100),
+                    updated_at: lastUpdated,
+                    author: userInfo
+                });
+            }
 
-        // 2. Region Ranking
-        const regionGroups = await db.select({
-            region: shops.address_region,
-            count: sql<number>`count(*)`
-        })
-            .from(users_ranking)
-            .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
-            .where(and(eq(users_ranking.user_id, id), isNotNull(shops.address_region)))
-            .groupBy(shops.address_region)
-            .having(sql`count(*) >= 10`);
+            // 2. Region Ranking
+            const regionGroups = await db.select({
+                region: shops.address_region,
+                count: sql<number>`count(*)`
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(and(eq(users_ranking.user_id, id), isNotNull(shops.address_region)))
+                .groupBy(shops.address_region)
+                .having(sql`count(*) >= 10`);
 
-        for (const group of regionGroups) {
-            lists.push({
-                id: `region_${group.region}`,
-                type: 'REGION',
-                title: `${group.region} 랭킹`,
-                count: Number(group.count),
-                updated_at: lastUpdated,
-                author: userInfo,
-                value: group.region
-            });
-        }
+            for (const group of regionGroups) {
+                resultLists.push({
+                    id: `region_${group.region}`,
+                    type: 'REGION',
+                    title: `${group.region} 랭킹`,
+                    count: Number(group.count),
+                    updated_at: lastUpdated,
+                    author: userInfo,
+                    value: group.region
+                });
+            }
 
-        // 3. Category Ranking
-        const categoryGroups = await db.select({
-            category: shops.food_kind,
-            count: sql<number>`count(*)`
-        })
-            .from(users_ranking)
-            .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
-            .where(and(eq(users_ranking.user_id, id), isNotNull(shops.food_kind)))
-            .groupBy(shops.food_kind)
-            .having(sql`count(*) >= 10`);
+            // 3. Category Ranking
+            const categoryGroups = await db.select({
+                category: shops.food_kind,
+                count: sql<number>`count(*)`
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(and(eq(users_ranking.user_id, id), isNotNull(shops.food_kind)))
+                .groupBy(shops.food_kind)
+                .having(sql`count(*) >= 10`);
 
-        for (const group of categoryGroups) {
-            lists.push({
-                id: `category_${group.category}`,
-                type: 'CATEGORY',
-                title: `${group.category} 랭킹`,
-                count: Number(group.count),
-                updated_at: lastUpdated,
-                author: userInfo,
-                value: group.category
-            });
-        }
+            for (const group of categoryGroups) {
+                resultLists.push({
+                    id: `category_${group.category}`,
+                    type: 'CATEGORY',
+                    title: `${group.category} 랭킹`,
+                    count: Number(group.count),
+                    updated_at: lastUpdated,
+                    author: userInfo,
+                    value: group.category
+                });
+            }
+            return resultLists;
+        }, 3600);
+
+        if (!lists) return res.status(404).json({ error: "User not found" });
 
         res.json(lists);
 
@@ -472,44 +481,47 @@ router.get("/:id/lists/detail", async (req, res) => {
         const type = req.query.type as string; // OVERALL, REGION, CATEGORY
         const value = req.query.value as string;
 
+        const cacheKey = `lists:${id}:detail:${type}:${value || 'all'}`;
 
+        const results = await getOrSetCache(cacheKey, async () => {
+            let query = db.select({
+                rank: users_ranking.rank,
+                shop: shops,
+                satisfaction_tier: users_ranking.satisfaction_tier,
+                // Subquery to get the latest review text
+                review_text: sql<string>`(
+                    select text from ${content} 
+                    where ${content.user_id} = ${users_ranking.user_id} 
+                    and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
+                    and ${content.is_deleted} = false
+                    order by ${content.created_at} desc 
+                    limit 1
+                )`,
+                // Subquery to get the latest review images (jsonb)
+                review_images: sql<string[]>`(
+                    select img from ${content} 
+                    where ${content.user_id} = ${users_ranking.user_id} 
+                    and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
+                    and ${content.is_deleted} = false
+                    order by ${content.created_at} desc 
+                    limit 1
+                )`
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .$dynamic();
 
-        let query = db.select({
-            rank: users_ranking.rank,
-            shop: shops,
-            satisfaction_tier: users_ranking.satisfaction_tier,
-            // Subquery to get the latest review text
-            review_text: sql<string>`(
-                select text from ${content} 
-                where ${content.user_id} = ${users_ranking.user_id} 
-                and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
-                and ${content.is_deleted} = false
-                order by ${content.created_at} desc 
-                limit 1
-            )`,
-            // Subquery to get the latest review images (jsonb)
-            review_images: sql<string[]>`(
-                select img from ${content} 
-                where ${content.user_id} = ${users_ranking.user_id} 
-                and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
-                and ${content.is_deleted} = false
-                order by ${content.created_at} desc 
-                limit 1
-            )`
-        })
-            .from(users_ranking)
-            .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
-            .$dynamic();
+            const conditions = [eq(users_ranking.user_id, id)];
 
-        const conditions = [eq(users_ranking.user_id, id)];
+            if (type === 'REGION' && value) {
+                conditions.push(eq(shops.address_region, value));
+            } else if (type === 'CATEGORY' && value) {
+                conditions.push(eq(shops.food_kind, value));
+            }
 
-        if (type === 'REGION' && value) {
-            conditions.push(eq(shops.address_region, value));
-        } else if (type === 'CATEGORY' && value) {
-            conditions.push(eq(shops.food_kind, value));
-        }
+            return await query.where(and(...conditions)).orderBy(users_ranking.rank).limit(100);
+        }, 3600);
 
-        const results = await query.where(and(...conditions)).orderBy(users_ranking.rank).limit(100);
         res.json(results);
 
     } catch (error) {
