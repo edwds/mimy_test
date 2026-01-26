@@ -111,7 +111,8 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
         if (location.key !== 'default') {
             navigate(-1);
         } else {
-            navigate(`/main/user/${userId}`, { replace: true });
+            // Fallback to viewing the user profile if no history
+            navigate(`/main?viewUser=${userId}`, { replace: true });
         }
     };
 

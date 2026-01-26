@@ -175,33 +175,54 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     // Content State
     const [contents, setContents] = useState<any[]>([]);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [contentPage, setContentPage] = useState(1);
+    const [hasMoreContent, setHasMoreContent] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
 
     // Lists State
     const [lists, setLists] = useState<any[]>([]);
     const [loadingLists, setLoadingLists] = useState(false);
 
+    // Initial Fetch & Reset
+    useEffect(() => {
+        setContentPage(1);
+        setContents([]);
+        setHasMoreContent(true);
+    }, [userId, activeTab]);
+
     useEffect(() => {
         const fetchContent = async () => {
             const targetId = user?.id || userId;
             if (!targetId || activeTab !== 'content') return;
+            if (!hasMoreContent && contentPage > 1) return;
 
-            setLoadingContent(true);
+            // Prevent double fetch
+            if (contentPage === 1) setLoadingContent(true);
+            else setIsFetchingMore(true);
+
             try {
-                // If userId is string (account_id), API might need numeric ID.
-                // We prefer user.id if available (from fetchUser).
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${targetId}?user_id=${currentUser?.id || ''}`);
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${targetId}?user_id=${currentUser?.id || ''}&page=${contentPage}&limit=20`);
                 if (response.ok) {
                     const data = await response.json();
-                    setContents(data);
+                    if (data.length < 20) setHasMoreContent(false);
+
+                    setContents(prev => contentPage === 1 ? data : [...prev, ...data]);
                 }
             } catch (error) {
                 console.error("Failed to load content", error);
             } finally {
                 setLoadingContent(false);
+                setIsFetchingMore(false);
             }
         };
         fetchContent();
-    }, [userId, activeTab, currentUser?.id, user]);
+    }, [userId, activeTab, contentPage, user]); // currentUser dependency removed to avoid re-fetch flickers, tricky but safer for stability logic
+
+    const loadMoreContent = () => {
+        if (!loadingContent && !isFetchingMore && hasMoreContent) {
+            setContentPage(prev => prev + 1);
+        }
+    };
 
     // Saved (Wants to go) - Overlap Logic
     const [commonShops, setCommonShops] = useState<any[]>([]);
@@ -275,7 +296,14 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const [isHeaderVisible] = useState(true);
 
     const handleScroll = () => {
-        // Keep scroll handler for future extensions
+        if (containerRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+            if (scrollHeight - scrollTop <= clientHeight + 300) { // Load more when near bottom (300px buffer)
+                if (activeTab === 'content') {
+                    loadMoreContent();
+                }
+            }
+        }
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -467,6 +495,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     <p className="text-sm">{t('profile.empty.content')}</p>
                                 </div>
                             )}
+                            {isFetchingMore && (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -546,7 +579,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     )}
 
                 </div>
-            </main>
+            </main >
 
             <TasteProfileSheet
                 isOpen={isTasteSheetOpen}
@@ -554,7 +587,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
                 userId={user?.id}
             />
-        </div>
+        </div >
     );
 };
 

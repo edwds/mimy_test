@@ -625,6 +625,10 @@ router.get("/user/:userId", async (req, res) => {
 
         const viewerId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
 
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = (page - 1) * limit;
+
         // Fetch User Content
         const userContent = await db.select({
             id: content.id,
@@ -660,7 +664,8 @@ router.get("/user/:userId", async (req, res) => {
                 eq(content.visibility, true)
             ))
             .orderBy(desc(content.created_at))
-            .limit(20);
+            .limit(limit)
+            .offset(offset);
 
         if (userContent.length === 0) return res.json([]);
 
