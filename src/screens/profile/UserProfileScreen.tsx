@@ -53,7 +53,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             // If viewing self, redirect to main profile
             // Check both numeric ID match and account_id match
             if (currentUser && (String(currentUser.id) === userId || currentUser.account_id === userId)) {
-                navigate('/main/profile', { replace: true });
+                // Preserve existing params (like viewListUser) when redirecting
+                // except viewUser which we want to drop since we are going to native profile tab
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('viewUser');
+                navigate({ pathname: '/main/profile', search: newParams.toString() }, { replace: true });
                 return;
             }
 
@@ -517,15 +521,21 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                     onPress={() => {
                                         // Navigate to details
                                         // Navigate to details via Overlay (query params)
-                                        const current = new URLSearchParams(window.location.search);
+                                        const newParams = new URLSearchParams(searchParams);
                                         const targetId = user?.id || userId;
 
-                                        current.set('viewListUser', String(targetId));
-                                        current.set('type', list.type);
-                                        if (list.value) current.set('value', list.value);
-                                        if (list.title) current.set('title', list.title);
+                                        // Explicitly ensure viewUser is preserved/set
+                                        // This prevents the background profile from unmounting if it was somehow lost
+                                        if (targetId) {
+                                            newParams.set('viewUser', String(targetId));
+                                        }
 
-                                        navigate({ search: current.toString() });
+                                        newParams.set('viewListUser', String(targetId));
+                                        newParams.set('type', list.type);
+                                        if (list.value) newParams.set('value', list.value);
+                                        if (list.title) newParams.set('title', list.title);
+
+                                        navigate({ search: newParams.toString() });
                                     }}
                                 />
                             ))}

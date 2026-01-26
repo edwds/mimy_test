@@ -410,12 +410,16 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     updatedAt={list.updated_at}
                                     author={list.author}
                                     onPress={() => {
-                                        const query = new URLSearchParams({
-                                            type: list.type,
-                                            value: list.value || '',
-                                            title: list.title,
-                                        });
-                                        navigate(`/profile/lists/${user.id}?${query.toString()}`);
+                                        const query = new URLSearchParams(searchParams);
+                                        query.set('viewListUser', String(user.id));
+
+                                        // Set list params
+                                        query.set('type', list.type);
+                                        if (list.value) query.set('value', list.value);
+                                        if (list.title) query.set('title', list.title);
+
+                                        // Navigate while keeping current path (keeps activeTab='profile')
+                                        navigate({ search: query.toString() });
                                     }}
                                 />
                             ))}

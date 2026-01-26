@@ -100,9 +100,17 @@ export const MainTab = () => {
                 {/* Stacked Screens */}
                 {(() => {
                     const searchParams = new URLSearchParams(location.search);
-                    const viewUserId = searchParams.get('viewUser');
+                    let viewUserId = searchParams.get('viewUser');
+                    const viewListUserId = searchParams.get('viewListUser');
                     const viewShopId = searchParams.get('viewShop');
-                    const viewListUserId = searchParams.get('viewListUser'); // User ID for the list
+
+                    // Fallback: If viewing a list but viewUser is missing, assume the list owner is the context.
+                    // This keeps the profile screen mounted in the background, preventing flicker on back.
+                    // EXCEPTION: If we are already on the Profile Tab (e.g. My Profile), allow the list to overlay strictly on top 
+                    // without forcing the UserProfileScreen overlay (which would be redundant or cause redirect loops).
+                    if (!viewUserId && viewListUserId && !location.pathname.includes('/profile')) {
+                        viewUserId = viewListUserId;
+                    }
 
                     // Render stack based on what is present. 
                     // Note: If multiple are present, we might want to show the last one, 
