@@ -208,6 +208,7 @@ export const ContentCard = ({
     const [isLiked, setIsLiked] = useState(effectiveIsLiked);
     const [likeCount, setLikeCount] = useState(content.stats.likes);
     const [commentCount, setCommentCount] = useState(content.stats.comments);
+    const [previewComments, setPreviewComments] = useState(content.preview_comments || []);
     const [isPoiBookmarked, setIsPoiBookmarked] = useState(!!content.poi?.is_bookmarked); // Add local state
     const [showComments, setShowComments] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
@@ -236,9 +237,10 @@ export const ContentCard = ({
         setLikeCount(content.stats.likes + adjustment);
 
         setCommentCount(content.stats.comments);
+        setPreviewComments(content.preview_comments || []);
         setIsPoiBookmarked(!!content.poi?.is_bookmarked); // Sync prop
         setIsFollowing(!!user.is_following);
-    }, [content.stats, content.poi?.is_bookmarked, user.is_following, optimisticLikes, content.id]);
+    }, [content.stats, content.preview_comments, content.poi?.is_bookmarked, user.is_following, optimisticLikes, content.id]);
 
 
 
@@ -304,13 +306,22 @@ export const ContentCard = ({
         // Update global optimistic stores
         toggleOptimisticLike(content.id, newLiked);
 
+
         try {
             const method = prevLiked ? 'DELETE' : 'POST';
-            await fetch(`${API_BASE_URL}/api/content/${content.id}/like`, {
+            const res = await fetch(`${API_BASE_URL}/api/content/${content.id}/like`, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: currentUser.id })
             });
+            const data = await res.json();
+            if (data.success && data.stats) {
+                // Sync with server truth
+                setIsLiked(data.stats.is_liked);
+                setLikeCount(data.stats.likes);
+                setCommentCount(data.stats.comments); // In case comments changed differently? Unlikely for like toggle but safe.
+                toggleOptimisticLike(content.id, data.stats.is_liked);
+            }
         } catch (e) {
             // Rollback
             setIsLiked(prevLiked);
@@ -1011,18 +1022,18 @@ export const ContentCard = ({
 
             {/* Comment Preview */}
             {
-                content.preview_comments && content.preview_comments.length > 0 && (
+                previewComments && previewComments.length > 0 && (
                     <div className="px-5 pb-2 mb-4 space-y-2">
-                        {content.stats.comments > content.preview_comments.length && (
+                        {commentCount > previewComments.length && (
                             <button
                                 onClick={handleOpenComments}
                                 className="text-gray-500 text-sm font-medium hover:text-gray-800"
                             >
-                                {t('content.view_all_comments', { count: content.stats.comments })}
+                                {t('content.view_all_comments', { count: commentCount })}
                             </button>
                         )}
 
-                        {content.preview_comments.map(comment => (
+                        {previewComments.map(comment => (
                             <div key={comment.id} className="flex gap-2 text-sm leading-tight">
                                 <span className="font-bold text-gray-900 flex-shrink-0">
                                     {comment.user?.nickname || 'User'}
@@ -1041,6 +1052,10 @@ export const ContentCard = ({
                 isOpen={showComments}
                 onClose={() => setShowComments(false)}
                 contentId={content.id}
+                onCommentSuccess={(stats, previews) => {
+                    setCommentCount(stats.comments);
+                    setPreviewComments(previews);
+                }}
             />
 
             <ImageViewer

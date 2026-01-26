@@ -20,9 +20,10 @@ interface CommentSheetProps {
     isOpen: boolean;
     onClose: () => void;
     contentId: number;
+    onCommentSuccess?: (stats: { comments: number }, previewComments: any[]) => void;
 }
 
-export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) => {
+export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: CommentSheetProps) => {
     const { user } = useUser();
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(false);
@@ -119,10 +120,18 @@ export const CommentSheet = ({ isOpen, onClose, contentId }: CommentSheetProps) 
             });
 
             if (res.ok) {
-                const newComment = await res.json();
+                const data = await res.json();
+                // Handle new response format { new_comment, stats, preview_comments }
+                // Fallback for backward compatibility if backend returns just comment
+                const newComment = data.new_comment || data;
+
                 setComments(prev => [...prev, newComment]);
                 setInputText('');
                 setTimeout(scrollToBottom, 100);
+
+                if (data.stats && data.preview_comments) {
+                    onCommentSuccess?.(data.stats, data.preview_comments);
+                }
             }
         } catch (error) {
             console.error("Failed to post comment", error);

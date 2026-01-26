@@ -976,7 +976,9 @@ router.post("/:id/like", async (req, res) => {
             });
         }
 
-        res.json({ success: true });
+        // Return updated stats
+        const stats = await fetchContentStats(contentId, user_id);
+        res.json({ success: true, stats });
     } catch (error) {
         console.error("Like error:", error);
         res.status(500).json({ error: "Failed to like" });
@@ -1000,7 +1002,9 @@ router.delete("/:id/like", async (req, res) => {
                 eq(likes.user_id, user_id)
             ));
 
-        res.json({ success: true });
+        // Return updated stats
+        const stats = await fetchContentStats(contentId, user_id);
+        res.json({ success: true, stats });
     } catch (error) {
         console.error("Unlike error:", error);
         res.status(500).json({ error: "Failed to unlike" });
@@ -1073,11 +1077,82 @@ router.post("/:id/comments", async (req, res) => {
             user: user[0] || { nickname: 'Unknown', profile_image: null }
         };
 
-        res.json(newComment);
+        // Fetch updated stats & preview comments
+        const stats = await fetchContentStats(contentId, user_id);
+
+        // Fetch Preview Comments (Latest 2)
+        const rawComments = await db.execute(sql.raw(`
+            SELECT 
+                c.id, c.content_id, c.text, c.created_at,
+                u.nickname, u.profile_image
+            FROM comments c
+            LEFT JOIN users u ON c.user_id = u.id
+            WHERE c.content_id = ${contentId}
+              AND c.is_deleted = false
+            ORDER BY c.created_at DESC
+            LIMIT 2
+         `));
+
+        const preview_comments = rawComments.rows.map((row: any) => ({
+            id: row.id,
+            content_id: Number(row.content_id),
+            text: row.text,
+            created_at: row.created_at,
+            user: { nickname: row.nickname, profile_image: row.profile_image }
+        }));
+
+        res.json({
+            new_comment: newComment,
+            stats,
+            preview_comments
+        });
     } catch (error) {
         console.error("Create comment error:", error);
         res.status(500).json({ error: "Failed to create comment" });
     }
 });
+
+// Helper for single content stats
+async function fetchContentStats(contentId: number, currentUserId?: number) {
+    const likeCountRes = await db.select({ count: sql<number>`count(*)` })
+        .from(likes)
+        .where(and(eq(likes.target_type, 'content'), eq(likes.target_id, contentId)));
+    const likeCount = Number(likeCountRes[0]?.count || 0);
+
+    const commentCountRes = await db.select({ count: sql<number>`count(*)` })
+        .from(comments)
+        .where(and(eq(comments.content_id, contentId), eq(comments.is_deleted, false)));
+    const commentCount = Number(commentCountRes[0]?.count || 0);
+
+    let is_liked = false;
+    let is_saved = false;
+
+    if (currentUserId) {
+        const likeCheck = await db.select().from(likes)
+            .where(and(eq(likes.target_type, 'content'), eq(likes.target_id, contentId), eq(likes.user_id, currentUserId)))
+            .limit(1);
+        is_liked = likeCheck.length > 0;
+
+        // Note: For is_saved, we need the shop_id. This might be expensive to fetch here every time if we don't have it.
+        // But for consistency, let's fetch the content prop to get shop_id
+        const contentItem = await db.select({ review_prop: content.review_prop }).from(content)
+            .where(eq(content.id, contentId)).limit(1);
+
+        if (contentItem.length > 0 && contentItem[0].review_prop) {
+            const prop = contentItem[0].review_prop as any;
+            if (prop.shop_id) {
+                const saveCheck = await db.select().from(users_wantstogo)
+                    .where(and(
+                        eq(users_wantstogo.user_id, currentUserId),
+                        eq(users_wantstogo.shop_id, Number(prop.shop_id)),
+                        eq(users_wantstogo.is_deleted, false)
+                    )).limit(1);
+                is_saved = saveCheck.length > 0;
+            }
+        }
+    }
+
+    return { likes: likeCount, comments: commentCount, is_liked, is_saved };
+}
 
 export default router;
