@@ -89,7 +89,9 @@ router.get("/:code", async (req, res) => {
             return {
                 items,
                 author: user[0],
-                title
+                title,
+                type,
+                value
             };
         }, 600); // Cache for 10 minutes
 

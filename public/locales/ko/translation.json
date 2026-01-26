@@ -114,6 +114,8 @@
         },
         "ranking": {
             "title": "어떤 곳이 더 좋았나요?",
+            "overall_title": "전체 랭킹",
+            "ranking_suffix": "랭킹",
             "new_label": "New!",
             "vs": "VS",
             "tip": "(Tip: 더 기억에 남는 곳을 선택해주세요)",

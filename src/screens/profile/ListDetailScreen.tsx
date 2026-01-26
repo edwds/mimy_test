@@ -85,7 +85,19 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         const data = await res.json();
                         setItems(data.items);
                         setAuthor(data.author);
-                        setTitle(data.title);
+
+                        // Dynamic Title Generation
+                        let displayTitle = data.title;
+                        const lType = data.type || listType;
+                        const lValue = data.value || listValue;
+
+                        if (lType === 'OVERALL') {
+                            displayTitle = t('write.ranking.overall_title', 'Overall Ranking');
+                        } else if (lType === 'REGION' || lType === 'CATEGORY') {
+                            displayTitle = `${lValue} ${t('write.ranking.ranking_suffix', 'Ranking')}`;
+                        }
+
+                        setTitle(displayTitle);
                     }
                 } else if (userId) {
                     // 1. Fetch User Info (for header)
@@ -102,6 +114,15 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         type: listType,
                         value: listValue
                     });
+
+                    // Also set title for non-shared view if it's generic "Ranking"
+                    if (title === 'Ranking' || !searchParams.get('title')) {
+                        if (listType === 'OVERALL') {
+                            setTitle(t('write.ranking.overall_title', 'Overall Ranking'));
+                        } else if ((listType === 'REGION' || listType === 'CATEGORY') && listValue) {
+                            setTitle(`${listValue} ${t('write.ranking.ranking_suffix', 'Ranking')}`);
+                        }
+                    }
                     const listRes = await fetch(`${API_BASE_URL}/api/users/${userId}/lists/detail?${query.toString()}`);
                     if (listRes.ok) {
                         const listData = await listRes.json();
