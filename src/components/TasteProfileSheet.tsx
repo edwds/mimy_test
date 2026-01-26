@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/api';
 
 
 
@@ -45,8 +46,8 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
         if (userId) {
             setLoading(true);
             Promise.all([
-                fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/vs/history?user_id=${userId}`).then(res => res.json()),
-                fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/hate/history?user_id=${userId}`).then(res => res.json())
+                fetch(`${API_BASE_URL}/api/vs/history?user_id=${userId}`).then(res => res.json()),
+                fetch(`${API_BASE_URL}/api/hate/history?user_id=${userId}`).then(res => res.json())
             ])
                 .then(([vsData, hateData]) => {
                     setHistory(Array.isArray(vsData) ? vsData : []);

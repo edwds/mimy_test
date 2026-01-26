@@ -500,13 +500,18 @@ router.post("/", async (req, res) => {
             img_text
         }).returning();
 
+        // ... (existing code)
+
         // Invalidation Strategy
+        console.log(`[Content Create] Invalidation/Pre-warm starting for user ${user_id}`);
+
         // 1. Invalidate Global Feed (New post appears)
         await invalidatePattern('feed:global:*');
 
         // 2. Invalidate User Lists -> PRE-WARM instead
         // await invalidatePattern(`lists:${user_id}*`); // Old way
-        prewarmUserLists(user_id); // New way (Background)
+        console.log(`[Content Create] Calling prewarmUserLists for ${user_id}`);
+        prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err)); // New way (Background)
 
         // 3. Invalidate Shop Reviews if it's a review
         if (type === 'review' && review_prop?.shop_id) {
@@ -515,6 +520,7 @@ router.post("/", async (req, res) => {
             // Also invalidate shop stats if cached?
         }
 
+        console.log(`[Content Create] Done`);
         res.json(result[0]);
     } catch (error) {
         console.error("Create content error:", error);
