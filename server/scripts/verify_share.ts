@@ -42,20 +42,40 @@ async function verify() {
 
         const { code } = createData;
 
-        // 3. Verify Get Link
-        console.log(`Fetching shared link ${code}...`);
-        const getRes = await fetch(`${API_URL}/${code}`);
+        // 3. Verify Get Link (First Request - Cache MISS)
+        console.log(`Fetching shared link ${code} (1st attempt)...`);
+        const start1 = performance.now();
+        const getRes1 = await fetch(`${API_URL}/${code}`);
+        const end1 = performance.now();
 
-        if (!getRes.ok) {
-            console.error("Failed to fetch link:", await getRes.text());
+        if (!getRes1.ok) {
+            console.error("Failed to fetch link 1:", await getRes1.text());
             return;
         }
 
-        const getData = await getRes.json();
-        console.log("Link Fetched Successfully!");
-        console.log("Title:", getData.title);
-        console.log("Author:", getData.author.nickname);
-        console.log("Items Count:", getData.items.length);
+        const getData1 = await getRes1.json();
+        console.log(`1st Fetch took: ${(end1 - start1).toFixed(2)}ms`);
+        console.log("Items Count:", getData1.items.length);
+
+        // 4. Verify Get Link (Second Request - Cache HIT)
+        console.log(`Fetching shared link ${code} (2nd attempt)...`);
+        const start2 = performance.now();
+        const getRes2 = await fetch(`${API_URL}/${code}`);
+        const end2 = performance.now();
+
+        if (!getRes2.ok) {
+            console.error("Failed to fetch link 2:", await getRes2.text());
+            return;
+        }
+
+        const getData2 = await getRes2.json();
+        console.log(`2nd Fetch took: ${(end2 - start2).toFixed(2)}ms`); // Should be much faster
+
+        if ((end2 - start2) < (end1 - start1)) {
+            console.log("✅ Caching seems to be working (2nd request was faster).");
+        } else {
+            console.log("⚠️ 2nd request was not faster. Redis might not be working or overhead is high.");
+        }
 
     } catch (error) {
         console.error("Verification failed:", error);
