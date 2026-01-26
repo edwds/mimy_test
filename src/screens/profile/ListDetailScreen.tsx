@@ -119,50 +119,60 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     }, [userId, listType, listValue, code]);
 
     const handleShare = async () => {
-        if (!userId) return; // Can only share if we have userId context (owner view)
+        let shareUrl = '';
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/share/list`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: author?.id || userId,
-                    type: listType,
-                    value: listValue,
-                    title
-                })
-            });
+        if (code) {
+            // If we are already on a shared page, just share the current URL
+            shareUrl = window.location.href;
+        } else if (userId) {
+            // Create a new share link
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/share/list`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: author?.id || userId,
+                        type: listType,
+                        value: listValue,
+                        title
+                    })
+                });
 
-            if (res.ok) {
-                const { url } = await res.json();
-                const shareUrl = window.location.origin + url;
-
-                // Try Native Share / Web Share API first
-                // Use type casting to avoid TS errors if necessary, or just check existence safely
-                const nav = navigator as any;
-                if (Capacitor.isNativePlatform() || (nav.share && nav.canShare && nav.canShare({ url: shareUrl }))) {
-                    try {
-                        await CapacitorShare.share({
-                            title: title,
-                            text: `Check out my ${title} list on Mimy!`,
-                            url: shareUrl,
-                            dialogTitle: 'Share List'
-                        });
-                        return; // Success, no need to show copied state (native sheet handles feedback)
-                    } catch (err) {
-                        console.log("Native share dismissed or failed, falling back to clipboard", err);
-                    }
+                if (res.ok) {
+                    const { url } = await res.json();
+                    shareUrl = window.location.origin + url;
+                } else {
+                    return;
                 }
-
-                // Fallback: Clipboard
-                await navigator.clipboard.writeText(shareUrl);
-
-                setShowCopied(true);
-                setTimeout(() => setShowCopied(false), 2000);
+            } catch (error) {
+                console.error("Share failed", error);
+                return;
             }
-        } catch (error) {
-            console.error("Share failed", error);
+        } else {
+            return;
         }
+
+        // Common Native/Clipboard Share
+        const nav = navigator as any;
+        if (Capacitor.isNativePlatform() || (nav.share && nav.canShare && nav.canShare({ url: shareUrl }))) {
+            try {
+                await CapacitorShare.share({
+                    title: title,
+                    text: `Check out ${author?.nickname || 'this'} user's ${title} list on Mimy!`,
+                    url: shareUrl,
+                    dialogTitle: 'Share List'
+                });
+                return;
+            } catch (err) {
+                console.log("Native share dismissed or failed, falling back to clipboard", err);
+            }
+        }
+
+        // Fallback: Clipboard
+        await navigator.clipboard.writeText(shareUrl);
+
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
     };
 
 
@@ -244,28 +254,26 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     </div>
                 </div>
 
-                {!code && (
-                    <div className="relative">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                                "rounded-full w-10 h-10 transition-colors",
-                                isScrolled
-                                    ? "text-foreground hover:bg-muted"
-                                    : "text-white hover:bg-white/20"
-                            )}
-                            onClick={handleShare}
-                        >
-                            <Share className="w-5 h-5" />
-                        </Button>
-                        {showCopied && (
-                            <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                                {t('common.copied', 'Link Copied!')}
-                            </div>
+                <div className="relative">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "rounded-full w-10 h-10 transition-colors",
+                            isScrolled
+                                ? "text-foreground hover:bg-muted"
+                                : "text-white hover:bg-white/20"
                         )}
-                    </div>
-                )}
+                        onClick={handleShare}
+                    >
+                        <Share className="w-5 h-5" />
+                    </Button>
+                    {showCopied && (
+                        <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                            {t('common.copied', 'Link Copied!')}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Scrollable Main Content */}
@@ -361,7 +369,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean }) => {
     const { shop, rank, satisfaction_tier, review_text, review_images } = item;
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isSaved, setIsSaved] = useState(initialIsSaved);
 
     const handleToggleSave = async (e: React.MouseEvent) => {
@@ -452,10 +460,11 @@ const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListIte
                         onClick={(e) => {
                             e.stopPropagation();
                             // Reserve Logic
-                            if (shop.catchtable_url) window.open(shop.catchtable_url, '_blank');
-                            else {
-                                // Fallback or alert? For now just try search
-                                window.open(`https://app.catchtable.co.kr/ct/shop/search?keyword=${encodeURIComponent(shop.name)}`, '_blank');
+                            const ref = shop.catchtable_ref;
+                            if (ref) {
+                                window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
+                            } else {
+                                alert("예약 링크가 없습니다.");
                             }
                         }}
                     >
@@ -507,12 +516,31 @@ const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListIte
                             )}
 
                             {/* Raw Rank if prominent */}
+                            {/* Raw Rank if prominent */}
                             {typeof rank === 'number' && rank > 0 && (() => {
-                                // Only show if not covered by tier or just always show for context?
-                                // User asked for "ranking".
+                                // Localized Rank Display
+                                const isKo = i18n.language.startsWith('ko');
+                                let rankText = `#${rank}`;
+
+                                if (isKo) {
+                                    rankText = `${rank}위`;
+                                } else {
+                                    // English Ordinals
+                                    const pr = new Intl.PluralRules('en-US', { type: 'ordinal' });
+                                    const suffixes = new Map([
+                                        ['one', 'st'],
+                                        ['two', 'nd'],
+                                        ['few', 'rd'],
+                                        ['other', 'th'],
+                                    ]);
+                                    const rule = pr.select(rank);
+                                    const suffix = suffixes.get(rule);
+                                    rankText = `${rank}${suffix}`;
+                                }
+
                                 return (
                                     <span className="font-semibold text-xs text-foreground/60">
-                                        #{rank}
+                                        {rankText}
                                     </span>
                                 );
                             })()}
