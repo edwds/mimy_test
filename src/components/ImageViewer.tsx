@@ -41,6 +41,9 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
     // Flag for instant transitions during gesture
     const [isGesturing, setIsGesturing] = useState(false);
 
+    // Prevent accidental swipes after zoom
+    const [isSwipeBlocked, setIsSwipeBlocked] = useState(false);
+
     // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
@@ -143,6 +146,12 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
             setIsGesturing(false);
             pinchStartDist.current = null;
             pinchStartCenter.current = null;
+
+            // Block swipes temporarily if we were zoomed in
+            if (scale > 1.05) {
+                setIsSwipeBlocked(true);
+                setTimeout(() => setIsSwipeBlocked(false), 500);
+            }
 
             // Elastic Snap-back: Always return to 1x and center
             setScale(1);
@@ -247,7 +256,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                             className="absolute w-full h-full flex items-center justify-center"
                         >
                             <motion.div
-                                drag={scale > 1.05 ? false : true}
+                                drag={scale > 1.05 || isSwipeBlocked ? false : true}
                                 dragElastic={0.2}
                                 dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
                                 style={{ y: dismissY }}

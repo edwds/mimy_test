@@ -5,6 +5,7 @@ import { UserService } from '@/services/UserService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
+import { useRecentSearches } from '@/hooks/useRecentSearches';
 
 
 interface Props {
@@ -18,6 +19,7 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const { recentSearches, addSearch, removeSearch } = useRecentSearches();
 
     // Fetch Saved Shops on Mount
     useEffect(() => {
@@ -77,6 +79,9 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
     };
 
     const handleItemClick = async (item: any) => {
+        if (query.trim()) {
+            addSearch(query);
+        }
         onSelect(item);
     };
 
@@ -184,6 +189,36 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
                 ) : (
                     // Default View: Saved Shops
                     <div className="space-y-6">
+                        {recentSearches.length > 0 && (
+                            <div className="mb-2">
+                                <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">{t('write.search.recent_title', '최근 검색어')}</h3>
+                                <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+                                    {recentSearches.map((keyword) => (
+                                        <div
+                                            key={keyword}
+                                            className="flex items-center bg-muted/60 border border-border/40 rounded-full pl-3 pr-1 py-1.5 flex-shrink-0"
+                                        >
+                                            <button
+                                                onClick={() => setQuery(keyword)}
+                                                className="text-sm font-medium text-foreground mr-1"
+                                            >
+                                                {keyword}
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeSearch(keyword);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-black/10 text-muted-foreground"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {savedShops.length > 0 && (
                             <div>
                                 <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">{t('write.search.saved_title')}</h3>

@@ -4,6 +4,7 @@ import { users, shops, content, comments, likes, users_ranking, users_wantstogo,
 import { eq, desc, and, sql, count, inArray, gt, gte, ne, lte } from "drizzle-orm";
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import { ListService } from "../services/ListService.js";
+import { LeaderboardService } from "../services/LeaderboardService.js";
 
 const router = Router();
 
@@ -508,10 +509,10 @@ router.post("/", async (req, res) => {
         // 1. Invalidate Global Feed (New post appears)
         await invalidatePattern('feed:global:*');
 
-        // 2. Invalidate User Lists -> PRE-WARM instead
-        // await invalidatePattern(`lists:${user_id}*`); // Old way
-        console.log(`[Content Create] Calling prewarmUserLists for ${user_id}`);
-        prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err)); // New way (Background)
+        // 2. Invalidate User Lists -> PRE-WARM
+        console.log(`[Content Create] Invalidating & Pre-warming lists for ${user_id}`);
+        await invalidatePattern(`lists:${user_id}*`);
+        prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err));
 
         // 3. Invalidate Shop Reviews if it's a review
         if (type === 'review' && review_prop?.shop_id) {
@@ -521,6 +522,11 @@ router.post("/", async (req, res) => {
         }
 
         console.log(`[Content Create] Done`);
+
+        // 4. Refresh Leaderboard (Async/Background)
+        // We don't await this to keep response fast, but catching error to prevent crash
+        LeaderboardService.refresh().catch(err => console.error("[Leaderboard] Refresh Error:", err));
+
         res.json(result[0]);
     } catch (error) {
         console.error("Create content error:", error);
@@ -604,8 +610,9 @@ router.post("/ranking/apply", async (req, res) => {
         res.json({ success: true, shop_id, satisfaction_tier: new_tier });
 
         // Invalidate User Lists -> PRE-WARM
-        // await invalidatePattern(`lists:${user_id}*`);
-        prewarmUserLists(user_id);
+        console.log(`[Ranking Apply] Invalidating & Pre-warming lists for ${user_id}`);
+        await invalidatePattern(`lists:${user_id}*`);
+        prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err));
 
         // Invalidate Shop Reviews (Ranks changed)
         await invalidatePattern(`shop:${shop_id}:reviews:*`);
