@@ -40,6 +40,9 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     // Data
     const [contents, setContents] = useState<any[]>([]);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [contentPage, setContentPage] = useState(1);
+    const [hasMoreContent, setHasMoreContent] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [isTasteSheetOpen, setIsTasteSheetOpen] = useState(false);
 
     const [lists, setLists] = useState<any[]>([]);
@@ -69,22 +72,42 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     // Fetch content
     useEffect(() => {
+        setContentPage(1);
+        setContents([]);
+        setHasMoreContent(true);
+    }, [user?.id, activeTab, refreshTrigger]);
+
+    useEffect(() => {
         const fetchContent = async () => {
             if (!user?.id || activeTab !== 'content') return;
+            if (!hasMoreContent && contentPage > 1) return;
 
-            setLoadingContent(true);
+            if (contentPage === 1) setLoadingContent(true);
+            else setIsFetchingMore(true);
+
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}`);
-                if (response.ok) setContents(await response.json());
+                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}&page=${contentPage}&limit=20`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length < 20) setHasMoreContent(false);
+                    setContents(prev => contentPage === 1 ? data : [...prev, ...data]);
+                }
             } catch (e) {
                 console.error('Failed to load content', e);
             } finally {
                 setLoadingContent(false);
+                setIsFetchingMore(false);
             }
         };
 
         fetchContent();
-    }, [user?.id, activeTab, refreshTrigger]);
+    }, [user?.id, activeTab, refreshTrigger, contentPage]);
+
+    const loadMoreContent = () => {
+        if (!loadingContent && !isFetchingMore && hasMoreContent) {
+            setContentPage(prev => prev + 1);
+        }
+    };
 
     // Fetch lists
     useEffect(() => {
@@ -128,6 +151,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     const handleScroll = () => {
         onSmartScroll();
+        if (containerRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+            if (scrollHeight - scrollTop <= clientHeight + 300) {
+                if (activeTab === 'content') {
+                    loadMoreContent();
+                }
+            }
+        }
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
@@ -354,6 +385,11 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                 </div>
                             )}
 
+                            {isFetchingMore && (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
                             {loadingContent && (
                                 <div className="flex justify-center py-20">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

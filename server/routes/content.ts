@@ -3,8 +3,39 @@ import { db } from "../db/index.js";
 import { users, shops, content, comments, likes, users_ranking, users_wantstogo, clusters, users_follow } from "../db/schema.js";
 import { eq, desc, and, sql, count, inArray, gt, gte, ne, lte } from "drizzle-orm";
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
+import { ListService } from "../services/ListService.js";
 
 const router = Router();
+
+// Helper: Pre-warm User Lists (Fire & Forget)
+async function prewarmUserLists(userId: number) {
+    try {
+        console.log(`[Pre-warm] Starting for user ${userId}`);
+        const listKey = `lists:${userId}`;
+
+        // 1. Fetch & Cache Main Lists
+        const lists = await ListService.fetchUserLists(userId);
+        if (lists && redis) {
+            await redis.set(listKey, JSON.stringify(lists), { ex: 3600 });
+            console.log(`[Pre-warm] Main lists cached for user ${userId}`);
+
+            // 2. Fetch & Cache Details (Only for active lists)
+            // We can iterate over the lists we just fetched to know what to pre-warm
+            for (const list of lists) {
+                const type = list.type;
+                const value = list.value || 'all'; // value is undefined for OVERALL
+                const detailKey = `lists:${userId}:detail:${type}:${value}`;
+
+                // Fetch detail
+                const detail = await ListService.fetchUserListDetail(userId, type, list.value);
+                if (redis) await redis.set(detailKey, JSON.stringify(detail), { ex: 3600 });
+            }
+            console.log(`[Pre-warm] Detail lists cached for user ${userId}`);
+        }
+    } catch (error) {
+        console.error(`[Pre-warm] Failed for user ${userId}`, error);
+    }
+}
 
 // Helper for standardized rank key
 const getRankKey = (userId: number, shopId: number) => `${userId}:${shopId}`;
@@ -473,8 +504,9 @@ router.post("/", async (req, res) => {
         // 1. Invalidate Global Feed (New post appears)
         await invalidatePattern('feed:global:*');
 
-        // 2. Invalidate User Lists (User's count/content changed)
-        await invalidatePattern(`lists:${user_id}*`);
+        // 2. Invalidate User Lists -> PRE-WARM instead
+        // await invalidatePattern(`lists:${user_id}*`); // Old way
+        prewarmUserLists(user_id); // New way (Background)
 
         // 3. Invalidate Shop Reviews if it's a review
         if (type === 'review' && review_prop?.shop_id) {
@@ -565,8 +597,9 @@ router.post("/ranking/apply", async (req, res) => {
 
         res.json({ success: true, shop_id, satisfaction_tier: new_tier });
 
-        // Invalidate User Lists (Ranking changed)
-        await invalidatePattern(`lists:${user_id}*`);
+        // Invalidate User Lists -> PRE-WARM
+        // await invalidatePattern(`lists:${user_id}*`);
+        prewarmUserLists(user_id);
 
         // Invalidate Shop Reviews (Ranks changed)
         await invalidatePattern(`shop:${shop_id}:reviews:*`);
