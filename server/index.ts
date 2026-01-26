@@ -12,6 +12,7 @@ import contentRoutes from "./routes/content.js";
 import vsRoutes from "./routes/vs.js";
 import hateRoutes from "./routes/hate.js";
 import adminRoutes from "./routes/admin.js";
+import shareRoutes from "./routes/share.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use("/api/content", contentRoutes);
 app.use("/api/vs", vsRoutes);
 app.use("/api/hate", hateRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/share", shareRoutes);
 
 import importRoutes from "./routes/import.js";
 app.use("/api/import", importRoutes);

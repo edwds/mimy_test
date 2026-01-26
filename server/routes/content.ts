@@ -386,13 +386,54 @@ async function enrichFeedWithLiveStats(feed: any[]) {
         .groupBy(comments.content_id);
     commentsRes.forEach(r => commentCountMap.set(r.content_id, Number(r.count)));
 
+    // Fetch Live Preview Comments (Latest 2 per content)
+    // Using window function to get top 2 efficiently
+    const previewCommentsMap = new Map<number, any[]>();
+
+    // SQLite/Postgres compatible Query
+    // Note: Drizzle raw sql needed.
+    if (contentIds.length > 0) {
+        const idsStr = contentIds.join(',');
+        const rawPreviews = await db.execute(sql.raw(`
+            SELECT * FROM (
+                SELECT 
+                    c.id, c.content_id, c.text, c.created_at,
+                    u.nickname, u.profile_image,
+                    ROW_NUMBER() OVER (PARTITION BY c.content_id ORDER BY c.created_at DESC) as rn
+                FROM comments c
+                LEFT JOIN users u ON c.user_id = u.id
+                WHERE c.content_id IN (${idsStr})
+                  AND c.is_deleted = false
+            ) t
+            WHERE rn <= 2
+        `));
+
+        rawPreviews.rows.forEach((row: any) => {
+            const cid = Number(row.content_id);
+            if (!previewCommentsMap.has(cid)) {
+                previewCommentsMap.set(cid, []);
+            }
+            previewCommentsMap.get(cid)?.push({
+                id: row.id,
+                content_id: cid,
+                text: row.text,
+                created_at: row.created_at,
+                user: {
+                    nickname: row.nickname,
+                    profile_image: row.profile_image
+                }
+            });
+        });
+    }
+
     return feed.map(item => ({
         ...item,
         stats: {
             ...item.stats,
             likes: likeCountMap.get(item.id) || 0,
             comments: commentCountMap.get(item.id) || 0
-        }
+        },
+        preview_comments: previewCommentsMap.get(item.id) || []
     }));
 }
 

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Calendar, Bookmark } from 'lucide-react';
+import { ArrowLeft, Loader2, Calendar, Bookmark, Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
 import { ShopService } from '@/services/ShopService';
 import { UserService } from '@/services/UserService';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
+import { Share as CapacitorShare } from '@capacitor/share';
 
 interface ListItem {
     rank: number;
@@ -35,14 +36,16 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { userId: paramUserId } = useParams(); // URL param (could be ID or account_id)
+    const { userId: paramUserId, code } = useParams(); // URL param (could be ID or account_id) or share code
     const userId = userIdProp || paramUserId;
     const [searchParams] = useSearchParams();
+    // const { toast } = useToast();
+    const [showCopied, setShowCopied] = useState(false);
 
     // List Metadata from URL or initial fetch
     const listType = searchParams.get('type') || 'OVERALL';
     const listValue = searchParams.get('value') || '';
-    const initialTitle = searchParams.get('title') || 'Ranking';
+    const [title, setTitle] = useState(searchParams.get('title') || 'Ranking');
 
     // State
     // const [viewMode, setViewMode] = useState<'list' | 'map'>('list'); // Removed unused
@@ -62,7 +65,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
     useEffect(() => {
         const fetchEverything = async () => {
-            if (!userId) return;
+            if (!userId && !code) return;
 
             setLoading(true);
             try {
@@ -75,24 +78,35 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     setSavedShopIds(ids);
                 }
 
-                // 1. Fetch User Info (for header)
-                // If the user navigated from profile, we might know this, but better to be safe for deep links.
-                // We use viewerId to get follow status if needed, but here just basic info.
-                const userRes = await fetch(`${API_BASE_URL}/api/users/${userId}`);
-                if (userRes.ok) {
-                    const userData = await userRes.json();
-                    setAuthor(userData);
-                }
+                if (code) {
+                    // Shared View
+                    const res = await fetch(`${API_BASE_URL}/api/share/${code}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setItems(data.items);
+                        setAuthor(data.author);
+                        setTitle(data.title);
+                    }
+                } else if (userId) {
+                    // 1. Fetch User Info (for header)
+                    // If the user navigated from profile, we might know this, but better to be safe for deep links.
+                    // We use viewerId to get follow status if needed, but here just basic info.
+                    const userRes = await fetch(`${API_BASE_URL}/api/users/${userId}`);
+                    if (userRes.ok) {
+                        const userData = await userRes.json();
+                        setAuthor(userData);
+                    }
 
-                // 2. Fetch List Items
-                const query = new URLSearchParams({
-                    type: listType,
-                    value: listValue
-                });
-                const listRes = await fetch(`${API_BASE_URL}/api/users/${userId}/lists/detail?${query.toString()}`);
-                if (listRes.ok) {
-                    const listData = await listRes.json();
-                    setItems(listData);
+                    // 2. Fetch List Items
+                    const query = new URLSearchParams({
+                        type: listType,
+                        value: listValue
+                    });
+                    const listRes = await fetch(`${API_BASE_URL}/api/users/${userId}/lists/detail?${query.toString()}`);
+                    if (listRes.ok) {
+                        const listData = await listRes.json();
+                        setItems(listData);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to load list details", error);
@@ -102,7 +116,54 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
         };
 
         fetchEverything();
-    }, [userId, listType, listValue]);
+    }, [userId, listType, listValue, code]);
+
+    const handleShare = async () => {
+        if (!userId) return; // Can only share if we have userId context (owner view)
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/share/list`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: author?.id || userId,
+                    type: listType,
+                    value: listValue,
+                    title
+                })
+            });
+
+            if (res.ok) {
+                const { url } = await res.json();
+                const shareUrl = window.location.origin + url;
+
+                // Try Native Share / Web Share API first
+                // Use type casting to avoid TS errors if necessary, or just check existence safely
+                const nav = navigator as any;
+                if (Capacitor.isNativePlatform() || (nav.share && nav.canShare && nav.canShare({ url: shareUrl }))) {
+                    try {
+                        await CapacitorShare.share({
+                            title: title,
+                            text: `Check out my ${title} list on Mimy!`,
+                            url: shareUrl,
+                            dialogTitle: 'Share List'
+                        });
+                        return; // Success, no need to show copied state (native sheet handles feedback)
+                    } catch (err) {
+                        console.log("Native share dismissed or failed, falling back to clipboard", err);
+                    }
+                }
+
+                // Fallback: Clipboard
+                await navigator.clipboard.writeText(shareUrl);
+
+                setShowCopied(true);
+                setTimeout(() => setShowCopied(false), 2000);
+            }
+        } catch (error) {
+            console.error("Share failed", error);
+        }
+    };
 
 
     const handleBack = () => {
@@ -172,17 +233,39 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         <ArrowLeft className="w-6 h-6" />
                     </Button>
 
-                    {/* Sticky Title */}
                     <div className={cn(
                         "flex flex-col transition-all duration-300",
                         isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                     )}>
-                        <span className="font-bold text-base truncate">{initialTitle}</span>
+                        <span className="font-bold text-base truncate">{title}</span>
                         {author && (
                             <span className="text-xs text-muted-foreground truncate">by {author.nickname}</span>
                         )}
                     </div>
                 </div>
+
+                {!code && (
+                    <div className="relative">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "rounded-full w-10 h-10 transition-colors",
+                                isScrolled
+                                    ? "text-foreground hover:bg-muted"
+                                    : "text-white hover:bg-white/20"
+                            )}
+                            onClick={handleShare}
+                        >
+                            <Share className="w-5 h-5" />
+                        </Button>
+                        {showCopied && (
+                            <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                                {t('common.copied', 'Link Copied!')}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Scrollable Main Content */}
@@ -225,7 +308,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
                                 {/* Title - Huge & Bold */}
                                 <h1 className="text-3xl font-black mb-4 leading-[1.1] text-foreground tracking-tight">
-                                    {initialTitle}
+                                    {title}
                                 </h1>
 
                                 {/* Meta Info */}

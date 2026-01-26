@@ -25,6 +25,7 @@ import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { AdminMatchScreen } from '@/screens/admin/AdminMatchScreen';
 import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
+import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { UserProvider } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -106,6 +107,9 @@ function App() {
 
                             {/* Redirect old user profile link to new one */}
                             <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />
+
+                            {/* Public Shared List - No Auth Required */}
+                            <Route path="/s/:code" element={<ListDetailScreen />} />
                         </Routes>
                     )}
                 </BrowserRouter>

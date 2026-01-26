@@ -270,6 +270,16 @@ export const clusters = pgTable('clusters', {
     updated_at: timestamp('updated_at').defaultNow(),
 });
 
+
+export const shared_links = pgTable('shared_links', {
+    id: serial('id').primaryKey(),
+    code: varchar('code', { length: 20 }).unique().notNull(),
+    type: varchar('type', { length: 20 }).notNull(), // 'LIST'
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    config: jsonb('config').notNull(),
+    created_at: timestamp('created_at').defaultNow(),
+});
+
 export const quiz_matches = pgTable('quiz_matches', {
     id: serial('id').primaryKey(),
     vector: text('vector').notNull(), // "0,0,0,0,0,0,0" (7 dims)
