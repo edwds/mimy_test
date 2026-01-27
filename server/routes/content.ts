@@ -481,6 +481,7 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
     const likedSet = new Set<number>();
     const savedShopSet = new Set<number>();
     const followingSet = new Set<number>();
+    const myRankMap = new Map<number, any>();
 
     // 1. Likes
     const myLikes = await db.select({ target_id: likes.target_id }).from(likes)
@@ -512,6 +513,16 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
         follows.forEach(f => followingSet.add(f.following_id));
     }
 
+    // 4. Rankings
+    if (shopIds.size > 0) {
+        const myRankings = await db.select().from(users_ranking)
+            .where(and(
+                eq(users_ranking.user_id, userId),
+                inArray(users_ranking.shop_id, Array.from(shopIds))
+            ));
+        myRankings.forEach(r => myRankMap.set(r.shop_id, r));
+    }
+
     // Patch
     return feed.map(item => ({
         ...item,
@@ -521,8 +532,23 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
         },
         poi: item.poi ? {
             ...item.poi,
-            is_bookmarked: savedShopSet.has(item.poi.shop_id)
+            is_bookmarked: savedShopSet.has(item.poi.shop_id),
+            my_review_stats: myRankMap.has(item.poi.shop_id) ? {
+                satisfaction: myRankMap.get(item.poi.shop_id).satisfaction_tier,
+                rank: myRankMap.get(item.poi.shop_id).rank,
+                percentile: 0,
+                total_reviews: 0
+            } : null
         } : undefined,
+        review_prop: (item.review_prop && item.review_prop.shop_id) ? {
+            ...item.review_prop,
+            my_review_stats: myRankMap.has(Number(item.review_prop.shop_id)) ? {
+                satisfaction: myRankMap.get(Number(item.review_prop.shop_id)).satisfaction_tier,
+                rank: myRankMap.get(Number(item.review_prop.shop_id)).rank,
+                percentile: 0,
+                total_reviews: 0
+            } : null
+        } : item.review_prop,
         stats: {
             ...item.stats,
             is_liked: likedSet.has(item.id),
