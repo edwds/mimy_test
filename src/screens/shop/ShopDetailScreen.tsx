@@ -320,23 +320,41 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                         {shop.food_kind || 'Restaurant'}
                                     </span>
                                     {/* Match Score Badge OR My Stats Badge */}
+                                    {/* Match Score Badge OR My Stats Badge */}
                                     {shop.my_review_stats ? (
-                                        <div className="relative inline-flex items-center gap-1 z-10 align-middle ml-2">
-                                            {/* Satisfaction Badge */}
+                                        <div className="relative inline-flex items-center gap-2 z-10 align-middle ml-2">
+                                            {/* Satisfaction & Ranking (Merged Badge) */}
                                             <div className={cn(
-                                                "px-2 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1",
-                                                shop.my_review_stats.satisfaction === 1 ? "bg-green-50 text-green-700 border-green-200" :
-                                                    shop.my_review_stats.satisfaction === 2 ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                                        "bg-red-50 text-red-700 border-red-200"
+                                                "font-bold px-2 py-0.5 rounded-full border border-current text-xs flex items-center gap-1",
+                                                shop.my_review_stats.satisfaction === 1 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
                                             )}>
+                                                {/* Satisfaction Text */}
                                                 {shop.my_review_stats.satisfaction === 1 ? '😋 Good' :
                                                     shop.my_review_stats.satisfaction === 2 ? '🙂 OK' : '😫 Bad'}
+
+                                                {/* Separator if both exist */}
+                                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                                    <span className="opacity-30 mx-0.5">|</span>
+                                                )}
+
+                                                {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
+                                                {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                                    <span>
+                                                        Top {shop.my_review_stats.percentile}%
+                                                    </span>
+                                                )}
                                             </div>
 
-                                            {/* Ranking Badge */}
-                                            <div className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-                                                Top {shop.my_review_stats.percentile}% (No.{shop.my_review_stats.rank})
-                                            </div>
+                                            {/* Rank (Outside Badge) */}
+                                            {shop.my_review_stats.rank > 0 && (
+                                                <div className="font-medium text-xs text-gray-800 flex items-center gap-0.5">
+                                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && <span className="">🏆</span>}
+                                                    {shop.my_review_stats.rank}
+                                                    {/* We can use t('common.nth') or simple conditional suffix if t not available for st/nd/rd */}
+                                                    {/* Assuming Korean context primarily based on user language */}
+                                                    위
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         shop.shop_user_match_score != null && (

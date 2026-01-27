@@ -734,8 +734,6 @@ export const ContentCard = ({
                 )
             }
 
-            {/* Satisfaction & Ranking (Between Image and Text) */}
-            {/* Satisfaction & Ranking (Merged Badge) */}
             {/* Satisfaction & Ranking (Merged Badge) */}
             {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
                 <div className="px-4 mb-2 mt-2 flex items-center gap-2 text-[13px]">
