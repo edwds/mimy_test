@@ -35,9 +35,10 @@ interface ShopCardProps {
             taste_result?: any;
         };
     } | null;
+    displayContext?: 'default' | 'discovery' | 'saved_list';
 }
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions, reviewSnippet }) => {
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions, reviewSnippet, displayContext = 'default' }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
@@ -203,7 +204,16 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
             {/* Let's show BELOW review if both exist? Or replace? */}
             {/* If I saved it, the save date is metadata. The review is content. */}
             {/* Let's stack them for now, but ensure it looks okay. */}
-            {!reviewSnippet && shop.is_saved && shop.saved_at && (
+            {/* Saved Footer (Conditional) - Only show if not in discovery context AND (no snippet OR in saved_list context) */}
+            {/* If context is 'saved_list', we prioritize showing the footer even if there is a snippet? 
+                Actually, user said: "Profile > Wants to go ... existing saved date. record. should appear."
+                And "Saved shops exposed in ShopBottomSheet... not record button but other people's reviews".
+                
+                So:
+                - Discovery: Hide Saved Footer. Show Snippet.
+                - Saved List: Show Saved Footer.
+            */}
+            {displayContext !== 'discovery' && (!reviewSnippet || displayContext === 'saved_list') && shop.is_saved && shop.saved_at && (
                 <div className="bg-muted/30 px-4 py-3 border-t border-border flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
                         {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}

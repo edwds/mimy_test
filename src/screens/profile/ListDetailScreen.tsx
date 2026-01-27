@@ -242,11 +242,10 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     return (
         <div className="flex flex-col h-full bg-background relative">
             {/* Fixed Top Navigation */}
-            {/* Fixed Top Navigation */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 transition-all duration-300",
-                    isScrolled ? "bg-background/95 backdrop-blur-md border-b border-border/10 shadow-sm" : "bg-transparent"
+                    "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 transition-all duration-300 border-b",
+                    isScrolled ? "bg-background/95 backdrop-blur-md border-border/10 shadow-sm" : "bg-transparent border-transparent shadow-none"
                 )}
                 style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
             >
@@ -255,10 +254,10 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 -ml-2 transition-colors",
+                            "rounded-full w-10 h-10 -ml-2 transition-colors hover:bg-transparent",
                             isScrolled
-                                ? "text-foreground hover:bg-muted"
-                                : "text-white hover:bg-white/20"
+                                ? "text-foreground hover:text-foreground"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleBack}
                     >
@@ -281,10 +280,10 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 transition-colors",
+                            "rounded-full w-10 h-10 transition-colors hover:bg-transparent",
                             isScrolled
-                                ? "text-foreground hover:bg-muted"
-                                : "text-white hover:bg-white/20"
+                                ? "text-foreground hover:text-foreground"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleShare}
                     >

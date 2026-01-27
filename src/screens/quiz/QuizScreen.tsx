@@ -72,9 +72,9 @@ export const QuizScreen = () => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex flex-col h-full bg-background pt-safe-offset-6 pb-safe-offset-6">
             {/* Header / Progress */}
-            <div className="p-6 pb-2">
+            <div className="px-6 pb-2">
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-muted">
                         <ArrowLeft className="w-6 h-6" />

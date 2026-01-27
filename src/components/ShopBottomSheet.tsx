@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { prefetchReviewSnippet, snippetCache } from '@/components/discovery/SelectedShopCard';
 
 // Wrapper to handle individual review fetching
-const ShopCardWithReview = ({ shop, onSave }: { shop: any, onSave?: (id: number) => void }) => {
+const ShopCardWithReview = ({ shop, onSave, displayContext }: { shop: any, onSave?: (id: number) => void, displayContext?: 'default' | 'discovery' | 'saved_list' }) => {
     // Initialize with prop if available, or cache, or null
     const [reviewSnippet, setReviewSnippet] = useState<any>(shop.reviewSnippet || snippetCache.get(shop.id) || null);
 
@@ -35,7 +35,7 @@ const ShopCardWithReview = ({ shop, onSave }: { shop: any, onSave?: (id: number)
         }
     }, [shop.id, shop.reviewSnippet, reviewSnippet]);
 
-    return <ShopCard shop={shop} onSave={onSave} reviewSnippet={reviewSnippet} />;
+    return <ShopCard shop={shop} onSave={onSave} reviewSnippet={reviewSnippet} displayContext={displayContext} />;
 };
 
 interface Props {
@@ -163,6 +163,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                             <ShopCardWithReview
                                 shop={shop}
                                 onSave={onSave}
+                                displayContext="discovery"
                             />
                         </div>
                     ))

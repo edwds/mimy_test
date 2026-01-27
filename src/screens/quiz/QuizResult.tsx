@@ -1,16 +1,18 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     // Result from backend: { clusterId, clusterData: { cluster_name, cluster_tagline, ... }, scores }
     const { result } = location.state || {};
 
     // Fallback if accessed directly without state
-    const clusterName = result?.clusterData?.cluster_name || "Unknown Flavor";
-    const clusterTagline = result?.clusterData?.cluster_tagline || "Your unique taste profile discovery.";
+    const clusterName = result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
+    const clusterTagline = result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
 
     const handleStart = () => {
         // User already updated on backend in QuizScreen
@@ -18,9 +20,9 @@ export const QuizResult = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background p-6 items-center justify-center animate-in zoom-in duration-500">
+        <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 items-center justify-center animate-in zoom-in duration-500">
             <div className="text-center space-y-6">
-                <p className="text-xl text-muted-foreground font-medium">Your Taste Type is</p>
+                <p className="text-xl text-muted-foreground font-medium">{t('quiz.result.title')}</p>
 
                 <h1 className="text-4xl font-black text-primary mb-4 tracking-tighter">
                     {clusterName}
@@ -49,7 +51,7 @@ export const QuizResult = () => {
                     className="w-full text-lg py-6 rounded-full shadow-lg shadow-primary/20"
                     onClick={handleStart}
                 >
-                    Start Mimy
+                    {t('quiz.result.start_app')}
                 </Button>
             </div>
         </div>

@@ -1,4 +1,3 @@
-
 export interface TasteScores {
     [key: string]: number;
 }
@@ -71,27 +70,37 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
         let satisfaction = 0;
 
         if (r.satisfactionTier !== undefined) {
-            // Tier Logic
-            // Tier 2 (Good): [0.3, 1.0]
-            // Tier 1 (OK):   [-0.2, 0.2]
-            // Tier 0 (Bad):  [-1.0, -0.3]
+            // ============================================================
+            // CORRECTED TIER LOGIC - Rebalanced for Normal Distribution
+            // ============================================================
+            // Goal: Maintain normal distribution even with 80% Good tier
+            // Mean target: ~3.0 (neutral)
+            // 3.5+ should be ~10% (meaningful recommendation threshold)
+            // 4.0+ should be ~0-1% (rare, excellent matches)
+            // ============================================================
 
             switch (r.satisfactionTier) {
-                case 2: // Good
-                    // rank 1 -> 1.0, rank N -> 0.3
-                    satisfaction = 0.3 + (0.7 * percentile);
+                case 2: // Good - CORRECTED RANGE
+                    // OLD: [+0.3, +1.0] - caused score inflation
+                    // NEW: [-0.3, +0.7] - wider range, lower center
+                    // rank 1 -> +0.7, rank N -> -0.3
+                    satisfaction = -0.3 + (1.0 * percentile);
                     break;
-                case 1: // OK
-                    // rank 1 -> 0.2, rank N -> -0.2
-                    satisfaction = -0.2 + (0.4 * percentile);
+
+                case 1: // OK - CORRECTED RANGE
+                    // OLD: [-0.2, +0.2]
+                    // NEW: [-0.5, +0.1] - lower center
+                    // rank 1 -> +0.1, rank N -> -0.5
+                    satisfaction = -0.5 + (0.6 * percentile);
                     break;
-                case 0: // Bad
-                    // rank 1 -> -0.3, rank N -> -1.0
-                    // Note: higher rank (more percentile) means "better" bad, so closer to -0.3?
-                    // Or rank 1 (best of bad) = -0.3, rank N (worst of bad) = -1.0.
-                    // Percentile 1.0 is "best rank".
-                    satisfaction = -1.0 + (0.7 * percentile);
+
+                case 0: // Bad - CORRECTED RANGE
+                    // OLD: [-1.0, -0.3]
+                    // NEW: [-1.0, -0.5] - narrower range
+                    // rank 1 -> -0.5, rank N -> -1.0
+                    satisfaction = -1.0 + (0.5 * percentile);
                     break;
+
                 default:
                     // Fallback to pure rank if tier is weird
                     satisfaction = (2 * percentile) - 1;
@@ -128,10 +137,9 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
     // 6. Map back to 0-100
     // score_raw is in approx [-1, 1] (influenced by prior 0).
     // map [-1, 1] -> [0, 100]
-    // map [-1, 1] -> [0, 100]
     const finalScore = 50 * (scoreRaw + 1);
 
-    // Keep 1 decimal place precision
+    // Keep 1 decimal place precision (IMPROVED from integer rounding)
     const preciseScore = Math.round(finalScore * 10) / 10;
 
     // Clamp just in case

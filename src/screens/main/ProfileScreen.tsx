@@ -451,7 +451,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             </div>
 
                             {savedShops.map((shop: any) => (
-                                <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} />
+                                <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
                             ))}
 
                             {!loadingSaved && savedShops.length === 0 && (
