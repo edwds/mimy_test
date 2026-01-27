@@ -1,6 +1,6 @@
 import { db } from "../db/index.js";
 import { users, users_ranking, content } from "../db/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 import { calculateShopMatchScore } from "./match.js";
 
 /**
@@ -79,4 +79,62 @@ export async function getShopMatchScores(shopIds: number[], viewerId: number): P
     }
 
     return scoresMap;
+}
+
+/**
+ * Batch calculates review stats for a given list of shop IDs and a viewer.
+ * Checks if viewer has reviewed the shop, and if so, returns rank/satisfaction/percentile.
+ * Returns a Map<shopId, Stats>.
+ */
+export async function getShopReviewStats(shopIds: number[], viewerId: number): Promise<Map<number, any>> {
+    const statsMap = new Map<number, any>();
+    if (!viewerId || shopIds.length === 0) return statsMap;
+
+    try {
+        // Fetch viewer's ranking rows for these shops
+        const myRankings = await db.select({
+            shop_id: users_ranking.shop_id,
+            rank: users_ranking.rank,
+            satisfaction_tier: users_ranking.satisfaction_tier
+        })
+            .from(users_ranking)
+            .where(and(
+                eq(users_ranking.user_id, viewerId),
+                inArray(users_ranking.shop_id, shopIds)
+            ));
+
+        // If user hasn't reviewed any of these shops, return empty
+        if (myRankings.length === 0) return statsMap;
+
+        // Get total ranked count for percentile calculation
+        // Optimization: Counts could be cached in users table or redis
+        const totalCountRes = await db.execute(sql`
+            SELECT count(*) as cnt FROM users_ranking WHERE user_id = ${viewerId}
+        `);
+        const totalCount = Number(totalCountRes.rows[0].cnt);
+
+        myRankings.forEach(row => {
+            if (!row.shop_id) return;
+
+            // Percentile: (rank / total) * 100 ?
+            // Top 1% means rank 1 out of 100.
+            // Formula: ceil((rank / total) * 100)
+            let percentile = 0;
+            if (totalCount > 0 && row.rank) {
+                percentile = Math.ceil((row.rank / totalCount) * 100);
+            }
+
+            statsMap.set(row.shop_id, {
+                satisfaction: row.satisfaction_tier, // 1=Good, 2=Ok, 3=Bad (approx, check schema)
+                rank: row.rank,
+                percentile: percentile,
+                total_reviews: totalCount
+            });
+        });
+
+    } catch (error) {
+        console.error("getShopReviewStats error:", error);
+    }
+
+    return statsMap;
 }

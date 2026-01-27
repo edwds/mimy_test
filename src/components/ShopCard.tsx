@@ -19,6 +19,12 @@ interface ShopCardProps {
         saved_at?: string; // If saved, when it was saved
         catchtable_ref?: string;
         shop_user_match_score?: number | null;
+        my_review_stats?: {
+            satisfaction: number;
+            rank: number;
+            percentile: number;
+            total_reviews: number;
+        } | null;
     };
     onSave?: (shopId: number) => void;
     onWrite?: (shopId: number) => void;
@@ -86,30 +92,50 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                                     {shop.food_kind}
                                 </span>
                             )}
-                            {/* Match Score Badge */}
-                            {shop.shop_user_match_score != null && (
-                                <div className="relative z-10">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            // Toggle tooltip logic handled by state
-                                            const el = document.getElementById(`tooltip-${shop.id}`);
-                                            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                                        }}
-                                        className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5"
-                                    >
-                                        <span>Taste Rating</span>
-                                        <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                    </button>
-                                    <div
-                                        id={`tooltip-${shop.id}`}
-                                        className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        {t('discovery.shop_card.match_tooltip')}
-                                        <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
+                            {/* Match Score Badge OR My Stats Badge */}
+                            {shop.my_review_stats ? (
+                                <div className="flex items-center gap-1">
+                                    {/* Satisfaction Badge */}
+                                    <div className={cn(
+                                        "px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1",
+                                        shop.my_review_stats.satisfaction === 1 ? "bg-green-50 text-green-700 border-green-200" :
+                                            shop.my_review_stats.satisfaction === 2 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                                "bg-red-50 text-red-700 border-red-200"
+                                    )}>
+                                        {shop.my_review_stats.satisfaction === 1 ? '😋 Good' :
+                                            shop.my_review_stats.satisfaction === 2 ? '🙂 OK' : '😫 Bad'}
+                                    </div>
+
+                                    {/* Ranking Badge */}
+                                    <div className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                        Top {shop.my_review_stats.percentile}% (No.{shop.my_review_stats.rank})
                                     </div>
                                 </div>
+                            ) : (
+                                shop.shop_user_match_score != null && (
+                                    <div className="relative z-10">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Toggle tooltip logic handled by state
+                                                const el = document.getElementById(`tooltip-${shop.id}`);
+                                                if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                            }}
+                                            className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5"
+                                        >
+                                            <span>Taste Rating</span>
+                                            <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                        </button>
+                                        <div
+                                            id={`tooltip-${shop.id}`}
+                                            className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {t('discovery.shop_card.match_tooltip')}
+                                            <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
+                                        </div>
+                                    </div>
+                                )
                             )}
                         </div>
                         {shop.description && (

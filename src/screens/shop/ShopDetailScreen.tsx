@@ -25,6 +25,12 @@ interface ShopDetail {
     catchtable_ref?: string;
     is_saved?: boolean;
     shop_user_match_score?: number | null;
+    my_review_stats?: {
+        satisfaction: number;
+        rank: number;
+        percentile: number;
+        total_reviews: number;
+    } | null;
 }
 
 interface ShopDetailProps {
@@ -313,27 +319,47 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     <span className="text-sm text-gray-400 font-normal align-middle">
                                         {shop.food_kind || 'Restaurant'}
                                     </span>
-                                    {/* Match Score Badge */}
-                                    {shop.shop_user_match_score != null && (
-                                        <div className="relative inline-block z-10 align-middle">
-                                            <button
-                                                onClick={() => {
-                                                    const el = document.getElementById('detail-match-tooltip');
-                                                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                                                }}
-                                                className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap"
-                                            >
-                                                <span>Taste Rating</span>
-                                                <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                            </button>
-                                            <div
-                                                id="detail-match-tooltip"
-                                                className="absolute left-0 top-full mt-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
-                                            >
-                                                {t('discovery.shop_card.match_tooltip')}
-                                                <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                    {/* Match Score Badge OR My Stats Badge */}
+                                    {shop.my_review_stats ? (
+                                        <div className="relative inline-flex items-center gap-1 z-10 align-middle ml-2">
+                                            {/* Satisfaction Badge */}
+                                            <div className={cn(
+                                                "px-2 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1",
+                                                shop.my_review_stats.satisfaction === 1 ? "bg-green-50 text-green-700 border-green-200" :
+                                                    shop.my_review_stats.satisfaction === 2 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                                        "bg-red-50 text-red-700 border-red-200"
+                                            )}>
+                                                {shop.my_review_stats.satisfaction === 1 ? '😋 Good' :
+                                                    shop.my_review_stats.satisfaction === 2 ? '🙂 OK' : '😫 Bad'}
+                                            </div>
+
+                                            {/* Ranking Badge */}
+                                            <div className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                                                Top {shop.my_review_stats.percentile}% (No.{shop.my_review_stats.rank})
                                             </div>
                                         </div>
+                                    ) : (
+                                        shop.shop_user_match_score != null && (
+                                            <div className="relative inline-block z-10 align-middle">
+                                                <button
+                                                    onClick={() => {
+                                                        const el = document.getElementById('detail-match-tooltip');
+                                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                                    }}
+                                                    className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap"
+                                                >
+                                                    <span>Taste Rating</span>
+                                                    <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                                </button>
+                                                <div
+                                                    id="detail-match-tooltip"
+                                                    className="absolute left-0 top-full mt-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
+                                                >
+                                                    {t('discovery.shop_card.match_tooltip')}
+                                                    <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                                </div>
+                                            </div>
+                                        )
                                     )}
                                 </h1>
                             </div>

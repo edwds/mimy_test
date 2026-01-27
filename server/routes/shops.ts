@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { shops, users_wantstogo, content, users, users_ranking, clusters } from "../db/schema.js";
 import { ilike, or, eq, sql, and, desc, asc, not, inArray } from "drizzle-orm";
 import { calculateShopMatchScore, TasteScores } from "../utils/match.js";
-import { getShopMatchScores } from "../utils/enricher.js";
+import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import fs from 'fs';
 import path from 'path';
@@ -196,15 +196,17 @@ router.get("/discovery", async (req, res) => {
             });
         });
 
-        // 3. Batch Calculate Match Score
+        // 3. Batch Calculate Match Score AND Review Stats
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
+        const reviewStatsMap = await getShopReviewStats(shopIds, uid);
 
         const enriched = baseResults.map(shop => ({
             ...shop,
             is_saved: savedSet.has(shop.id),
             saved_at: savedAtMap.get(shop.id) || null,
             reviewSnippet: snippetsMap.get(shop.id) || null,
-            shop_user_match_score: matchScoresMap.get(shop.id) || null
+            shop_user_match_score: matchScoresMap.get(shop.id) || null,
+            my_review_stats: reviewStatsMap.get(shop.id) || null
         }));
 
         res.json(enriched);
@@ -350,12 +352,14 @@ router.get("/:id", async (req, res) => {
 
         if (!shopData) return res.status(404).json({ error: "Shop not found" });
 
-        // Enrich with Match Score
+        // Enrich with Match Score & Review Stats
         const matchScoresMap = await getShopMatchScores([id], uid);
+        const reviewStatsMap = await getShopReviewStats([id], uid);
 
         res.json({
             ...shopData,
-            shop_user_match_score: matchScoresMap.get(id) || null
+            shop_user_match_score: matchScoresMap.get(id) || null,
+            my_review_stats: reviewStatsMap.get(id) || null
         });
     } catch (error) {
         console.error("Shop details error:", error);
