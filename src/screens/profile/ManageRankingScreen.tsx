@@ -7,18 +7,21 @@ import { useTranslation } from 'react-i18next';
 import { RankingService, RankingItem } from '@/services/RankingService';
 import { Button } from '@/components/ui/button';
 
+
+
+
 export const ManageRankingScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [items, setItems] = useState<RankingItem[]>([]);
+    const [originalItems, setOriginalItems] = useState<RankingItem[]>([]); // Source of truth
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [isDirty, setIsDirty] = useState(false);
 
-    // Deletion State
-    const [deleteTarget, setDeleteTarget] = useState<RankingItem | null>(null);
+    // We track delete targets by ID
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
-    const currentUser = { id: Number(localStorage.getItem("mimy_user_id") || 0) }; // Mock auth hook usage
+    const currentUser = { id: Number(localStorage.getItem("mimy_user_id") || 0) };
 
     useEffect(() => {
         loadData();
@@ -28,8 +31,7 @@ export const ManageRankingScreen = () => {
         setLoading(true);
         try {
             const data = await RankingService.getAll(currentUser.id);
-            setItems(data);
-            setIsDirty(false);
+            setOriginalItems(data);
         } catch (e) {
             console.error(e);
             alert("Failed to load rankings");
@@ -38,40 +40,104 @@ export const ManageRankingScreen = () => {
         }
     };
 
-    // Handle Reorder
-    const handleReorder = (newOrder: RankingItem[]) => {
-        // Update ranks based on new index
-        // Since we have tiers, reordering across tiers is tricky if we just use a flat list.
-        // For simplicity, we'll assume the list is flat and we just update rank 1..N
-        // BUT, our backend expects satisfaction_tier too.
-        // If we drag a "Bad" item to "Good" section, should it update tier? 
-        // User request: "순서 변경 및 삭제". Usually means global rank order. 
-        // Let's implement global rank update regardless of tier? 
-        // Actually, our ranking logic depends on tiers. 
-        // Let's just update the 'rank' property sequentially 1..N and keep tier as is? No, index determines rank.
-        // Or should we update tier based on position? 
-        // Simplest MVP: Just reorder within same list. We will send back the new order.
-        // Ideally we should group by tier, but a single Reorder.Group is requested for "Full List".
+    // Since Framer Motion Reorder.Group doesn't support dragging between different Groups easily without complex setup,
+    // and we want to change satisfaction level on drop.
+    // A simpler approach for this "Tiered" UI is:
+    // Render ONE SINGLE Reorder.Group list, but with visual separating Headers that are non-draggable.
+    // When reorder happens, we check where items landed relative to headers.
 
-        setItems(newOrder);
-        setIsDirty(true);
+    // Let's build a flattened list for Reorder.Group
+    // Items: [ {type:'header', tier:2}, ...goodItems, {type:'header', tier:1}, ...okItems, ... ]
+
+    type FlattenedItem =
+        | { type: 'header', id: string, tier: number, title: string }
+        | { type: 'item', id: string, data: RankingItem };
+
+    const [flatList, setFlatList] = useState<FlattenedItem[]>([]);
+
+    useEffect(() => {
+        if (!loading) {
+            // Rebuild flat list from current state only on load or explicit reset
+            // But dragging updates flatList directly.
+            // Converting originalItems (from DB) to FlatList initially.
+            const newFlatList: FlattenedItem[] = [];
+
+            // Good
+            newFlatList.push({ type: 'header', id: 'header-2', tier: 2, title: t('write.basic.good', 'Delicious') });
+            originalItems.filter(i => i.satisfaction_tier === 2).forEach(i =>
+                newFlatList.push({ type: 'item', id: String(i.id), data: i })
+            );
+
+            // Ok
+            newFlatList.push({ type: 'header', id: 'header-1', tier: 1, title: t('write.basic.ok', 'Okay') });
+            originalItems.filter(i => i.satisfaction_tier === 1).forEach(i =>
+                newFlatList.push({ type: 'item', id: String(i.id), data: i })
+            );
+
+            // Bad
+            newFlatList.push({ type: 'header', id: 'header-0', tier: 0, title: t('write.basic.bad', 'Bad') });
+            originalItems.filter(i => i.satisfaction_tier === 0).forEach(i =>
+                newFlatList.push({ type: 'item', id: String(i.id), data: i })
+            );
+
+            setFlatList(newFlatList);
+        }
+    }, [originalItems, loading, t]);
+
+    const handleReorder = (newOrder: FlattenedItem[]) => {
+        // Constraint: Headers cannot be moved relative to each other? 
+        // Actually headers CAN be moved by the user in a basic Reorder list if we don't lock them.
+        // We can force them back or make them non-draggable. 
+        // dragListener={false} prevents picking them up.
+        // But what if I drag an item ABOVE the first header?
+        // We need to sanitise the order after drop or during render.
+        // Let's apply logic: Scan list. Update item tiers based on the LAST SEEN header.
+
+        // Let's just update the list state for now.
+        setFlatList(newOrder);
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Recalculate ranks based on current index
-            // Note: In our DB, lower rank = better.
-            // Items at top = Rank 1.
-            const payload = items.map((item, index) => ({
-                shop_id: item.shop_id,
-                rank: index + 1,
-                satisfaction_tier: item.satisfaction_tier // Keep tier as is? Or should we infer? Let's keep as is for now as drag doesn't change tier implicitly.
-            }));
+            // Process flatList to generate updates
+            // Logic: Iterate top to bottom.
+            // Current Tier starts at 2 (Top).
+            // Updates when we hit a header.
+
+            let currentTier = 2; // Default? Or should we strictly follow headers?
+            // If the first item is above the first header (unlikely if header is index 0), assume Tier 2.
+
+            const payload: any[] = [];
+            let rankCounter = 1; // Global rank? Or per tier? 
+            // "Overall Ranking" suggested global rank. User said "Satisfaction 별로 그룹핑".
+            // If grouped, usually rank resets or continues?
+            // Previous logic: Global ranking.
+            // Visual display: Ordered by Tier desc, then Rank asc.
+            // So if I move item to Tier 1, its rank should be > all Tier 2 items.
+            // So Rank Counter continues globally.
+
+            // Wait, we need to enforce Header Order in the list?
+            // If user somehow dragged Header 1 above Header 2, the tiers flip.
+            // Ideally we force headers to stay put? 
+            // `Reorder` doesn't support "fixed items".
+
+            // Simple fix: We strictly infer tier from the "Header" above the item.
+            // If item is above Top Header, assume Top Header's tier.
+
+            flatList.forEach(item => {
+                if (item.type === 'header') {
+                    currentTier = item.tier;
+                } else {
+                    payload.push({
+                        shop_id: item.data.shop_id,
+                        rank: rankCounter++,
+                        satisfaction_tier: currentTier
+                    });
+                }
+            });
 
             await RankingService.reorder(currentUser.id, payload);
-            setIsDirty(false);
-            // navigate(-1); // Go back or stay?
             alert(t('common.saved', 'Saved'));
         } catch (e) {
             console.error(e);
@@ -82,11 +148,17 @@ export const ManageRankingScreen = () => {
     };
 
     const handleDelete = async () => {
-        if (!deleteTarget) return;
+        if (deleteTargetId === null) return;
+
+        // Find the item to get shop_id
+        const targetItem = flatList.find(i => i.type === 'item' && i.data.id === deleteTargetId);
+        if (!targetItem || targetItem.type !== 'item') return;
+
         try {
-            await RankingService.delete(deleteTarget.shop_id, currentUser.id);
-            setItems(items.filter(i => i.id !== deleteTarget.id));
-            setDeleteTarget(null);
+            await RankingService.delete(targetItem.data.shop_id, currentUser.id);
+            // Remove from UI
+            setFlatList(prev => prev.filter(i => i.type !== 'item' || i.data.id !== deleteTargetId));
+            setDeleteTargetId(null);
         } catch (e) {
             console.error(e);
             alert("Failed to delete");
@@ -94,6 +166,8 @@ export const ManageRankingScreen = () => {
     };
 
     if (loading) return <div className="p-4">Loading...</div>;
+
+    // We need to enable `dragListener={false}` on headers.
 
     return (
         <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0px)' }}>
@@ -108,7 +182,7 @@ export const ManageRankingScreen = () => {
                     size="sm"
                     className="text-primary font-bold"
                     onClick={handleSave}
-                    disabled={!isDirty || saving}
+                    disabled={saving}
                 >
                     {saving ? '...' : t('common.save', 'Save')}
                 </Button>
@@ -123,48 +197,66 @@ export const ManageRankingScreen = () => {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4">
-                <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="space-y-2">
-                    {items.map((item) => (
-                        <Reorder.Item key={item.id} value={item} className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-none">
-                            <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+            <div className="flex-1 overflow-y-auto p-4 content-center">
+                <Reorder.Group axis="y" values={flatList} onReorder={handleReorder} className="space-y-2">
+                    {flatList.map((item) => {
+                        if (item.type === 'header') {
+                            return (
+                                <Reorder.Item
+                                    key={item.id}
+                                    value={item}
+                                    dragListener={false}
+                                    className="pt-4 pb-2"
+                                >
+                                    <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1">
+                                        {item.title}
+                                    </div>
+                                </Reorder.Item>
+                            );
+                        }
 
-                            {/* Rank Badge */}
-                            <div className="w-8 flex-shrink-0 text-center font-bold text-gray-900 leading-none">
-                                {items.indexOf(item) + 1}
-                            </div>
-
-                            {/* Thumb */}
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                                {item.shop.thumbnail_img ? (
-                                    <img src={item.shop.thumbnail_img} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs">🏢</div>
-                                )}
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="font-bold text-sm truncate">{item.shop.name}</div>
-                                <div className="text-xs text-gray-500 truncate">
-                                    {getTierLabel(item.satisfaction_tier)} • {item.shop.category}
-                                </div>
-                            </div>
-
-                            {/* Delete */}
-                            <button
-                                onClick={() => setDeleteTarget(item)}
-                                className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        // Item
+                        const rankingItem = item.data;
+                        return (
+                            <Reorder.Item
+                                key={item.id}
+                                value={item}
+                                className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-none shadow-sm active:shadow-md"
                             >
-                                <Trash2 className="w-5 h-5" />
-                            </button>
-                        </Reorder.Item>
-                    ))}
+                                <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+
+                                {/* Thumb */}
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                                    {rankingItem.shop.thumbnail_img ? (
+                                        <img src={rankingItem.shop.thumbnail_img} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs">🏢</div>
+                                    )}
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-sm truncate">{rankingItem.shop.name}</div>
+                                    <div className="text-xs text-gray-500 truncate">
+                                        {rankingItem.shop.category}
+                                    </div>
+                                </div>
+
+                                {/* Delete */}
+                                <button
+                                    onClick={() => setDeleteTargetId(rankingItem.id)}
+                                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            </Reorder.Item>
+                        );
+                    })}
                 </Reorder.Group>
             </div>
 
-            {/* Simple Delete Confirmation */}
-            {deleteTarget && (
+            {/* Delete Confirmation */}
+            {deleteTargetId && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6 animate-in fade-in">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl scale-100">
                         <h3 className="font-bold text-lg mb-2">{t('common.confirm_delete', 'Delete Ranking?')}</h3>
@@ -175,16 +267,16 @@ export const ManageRankingScreen = () => {
                             <Button
                                 variant="outline"
                                 className="flex-1 rounded-xl h-11"
-                                onClick={() => setDeleteTarget(null)}
+                                onClick={() => setDeleteTargetId(null)}
                             >
-                                Cancel
+                                {t('common.cancel', 'Cancel')}
                             </Button>
                             <Button
                                 variant="destructive"
                                 className="flex-1 rounded-xl h-11 bg-red-600 hover:bg-red-700 text-white"
                                 onClick={handleDelete}
                             >
-                                Delete
+                                {t('common.delete', 'Delete')}
                             </Button>
                         </div>
                     </div>
@@ -193,12 +285,3 @@ export const ManageRankingScreen = () => {
         </div>
     );
 };
-
-function getTierLabel(tier: number) {
-    switch (tier) {
-        case 2: return "😋 Good";
-        case 1: return "🙂 Ok";
-        case 0: return "🙁 Bad";
-        default: return "";
-    }
-}

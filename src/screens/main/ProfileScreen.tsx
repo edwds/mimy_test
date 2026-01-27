@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2 } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -400,6 +400,18 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'list' && (
                         <div className="pb-20 px-5 pt-4">
+                            <div className="mb-4 flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                    onClick={() => navigate('/profile/manage/ranking')}
+                                >
+                                    <ListOrdered className="w-3.5 h-3.5" />
+                                    {t('profile.manage_ranking', 'Manage Ranking')}
+                                </Button>
+                            </div>
+
                             {lists.map((list) => (
                                 <ListCard
                                     key={list.id}

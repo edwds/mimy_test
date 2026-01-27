@@ -420,10 +420,24 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     onClick={() => {
                                         navigate(`/write?shop_id=${shop.id}&type=review`);
                                     }}
-                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
+                                    className={cn(
+                                        "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
+                                        shop.my_review_stats
+                                            ? "bg-primary/5 border-primary/20 text-primary" // Completed Style
+                                            : "bg-white border-gray-200 text-gray-700" // Default Style
+                                    )}
                                 >
-                                    <PenSquare size={16} />
-                                    {t('shop.evaluate', 'Evaluate')}
+                                    {shop.my_review_stats ? (
+                                        <>
+                                            <Check size={16} />
+                                            {t('shop.evaluated', 'Completed')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <PenSquare size={16} />
+                                            {t('shop.evaluate', 'Evaluate')}
+                                        </>
+                                    )}
                                 </button>
 
                                 <button

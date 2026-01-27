@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Bookmark, PenSquare } from 'lucide-react';
+import { MapPin, Bookmark, PenSquare, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
@@ -175,10 +175,24 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                                 e.stopPropagation();
                                 onWrite?.(shop.id);
                             }}
-                            className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
+                            className={cn(
+                                "flex-1 py-2 px-3 text-sm font-medium rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity",
+                                shop.my_review_stats
+                                    ? "bg-primary/10 text-primary" // Completed Style
+                                    : "bg-muted text-foreground" // Default Style
+                            )}
                         >
-                            <PenSquare className="w-4 h-4 mr-2" />
-                            {t('discovery.shop_card.record')}
+                            {shop.my_review_stats ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    {t('discovery.shop_card.evaluated', 'Completed')}
+                                </>
+                            ) : (
+                                <>
+                                    <PenSquare className="w-4 h-4 mr-2" />
+                                    {t('discovery.shop_card.record')}
+                                </>
+                            )}
                         </button>
                         <button
                             onClick={(e) => {

@@ -6,7 +6,12 @@
         "vs": "VS",
         "write": "글쓰기",
         "top": "상위",
-        "start_quiz": "퀴즈 시작하기"
+        "start_quiz": "퀴즈 시작하기",
+        "save": "저장",
+        "saved": "저장되었습니다",
+        "cancel": "취소",
+        "delete": "삭제",
+        "confirm_delete": "삭제하시겠습니까?"
     },
     "nav": {
         "home": "홈",
@@ -285,6 +290,11 @@
                 "vote_more": "더 체크하러 가기",
                 "eat": "먹음",
                 "not_eat": "안먹음"
+            },
+            "ranking": {
+                "title": "랭킹 관리",
+                "warning": "랭킹을 삭제하면 작성된 리뷰도 함께 삭제됩니다.",
+                "confirm_delete_desc": "이 작업은 되돌릴 수 없습니다. 관련된 리뷰도 영구적으로 삭제됩니다."
             }
         },
         "settings": {

@@ -509,20 +509,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
                     {activeTab === "list" && (
                         <div className="pb-20 px-5 pt-4">
-                            {/* Manage Button (Self Only) */}
-                            {currentUser?.id === user?.id && (
-                                <div className="mb-4 flex justify-end">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
-                                        onClick={() => navigate('/profile/manage/ranking')}
-                                    >
-                                        <List className="w-3.5 h-3.5" />
-                                        {t('profile.manage_ranking', 'Manage Ranking')}
-                                    </Button>
-                                </div>
-                            )}
+
 
                             {lists.map((list) => (
                                 <ListCard
