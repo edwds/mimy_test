@@ -9,7 +9,9 @@ interface Props {
     userId: number;
     currentShop: any; // { id, name, food_kind }
     satisfaction: string;
-    onFinish: () => void;
+    onWriteReview: () => void;
+    onEvaluateAnother: () => void;
+    onComplete: () => void;
 }
 
 interface Candidate {
@@ -19,7 +21,7 @@ interface Candidate {
     food_kind: string;
 }
 
-export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction, onFinish }) => {
+export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction, onWriteReview, onEvaluateAnother, onComplete }) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [mode, setMode] = useState<'COMPARING' | 'SUCCESS'>('COMPARING');
@@ -183,12 +185,30 @@ export const RankingStep: React.FC<Props> = ({ userId, currentShop, satisfaction
             </div>
 
             <div className="w-full max-w-xs">
-                <Button
-                    onClick={onFinish}
-                    className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-[var(--color-primary)]/30 transition-all active:scale-[0.98]"
-                >
-                    {t('write.ranking.confirm')}
-                </Button>
+                <div className="w-full max-w-sm flex flex-col gap-3">
+                    <Button
+                        onClick={onWriteReview}
+                        className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-all active:scale-[0.98]"
+                    >
+                        {t('write.ranking.write_review', 'Write a Review')}
+                    </Button>
+
+                    <Button
+                        onClick={onEvaluateAnother}
+                        variant="outline"
+                        className="w-full h-14 text-lg font-bold rounded-2xl border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all active:scale-[0.98]"
+                    >
+                        {t('write.ranking.evaluate_another', 'Evaluate Another')}
+                    </Button>
+
+                    <Button
+                        onClick={onComplete}
+                        variant="ghost"
+                        className="w-full h-12 text-base font-medium text-gray-400 hover:text-gray-600 hover:bg-transparent transition-all"
+                    >
+                        {t('write.ranking.complete', 'Complete')}
+                    </Button>
+                </div>
             </div>
         </div>
     );

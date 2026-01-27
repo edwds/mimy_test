@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Calendar, Bookmark, MapPin, ChevronDown, Check, Share } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, PenSquare } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -321,16 +321,17 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     </span>
                                     {/* Match Score Badge OR My Stats Badge */}
                                     {/* Match Score Badge OR My Stats Badge */}
+                                    {/* Match Score Badge OR My Stats Badge */}
                                     {shop.my_review_stats ? (
                                         <div className="relative inline-flex items-center gap-2 z-10 align-middle ml-2">
                                             {/* Satisfaction & Ranking (Merged Badge) */}
                                             <div className={cn(
                                                 "font-bold px-2 py-0.5 rounded-full border border-current text-xs flex items-center gap-1",
-                                                shop.my_review_stats.satisfaction === 1 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
+                                                shop.my_review_stats.satisfaction === 2 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
                                             )}>
                                                 {/* Satisfaction Text */}
-                                                {shop.my_review_stats.satisfaction === 1 ? '😋 Good' :
-                                                    shop.my_review_stats.satisfaction === 2 ? '🙂 OK' : '😫 Bad'}
+                                                {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                                    shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
                                                 {/* Separator if both exist */}
                                                 {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
@@ -340,19 +341,18 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                                 {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
                                                 {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
                                                     <span>
-                                                        Top {shop.my_review_stats.percentile}%
+                                                        상위 {shop.my_review_stats.percentile}%
                                                     </span>
                                                 )}
                                             </div>
 
                                             {/* Rank (Outside Badge) */}
                                             {shop.my_review_stats.rank > 0 && (
-                                                <div className="font-medium text-xs text-gray-800 flex items-center gap-0.5">
-                                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && <span className="">🏆</span>}
-                                                    {shop.my_review_stats.rank}
-                                                    {/* We can use t('common.nth') or simple conditional suffix if t not available for st/nd/rd */}
-                                                    {/* Assuming Korean context primarily based on user language */}
-                                                    위
+                                                <div className="font-bold text-sm text-gray-900 flex items-center gap-0.5">
+                                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                                        <span className="text-[10px] bg-yellow-100 p-0.5 rounded-full">🏆</span>
+                                                    )}
+                                                    {shop.my_review_stats.rank}위
                                                 </div>
                                             )}
                                         </div>
@@ -418,16 +418,12 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                                 <button
                                     onClick={() => {
-                                        if (shop.catchtable_ref) {
-                                            window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                                        } else {
-                                            alert("예약 링크가 없습니다.");
-                                        }
+                                        navigate(`/write?shop_id=${shop.id}&type=review`);
                                     }}
                                     className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
                                 >
-                                    <Calendar size={16} />
-                                    {t('shop.reservation', 'Reservation')}
+                                    <PenSquare size={16} />
+                                    {t('shop.evaluate', 'Evaluate')}
                                 </button>
 
                                 <button

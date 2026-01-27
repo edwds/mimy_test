@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Calendar, Bookmark } from 'lucide-react';
+import { MapPin, Bookmark, PenSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
@@ -44,7 +44,7 @@ interface ShopCardProps {
     displayContext?: 'default' | 'discovery' | 'saved_list';
 }
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onReserve, onClick, hideActions, reviewSnippet, displayContext = 'default' }) => {
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onClick, hideActions, reviewSnippet, displayContext = 'default' }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
@@ -94,22 +94,38 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                             )}
                             {/* Match Score Badge OR My Stats Badge */}
                             {shop.my_review_stats ? (
-                                <div className="flex items-center gap-1">
-                                    {/* Satisfaction Badge */}
+                                <div className="flex items-center gap-2">
+                                    {/* Satisfaction & Ranking (Merged Badge) */}
                                     <div className={cn(
-                                        "px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1",
-                                        shop.my_review_stats.satisfaction === 1 ? "bg-green-50 text-green-700 border-green-200" :
-                                            shop.my_review_stats.satisfaction === 2 ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                                "bg-red-50 text-red-700 border-red-200"
+                                        "font-bold px-2 py-0.5 rounded-full border border-current text-[10px] flex items-center gap-1",
+                                        shop.my_review_stats.satisfaction === 2 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
                                     )}>
-                                        {shop.my_review_stats.satisfaction === 1 ? '😋 Good' :
-                                            shop.my_review_stats.satisfaction === 2 ? '🙂 OK' : '😫 Bad'}
+                                        {/* Satisfaction Text */}
+                                        {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                            shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
+
+                                        {/* Separator if both exist */}
+                                        {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                            <span className="opacity-30 mx-0.5">|</span>
+                                        )}
+
+                                        {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
+                                        {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                            <span>
+                                                상위 {shop.my_review_stats.percentile}%
+                                            </span>
+                                        )}
                                     </div>
 
-                                    {/* Ranking Badge */}
-                                    <div className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                                        Top {shop.my_review_stats.percentile}% (No.{shop.my_review_stats.rank})
-                                    </div>
+                                    {/* Rank (Outside Badge) */}
+                                    {shop.my_review_stats.rank > 0 && (
+                                        <div className="font-bold text-[13px] text-gray-900 flex items-center gap-0.5">
+                                            {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                                <span className="text-[10px] bg-yellow-100 p-0.5 rounded-full">🏆</span>
+                                            )}
+                                            {shop.my_review_stats.rank}위
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 shop.shop_user_match_score != null && (
@@ -157,16 +173,12 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onRes
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (shop.catchtable_ref) {
-                                    window.open(`https://app.catchtable.co.kr/ct/shop/${shop.catchtable_ref}`, '_blank');
-                                } else {
-                                    onReserve?.(shop.id);
-                                }
+                                onWrite?.(shop.id);
                             }}
                             className="flex-1 py-2 px-3 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 flex items-center justify-center"
                         >
-                            <Calendar className="w-4 h-4 mr-2" />
-                            {t('discovery.shop_card.reserve_btn')}
+                            <PenSquare className="w-4 h-4 mr-2" />
+                            {t('discovery.shop_card.record')}
                         </button>
                         <button
                             onClick={(e) => {

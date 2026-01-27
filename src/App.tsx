@@ -23,6 +23,7 @@ import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { AdminMatchScreen } from '@/screens/admin/AdminMatchScreen';
+import { ManageRankingScreen } from '@/screens/profile/ManageRankingScreen';
 import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
@@ -101,6 +102,7 @@ function App() {
                             <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
                             <Route path="/shop/:shopId" element={<ProtectedRoute><RedirectToShop /></ProtectedRoute>} />
                             <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
+                            <Route path="/profile/manage/ranking" element={<ProtectedRoute><ManageRankingScreen /></ProtectedRoute>} />
                             <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
                             <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
                             <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />

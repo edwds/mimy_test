@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, Calendar, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, PenSquare } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -10,15 +10,7 @@ import { CommentSheet } from './CommentSheet';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
-const getRankingTier = (rank: number, total: number | undefined): number | null => {
-    if (!total || total < 50) return null;
-    const percentage = (rank / total) * 100;
-    const tiers = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90];
-    for (const tier of tiers) {
-        if (percentage <= tier) return tier;
-    }
-    return null;
-};
+
 
 type ContentBodyProps = {
     text: string;
@@ -114,6 +106,7 @@ export interface ContentCardProps {
 
         // REVIEW: visit metadata only
         review_prop?: {
+            shop_id?: number; // Added to fix lint error
             shop_name: string;
             shop_address?: string;
             thumbnail_img?: string;
@@ -160,7 +153,7 @@ export interface ContentCardProps {
     onShare?: (contentId: number) => void;
 
     onTogglePoiBookmark?: (contentId: number) => void;
-    onReservePoi?: (contentId: number) => void;
+    onEvaluatePoi?: (contentId: number) => void;
     showActions?: boolean;
     hideShopInfo?: boolean;
 }
@@ -217,6 +210,8 @@ export const ContentCard = ({
 
     const [isFollowing, setIsFollowing] = useState(!!user.is_following);
     const [followLoading, setFollowLoading] = useState(false);
+
+
 
     // Image Viewer State
     const [showViewer, setShowViewer] = useState(false);
@@ -746,17 +741,16 @@ export const ContentCard = ({
                             {satisfaction && t(`write.basic.${satisfaction}`)}
 
                             {/* Separator if both exist */}
-                            {satisfaction && typeof rank === 'number' && rank > 0 && (() => {
-                                const tier = getRankingTier(rank, user.ranking_count);
-                                return tier ? <span className="opacity-30 mx-0.5">|</span> : null;
-                            })()}
+                            {satisfaction && typeof rank === 'number' && rank > 0 && user.ranking_count && user.ranking_count >= 50 && (
+                                <span className="opacity-30 mx-0.5">|</span>
+                            )}
 
                             {/* Tier Info */}
-                            {typeof rank === 'number' && rank > 0 && (() => {
-                                const tier = getRankingTier(rank, user.ranking_count);
-                                return tier ? (
-                                    <span>{t('common.top')} {tier}%</span>
-                                ) : null;
+                            {typeof rank === 'number' && rank > 0 && user.ranking_count && user.ranking_count >= 50 && (() => {
+                                const percent = Math.ceil((rank / user.ranking_count) * 100);
+                                return (
+                                    <span>{t('common.top')} {percent}%</span>
+                                );
                             })()}
                         </span>
                     )}
@@ -895,24 +889,23 @@ export const ContentCard = ({
 
                         {/* Shop actions: Reserve + Bookmark */}
                         <div className="flex items-center gap-4 mr-2">
-                            {/* Reserve Button */}
+                            {/* Evaluate Button */}
                             <motion.button
                                 type="button"
                                 whileTap={{ scale: 0.9 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const ref = content.poi?.catchtable_ref;
-                                    if (ref) {
-                                        window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
+                                    const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
+                                    if (shopId) {
+                                        navigate(`/write?shop_id=${shopId}&type=review`);
                                     } else {
-                                        // Fallback or alert
-                                        alert("예약 링크가 없습니다.");
+                                        alert("매장 정보를 찾을 수 없습니다.");
                                     }
                                 }}
                                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                                aria-label="Reserve"
+                                aria-label="Evaluate"
                             >
-                                <Calendar size={22} />
+                                <PenSquare size={22} />
                             </motion.button>
 
                             {/* Bookmark Button */}

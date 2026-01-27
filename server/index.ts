@@ -34,6 +34,9 @@ app.use("/api/hate", hateRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/share", shareRoutes);
 
+import rankingRoutes from "./routes/ranking.js";
+app.use("/api/ranking", rankingRoutes);
+
 import importRoutes from "./routes/import.js";
 app.use("/api/import", importRoutes);
 

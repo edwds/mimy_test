@@ -1196,4 +1196,43 @@ async function fetchContentStats(contentId: number, currentUserId?: number) {
     return { likes: likeCount, comments: commentCount, is_liked, is_saved };
 }
 
+// DELETE /api/content/:id
+router.delete("/:id", async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        const { user_id } = req.body;
+
+        if (!contentId || !user_id) {
+            return res.status(400).json({ error: "Missing parameters" });
+        }
+
+        // Check ownership
+        const target = await db.select().from(content).where(eq(content.id, contentId)).limit(1);
+        if (target.length === 0) return res.status(404).json({ error: "Content not found" });
+        if (target[0].user_id !== user_id) return res.status(403).json({ error: "Unauthorized" });
+
+        // Soft Delete
+        await db.update(content)
+            .set({ is_deleted: true, updated_at: new Date() })
+            .where(eq(content.id, contentId));
+
+        // Invalidate Cache
+        await invalidatePattern('feed:global:*');
+        await invalidatePattern(`lists:${user_id}*`);
+
+        // If it was a shop review, invalidate shop reviews
+        const reviewProp = target[0].review_prop as any;
+        if (reviewProp?.shop_id) {
+            await invalidatePattern(`shop:${reviewProp.shop_id}:reviews:*`);
+        }
+
+        console.log(`[Content Delete] Content ${contentId} soft deleted by user ${user_id}`);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Delete content error:", error);
+        res.status(500).json({ error: "Failed to delete content" });
+    }
+});
+
 export default router;
