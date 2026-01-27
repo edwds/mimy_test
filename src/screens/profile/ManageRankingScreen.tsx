@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from 'react';
-import { Reorder } from 'framer-motion';
+import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RankingService, RankingItem } from '@/services/RankingService';
 import { Button } from '@/components/ui/button';
+import React, { useRef } from 'react';
 
 
 
@@ -197,7 +198,7 @@ export const ManageRankingScreen = () => {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 content-center">
+            <div className="flex-1 overflow-y-auto p-4">
                 <Reorder.Group axis="y" values={flatList} onReorder={handleReorder} className="space-y-2">
                     {flatList.map((item) => {
                         if (item.type === 'header') {
@@ -218,38 +219,12 @@ export const ManageRankingScreen = () => {
                         // Item
                         const rankingItem = item.data;
                         return (
-                            <Reorder.Item
+                            <DraggableRankingItem
                                 key={item.id}
-                                value={item}
-                                className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-none shadow-sm active:shadow-md"
-                            >
-                                <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
-
-                                {/* Thumb */}
-                                <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                                    {rankingItem.shop.thumbnail_img ? (
-                                        <img src={rankingItem.shop.thumbnail_img} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs">🏢</div>
-                                    )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-sm truncate">{rankingItem.shop.name}</div>
-                                    <div className="text-xs text-gray-500 truncate">
-                                        {rankingItem.shop.category}
-                                    </div>
-                                </div>
-
-                                {/* Delete */}
-                                <button
-                                    onClick={() => setDeleteTargetId(rankingItem.id)}
-                                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
-                            </Reorder.Item>
+                                item={item}
+                                rankingItem={rankingItem}
+                                onDelete={(id) => setDeleteTargetId(id)}
+                            />
                         );
                     })}
                 </Reorder.Group>
@@ -283,5 +258,124 @@ export const ManageRankingScreen = () => {
                 </div>
             )}
         </div>
+    );
+};
+
+// Sub-component for individual Draggable Items
+interface DraggableRankingItemProps {
+    item: any; // FlattenedItem
+    rankingItem: RankingItem;
+    onDelete: (id: number) => void;
+}
+
+const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingItemProps) => {
+    const dragControls = useDragControls();
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Initial touch point to detect movement
+    const startPoint = useRef<{ x: number, y: number } | null>(null);
+    const isDragging = useRef(false);
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        // Only trigger on primary button (left click or touch)
+        if (e.button !== 0) return;
+
+        // Store start point
+        startPoint.current = { x: e.clientX, y: e.clientY };
+        isDragging.current = false;
+
+        // Start Long Press Timer
+        timeoutRef.current = setTimeout(() => {
+            if (!isDragging.current) {
+                // Haptic feedback if available
+                if (navigator.vibrate) navigator.vibrate(50);
+
+                // Allow drag start
+                dragControls.start(e as unknown as React.PointerEvent<Element>);
+            }
+        }, 500); // 500ms Long Press
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!startPoint.current) return;
+
+        // Calculate distance moved
+        const deltaX = Math.abs(e.clientX - startPoint.current.x);
+        const deltaY = Math.abs(e.clientY - startPoint.current.y);
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        // If moved more than 10px, cancel long press (it's a scroll or random move)
+        if (distance > 10) {
+            isDragging.current = true;
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        }
+    };
+
+    const handlePointerUp = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        startPoint.current = null;
+    };
+
+    return (
+        <Reorder.Item
+            value={item}
+            dragListener={false}
+            dragControls={dragControls}
+            className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-pan-y shadow-sm active:shadow-md"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{ touchAction: 'pan-y' }} // Explicitly allow vertical scrolling
+        >
+            {/* Grip Handle - Immediate Drag */}
+            <div
+                className="cursor-grab active:cursor-grabbing p-1 -m-1"
+                onPointerDown={(e) => {
+                    // Start drag immediately
+                    dragControls.start(e);
+                    // Cancel the parent long press timer just in case
+                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                }}
+            >
+                <GripVertical className="w-5 h-5 text-gray-400" />
+            </div>
+
+            {/* Thumb */}
+            <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                {rankingItem.shop.thumbnail_img ? (
+                    <img src={rankingItem.shop.thumbnail_img} alt="" className="w-full h-full object-cover pointer-events-none" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs">🏢</div>
+                )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm truncate">{rankingItem.shop.name}</div>
+                <div className="text-xs text-gray-500 truncate">
+                    {rankingItem.shop.category}
+                </div>
+            </div>
+
+            {/* Delete */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation(); // prevent drag selection if it bubbled
+                    onDelete(rankingItem.id);
+                }}
+                className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on delete button
+            >
+                <Trash2 className="w-5 h-5" />
+            </button>
+        </Reorder.Item>
     );
 };
