@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Bookmark, PenSquare, Check } from 'lucide-react';
+import { MapPin, Bookmark, Check, ListOrdered } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
@@ -67,7 +67,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
             onClick={handleCardClick}
         >
             {/* Image Area */}
-            <div className="relative h-36 bg-muted">
+            <div className="relative h-36 bg-muted text-left">
                 {shop.thumbnail_img ? (
                     <img
                         src={shop.thumbnail_img}
@@ -79,6 +79,71 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                         <span className="text-4xl">🍽️</span>
                     </div>
                 )}
+
+                {/* Badge Overlay */}
+                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent flex items-end">
+                    {shop.my_review_stats ? (
+                        <div className="flex items-center gap-1.5">
+                            {/* Satisfaction & Ranking (Merged Badge) */}
+                            <div className={cn(
+                                "font-bold px-2 py-0.5 rounded-full border border-white/20 text-[10px] flex items-center gap-1 backdrop-blur-md shadow-sm",
+                                shop.my_review_stats.satisfaction === 2
+                                    ? "bg-orange-500/90 text-white border-orange-400/50"
+                                    : "bg-black/60 text-white"
+                            )}>
+                                {/* Satisfaction Text */}
+                                {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                    shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
+
+                                {/* Separator if both exist */}
+                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                    <span className="opacity-40 mx-0.5">|</span>
+                                )}
+
+                                {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
+                                {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                    <span>
+                                        상위 {shop.my_review_stats.percentile}%
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Rank (Outside Badge) */}
+                            {shop.my_review_stats.rank > 0 && (
+                                <div className="font-bold text-[13px] text-white flex items-center gap-0.5 drop-shadow-md">
+                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                        <span>🏆</span>
+                                    )}
+                                    {shop.my_review_stats.rank}위
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        shop.shop_user_match_score != null && (
+                            <div className="relative z-10">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const el = document.getElementById(`tooltip-${shop.id}`);
+                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                    }}
+                                    className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded-full border border-white/20 flex items-center gap-1 backdrop-blur-md shadow-sm"
+                                >
+                                    <span>Taste Rating</span>
+                                    <span className="text-orange-400">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                </button>
+                                <div
+                                    id={`tooltip-${shop.id}`}
+                                    className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {t('discovery.shop_card.match_tooltip')}
+                                    <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
+                                </div>
+                            </div>
+                        )
+                    )}
+                </div>
             </div>
 
             {/* Content Area */}
@@ -92,67 +157,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                                     {shop.food_kind}
                                 </span>
                             )}
-                            {/* Match Score Badge OR My Stats Badge */}
-                            {shop.my_review_stats ? (
-                                <div className="flex items-center gap-2">
-                                    {/* Satisfaction & Ranking (Merged Badge) */}
-                                    <div className={cn(
-                                        "font-bold px-2 py-0.5 rounded-full border border-current text-[10px] flex items-center gap-1",
-                                        shop.my_review_stats.satisfaction === 2 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
-                                    )}>
-                                        {/* Satisfaction Text */}
-                                        {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
-                                            shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
-                                        {/* Separator if both exist */}
-                                        {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                            <span className="opacity-30 mx-0.5">|</span>
-                                        )}
-
-                                        {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
-                                        {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                            <span>
-                                                상위 {shop.my_review_stats.percentile}%
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Rank (Outside Badge) */}
-                                    {shop.my_review_stats.rank > 0 && (
-                                        <div className="font-bold text-[13px] text-gray-900 flex items-center gap-0.5">
-                                            {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
-                                                <span className="text-[10px] bg-yellow-100 p-0.5 rounded-full">🏆</span>
-                                            )}
-                                            {shop.my_review_stats.rank}위
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                shop.shop_user_match_score != null && (
-                                    <div className="relative z-10">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Toggle tooltip logic handled by state
-                                                const el = document.getElementById(`tooltip-${shop.id}`);
-                                                if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                                            }}
-                                            className="text-xs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex items-center gap-0.5"
-                                        >
-                                            <span>Taste Rating</span>
-                                            <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                        </button>
-                                        <div
-                                            id={`tooltip-${shop.id}`}
-                                            className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            {t('discovery.shop_card.match_tooltip')}
-                                            <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
-                                        </div>
-                                    </div>
-                                )
-                            )}
                         </div>
                         {shop.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2">
@@ -189,7 +194,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                                 </>
                             ) : (
                                 <>
-                                    <PenSquare className="w-4 h-4 mr-2" />
+                                    <ListOrdered className="w-4 h-4 mr-2" />
                                     {t('discovery.shop_card.record')}
                                 </>
                             )}

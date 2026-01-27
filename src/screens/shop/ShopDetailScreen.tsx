@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, PenSquare } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, ListOrdered } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -204,6 +204,10 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
     // Fix: Reactive pointer events based on scroll position
     const headerPointerEvents = useTransform(scrollY, (y) => y > 220 ? 'auto' : 'none');
 
+    // Share button transforms (Added to fix hook order error)
+    const shareOpacity = useTransform(scrollY, [180, 220], [1, 0]);
+    const sharePointerEvents = useTransform(scrollY, (y) => y > 200 ? 'none' : 'auto');
+
     if (loading) return <div className="min-h-screen bg-white" />;
 
     if (!shop) return <div className="min-h-screen bg-white flex items-center justify-center">Store not found</div>;
@@ -259,25 +263,46 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                 {/* Action Buttons */}
                 <div className="relative z-30 flex items-center gap-2 pointer-events-auto">
-                    {/* Sticky Header Bookmark Button */}
-                    <motion.button
-                        onClick={handleBookmark}
-                        style={{
-                            opacity: headerTitleOpacity,
-                            pointerEvents: headerPointerEvents,
-                            color: buttonColor
-                        }}
-                        className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center mr-[-4px]"
-                    >
-                        <Bookmark size={24} style={shop.is_saved ? { color: '#ef4444' } : undefined} className={cn(shop.is_saved && "fill-current")} />
-                        {/* Note: buttonColor controls the color. If saved, we might want to override color to Red? 
-                            The original button uses `text-red-500` class if saved.
-                            Here `style={{ color: buttonColor }}` sets text color. 
-                            If I want red when saved, I should override the style or let class take precedence? 
-                            Style usually takes precedence.
-                            I will modify the style prop logic for this button.
-                        */}
-                    </motion.button>
+                    {/* Share / Save Container */}
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                        {/* Share Button (Visible initially) */}
+                        <motion.button
+                            onClick={() => {
+                                if (navigator.share) {
+                                    navigator.share({
+                                        title: shop.name,
+                                        text: shop.description || shop.address_full,
+                                        url: window.location.href
+                                    }).catch(console.error);
+                                } else {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    alert("링크가 복사되었습니다.");
+                                }
+                            }}
+                            style={{
+                                opacity: shareOpacity,
+                                pointerEvents: sharePointerEvents,
+                                color: buttonColor
+                            }}
+                            className="absolute inset-0 p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
+                        >
+                            <Share size={24} />
+                        </motion.button>
+
+                        {/* Sticky Save Button (Visible on scroll) */}
+                        <motion.button
+                            onClick={handleBookmark}
+                            style={{
+                                opacity: headerTitleOpacity,
+                                pointerEvents: headerPointerEvents,
+                                color: buttonColor
+                            }}
+                            className="absolute inset-0 p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
+                        >
+                            <Bookmark size={24} style={shop.is_saved ? { color: '#ef4444' } : undefined} className={cn(shop.is_saved && "fill-current")} />
+                        </motion.button>
+                    </div>
+
                     <motion.button
                         style={{ color: buttonColor }}
                         className="p-2 rounded-full transition-colors active:scale-95 flex items-center justify-center"
@@ -298,7 +323,69 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-4xl">🏢</div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 pb-12 pt-12 bg-gradient-to-t from-black/60 to-transparent z-10 flex items-end justify-between">
+                    {/* Badge Overlay */}
+                    {shop.my_review_stats ? (
+                        <div className="flex items-center mb-1 gap-2">
+                            {/* Satisfaction & Ranking (Merged Badge) */}
+                            <div className={cn(
+                                "font-bold px-2.5 py-1 rounded-full border border-white/20 text-xs flex items-center gap-1.5 backdrop-blur-md shadow-lg",
+                                shop.my_review_stats.satisfaction === 2
+                                    ? "bg-orange-500/90 text-white border-orange-400/50"
+                                    : "bg-black/60 text-white"
+                            )}>
+                                {/* Satisfaction Text */}
+                                {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                    shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
+
+                                {/* Separator if both exist */}
+                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                    <span className="opacity-40 mx-0.5">|</span>
+                                )}
+
+                                {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
+                                {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                    <span>
+                                        상위 {shop.my_review_stats.percentile}%
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Rank (Outside Badge) */}
+                            {shop.my_review_stats.rank > 0 && (
+                                <div className="font-base text-xs text-white flex items-center gap-1 drop-shadow-md">
+                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                        <span>🏆</span>
+                                    )}
+                                    {shop.my_review_stats.rank}위
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        shop.shop_user_match_score != null && (
+                            <div className="relative inline-block mb-1 z-10">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const el = document.getElementById('detail-match-tooltip');
+                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                    }}
+                                    className="text-xs font-bold text-white bg-black/60 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 backdrop-blur-md shadow-lg"
+                                >
+                                    <span>Taste Rating</span>
+                                    <span className="text-orange-400">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                </button>
+                                <div
+                                    id="detail-match-tooltip"
+                                    className="absolute left-0 bottom-full mb-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
+                                >
+                                    {t('discovery.shop_card.match_tooltip')}
+                                    <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                </div>
+                            </div>
+                        )
+                    )}
+                </div>
             </motion.div>
 
             {/* Scrollable Sheet Content */}
@@ -319,66 +406,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     <span className="text-sm text-gray-400 font-normal align-middle">
                                         {shop.food_kind || 'Restaurant'}
                                     </span>
-                                    {/* Match Score Badge OR My Stats Badge */}
-                                    {/* Match Score Badge OR My Stats Badge */}
-                                    {/* Match Score Badge OR My Stats Badge */}
-                                    {shop.my_review_stats ? (
-                                        <div className="relative inline-flex items-center gap-2 z-10 align-middle ml-2">
-                                            {/* Satisfaction & Ranking (Merged Badge) */}
-                                            <div className={cn(
-                                                "font-bold px-2 py-0.5 rounded-full border border-current text-xs flex items-center gap-1",
-                                                shop.my_review_stats.satisfaction === 2 ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
-                                            )}>
-                                                {/* Satisfaction Text */}
-                                                {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
-                                                    shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
-                                                {/* Separator if both exist */}
-                                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                                    <span className="opacity-30 mx-0.5">|</span>
-                                                )}
-
-                                                {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
-                                                {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                                    <span>
-                                                        상위 {shop.my_review_stats.percentile}%
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Rank (Outside Badge) */}
-                                            {shop.my_review_stats.rank > 0 && (
-                                                <div className="font-bold text-sm text-gray-900 flex items-center gap-0.5">
-                                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
-                                                        <span className="text-[10px] bg-yellow-100 p-0.5 rounded-full">🏆</span>
-                                                    )}
-                                                    {shop.my_review_stats.rank}위
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        shop.shop_user_match_score != null && (
-                                            <div className="relative inline-block z-10 align-middle">
-                                                <button
-                                                    onClick={() => {
-                                                        const el = document.getElementById('detail-match-tooltip');
-                                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                                                    }}
-                                                    className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 flex items-center gap-1 align-middle whitespace-nowrap"
-                                                >
-                                                    <span>Taste Rating</span>
-                                                    <span>{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                                </button>
-                                                <div
-                                                    id="detail-match-tooltip"
-                                                    className="absolute left-0 top-full mt-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
-                                                >
-                                                    {t('discovery.shop_card.match_tooltip')}
-                                                    <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
-                                                </div>
-                                            </div>
-                                        )
-                                    )}
                                 </h1>
                             </div>
                         </div>
@@ -398,80 +426,56 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                             </div>
                         </div>
 
-                        {/* Actions Row */}
-                        {/* Actions: Sub (Directions, Reservation, Share) + Main (Save) */}
-                        <div className="flex flex-col gap-3 mb-8">
-                            {/* Sub Actions Row */}
-                            <div className="flex gap-2.5">
-                                <button
-                                    onClick={() => {
-                                        const dest = (shop.lat && shop.lon)
-                                            ? `${shop.lat},${shop.lon}`
-                                            : encodeURIComponent(shop.address_full || shop.name);
-                                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
-                                    }}
-                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
-                                >
-                                    <MapPin size={16} />
-                                    {t('shop.directions', 'Directions')}
-                                </button>
+                        {/* Actions Row: Directions / Save / Evaluate */}
+                        <div className="flex gap-2.5 mb-8">
+                            <button
+                                onClick={() => {
+                                    const dest = (shop.lat && shop.lon)
+                                        ? `${shop.lat},${shop.lon}`
+                                        : encodeURIComponent(shop.address_full || shop.name);
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                                }}
+                                className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
+                            >
+                                <MapPin size={16} />
+                                {t('shop.directions', 'Directions')}
+                            </button>
 
-                                <button
-                                    onClick={() => {
-                                        navigate(`/write?shop_id=${shop.id}&type=review`);
-                                    }}
-                                    className={cn(
-                                        "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
-                                        shop.my_review_stats
-                                            ? "bg-primary/5 border-primary/20 text-primary" // Completed Style
-                                            : "bg-white border-gray-200 text-gray-700" // Default Style
-                                    )}
-                                >
-                                    {shop.my_review_stats ? (
-                                        <>
-                                            <Check size={16} />
-                                            {t('shop.evaluated', 'Completed')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <PenSquare size={16} />
-                                            {t('shop.evaluate', 'Evaluate')}
-                                        </>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        if (navigator.share) {
-                                            navigator.share({
-                                                title: shop.name,
-                                                text: shop.description || shop.address_full,
-                                                url: window.location.href
-                                            }).catch(console.error);
-                                        } else {
-                                            navigator.clipboard.writeText(window.location.href);
-                                            alert("링크가 복사되었습니다.");
-                                        }
-                                    }}
-                                    className="flex-1 h-12 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm"
-                                >
-                                    <Share size={16} />
-                                    {t('shop.share', 'Share')}
-                                </button>
-                            </div>
-
-                            {/* Main Action: Save (Wants to go) */}
                             <button
                                 onClick={handleBookmark}
                                 className={cn(
-                                    "w-full h-14 rounded-2xl flex items-center justify-center gap-2 font-bold text-lg",
+                                    "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
                                     shop.is_saved
-                                        ? "bg-red-50 border border-red-100 text-red-500"
-                                        : "bg-primary text-white border border-primary"
+                                        ? "bg-red-50 border-red-100 text-red-500"
+                                        : "bg-white border-gray-200 text-gray-700"
                                 )}
                             >
-                                <Bookmark size={20} className={cn(shop.is_saved && "fill-current")} />
+                                <Bookmark size={16} className={cn(shop.is_saved && "fill-current")} />
                                 {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    navigate(`/write?shop_id=${shop.id}&type=review`);
+                                }}
+                                className={cn(
+                                    "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
+                                    shop.my_review_stats
+                                        ? "bg-primary/5 border-primary/20 text-primary" // Completed Style
+                                        : "bg-white border-gray-200 text-gray-700" // Default Style
+                                )}
+                            >
+                                {shop.my_review_stats ? (
+                                    <>
+                                        <Check size={16} />
+                                        {t('shop.evaluated', 'Completed')}
+                                    </>
+                                ) : (
+                                    <>
+                                        <ListOrdered size={16} />
+                                        {t('shop.evaluate', 'Evaluate')}
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, PenSquare } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, ListOrdered } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
@@ -116,6 +116,12 @@ export interface ContentCardProps {
             rank?: number;
             satisfaction?: Satisfaction;
             visit_count?: number;
+            my_review_stats?: {
+                satisfaction: Satisfaction | number;
+                rank: number;
+                percentile: number;
+                total_reviews: number;
+            } | null;
         };
 
         // POI: move rank/satisfaction here (or keep under review_prop if you want, but per request: POI side)
@@ -131,6 +137,12 @@ export interface ContentCardProps {
             catchtable_ref?: string;
             lat?: number;
             lon?: number;
+            my_review_stats?: {
+                satisfaction: Satisfaction | number;
+                rank: number;
+                percentile: number;
+                total_reviews: number;
+            } | null;
         };
 
         stats: {
@@ -183,7 +195,8 @@ export const ContentCard = ({
     content,
     onShare,
     showActions = false,
-    hideShopInfo = false
+    hideShopInfo = false,
+
 }: ContentCardProps) => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
@@ -641,6 +654,7 @@ export const ContentCard = ({
                             </div>
                         )
                     )}
+
                 </div>
             </div>
 
@@ -889,24 +903,26 @@ export const ContentCard = ({
 
                         {/* Shop actions: Reserve + Bookmark */}
                         <div className="flex items-center gap-4 mr-2">
-                            {/* Evaluate Button */}
-                            <motion.button
-                                type="button"
-                                whileTap={{ scale: 0.9 }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
-                                    if (shopId) {
-                                        navigate(`/write?shop_id=${shopId}&type=review`);
-                                    } else {
-                                        alert("매장 정보를 찾을 수 없습니다.");
-                                    }
-                                }}
-                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                                aria-label="Evaluate"
-                            >
-                                <PenSquare size={22} />
-                            </motion.button>
+                            {/* Evaluate Button (Only if NOT evaluated) */}
+                            {!(content.poi?.my_review_stats || content.review_prop?.my_review_stats) && (
+                                <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
+                                        if (shopId) {
+                                            navigate(`/write?shop_id=${shopId}&type=review`);
+                                        } else {
+                                            alert("매장 정보를 찾을 수 없습니다.");
+                                        }
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                    aria-label="Evaluate"
+                                >
+                                    <ListOrdered size={22} />
+                                </motion.button>
+                            )}
 
                             {/* Bookmark Button */}
                             <motion.button

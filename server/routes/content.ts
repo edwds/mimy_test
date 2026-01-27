@@ -213,6 +213,7 @@ async function fetchFeedContent(params: {
     const likedSet = new Set<number>();
     const savedShopSet = new Set<number>();
     const followingAuthorSet = new Set<number>();
+    const myRankMap = new Map<number, any>(); // shopId -> ranking row
 
     if (contentIds.length > 0) {
         const likesRes = await db.select({
@@ -255,6 +256,15 @@ async function fetchFeedContent(params: {
                         inArray(users_follow.following_id, Array.from(userIds))
                     ));
                 follows.forEach(f => followingAuthorSet.add(f.following_id));
+            }
+
+            if (shopIds.size > 0) {
+                const myRankings = await db.select().from(users_ranking)
+                    .where(and(
+                        eq(users_ranking.user_id, currentUserId),
+                        inArray(users_ranking.shop_id, Array.from(shopIds))
+                    ));
+                myRankings.forEach(r => myRankMap.set(r.shop_id, r));
             }
         }
     }
@@ -301,6 +311,20 @@ async function fetchFeedContent(params: {
             const rank = rankMap.get(getRankKey(item.user_id, sid));
             const visitCount = visitCountMap.get(item.id) || 1;
             const isSaved = savedShopSet.has(sid);
+            const myRank = myRankMap.get(sid);
+
+            let myStats = null;
+            if (myRank) {
+                // Approximate stats for feed (we might not have total_reviews/percentile perfectly calculated without extra queries)
+                // But for "Hiding button", existence is enough.
+                // We map simplified stats.
+                myStats = {
+                    satisfaction: myRank.satisfaction_tier, // 2=good, 1=ok, 0=bad
+                    rank: myRank.rank,
+                    percentile: 0, // Placeholder
+                    total_reviews: 0 // Placeholder
+                };
+            }
 
             let displayCompanions = [];
             if (enrichedProp.companions && Array.isArray(enrichedProp.companions)) {
@@ -317,7 +341,8 @@ async function fetchFeedContent(params: {
                     thumbnail_img: shop.thumbnail_img,
                     rank: rank || null,
                     visit_count: visitCount,
-                    companions_info: displayCompanions
+                    companions_info: displayCompanions,
+                    my_review_stats: myStats
                 };
 
                 poi = {
@@ -331,7 +356,8 @@ async function fetchFeedContent(params: {
                     is_bookmarked: isSaved,
                     catchtable_ref: shop.catchtable_ref,
                     lat: shop.lat,
-                    lon: shop.lon
+                    lon: shop.lon,
+                    my_review_stats: myStats
                 };
             }
         }
