@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, ListOrdered } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, ListOrdered, HelpCircle } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -55,16 +55,23 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
     const [showViewer, setShowViewer] = useState(false);
     const [viewerIndex, setViewerIndex] = useState(0);
 
-    // Close dropdown on outside click
+    // Tooltip State
+    const [showTooltip, setShowTooltip] = useState(false);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown and tooltip on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setShowSortDropdown(false);
             }
+            if (showTooltip && tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+                setShowTooltip(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [showTooltip]);
     // page state removed as unused (derived in effect or local var if needed, but error said it was unused)
     // Actually, verify if page is used in fetchReviews.
     // fetchReviews uses pageNum argument.
@@ -323,69 +330,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-4xl">🏢</div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 p-4 pb-12 pt-12 bg-gradient-to-t from-black/60 to-transparent z-10 flex items-end justify-between">
-                    {/* Badge Overlay */}
-                    {shop.my_review_stats ? (
-                        <div className="flex items-center mb-1 gap-2">
-                            {/* Satisfaction & Ranking (Merged Badge) */}
-                            <div className={cn(
-                                "font-bold px-2.5 py-1 rounded-full border border-white/20 text-xs flex items-center gap-1.5 backdrop-blur-md shadow-lg",
-                                shop.my_review_stats.satisfaction === 2
-                                    ? "bg-orange-500/90 text-white border-orange-400/50"
-                                    : "bg-black/60 text-white"
-                            )}>
-                                {/* Satisfaction Text */}
-                                {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
-                                    shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
-                                {/* Separator if both exist */}
-                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                    <span className="opacity-40 mx-0.5">|</span>
-                                )}
-
-                                {/* Tier Info (Inside Badge) - Only if total_reviews >= 50 */}
-                                {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                    <span>
-                                        상위 {shop.my_review_stats.percentile}%
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Rank (Outside Badge) */}
-                            {shop.my_review_stats.rank > 0 && (
-                                <div className="font-base text-xs text-white flex items-center gap-1 drop-shadow-md">
-                                    {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
-                                        <span>🏆</span>
-                                    )}
-                                    {shop.my_review_stats.rank}위
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        shop.shop_user_match_score != null && (
-                            <div className="relative inline-block mb-1 z-10">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const el = document.getElementById('detail-match-tooltip');
-                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                                    }}
-                                    className="text-xs font-bold text-white bg-black/60 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 backdrop-blur-md shadow-lg"
-                                >
-                                    <span>Taste Rating</span>
-                                    <span className="text-orange-400">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                </button>
-                                <div
-                                    id="detail-match-tooltip"
-                                    className="absolute left-0 bottom-full mb-2 w-56 p-2.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-[60] text-left leading-relaxed backdrop-blur-sm hidden"
-                                >
-                                    {t('discovery.shop_card.match_tooltip')}
-                                    <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900/95 rotate-45" />
-                                </div>
-                            </div>
-                        )
-                    )}
-                </div>
             </motion.div>
 
             {/* Scrollable Sheet Content */}
@@ -398,6 +343,71 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                     {/* Shop Info & Actions */}
                     <div className="px-6 pt-8">
+                        {/* Badge / Score Section (Moved from Hero) */}
+                        <div className="mb-3">
+                            {shop.my_review_stats ? (
+                                <div className="flex items-center gap-2">
+                                    {/* Satisfaction & Badge */}
+                                    <div className={cn(
+                                        "font-bold px-2.5 py-1 rounded-full border text-xs flex items-center gap-1.5",
+                                        shop.my_review_stats.satisfaction === 2
+                                            ? "bg-orange-50 text-orange-600 border-orange-100"
+                                            : "bg-gray-100 text-gray-700 border-gray-200"
+                                    )}>
+                                        {/* Satisfaction Text */}
+                                        {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                            shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
+
+                                        {/* Separator */}
+                                        {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                            <span className="opacity-20 mx-0.5 bg-current w-[1px] h-3 block"></span>
+                                        )}
+
+                                        {/* Tier Info */}
+                                        {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                            <span>
+                                                상위 {shop.my_review_stats.percentile}%
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Rank Text */}
+                                    {shop.my_review_stats.rank > 0 && (
+                                        <div className="font-bold text-sm text-gray-900 flex items-center gap-1">
+                                            {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                                <span>🏆</span>
+                                            )}
+                                            {shop.my_review_stats.rank}위
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                shop.shop_user_match_score != null && (
+                                    <div className="relative inline-block z-10" ref={tooltipRef}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowTooltip(!showTooltip);
+                                            }}
+                                            className="text-xs font-bold text-gray-900 bg-gray-100 pl-3 pr-2 py-1.5 rounded-full border border-gray-200 flex items-center gap-1.5 active:bg-gray-200 transition-colors"
+                                        >
+                                            <span className="text-gray-500">예상 평가</span>
+                                            <span className="text-orange-600">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                            <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
+                                        </button>
+                                        {showTooltip && (
+                                            <div
+                                                className="absolute left-0 top-full mt-2 w-56 p-3 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-50 text-left leading-relaxed animate-in fade-in zoom-in-95 duration-200"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <p>{t('discovery.shop_card.match_tooltip')}</p>
+                                                <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            )}
+                        </div>
                         {/* Title Section (Name + Kind) */}
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex-1 mr-2">

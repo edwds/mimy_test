@@ -1,8 +1,9 @@
 import React from 'react';
-import { MapPin, Bookmark, Check, ListOrdered } from 'lucide-react';
+import { MapPin, Bookmark, Check, ListOrdered, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
+import { useState, useEffect, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -48,6 +49,24 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
+    const [showTooltip, setShowTooltip] = useState(false);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+
+    // Close tooltip on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showTooltip && tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+                setShowTooltip(false);
+            }
+        };
+
+        if (showTooltip) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [showTooltip]);
 
 
 
@@ -120,26 +139,27 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                         </div>
                     ) : (
                         shop.shop_user_match_score != null && (
-                            <div className="relative z-10">
+                            <div className="relative z-10" ref={tooltipRef}>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        const el = document.getElementById(`tooltip-${shop.id}`);
-                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                        setShowTooltip(!showTooltip);
                                     }}
-                                    className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded-full border border-white/20 flex items-center gap-1 backdrop-blur-md shadow-sm"
+                                    className="text-xs font-medium text-white bg-black/60 pl-2 pr-1.5 py-1 rounded-full border border-white/20 flex items-center gap-1 backdrop-blur-md shadow-sm active:bg-black/80 transition-colors"
                                 >
-                                    <span>Taste Rating</span>
-                                    <span className="text-orange-400">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                    <span>예상 평가</span>
+                                    <span className="text-orange-400 font-bold">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                    <HelpCircle className="w-3 h-3 text-white/50" />
                                 </button>
-                                <div
-                                    id={`tooltip-${shop.id}`}
-                                    className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 text-left leading-relaxed hidden"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    {t('discovery.shop_card.match_tooltip')}
-                                    <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900 rotate-45" />
-                                </div>
+                                {showTooltip && (
+                                    <div
+                                        className="absolute left-0 bottom-full mb-2 w-52 p-3 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-50 text-left leading-relaxed animate-in fade-in zoom-in-95 duration-200"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <p>{t('discovery.shop_card.match_tooltip')}</p>
+                                        <div className="absolute left-4 -bottom-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                    </div>
+                                )}
                             </div>
                         )
                     )}

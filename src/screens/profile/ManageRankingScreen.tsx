@@ -50,92 +50,37 @@ export const ManageRankingScreen = () => {
     // Let's build a flattened list for Reorder.Group
     // Items: [ {type:'header', tier:2}, ...goodItems, {type:'header', tier:1}, ...okItems, ... ]
 
-    type FlattenedItem =
-        | { type: 'header', id: string, tier: number, title: string }
-        | { type: 'item', id: string, data: RankingItem };
-
-    const [flatList, setFlatList] = useState<FlattenedItem[]>([]);
+    // We separate items into 3 tiers to prevent dragging between them.
+    // Tier 2 (Good), Tier 1 (Ok), Tier 0 (Bad)
+    const [tier2Items, setTier2Items] = useState<RankingItem[]>([]);
+    const [tier1Items, setTier1Items] = useState<RankingItem[]>([]);
+    const [tier0Items, setTier0Items] = useState<RankingItem[]>([]);
 
     useEffect(() => {
         if (!loading) {
-            // Rebuild flat list from current state only on load or explicit reset
-            // But dragging updates flatList directly.
-            // Converting originalItems (from DB) to FlatList initially.
-            const newFlatList: FlattenedItem[] = [];
-
-            // Good
-            newFlatList.push({ type: 'header', id: 'header-2', tier: 2, title: t('write.basic.good', 'Delicious') });
-            originalItems.filter(i => i.satisfaction_tier === 2).forEach(i =>
-                newFlatList.push({ type: 'item', id: String(i.id), data: i })
-            );
-
-            // Ok
-            newFlatList.push({ type: 'header', id: 'header-1', tier: 1, title: t('write.basic.ok', 'Okay') });
-            originalItems.filter(i => i.satisfaction_tier === 1).forEach(i =>
-                newFlatList.push({ type: 'item', id: String(i.id), data: i })
-            );
-
-            // Bad
-            newFlatList.push({ type: 'header', id: 'header-0', tier: 0, title: t('write.basic.bad', 'Bad') });
-            originalItems.filter(i => i.satisfaction_tier === 0).forEach(i =>
-                newFlatList.push({ type: 'item', id: String(i.id), data: i })
-            );
-
-            setFlatList(newFlatList);
+            setTier2Items(originalItems.filter(i => i.satisfaction_tier === 2));
+            setTier1Items(originalItems.filter(i => i.satisfaction_tier === 1));
+            setTier0Items(originalItems.filter(i => i.satisfaction_tier === 0));
         }
-    }, [originalItems, loading, t]);
-
-    const handleReorder = (newOrder: FlattenedItem[]) => {
-        // Constraint: Headers cannot be moved relative to each other? 
-        // Actually headers CAN be moved by the user in a basic Reorder list if we don't lock them.
-        // We can force them back or make them non-draggable. 
-        // dragListener={false} prevents picking them up.
-        // But what if I drag an item ABOVE the first header?
-        // We need to sanitise the order after drop or during render.
-        // Let's apply logic: Scan list. Update item tiers based on the LAST SEEN header.
-
-        // Let's just update the list state for now.
-        setFlatList(newOrder);
-    };
+    }, [originalItems, loading]);
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Process flatList to generate updates
-            // Logic: Iterate top to bottom.
-            // Current Tier starts at 2 (Top).
-            // Updates when we hit a header.
-
-            let currentTier = 2; // Default? Or should we strictly follow headers?
-            // If the first item is above the first header (unlikely if header is index 0), assume Tier 2.
-
             const payload: any[] = [];
-            let rankCounter = 1; // Global rank? Or per tier? 
-            // "Overall Ranking" suggested global rank. User said "Satisfaction 별로 그룹핑".
-            // If grouped, usually rank resets or continues?
-            // Previous logic: Global ranking.
-            // Visual display: Ordered by Tier desc, then Rank asc.
-            // So if I move item to Tier 1, its rank should be > all Tier 2 items.
-            // So Rank Counter continues globally.
+            let rankCounter = 1;
 
-            // Wait, we need to enforce Header Order in the list?
-            // If user somehow dragged Header 1 above Header 2, the tiers flip.
-            // Ideally we force headers to stay put? 
-            // `Reorder` doesn't support "fixed items".
+            // Concatenate all tiers in order: Tier 2 -> Tier 1 -> Tier 0
+            // Since they can't change tiers, we just use the current tier value.
 
-            // Simple fix: We strictly infer tier from the "Header" above the item.
-            // If item is above Top Header, assume Top Header's tier.
-
-            flatList.forEach(item => {
-                if (item.type === 'header') {
-                    currentTier = item.tier;
-                } else {
-                    payload.push({
-                        shop_id: item.data.shop_id,
-                        rank: rankCounter++,
-                        satisfaction_tier: currentTier
-                    });
-                }
+            [...tier2Items, ...tier1Items, ...tier0Items].forEach(item => {
+                payload.push({
+                    shop_id: item.shop_id,
+                    rank: rankCounter++,
+                    satisfaction_tier: item.satisfaction_tier // Keep original tier or enforce the list it's currently in? 
+                    // Since we split by tier, item.satisfaction_tier *should* match the list it is in. 
+                    // Actually, if we somehow started empty, users can't add items here anyway.
+                });
             });
 
             await RankingService.reorder(currentUser.id, payload);
@@ -152,13 +97,30 @@ export const ManageRankingScreen = () => {
         if (deleteTargetId === null) return;
 
         // Find the item to get shop_id
-        const targetItem = flatList.find(i => i.type === 'item' && i.data.id === deleteTargetId);
-        if (!targetItem || targetItem.type !== 'item') return;
+        let targetShopId: number | null = null;
+        let foundInTier = -1;
+
+        // Search in all tiers
+        if (tier2Items.some(i => i.id === deleteTargetId)) {
+            targetShopId = tier2Items.find(i => i.id === deleteTargetId)!.shop_id;
+            foundInTier = 2;
+        } else if (tier1Items.some(i => i.id === deleteTargetId)) {
+            targetShopId = tier1Items.find(i => i.id === deleteTargetId)!.shop_id;
+            foundInTier = 1;
+        } else if (tier0Items.some(i => i.id === deleteTargetId)) {
+            targetShopId = tier0Items.find(i => i.id === deleteTargetId)!.shop_id;
+            foundInTier = 0;
+        }
+
+        if (!targetShopId) return;
 
         try {
-            await RankingService.delete(targetItem.data.shop_id, currentUser.id);
+            await RankingService.delete(targetShopId, currentUser.id);
             // Remove from UI
-            setFlatList(prev => prev.filter(i => i.type !== 'item' || i.data.id !== deleteTargetId));
+            if (foundInTier === 2) setTier2Items(prev => prev.filter(i => i.id !== deleteTargetId));
+            if (foundInTier === 1) setTier1Items(prev => prev.filter(i => i.id !== deleteTargetId));
+            if (foundInTier === 0) setTier0Items(prev => prev.filter(i => i.id !== deleteTargetId));
+
             setDeleteTargetId(null);
         } catch (e) {
             console.error(e);
@@ -198,36 +160,62 @@ export const ManageRankingScreen = () => {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4">
-                <Reorder.Group axis="y" values={flatList} onReorder={handleReorder} className="space-y-2">
-                    {flatList.map((item) => {
-                        if (item.type === 'header') {
-                            return (
-                                <Reorder.Item
-                                    key={item.id}
-                                    value={item}
-                                    dragListener={false}
-                                    className="pt-4 pb-2"
-                                >
-                                    <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1">
-                                        {item.title}
-                                    </div>
-                                </Reorder.Item>
-                            );
-                        }
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-                        // Item
-                        const rankingItem = item.data;
-                        return (
-                            <DraggableRankingItem
-                                key={item.id}
-                                item={item}
-                                rankingItem={rankingItem}
-                                onDelete={(id) => setDeleteTargetId(id)}
-                            />
-                        );
-                    })}
-                </Reorder.Group>
+                {/* Tier 2: Delicious */}
+                {tier2Items.length > 0 && (
+                    <div>
+                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
+                            {t('write.basic.good', 'Delicious')}
+                        </div>
+                        <Reorder.Group axis="y" values={tier2Items} onReorder={setTier2Items} className="space-y-2">
+                            {tier2Items.map(item => (
+                                <DraggableRankingItem
+                                    key={item.id}
+                                    rankingItem={item}
+                                    onDelete={(id) => setDeleteTargetId(id)}
+                                />
+                            ))}
+                        </Reorder.Group>
+                    </div>
+                )}
+
+                {/* Tier 1: Okay */}
+                {tier1Items.length > 0 && (
+                    <div>
+                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
+                            {t('write.basic.ok', 'Okay')}
+                        </div>
+                        <Reorder.Group axis="y" values={tier1Items} onReorder={setTier1Items} className="space-y-2">
+                            {tier1Items.map(item => (
+                                <DraggableRankingItem
+                                    key={item.id}
+                                    rankingItem={item}
+                                    onDelete={(id) => setDeleteTargetId(id)}
+                                />
+                            ))}
+                        </Reorder.Group>
+                    </div>
+                )}
+
+                {/* Tier 0: Bad */}
+                {tier0Items.length > 0 && (
+                    <div>
+                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
+                            {t('write.basic.bad', 'Bad')}
+                        </div>
+                        <Reorder.Group axis="y" values={tier0Items} onReorder={setTier0Items} className="space-y-2">
+                            {tier0Items.map(item => (
+                                <DraggableRankingItem
+                                    key={item.id}
+                                    rankingItem={item}
+                                    onDelete={(id) => setDeleteTargetId(id)}
+                                />
+                            ))}
+                        </Reorder.Group>
+                    </div>
+                )}
+
             </div>
 
             {/* Delete Confirmation */}
@@ -262,13 +250,13 @@ export const ManageRankingScreen = () => {
 };
 
 // Sub-component for individual Draggable Items
+// Sub-component for individual Draggable Items
 interface DraggableRankingItemProps {
-    item: any; // FlattenedItem
-    rankingItem: RankingItem;
+    rankingItem: RankingItem; // Changed prop signature
     onDelete: (id: number) => void;
 }
 
-const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingItemProps) => {
+const DraggableRankingItem = ({ rankingItem, onDelete }: DraggableRankingItemProps) => {
     const dragControls = useDragControls();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -324,7 +312,7 @@ const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingI
 
     return (
         <Reorder.Item
-            value={item}
+            value={rankingItem} // Changed value to be the item itself
             dragListener={false}
             dragControls={dragControls}
             className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-pan-y shadow-sm active:shadow-md"
@@ -338,6 +326,7 @@ const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingI
             {/* Grip Handle - Immediate Drag */}
             <div
                 className="cursor-grab active:cursor-grabbing p-1 -m-1"
+                style={{ touchAction: 'none' }} // Critical: Prevent scroll on handle
                 onPointerDown={(e) => {
                     // Start drag immediately
                     dragControls.start(e);
