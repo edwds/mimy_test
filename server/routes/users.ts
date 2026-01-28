@@ -4,6 +4,7 @@ import { users, clusters, shops, users_wantstogo, users_follow, content, likes, 
 import { eq, and, desc, sql, ilike, isNotNull, inArray } from "drizzle-orm";
 import { getShopMatchScores } from "../utils/enricher.js";
 import { getOrSetCache } from "../redis.js";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -238,7 +239,7 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-router.get("/:id/saved_shops", async (req, res) => {
+router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
 
@@ -265,8 +266,7 @@ router.get("/:id/saved_shops", async (req, res) => {
             .orderBy(desc(users_wantstogo.created_at));
 
         // Enrich with Match Score & My Rank
-        const userIdHeader = req.headers['x-user-id'];
-        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+        const uid = req.user?.id || 0;
 
         const shopIds = savedShops.map(s => s.id);
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
@@ -351,12 +351,12 @@ router.get("/:id/following", async (req, res) => {
 });
 
 // POST /:id/follow (Toggle Follow)
-router.post("/:id/follow", async (req, res) => {
+router.post("/:id/follow", requireAuth, async (req, res) => {
     try {
         const targetId = parseInt(req.params.id);
-        const { followerId } = req.body;
+        const followerId = req.user!.id; // Get from JWT
 
-        if (!followerId || isNaN(targetId)) {
+        if (isNaN(targetId)) {
             return res.status(400).json({ error: "Invalid parameters" });
         }
 

@@ -6,6 +6,7 @@ import { ilike, or, eq, sql, and, desc, asc, not, inArray } from "drizzle-orm";
 import { calculateShopMatchScore, TasteScores } from "../utils/match.js";
 import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -34,7 +35,7 @@ const getClusterName = (id: string | number | null) => {
 };
 
 // GET /api/shops/discovery
-router.get("/discovery", async (req, res) => {
+router.get("/discovery", optionalAuth, async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
@@ -53,9 +54,8 @@ router.get("/discovery", async (req, res) => {
         const canCache = !hasBBox;
         const cacheKey = `discovery:seed:${seed}:page:${page}:limit:${limit}`;
 
-        // TODO: Switch to secure session/token auth to get uid
-        const userIdHeader = req.headers['x-user-id'];
-        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+        // Get user ID from JWT
+        const uid = req.user?.id || 0;
 
         const fetchDiscovery = async () => {
             let query = db.select({
@@ -218,12 +218,12 @@ router.get("/discovery", async (req, res) => {
 });
 
 // POST /api/shops/:id/save
-router.post("/:id/save", async (req, res) => {
+router.post("/:id/save", requireAuth, async (req, res) => {
     try {
         const shopId = parseInt(req.params.id);
-        const { userId } = req.body; // TODO: Replace with secure session auth
+        const userId = req.user!.id; // Get from JWT
 
-        if (!userId || isNaN(shopId)) {
+        if (isNaN(shopId)) {
             return res.status(400).json({ error: "Invalid parameters" });
         }
 
@@ -283,7 +283,7 @@ router.post("/:id/save", async (req, res) => {
 });
 
 // GET /api/shops/search
-router.get("/search", async (req, res) => {
+router.get("/search", optionalAuth, async (req, res) => {
     try {
         const { q } = req.query;
         if (!q || typeof q !== 'string') return res.json([]);
@@ -312,9 +312,8 @@ router.get("/search", async (req, res) => {
             ))
             .limit(20);
 
-
-        const userIdHeader = req.headers['x-user-id'];
-        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+        // Get user ID from JWT
+        const uid = req.user?.id || 0;
 
         // Enrich with Match Score & My Rank
         const shopIds = results.map(s => s.id);
@@ -349,13 +348,13 @@ router.get("/search", async (req, res) => {
 });
 
 // GET /api/shops/:id
-router.get("/:id", async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
-        const userIdHeader = req.headers['x-user-id'];
-        const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
+        // Get user ID from JWT
+        const uid = req.user?.id || 0;
 
         const cacheKey = `shop:${id}`;
 

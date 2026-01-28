@@ -8,3 +8,4 @@ server/db/mimy.db
 
 # Mock Data Dumps
 server/data/*_dump.*
+PRODUCTION_SECRETS.txt

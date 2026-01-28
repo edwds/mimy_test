@@ -34,7 +34,14 @@ export const OtpStep = () => {
     };
 
     const handleNext = () => {
-        // Verify mock code
+        // Fixed OTP code for development: 260130
+        const FIXED_OTP = "260130";
+
+        if (code !== FIXED_OTP) {
+            alert(t('register.otp.invalid', { defaultValue: 'Invalid verification code. Please try 260130' }));
+            return;
+        }
+
         navigate('/register/profile');
     };
 

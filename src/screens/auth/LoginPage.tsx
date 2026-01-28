@@ -50,6 +50,7 @@ export const LoginPage = () => {
             const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include", // Include cookies
                 body: JSON.stringify({ token: accessToken })
             });
 
@@ -61,10 +62,13 @@ export const LoginPage = () => {
                     localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
                     navigate('/register/phone');
                 } else {
-                    // Existing User: Login normally
+                    // Existing User: Login normally (JWT cookies already set by server)
                     await contextLogin(user.id.toString());
                     navigate('/main');
                 }
+            } else if (response.status === 403) {
+                const errorData = await response.json();
+                alert(errorData.message || "Only @catchtable.co.kr email addresses are allowed");
             } else {
                 alert("Login failed on server");
             }
@@ -89,6 +93,9 @@ export const LoginPage = () => {
                 <div className="text-center space-y-2">
                     <h1 className="text-2xl font-bold tracking-tight">{t('auth.login.title')}</h1>
                     <p className="text-muted-foreground">{t('auth.login.desc')}</p>
+                    <p className="text-sm text-muted-foreground/70 pt-2">
+                        @catchtable.co.kr {t('auth.login.emailOnly', { defaultValue: 'email addresses only' })}
+                    </p>
                 </div>
             </header>
 

@@ -25,7 +25,7 @@ interface UserContextType {
     loading: boolean;
     refreshUser: () => Promise<void>;
     login: (userId: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     optimisticLikes: Record<number, boolean>;
     toggleOptimisticLike: (contentId: number, isLiked: boolean) => void;
     coordinates: { lat: number; lon: number } | null;
@@ -39,22 +39,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
 
     const fetchUserData = async () => {
-        const userId = UserService.getUserId();
-        if (userId) {
-            try {
-                const userData = await UserService.fetchUser(userId);
-                if (userData) {
-                    setUser(userData);
-                } else {
-                    console.warn("Failed to load user data, logging out.");
-                    localStorage.removeItem("mimy_user_id");
-                    setUser(null);
-                    window.location.href = '/start';
-                }
-            } catch (error) {
-                console.error("Failed to fetch user in context", error);
+        try {
+            // Fetch current user from JWT cookie
+            const userData = await UserService.getCurrentUser();
+            if (userData) {
+                setUser(userData);
+            } else {
+                setUser(null);
             }
-        } else {
+        } catch (error) {
+            console.error("Failed to fetch user in context", error);
             setUser(null);
         }
         setLoading(false);
@@ -83,13 +77,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const login = async (userId: string) => {
-        localStorage.setItem("mimy_user_id", userId);
+        // Server already set JWT cookies during login/register
+        // Just fetch user data
         await fetchUserData();
     };
 
-    const logout = () => {
-        localStorage.removeItem("mimy_user_id");
+    const logout = async () => {
+        try {
+            // Call logout API to clear cookies
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+            await fetch(`${API_BASE_URL}/api/auth/logout`, {
+                method: 'POST',
+                credentials: 'include' // Include cookies
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
         setUser(null);
+        window.location.href = '/start';
     };
 
     const [optimisticLikes, setOptimisticLikes] = useState<Record<number, boolean>>({});

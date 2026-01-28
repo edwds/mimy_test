@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { users_ranking, shops, content } from "../db/schema.js";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { invalidatePattern } from "../redis.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -47,12 +48,12 @@ router.get("/all", async (req, res) => {
 
 // DELETE /api/ranking/:shopId
 // Symbiotic Deletion: Deletes ranking AND associated content (reviews)
-router.delete("/:shopId", async (req, res) => {
+router.delete("/:shopId", requireAuth, async (req, res) => {
     try {
         const shopId = parseInt(req.params.shopId);
-        const { user_id } = req.body;
+        const user_id = req.user!.id; // Get from JWT
 
-        if (!shopId || !user_id) {
+        if (!shopId) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
@@ -105,11 +106,12 @@ router.delete("/:shopId", async (req, res) => {
 
 // PUT /api/ranking/reorder
 // Accepts list of items to update ranks/tiers
-router.put("/reorder", async (req, res) => {
+router.put("/reorder", requireAuth, async (req, res) => {
     try {
-        const { user_id, items } = req.body; // items: { shop_id, rank, satisfaction_tier }[]
+        const user_id = req.user!.id; // Get from JWT
+        const { items } = req.body; // items: { shop_id, rank, satisfaction_tier }[]
 
-        if (!user_id || !Array.isArray(items)) {
+        if (!Array.isArray(items)) {
             return res.status(400).json({ error: "Invalid parameters" });
         }
 

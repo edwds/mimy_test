@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
@@ -19,7 +20,17 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS configuration with credentials support
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://mimytest.vercel.app', 'https://www.mimytest.vercel.app']
+        : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4173'],
+    credentials: true, // Allow cookies to be sent
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(cookieParser()); // Parse cookies
 app.use(express.json());
 
 // Routes

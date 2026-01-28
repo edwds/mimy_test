@@ -17,27 +17,30 @@ export interface RankingItem {
 }
 
 export const RankingService = {
-    getAll: async (userId: number): Promise<RankingItem[]> => {
-        const res = await fetch(`${API_BASE_URL}/api/ranking/all?user_id=${userId}`);
+    getAll: async (): Promise<RankingItem[]> => {
+        const res = await fetch(`${API_BASE_URL}/api/ranking/all`, {
+            credentials: 'include'
+        });
         if (!res.ok) throw new Error('Failed to fetch rankings');
         return res.json();
     },
 
-    delete: async (shopId: number, userId: number) => {
+    delete: async (shopId: number) => {
         const res = await fetch(`${API_BASE_URL}/api/ranking/${shopId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
+            credentials: 'include'
         });
         if (!res.ok) throw new Error('Failed to delete ranking');
         return res.json();
     },
 
-    reorder: async (userId: number, items: { shop_id: number; rank: number; satisfaction_tier: number }[]) => {
+    reorder: async (items: { shop_id: number; rank: number; satisfaction_tier: number }[]) => {
         const res = await fetch(`${API_BASE_URL}/api/ranking/reorder`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, items })
+            credentials: 'include',
+            body: JSON.stringify({ items })
         });
         if (!res.ok) throw new Error('Failed to reorder ranking');
         return res.json();

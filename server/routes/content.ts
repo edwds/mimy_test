@@ -5,6 +5,7 @@ import { eq, desc, and, sql, count, inArray, gt, gte, ne, lte } from "drizzle-or
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import { ListService } from "../services/ListService.js";
 import { LeaderboardService } from "../services/LeaderboardService.js";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -558,7 +559,7 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
 }
 
 // GET /api/content/feed
-router.get("/feed", async (req, res) => {
+router.get("/feed", optionalAuth, async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
@@ -570,7 +571,7 @@ router.get("/feed", async (req, res) => {
         const userLat = Number.isFinite(rawLat) ? rawLat : null;
         const userLon = Number.isFinite(rawLon) ? rawLon : null;
 
-        const currentUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+        const currentUserId = req.user?.id || null; // Get from JWT if available
 
         // Caching Logic: Only for global feed (popular)
         const isGlobal = (filter === 'popular' || filter === '') && !userLat; // popular doesn't use location currently in code, but checking safety
@@ -611,12 +612,13 @@ router.get("/feed", async (req, res) => {
 });
 
 // POST /api/content (Create Review/Post)
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
     try {
-        const { user_id, type, text, img, video, review_prop, keyword, link_json, img_text } = req.body;
+        const user_id = req.user!.id; // Get from JWT
+        const { type, text, img, video, review_prop, keyword, link_json, img_text } = req.body;
 
-        if (!user_id || !type) {
-            return res.status(400).json({ error: "user_id and type are required" });
+        if (!type) {
+            return res.status(400).json({ error: "type is required" });
         }
 
         const result = await db.insert(content).values({
@@ -676,12 +678,13 @@ function mapSatisfactionToTier(satisfaction: string): number {
 }
 
 // POST /api/content/ranking/apply
-router.post("/ranking/apply", async (req, res) => {
+router.post("/ranking/apply", requireAuth, async (req, res) => {
     try {
-        const { user_id, shop_id, insert_index } = req.body;
+        const user_id = req.user!.id; // Get from JWT
+        const { shop_id, insert_index } = req.body;
         let { satisfaction } = req.body;
 
-        if (!user_id || !shop_id || insert_index === undefined) {
+        if (!shop_id || insert_index === undefined) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
@@ -1076,12 +1079,12 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // POST /api/content/:id/like
-router.post("/:id/like", async (req, res) => {
+router.post("/:id/like", requireAuth, async (req, res) => {
     try {
         const contentId = parseInt(req.params.id);
-        const { user_id } = req.body;
+        const user_id = req.user!.id; // Get from JWT
 
-        if (!contentId || !user_id) {
+        if (!contentId) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
@@ -1110,12 +1113,12 @@ router.post("/:id/like", async (req, res) => {
 });
 
 // DELETE /api/content/:id/like
-router.delete("/:id/like", async (req, res) => {
+router.delete("/:id/like", requireAuth, async (req, res) => {
     try {
         const contentId = parseInt(req.params.id);
-        const { user_id } = req.body;
+        const user_id = req.user!.id; // Get from JWT
 
-        if (!contentId || !user_id) {
+        if (!contentId) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
@@ -1169,12 +1172,13 @@ router.get("/:id/comments", async (req, res) => {
 });
 
 // POST /api/content/:id/comments
-router.post("/:id/comments", async (req, res) => {
+router.post("/:id/comments", requireAuth, async (req, res) => {
     try {
         const contentId = parseInt(req.params.id);
-        const { user_id, text, parent_id, mention_user_id } = req.body;
+        const user_id = req.user!.id; // Get from JWT
+        const { text, parent_id, mention_user_id } = req.body;
 
-        if (!contentId || !user_id || !text) {
+        if (!contentId || !text) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
@@ -1280,12 +1284,12 @@ async function fetchContentStats(contentId: number, currentUserId?: number) {
 }
 
 // DELETE /api/content/:id
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res) => {
     try {
         const contentId = parseInt(req.params.id);
-        const { user_id } = req.body;
+        const user_id = req.user!.id; // Get from JWT
 
-        if (!contentId || !user_id) {
+        if (!contentId) {
             return res.status(400).json({ error: "Missing parameters" });
         }
 
