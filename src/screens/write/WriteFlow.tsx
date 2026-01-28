@@ -24,7 +24,7 @@ export const WriteFlow = () => {
     // Data Accumulation
     const [type] = useState<'review' | 'post'>('review'); // Default to review
     const [selectedShop, setSelectedShop] = useState<any>(locationState?.shop || null);
-    const [satisfaction] = useState<'good' | 'ok' | 'bad'>(locationState?.satisfaction || 'good');
+    const [satisfaction, setSatisfaction] = useState<'good' | 'ok' | 'bad'>(locationState?.satisfaction || 'good');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initial Step Logic
@@ -36,6 +36,20 @@ export const WriteFlow = () => {
 
     // Get real user ID
     const currentUserId = Number(localStorage.getItem("mimy_user_id") || 0);
+
+    // Sync state with location updates (Critical for same-route navigation from RankingContext)
+    useEffect(() => {
+        if (location.state && (location.state as any).step) {
+            const state = location.state as any;
+            if (state.step === 'WRITE_CONTENT') {
+                if (state.shop) setSelectedShop(state.shop);
+                if (state.satisfaction) setSatisfaction(state.satisfaction);
+                setStep('WRITE_CONTENT');
+            } else if (state.step === 'SEARCH_SHOP') {
+                setStep('SEARCH_SHOP');
+            }
+        }
+    }, [location.state]);
 
     // Fetch Shop if shop_id is present
     useEffect(() => {

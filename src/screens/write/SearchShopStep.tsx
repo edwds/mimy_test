@@ -195,7 +195,27 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                 </div>
             )}
 
-            {/* ... Google Mode Header ... */}
+            {/* Google Mode Header */}
+            {isGoogleMode && (
+                <div className="flex flex-col sticky top-0 z-10 bg-background/80 backdrop-blur-md transition-colors pb-3 border-b border-border/50" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+                    <div className="pl-4 pr-8 flex items-center mb-1">
+                        <button
+                            onClick={() => {
+                                setIsGoogleMode(false);
+                                setGoogleResults([]);
+                                setQuery(''); // Reset query or keep? Usually reset if going back.
+                            }}
+                            className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="flex-1 ml-2">
+                            <div className="text-xs font-bold text-blue-600 mb-0.5">Google Maps Search</div>
+                            <div className="font-bold text-lg leading-none">{query}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Results */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
