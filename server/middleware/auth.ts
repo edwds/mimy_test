@@ -24,31 +24,42 @@ export const requireAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    console.log('[requireAuth] Path:', req.path);
+    console.log('[requireAuth] Cookies:', Object.keys(req.cookies || {}));
+    console.log('[requireAuth] Has Authorization header:', !!req.headers.authorization);
+
     // Priority 1: Authorization header (for mobile apps)
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const payload = verifyAccessToken(token);
       if (payload) {
+        console.log('[requireAuth] ✅ Authenticated via Bearer token, userId:', payload.userId);
         req.user = {
           id: payload.userId,
           email: payload.email
         };
         return next();
       }
+      console.log('[requireAuth] ❌ Bearer token verification failed');
     }
 
     // Priority 2: JWT cookie (for web)
     const token = req.cookies?.access_token;
     if (token) {
+      console.log('[requireAuth] Found access_token cookie');
       const payload = verifyAccessToken(token);
       if (payload) {
+        console.log('[requireAuth] ✅ Authenticated via cookie, userId:', payload.userId);
         req.user = {
           id: payload.userId,
           email: payload.email
         };
         return next();
       }
+      console.log('[requireAuth] ❌ Cookie token verification failed');
+    } else {
+      console.log('[requireAuth] ❌ No access_token cookie found');
     }
 
     // Priority 3: Temporary dual-mode support for x-user-id header
@@ -67,6 +78,7 @@ export const requireAuth = async (
     }
 
     // No valid authentication found
+    console.log('[requireAuth] ❌ No valid authentication found, returning 401');
     res.status(401).json({
       error: 'Authentication required',
       message: 'Please log in to access this resource'
