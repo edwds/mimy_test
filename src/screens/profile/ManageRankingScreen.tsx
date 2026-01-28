@@ -21,8 +21,6 @@ export const ManageRankingScreen = () => {
     // We track delete targets by ID
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
-    const currentUser = { id: Number(localStorage.getItem("mimy_user_id") || 0) };
-
     useEffect(() => {
         loadData();
     }, []);
@@ -30,7 +28,7 @@ export const ManageRankingScreen = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await RankingService.getAll(currentUser.id);
+            const data = await RankingService.getAll();
             setOriginalItems(data);
         } catch (e) {
             console.error(e);
@@ -109,7 +107,7 @@ export const ManageRankingScreen = () => {
                 }
             });
 
-            await RankingService.reorder(currentUser.id, payload);
+            await RankingService.reorder(payload);
             alert(t('common.saved', 'Saved'));
             navigate(-1); // Back on success
         } catch (e) {
@@ -134,7 +132,7 @@ export const ManageRankingScreen = () => {
         if (!targetShopId) return;
 
         try {
-            await RankingService.delete(targetShopId, currentUser.id);
+            await RankingService.delete(targetShopId);
             // Remove from UI
             setFlatList(prev => prev.filter(i => i.type !== 'item' || i.data.id !== deleteTargetId));
 

@@ -136,7 +136,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
         setLoadingReviews(true);
         try {
-            const data = await ShopService.getReviews(id, pageNum, sortType, user?.id);
+            const data = await ShopService.getReviews(id, pageNum, sortType);
             if (data.length < 20) setHasMore(false);
 
             setReviews(prev => reset ? data : [...prev, ...data]);

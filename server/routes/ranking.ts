@@ -11,10 +11,9 @@ const router = Router();
 // GET /api/ranking/all
 // Fetch all rankings for the user, grouped or flat.
 // We'll return a flat list sorted by Tier (desc) then Rank (asc).
-router.get("/all", async (req, res) => {
+router.get("/all", requireAuth, async (req, res) => {
     try {
-        const userId = parseInt(req.query.user_id as string);
-        if (!userId) return res.status(400).json({ error: "Missing user_id" });
+        const userId = req.user!.id; // Get from JWT
 
         const rankings = await db.select({
             id: users_ranking.id,

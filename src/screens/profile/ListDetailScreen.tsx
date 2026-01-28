@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { API_BASE_URL, WEB_BASE_URL } from '@/lib/api';
 import { ShopService } from '@/services/ShopService';
 import { UserService } from '@/services/UserService';
+import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 import { Share as CapacitorShare } from '@capacitor/share';
@@ -36,6 +37,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useUser();
     const { userId: paramUserId, code } = useParams(); // URL param (could be ID or account_id) or share code
     const userId = userIdProp || paramUserId;
     const [searchParams] = useSearchParams();
@@ -70,9 +72,8 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
             setLoading(true);
             try {
                 // 0. Fetch My Saved Shops (to check bookmark status)
-                const currentId = UserService.getUserId();
-                if (currentId) {
-                    const saved = await UserService.getSavedShops(currentId);
+                if (user?.id) {
+                    const saved = await UserService.getSavedShops(user.id);
                     // Ensure we map to numbers
                     const ids = new Set<number>(saved.map((s: any) => Number(s.id)));
                     setSavedShopIds(ids);

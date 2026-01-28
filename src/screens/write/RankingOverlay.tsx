@@ -112,7 +112,6 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
 
             // Send to server
             await ContentService.applyRanking({
-                user_id: userId,
                 shop_id: shop.id,
                 insert_index: insertIndex,
                 satisfaction: satisfaction!

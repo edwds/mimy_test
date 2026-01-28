@@ -76,9 +76,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         await fetchUserData();
     };
 
-    const login = async (userId: string) => {
+    const login = async (_userId: string) => {
         // Server already set JWT cookies during login/register
-        // Just fetch user data
+        // Just fetch user data (userId parameter kept for backward compatibility)
         await fetchUserData();
     };
 
