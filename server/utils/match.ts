@@ -123,11 +123,11 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
 
     // 5. Shrinkage / Bayesian Average
     // score_raw = (alpha * mu0 + sum(w*s)) / (alpha + sum(w))
-    const scoreRaw = (ALPHA * MU_0 + weightedSum) / (ALPHA + totalWeight);
+    let scoreRaw = (ALPHA * MU_0 + weightedSum) / (ALPHA + totalWeight);
 
     // 6. Map back to 0-100
     // score_raw is in approx [-1, 1] (influenced by prior 0).
-    // map [-1, 1] -> [0, 100]
+
     // map [-1, 1] -> [0, 100]
     const finalScore = 50 * (scoreRaw + 1);
 

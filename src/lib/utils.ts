@@ -102,24 +102,38 @@ export const calculateTasteMatch = (myScores: TasteScores, targetScores: TasteSc
 // ----------------------------------------------------------------------------
 
 export function scoreToTasteRatingRaw(score: number): number {
-    // Clamp score to [0, 100]
     const clamped = Math.max(0, Math.min(100, score));
-    // Linear mapping: 0->1, 50->3, 100->5
-    // Formula: 1 + (score / 25)
-    return 1 + (clamped / 25);
+
+    // Distribution-based Mapping (Calibrated for Power=2.0)
+    // P95 (87.4) -> 3.5
+    // P99 (92.6) -> 4.0
+    // P99.95 (96.6) -> 4.5
+    // Max (100) -> 5.0
+
+    if (clamped >= 96.6) {
+        // Top 0.05% (96.6 ~ 100): 4.5 ~ 5.0
+        return 4.5 + ((clamped - 96.6) / 3.4) * 0.5;
+    } else if (clamped >= 92.6) {
+        // Top 1% (92.6 ~ 96.6): 4.0 ~ 4.5
+        return 4.0 + ((clamped - 92.6) / 4.0) * 0.5;
+    } else if (clamped >= 87.4) {
+        // Top 5% (87.4 ~ 92.6): 3.5 ~ 4.0
+        return 3.5 + ((clamped - 87.4) / 5.2) * 0.5;
+    } else {
+        // Bottom 95% (0 ~ 87.4): 3.0 ~ 3.5
+        // Note: 0 score maps to 3.0. 
+        // If we want lower scores for really bad matches, we might want a steeper drop?
+        // But user said "3~3.5 사이에 전체 95% 분포". So 3.0 is effectively the floor.
+        return 3.0 + (clamped / 87.4) * 0.5;
+    }
 }
 
 export function scoreToTasteRatingStep(score: number, step: number = 0.05): number {
     const raw = scoreToTasteRatingRaw(score);
-    // Snap to nearest step (e.g., 0.05)
-    // precision correction: multiply by inverse of step, round, then divide
-    // easier: round(raw / step) * step
     const snapped = Math.round(raw / step) * step;
-    // Fix floating point artifacts (e.g. 3.0000000004) -> 3.00
     return parseFloat(snapped.toFixed(2));
 }
 
-// Optional: 2-decimal rounding without step snapping
 export function scoreToTasteRating2(score: number): number {
     const raw = scoreToTasteRatingRaw(score);
     return Math.round(raw * 100) / 100;
