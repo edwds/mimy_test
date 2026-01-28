@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, Utensils, MapPin, Star } from 'lucide-react';
+import { Search, ChevronLeft, Utensils, MapPin, Star, Check } from 'lucide-react';
 import { ShopService } from '@/services/ShopService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -119,34 +119,60 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
         }
     };
 
-    const displayItems = isGoogleMode ? googleResults : results;
+    const [showUnvisitedOnly, setShowUnvisitedOnly] = useState(false);
+
+    // Filter Items
+    const filteredItems = isGoogleMode
+        ? googleResults
+        : results.filter(shop => {
+            if (showUnvisitedOnly && (shop.my_rank || shop.is_saved)) return false;
+            // is_saved check optional, user said "visited/ranked", usually ranked means visited.
+            // But let's stick to my_rank as primary "visited" signal for this feature requester.
+            // If they want "Unvisited", they mean "Not Ranked".
+            // Let's rely on my_rank for now.
+            if (showUnvisitedOnly && shop.my_rank) return false;
+            return true;
+        });
+
+    const displayItems = filteredItems;
     const showList = displayItems.length > 0;
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
             {/* Header */}
-            {/* Header */}
             {!isGoogleMode && (
-                <div
-                    className="pl-4 pr-8 pb-3 flex items-center bg-background/80 backdrop-blur-md sticky top-0 z-10 transition-colors"
-                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
-                >
-                    <button
-                        onClick={onBack}
-                        className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl text-foreground placeholder:text-muted-foreground"
-                            placeholder={t('write.search.placeholder')}
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            autoFocus
-                        />
+                <div className="flex flex-col sticky top-0 z-10 bg-background/80 backdrop-blur-md transition-colors pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+                    <div className="pl-4 pr-8 flex items-center mb-2">
+                        <button
+                            onClick={onBack}
+                            className="p-2 -ml-2 text-foreground hover:bg-muted rounded-full transition-colors"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                className="pl-10 h-11 bg-muted/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all rounded-xl text-foreground placeholder:text-muted-foreground"
+                                placeholder={t('write.search.placeholder')}
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
                     </div>
+
+                    {/* Filter Bar */}
+                    {results.length > 0 && (
+                        <div className="px-4 flex justify-end">
+                            <button
+                                onClick={() => setShowUnvisitedOnly(!showUnvisitedOnly)}
+                                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${showUnvisitedOnly ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                            >
+                                {showUnvisitedOnly && <Check size={12} strokeWidth={3} />}
+                                안 가본 곳만 보기
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -176,13 +202,22 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 <div className="space-y-2 flex-1">
                                     <Skeleton className="h-4 w-1/3" />
                                     <Skeleton className="h-3 w-1/2" />
+                                    {/* Added Badge Skeleton */}
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : query.length > 1 ? (
-                    showList ? (
+                    showList || (showUnvisitedOnly && results.length > 0) ? (
                         <div className="space-y-4">
+                            {/* Empty State for Filter */}
+                            {showList === false && showUnvisitedOnly && (
+                                <div className="py-12 text-center text-gray-400 text-sm">
+                                    <div>모두 방문한 곳이네요! 👏</div>
+                                    <div className="mt-1">안 가본 곳이 없어요.</div>
+                                </div>
+                            )}
+
                             {isGoogleMode && (
                                 <div className="px-1 py-1">
                                     <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
@@ -196,7 +231,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                     <li key={shop.id || shop.google_place_id || idx}>
                                         <button
                                             onClick={() => handleItemClick(shop)}
-                                            className="items-center group w-full text-left p-3 rounded-2xl flex items-start gap-4 hover:bg-muted/40 transition-colors"
+                                            className="items-center group w-full text-left p-3 rounded-2xl flex items-start gap-4 hover:bg-muted/40 transition-colors relative"
                                         >
                                             <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden border border-border/40"
                                                 style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
@@ -207,7 +242,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0 py-1">
+                                            <div className="flex-1 min-w-0 py-1 pr-14">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                         {shop.name}
@@ -227,6 +262,19 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                     <span className="truncate">{shop.address_region || shop.address_full || shop.formatted_address}</span>
                                                 </div>
                                             </div>
+
+                                            {/* Rank / Visited Status Badge */}
+                                            {shop.my_rank && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end">
+                                                    <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-100">
+                                                        <Check size={12} strokeWidth={3} />
+                                                        <span>완료</span>
+                                                    </div>
+                                                    <div className="text-[10px] font-bold text-gray-400 mt-1">
+                                                        Rank {shop.my_rank}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </button>
                                     </li>
                                 ))}

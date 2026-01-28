@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { Smile, Meh, Frown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -161,8 +161,8 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             <X size={20} />
                         </button>
                         <div className="flex gap-4 items-center pr-8">
-                            {shop.image_url ? (
-                                <img src={shop.image_url} alt={shop.name} className="w-16 h-16 rounded-xl object-cover bg-gray-100 border border-gray-100" />
+                            {shop.thumbnail_img ? (
+                                <img src={shop.thumbnail_img} alt={shop.name} className="w-16 h-16 rounded-xl object-cover bg-gray-100 border border-gray-100" />
                             ) : (
                                 <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-2xl">🏪</div>
                             )}
@@ -256,10 +256,9 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
 
                             {/* POI + Ranking Bundle */}
                             <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6 flex flex-col items-center gap-4">
-                                {/* Shop Info */}
                                 <div className="flex flex-col items-center text-center gap-2">
-                                    {shop.image_url ? (
-                                        <img src={shop.image_url} alt={shop.name} className="w-20 h-20 rounded-2xl object-cover bg-gray-100 border border-gray-100 shadow-sm" />
+                                    {shop.thumbnail_img ? (
+                                        <img src={shop.thumbnail_img} alt={shop.name} className="w-20 h-20 rounded-2xl object-cover bg-gray-100 border border-gray-100 shadow-sm" />
                                     ) : (
                                         <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center text-3xl">🏪</div>
                                     )}
@@ -297,7 +296,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                 {t('write.ranking.success_title', 'Ranking Updated!')}
                             </h2>
                             <div className="text-gray-500 mb-8 max-w-[80%] mx-auto leading-relaxed text-sm whitespace-pre-wrap">
-                                <span dangerouslySetInnerHTML={{ __html: t('write.ranking.success_desc', { name: shop.name, defaultValue: `Ranking for ${shop.name} has been updated.` }) }} />
+                                <Trans i18nKey="write.ranking.success_desc" values={{ name: shop.name }} components={{ 1: <strong className="text-gray-900 font-bold" /> }} />
                             </div>
 
                             {/* Action Buttons */}
