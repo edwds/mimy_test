@@ -548,7 +548,7 @@ router.get("/search/google", async (req, res) => {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.types'
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.adrFormatAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.editorialSummary,places.types'
             },
             body: JSON.stringify({ textQuery, languageCode: 'ko' }),
             signal: controller.signal
@@ -571,17 +571,28 @@ router.get("/search/google", async (req, res) => {
                 if (p.photos && p.photos.length > 0) {
                     thumb = `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
                 }
+                // Extract Region + City from adrFormatAddress
+                let regionStr = "";
+                const regionMatch = p.adrFormatAddress?.match(/<span class="region">([^<]+)<\/span>/);
+                const localityMatch = p.adrFormatAddress?.match(/<span class="locality">([^<]+)<\/span>/);
+
+                const parts = [];
+                if (regionMatch) parts.push(regionMatch[1]);
+                if (localityMatch) parts.push(localityMatch[1]);
+                if (parts.length > 0) regionStr = parts.join(" ");
+
                 return {
                     google_place_id: p.id,
                     name: p.displayName?.text || p.formattedAddress,
                     formatted_address: p.formattedAddress,
+                    address_region: regionStr || null,
                     location: { lat: p.location?.latitude, lng: p.location?.longitude },
                     rating: p.rating,
                     user_ratings_total: p.userRatingCount,
                     thumbnail_img: thumb,
                     food_kind: matchedType,
-                    // null-safe generativeSummary
-                    description: p.generativeSummary?.overview?.text?.text || null,
+                    // null-safe generativeSummary -> editorialSummary
+                    description: p.generativeSummary?.overview?.text || p.editorialSummary?.text || null,
                     photos: p.photos
                 };
             });
@@ -611,9 +622,9 @@ router.post("/import-google", async (req, res) => {
         const existing = await db.select().from(shops).where(eq(shops.google_place_id, place.google_place_id)).limit(1);
         if (existing.length > 0) return res.json(existing[0]);
 
-        // Region Parse (TODO: improve robust parsing)
-        let address_region = null;
-        if (place.formatted_address) {
+        // Region Parse
+        let address_region = place.address_region || null;
+        if (!address_region && place.formatted_address) {
             address_region = place.formatted_address.split(" ").slice(0, 3).join(" ");
         }
 
