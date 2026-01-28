@@ -84,6 +84,20 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
+    // Caption Edit State
+    const [captionEditId, setCaptionEditId] = useState<string | null>(null);
+    const [captionEditText, setCaptionEditText] = useState('');
+
+    const handleCaptionSave = () => {
+        if (captionEditId) {
+            setMediaItems(prev => prev.map(m =>
+                m.id === captionEditId ? { ...m, caption: captionEditText } : m
+            ));
+            setCaptionEditId(null);
+            setCaptionEditText('');
+        }
+    };
+
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
         setPendingFiles(Array.from(e.target.files));
@@ -347,6 +361,70 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         </div>
                     )}
 
+                    {/* Common: Images (Moved Here) */}
+                    <div className="space-y-3 pt-1">
+                        <div className="flex items-center justify-between mb-2">
+                            <Label className="text-base font-semibold flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4" />
+                                {t('write.content.photo_label')}
+                            </Label>
+                            <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
+                        </div>
+
+                        <div className="flex overflow-x-auto no-scrollbar gap-3 pb-2 -mx-6 px-6">
+                            {mediaItems.map((item) => (
+                                <div key={item.id} className="w-28 flex-shrink-0 flex flex-col gap-1.5">
+                                    <div className="w-28 h-28 relative rounded-xl overflow-hidden group border border-gray-100 bg-muted shadow-sm">
+                                        {item.status === 'complete' && item.url ? (
+                                            <>
+                                                <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                                                <button
+                                                    onClick={() => setMediaItems(prev => prev.filter(m => m.id !== item.id))}
+                                                    className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                                                >
+                                                    <X className="w-3 h-3 text-white" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <UploadingThumbnail
+                                                file={item.file}
+                                                progress={item.progress}
+                                                error={item.status === 'error'}
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Caption Button */}
+                                    <button
+                                        onClick={() => {
+                                            setCaptionEditId(item.id);
+                                            setCaptionEditText(item.caption || '');
+                                        }}
+                                        className={cn(
+                                            "text-xs text-center py-1 px-1 rounded-md truncate transition-colors",
+                                            item.caption ? "font-medium text-gray-700 hover:bg-gray-100" : "text-gray-400 hover:bg-gray-50 bg-gray-50/50"
+                                        )}
+                                    >
+                                        {item.caption || "설명 추가"}
+                                    </button>
+                                </div>
+                            ))}
+
+                            {mediaItems.length < 30 && (
+                                <label className="w-28 h-28 flex-shrink-0 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
+                                    <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleFileSelect}
+                                    />
+                                </label>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Mode Specific: Post - Keywords */}
                     {mode === 'post' && (
                         <div className="space-y-3">
@@ -490,58 +568,42 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         )}
                     </div>
 
-                    {/* Common: Images */}
-                    <div className="space-y-3 pt-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <Label className="text-base font-semibold flex items-center gap-2">
-                                <ImageIcon className="w-4 h-4" />
-                                {t('write.content.photo_label')}
-                            </Label>
-                            <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
-                        </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                            {mediaItems.map((item) => (
-                                <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden group border border-border shadow-sm bg-muted">
-
-                                    {item.status === 'complete' && item.url ? (
-                                        <>
-                                            <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                                            <button
-                                                onClick={() => setMediaItems(prev => prev.filter(m => m.id !== item.id))}
-                                                className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                                            >
-                                                <X className="w-3 h-3 text-white" />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <UploadingThumbnail
-                                            file={item.file}
-                                            progress={item.progress}
-                                            error={item.status === 'error'}
-                                        />
-                                    )}
-
-                                </div>
-                            ))}
-
-                            {mediaItems.length < 30 && (
-                                <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
-                                    <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleFileSelect}
-                                    />
-                                </label>
-                            )}
-                        </div>
-                    </div>
 
                 </div>
             </div>
+            {/* Caption Edit Modal */}
+            {captionEditId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCaptionEditId(null)} />
+                    <div className="relative bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold mb-4 text-center">어떤 사진인가요?</h3>
+                        <Input
+                            autoFocus
+                            placeholder="메뉴 이름이나 설명을 적어주세요"
+                            value={captionEditText}
+                            onChange={(e) => setCaptionEditText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCaptionSave()}
+                            className="mb-4"
+                        />
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setCaptionEditId(null)}
+                                className="flex-1 rounded-xl"
+                            >
+                                취소
+                            </Button>
+                            <Button
+                                onClick={handleCaptionSave}
+                                className="flex-1 rounded-xl bg-primary text-white"
+                            >
+                                확인
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
