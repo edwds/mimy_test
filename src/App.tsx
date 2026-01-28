@@ -27,7 +27,7 @@ import { ManageRankingScreen } from '@/screens/profile/ManageRankingScreen';
 import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
-import { UserProvider } from '@/context/UserContext';
+import { UserProvider, useUser } from '@/context/UserContext';
 import { RankingProvider } from '@/context/RankingContext';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -39,42 +39,43 @@ if (Capacitor.isNativePlatform()) {
 }
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const isLoggedIn = !!localStorage.getItem("mimy_user_id");
-    if (!isLoggedIn) {
+    const { user, loading } = useUser();
+
+    if (loading) {
+        return <SplashScreen />;
+    }
+
+    if (!user) {
         return <Navigate to="/start" replace />;
     }
+
     return children;
 };
 
-function App() {
-    const isLoggedIn = !!localStorage.getItem("mimy_user_id");
-    const [loading, setLoading] = useState(!isLoggedIn);
+// App content component that uses UserContext
+function AppContent() {
+    const { user, loading: userLoading } = useUser();
+    const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
-        if (!isLoggedIn) {
-            const timer = setTimeout(() => setLoading(false), 2000);
+        // Show splash for at least 2 seconds on first load if not logged in
+        if (!userLoading) {
+            const timer = setTimeout(() => setInitialLoading(false), user ? 0 : 2000);
             return () => clearTimeout(timer);
         }
-    }, [isLoggedIn]);
+    }, [userLoading, user]);
 
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-    if (!googleClientId) {
-        console.error("Missing VITE_GOOGLE_CLIENT_ID in environment variables");
-    }
+    const showLoading = userLoading || initialLoading;
 
     return (
-        <GoogleOAuthProvider clientId={googleClientId || ""}>
-            <UserProvider>
-                <DebugLocaleSwitcher />
-                <BrowserRouter>
-                    <RankingProvider>
-                        <StatusBarGuard />
-                        {loading ? (
-                            <SplashScreen />
-                        ) : (
-                            <Routes>
-                                <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
+        <BrowserRouter>
+            <RankingProvider>
+                <StatusBarGuard />
+                {showLoading ? (
+                    <SplashScreen />
+                ) : (
+                    <Routes>
+                        <Route path="/" element={user ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
                                 <Route path="/start" element={<StartRoute />} />
 
                                 {/* Onboarding Flow */}
@@ -118,8 +119,23 @@ function App() {
                         )}
                     </RankingProvider>
                 </BrowserRouter>
+    );
+}
+
+function App() {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+        console.error("Missing VITE_GOOGLE_CLIENT_ID in environment variables");
+    }
+
+    return (
+        <GoogleOAuthProvider clientId={googleClientId || ""}>
+            <UserProvider>
+                <DebugLocaleSwitcher />
+                <AppContent />
             </UserProvider>
-        </GoogleOAuthProvider >
+        </GoogleOAuthProvider>
     );
 }
 
