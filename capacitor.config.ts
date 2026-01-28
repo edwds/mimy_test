@@ -18,7 +18,8 @@ const config: CapacitorConfig = {
   },
   ios: {
     allowsBackForwardNavigationGestures: true,
-    contentInset: 'always'
+    contentInset: 'never',
+    scrollEnabled: false
   }
 };
 

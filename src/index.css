@@ -99,6 +99,7 @@
     body,
     #root {
         height: 100%;
+        width: 100%;
         margin: 0;
         padding: 0;
         overscroll-behavior-y: none;
@@ -118,6 +119,20 @@
     body::-webkit-scrollbar,
     *::-webkit-scrollbar {
         display: none;
+    }
+
+    /* Mobile View: iOS Full Screen */
+    @media (max-width: 767px) {
+        html,
+        body,
+        #root {
+            position: fixed;
+            /* iOS: Prevent scroll and use full viewport */
+            overflow: hidden;
+            /* iOS: Prevent body scroll */
+            -webkit-overflow-scrolling: touch;
+            /* iOS: Smooth scrolling */
+        }
     }
 
     /* PC View: Simulate Mobile Device */
