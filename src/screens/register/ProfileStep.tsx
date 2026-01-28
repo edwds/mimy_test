@@ -8,6 +8,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 import { useUser } from '@/context/UserContext';
 import { saveTokens } from '@/lib/tokenStorage';
+import { authFetch } from '@/lib/authFetch';
 import { Capacitor } from '@capacitor/core';
 
 import { useTranslation } from 'react-i18next';
@@ -164,7 +165,7 @@ export const ProfileStep = () => {
                     }
                     const googleInfo = JSON.parse(googleInfoStr);
 
-                    response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                    response = await authFetch(`${API_BASE_URL}/api/auth/register`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -200,12 +201,13 @@ export const ProfileStep = () => {
                     navigate('/quiz/intro');
                 } else {
                     const errorData = await response.json();
+                    console.error('[Register] Server error:', response.status, errorData);
                     alert(errorData.error || "Failed to save profile");
                     setChecking(false);
                 }
             } catch (e) {
-                console.error(e);
-                alert("Network error");
+                console.error('[Register] Network error:', e);
+                alert(`Network error: ${e instanceof Error ? e.message : 'Unknown error'}`);
                 setChecking(false);
             }
         }

@@ -6,6 +6,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 import { useUser } from '@/context/UserContext';
 import { saveTokens } from '@/lib/tokenStorage';
+import { authFetch } from '@/lib/authFetch';
 
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
@@ -47,16 +48,21 @@ export const LoginPage = () => {
 
     const processLogin = async (accessToken: string) => {
         try {
+            console.log('[Login] Sending Google token to backend...');
+
             // Send access token to backend
-            const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+            const response = await authFetch(`${API_BASE_URL}/api/auth/google`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include", // Include cookies
                 body: JSON.stringify({ token: accessToken })
             });
 
+            console.log('[Login] Response status:', response.status);
+
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Login] Response data:', { hasUser: !!data.user, hasTokens: !!data.tokens, isNew: data.isNew });
+
                 const { user, isNew, tokens } = data;
 
                 if (isNew) {
@@ -76,13 +82,16 @@ export const LoginPage = () => {
                 }
             } else if (response.status === 403) {
                 const errorData = await response.json();
+                console.error('[Login] 403 Error:', errorData);
                 alert(errorData.message || "Only @catchtable.co.kr email addresses are allowed");
             } else {
-                alert("Login failed on server");
+                const errorText = await response.text();
+                console.error('[Login] Server error:', response.status, errorText);
+                alert(`Login failed on server: ${response.status}`);
             }
         } catch (e) {
-            console.error(e);
-            alert("Network error");
+            console.error('[Login] Network error:', e);
+            alert(`Network error: ${e instanceof Error ? e.message : 'Unknown error'}`);
         }
     };
 
