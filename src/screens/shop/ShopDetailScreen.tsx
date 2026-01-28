@@ -8,6 +8,7 @@ import { cn, scoreToTasteRatingStep } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
+import { authFetch } from '@/lib/authFetch';
 import { API_BASE_URL } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { ImageViewer } from '@/components/ImageViewer';
@@ -188,10 +189,10 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
         setShop(prev => prev ? { ...prev, is_saved: !prev.is_saved } : null);
 
         try {
-            await fetch(`${API_BASE_URL}/api/shops/${id}/save`, {
+            await authFetch(`${API_BASE_URL}/api/shops/${id}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id })
+                body: JSON.stringify({})
             });
             // alert(t('common.saved_to_list') || "Saved!"); // Removed alert for smoother UX
         } catch (e) {

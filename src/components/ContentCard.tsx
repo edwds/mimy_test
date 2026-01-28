@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, ListOrdered } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
 import { CommentSheet } from './CommentSheet';
 
@@ -951,12 +952,12 @@ export const ContentCard = ({
                                     setIsPoiBookmarked(!prevBookmarked);
 
                                     try {
-                                        // Use standardized endpoint: POST /api/shops/:id/save
+                                        // Use standardized endpoint: POST /api/shops/:id/save with authFetch
                                         const shopId = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
-                                        const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+                                        const res = await authFetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ userId: currentUser.id })
+                                            body: JSON.stringify({})
                                         });
 
                                         if (res.ok) {
