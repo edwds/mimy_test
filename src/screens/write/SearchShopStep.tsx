@@ -125,17 +125,18 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const filteredItems = isGoogleMode
         ? googleResults
         : results.filter(shop => {
-            if (showUnvisitedOnly && (shop.my_rank || shop.is_saved)) return false;
-            // is_saved check optional, user said "visited/ranked", usually ranked means visited.
-            // But let's stick to my_rank as primary "visited" signal for this feature requester.
-            // If they want "Unvisited", they mean "Not Ranked".
-            // Let's rely on my_rank for now.
             if (showUnvisitedOnly && shop.my_rank) return false;
             return true;
         });
 
     const displayItems = filteredItems;
     const showList = displayItems.length > 0;
+
+    // Filter Saved Shops
+    const filteredSavedShops = savedShops.filter(shop => {
+        if (showUnvisitedOnly && shop.my_rank) return false;
+        return true;
+    });
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
@@ -162,7 +163,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     </div>
 
                     {/* Filter Bar */}
-                    {results.length > 0 && (
+                    {(results.length > 0 || savedShops.length > 0) && (
                         <div className="px-4 flex justify-end">
                             <button
                                 onClick={() => setShowUnvisitedOnly(!showUnvisitedOnly)}
@@ -201,7 +202,6 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 <Skeleton className="w-14 h-14 rounded-xl" />
                                 <div className="space-y-2 flex-1">
                                     <Skeleton className="h-4 w-1/3" />
-                                    <Skeleton className="h-3 w-1/2" />
                                     {/* Added Badge Skeleton */}
                                 </div>
                             </div>
@@ -320,11 +320,11 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                             <div>
                                 <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">{t('write.search.saved_title')}</h3>
                                 <ul className="space-y-3">
-                                    {savedShops.map((shop) => (
+                                    {filteredSavedShops.map((shop) => (
                                         <li key={shop.id}>
                                             <button
                                                 onClick={() => onSelect(shop)}
-                                                className="items-center group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all flex items-start gap-4"
+                                                className="items-center group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all flex items-start gap-4 relative"
                                             >
                                                 <div className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
                                                     style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
@@ -335,7 +335,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="flex-1 min-w-0 py-1">
+                                                <div className="flex-1 min-w-0 py-1 pr-14">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                             {shop.name}
@@ -348,10 +348,29 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                         <span className="truncate">{shop.address_region || shop.address_full}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* Rank / Visited Status Badge */}
+                                                {shop.my_rank && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end">
+                                                        <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-100">
+                                                            <Check size={12} strokeWidth={3} />
+                                                            <span>완료</span>
+                                                        </div>
+                                                        <div className="text-[10px] font-bold text-gray-400 mt-1">
+                                                            Rank {shop.my_rank}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </button>
                                         </li>
                                     ))}
                                 </ul>
+                            </div>
+                        )}
+
+                        {filteredSavedShops.length === 0 && savedShops.length > 0 && showUnvisitedOnly && (
+                            <div className="py-20 text-center text-gray-400 text-sm opacity-60">
+                                <div>저장한 곳 중 안 가본 곳이 없어요!</div>
                             </div>
                         )}
 

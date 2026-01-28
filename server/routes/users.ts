@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard } from "../db/schema.js";
-import { eq, and, desc, sql, ilike, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, ilike, isNotNull, inArray } from "drizzle-orm";
 import { getShopMatchScores } from "../utils/enricher.js";
 import { getOrSetCache } from "../redis.js";
 
@@ -264,18 +264,37 @@ router.get("/:id/saved_shops", async (req, res) => {
             ))
             .orderBy(desc(users_wantstogo.created_at));
 
-        // Enrich with Match Score
+        // Enrich with Match Score & My Rank
         const userIdHeader = req.headers['x-user-id'];
         const uid = userIdHeader ? parseInt(userIdHeader as string) : 0;
 
         const shopIds = savedShops.map(s => s.id);
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
 
+        // Fetch My Rank (if viewer is looking at their own saved list, or public list)
+        // Usually 'my_rank' refers to the ranking of the VIEWER (uid), not the list owner (id).
+        // If I am looking at someone else's list, 'my_rank' should be MY rank.
+        // Assuming 'my_rank' means "Did I (viewer) visit this?".
+        const myRanksMap = new Map<number, number>();
+        if (uid > 0 && shopIds.length > 0) {
+            const myRanks = await db.select({
+                shop_id: users_ranking.shop_id,
+                rank: users_ranking.rank
+            }).from(users_ranking)
+                .where(and(
+                    eq(users_ranking.user_id, uid),
+                    inArray(users_ranking.shop_id, shopIds)
+                ));
+
+            myRanks.forEach(r => myRanksMap.set(r.shop_id, r.rank));
+        }
+
         // Enrich with is_saved=true and match_score
         const enriched = savedShops.map(shop => ({
             ...shop,
             is_saved: true,
-            shop_user_match_score: matchScoresMap.get(shop.id) || null
+            shop_user_match_score: matchScoresMap.get(shop.id) || null,
+            my_rank: myRanksMap.get(shop.id) || null
         }));
 
         res.json(enriched);
