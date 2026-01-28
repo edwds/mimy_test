@@ -798,7 +798,20 @@ router.get("/ranking/candidates", async (req, res) => {
             .where(eq(users_ranking.user_id, userId));
         const totalCount = Number(totalCountRes[0]?.count || 0);
 
-        res.json({ candidates, total_count: totalCount });
+        // Count items in higher tiers to determine base rank if current tier is empty
+        const higherTierCountRes = await db.select({ count: sql<number>`count(*)` })
+            .from(users_ranking)
+            .where(and(
+                eq(users_ranking.user_id, userId),
+                gt(users_ranking.satisfaction_tier, tier)
+            ));
+        const higherTierCount = Number(higherTierCountRes[0]?.count || 0);
+
+        res.json({
+            candidates,
+            total_count: totalCount,
+            higher_tier_count: higherTierCount
+        });
     } catch (error) {
         console.error("Fetch ranking candidates error:", error);
         res.status(500).json({ error: "Failed to fetch candidates" });

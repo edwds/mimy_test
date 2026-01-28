@@ -30,6 +30,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
 
     const [rankingResult, setRankingResult] = useState<{ rank: number, percentile?: number, total?: number } | null>(null);
     const [totalCount, setTotalCount] = useState(0);
+    const [baseRank, setBaseRank] = useState(0);
 
     // Ranking Logic
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -54,10 +55,13 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                 const json = await res.json();
                 const data: Candidate[] = json.candidates || json;
                 const total = json.total_count || 0;
+                const higherCount = json.higher_tier_count || 0;
+
                 setTotalCount(total);
+                setBaseRank(higherCount);
 
                 if (data.length === 0) {
-                    await saveRank(0, total);
+                    await saveRank(0, total, higherCount);
                     setRankingMode('DONE');
                     setStep('SUCCESS');
                 } else {
@@ -69,7 +73,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                 }
             } else {
                 // Fallback
-                await saveRank(0, 0);
+                await saveRank(0, 0, 0);
                 setStep('SUCCESS');
             }
         } catch (e) {
@@ -87,10 +91,12 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
         }
     };
 
-    const saveRank = async (insertIndex: number, currentTotal?: number) => {
+    const saveRank = async (insertIndex: number, currentTotal?: number, currentBaseRank?: number) => {
         try {
             // Calculate Rank locally (Optimistic)
-            let myRank = 1;
+            const safeBase = currentBaseRank !== undefined ? currentBaseRank : baseRank;
+            let myRank = safeBase + 1;
+
             if (candidates.length > 0) {
                 if (insertIndex < candidates.length) {
                     myRank = candidates[insertIndex].rank;

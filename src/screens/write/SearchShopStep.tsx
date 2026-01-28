@@ -416,7 +416,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
             {/* Region Input Modal */}
             {isRegionModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-24">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsRegionModalOpen(false)} />
                     <div className="relative bg-white dark:bg-zinc-900 w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold mb-1 text-center">어디서 찾을까요?</h3>
