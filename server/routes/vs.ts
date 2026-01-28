@@ -2,15 +2,16 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { vs_prop, vs_result } from "../db/schema.js";
 import { eq, and, notExists, desc, sql } from "drizzle-orm";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 
 const router = Router();
 
 // GET /api/vs/candidates
 // Fetch props that the user has NOT voted on yet
-router.get("/candidates", async (req, res) => {
+router.get("/candidates", optionalAuth, async (req, res) => {
     try {
-        const userId = parseInt(req.query.user_id as string);
-        if (!userId || isNaN(userId)) {
+        const userId = req.user?.id;
+        if (!userId) {
             // If no user, just return random 3 (or handle as guest)
             // For now, require login or return empty
             return res.json([]);
@@ -55,12 +56,13 @@ router.get("/candidates", async (req, res) => {
 });
 
 // POST /api/vs/:id/vote
-router.post("/:id/vote", async (req, res) => {
+router.post("/:id/vote", requireAuth, async (req, res) => {
     try {
         const propId = parseInt(req.params.id);
-        const { user_id, selection } = req.body; // selection: 'A' or 'B'
+        const { selection } = req.body; // selection: 'A' or 'B'
+        const user_id = req.user!.id;
 
-        if (!user_id || !selection || isNaN(propId)) {
+        if (!selection || isNaN(propId)) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
@@ -87,10 +89,10 @@ router.post("/:id/vote", async (req, res) => {
 
 // GET /api/vs/history
 // Fetch props that the user HAS voted on
-router.get("/history", async (req, res) => {
+router.get("/history", optionalAuth, async (req, res) => {
     try {
-        const userId = parseInt(req.query.user_id as string);
-        if (!userId || isNaN(userId)) {
+        const userId = req.user?.id;
+        if (!userId) {
             return res.json([]);
         }
 

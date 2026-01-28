@@ -13,6 +13,7 @@ import { DiscoverySearchOverlay } from '@/components/discovery/DiscoverySearchOv
 import { SelectedShopCard } from '@/components/discovery/SelectedShopCard';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
+import { authFetch } from '@/lib/authFetch';
 
 const getSessionSeed = () => {
     let seed = sessionStorage.getItem('discovery_seed');
@@ -58,29 +59,25 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const fetchShops = async (useBounds = false) => {
         setIsLoading(true);
         try {
-            const userId = localStorage.getItem('mimy_user_id');
-            const headers: any = {};
-            if (userId) headers['x-user-id'] = userId;
-
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
 
-            if (showSavedOnly && userId) {
-                url = `${API_BASE_URL}/api/users/${userId}/saved_shops`;
+            if (showSavedOnly) {
+                url = `${API_BASE_URL}/api/users/me/saved_shops`;
             } else if (useBounds && bounds) {
                 url += `&minLat=${bounds.minLat}&maxLat=${bounds.maxLat}&minLon=${bounds.minLon}&maxLon=${bounds.maxLon}`;
             } else if (useBounds === false && !showSavedOnly && mapCenter) {
-                // Initial load with mapCenter logic if we want to default to "Nearby" without explicit bounds 
+                // Initial load with mapCenter logic if we want to default to "Nearby" without explicit bounds
                 // But better to expect bounds to be passed if useBounds is true.
                 // If useBounds is false (initial "discovery" feed), the backend just returns random shops.
                 // User Requirement: "Fetch 50 shops based on current location"
                 // So we should actually pass bounds or coordinates.
-                // Let's modify logic to support lat/lon simply? 
+                // Let's modify logic to support lat/lon simply?
                 // Backend supports BBox. Let's stick to BBox.
 
                 // If we have no bounds but have a center (initial load), maybe we construct a box?
             }
 
-            const res = await fetch(url, { headers });
+            const res = await authFetch(url);
 
             if (res.ok) {
                 const data = await res.json();
@@ -146,15 +143,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const fetchShopsWithBounds = async (customBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
         setIsLoading(true);
         try {
-            const userId = localStorage.getItem('mimy_user_id');
-            const headers: any = {};
-            if (userId) headers['x-user-id'] = userId;
-
             // Always use discovery endpoint with bounds
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
             url += `&minLat=${customBounds.minLat}&maxLat=${customBounds.maxLat}&minLon=${customBounds.minLon}&maxLon=${customBounds.maxLon}`;
 
-            const res = await fetch(url, { headers });
+            const res = await authFetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setShops(data);
@@ -177,12 +170,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     }, [refreshTrigger]);
 
     const handleSave = async (shopId: number) => {
-        const userId = localStorage.getItem('mimy_user_id');
-        if (!userId) {
-            alert(t('discovery.alerts.login_required'));
-            return;
-        }
-
         // Optimistic Update
         setShops(prev => {
             if (showSavedOnly) {
@@ -206,10 +193,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         });
 
         try {
-            await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+            await authFetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: parseInt(userId) })
+                body: JSON.stringify({})
             });
         } catch (e) {
             console.error(e);

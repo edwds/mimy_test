@@ -9,6 +9,7 @@ import { HateCard } from '@/components/HateCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
+import { authFetch } from '@/lib/authFetch';
 
 // Force deploy check
 interface Props {
@@ -154,9 +155,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                 filterParams += `&lat=${userLocation.lat}&lon=${userLocation.lon}`;
             }
 
-            const res = await fetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}${filterParams}`, {
-                signal: currentSignal
-            });
+            const res = await authFetch(`${API_BASE_URL}/api/content/feed?page=${pageNum}&limit=20${userIdParam}${filterParams}`);
 
             if (res.ok) {
                 const data = await res.json();
@@ -249,10 +248,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const handleVsVote = async (id: number, selection: 'A' | 'B') => {
         try {
             if (currentUser?.id) {
-                await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
+                await authFetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: currentUser.id, selection })
+                    body: JSON.stringify({ selection })
                 });
             }
         } catch (e) {
@@ -263,10 +262,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const handleHateVote = async (id: number, selection: 'EAT' | 'NOT_EAT') => {
         try {
             if (currentUser?.id) {
-                await fetch(`${API_BASE_URL}/api/hate/${id}/vote`, {
+                await authFetch(`${API_BASE_URL}/api/hate/${id}/vote`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: currentUser.id, selection })
+                    body: JSON.stringify({ selection })
                 });
             }
         } catch (e) {

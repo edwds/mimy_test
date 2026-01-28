@@ -13,6 +13,7 @@ import { useUser } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { ListCard } from '@/components/ListCard';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '@/lib/authFetch';
 
 type ProfileTabType = 'content' | 'list' | 'saved';
 
@@ -86,7 +87,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             else setIsFetchingMore(true);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}&page=${contentPage}&limit=20`);
+                const response = await authFetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}&page=${contentPage}&limit=20`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.length < 20) setHasMoreContent(false);
@@ -116,7 +117,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
             setLoadingLists(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/lists`);
+                const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/lists`);
                 if (response.ok) setLists(await response.json());
             } catch (e) {
                 console.error('Failed to load lists', e);
@@ -135,7 +136,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
             setLoadingSaved(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
+                const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
                 if (response.ok) setSavedShops(await response.json());
             } catch (e) {
                 console.error('Failed to load saved shops', e);
@@ -180,10 +181,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         setSavedShops((prev) => prev.filter((s) => s.id !== shopId));
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
+            const res = await authFetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user?.id }),
+                body: JSON.stringify({}),
             });
             if (!res.ok) throw new Error('Unsave failed');
         } catch (e) {
