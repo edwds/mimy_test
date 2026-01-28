@@ -7,6 +7,7 @@ import { ShopService } from '@/services/ShopService';
 import { cn, scoreToTasteRatingStep } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
+import { useRanking } from '@/context/RankingContext';
 import { API_BASE_URL } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { ImageViewer } from '@/components/ImageViewer';
@@ -43,6 +44,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { user } = useUser();
+    const { openRanking } = useRanking();
 
     const [shop, setShop] = useState<ShopDetail | null>(null);
     const [reviews, setReviews] = useState<any[]>([]);
@@ -466,7 +468,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                             <button
                                 onClick={() => {
-                                    navigate(`/write?shop_id=${shop.id}&type=review`);
+                                    openRanking(shop);
                                 }}
                                 className={cn(
                                     "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",

@@ -3,6 +3,7 @@ import { MapPin, Bookmark, Check, ListOrdered, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
+import { useRanking } from '@/context/RankingContext';
 import { useState, useEffect, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
@@ -49,6 +50,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
+    const { openRanking } = useRanking();
     const [showTooltip, setShowTooltip] = useState(false);
     const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -198,7 +200,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onWrite?.(shop.id);
+                                if (onWrite) {
+                                    onWrite(shop.id);
+                                } else {
+                                    openRanking(shop);
+                                }
                             }}
                             className={cn(
                                 "flex-1 py-2 px-3 text-sm font-medium rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity",

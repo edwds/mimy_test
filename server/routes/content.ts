@@ -708,7 +708,7 @@ router.post("/ranking/apply", async (req, res) => {
 
         const new_tier = mapSatisfactionToTier(satisfaction);
 
-        await db.transaction(async (tx) => {
+        const result = await db.transaction(async (tx) => {
             const existing = await tx.select().from(users_ranking)
                 .where(and(eq(users_ranking.user_id, user_id), eq(users_ranking.shop_id, shop_id)))
                 .limit(1);
@@ -735,9 +735,22 @@ router.post("/ranking/apply", async (req, res) => {
             await tx.insert(users_ranking).values({
                 user_id, shop_id, satisfaction_tier: new_tier, rank: new_global_rank
             });
+
+            const totalCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, user_id));
+            const totalCount = Number(totalCountRes[0]?.count || 0);
+
+            return { new_global_rank, totalCount };
         });
 
-        res.json({ success: true, shop_id, satisfaction_tier: new_tier });
+        res.json({
+            success: true,
+            shop_id,
+            satisfaction_tier: new_tier,
+            rank: result.new_global_rank,
+            total_count: result.totalCount
+        });
 
         // Invalidate User Lists -> PRE-WARM
         console.log(`[Ranking Apply] Invalidating & Pre-warming lists for ${user_id}`);

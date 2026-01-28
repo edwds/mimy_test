@@ -28,6 +28,7 @@ import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { UserProvider } from '@/context/UserContext';
+import { RankingProvider } from '@/context/RankingContext';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { StatusBarGuard } from '@/components/StatusBarGuard';
@@ -67,53 +68,55 @@ function App() {
             <UserProvider>
                 <DebugLocaleSwitcher />
                 <BrowserRouter>
-                    <StatusBarGuard />
-                    {loading ? (
-                        <SplashScreen />
-                    ) : (
-                        <Routes>
-                            <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
-                            <Route path="/start" element={<StartRoute />} />
+                    <RankingProvider>
+                        <StatusBarGuard />
+                        {loading ? (
+                            <SplashScreen />
+                        ) : (
+                            <Routes>
+                                <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/start" replace />} />
+                                <Route path="/start" element={<StartRoute />} />
 
-                            {/* Onboarding Flow */}
-                            <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
-                            <Route path="/onboarding/agreement" element={<AgreementStep />} />
+                                {/* Onboarding Flow */}
+                                <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
+                                <Route path="/onboarding/agreement" element={<AgreementStep />} />
 
-                            {/* Auth */}
-                            <Route path="/login" element={<LoginPage />} />
+                                {/* Auth */}
+                                <Route path="/login" element={<LoginPage />} />
 
-                            {/* Registration Flow */}
-                            <Route path="/register/phone" element={<PhoneStep />} />
-                            <Route path="/register/otp" element={<OtpStep />} />
-                            <Route path="/register/profile" element={<ProfileStep />} />
+                                {/* Registration Flow */}
+                                <Route path="/register/phone" element={<PhoneStep />} />
+                                <Route path="/register/otp" element={<OtpStep />} />
+                                <Route path="/register/profile" element={<ProfileStep />} />
 
-                            {/* Quiz Flow */}
-                            {/* Protected Routes */}
-                            <Route path="/quiz/intro" element={<ProtectedRoute><QuizIntro /></ProtectedRoute>} />
-                            <Route path="/quiz/test" element={<ProtectedRoute><QuizScreen /></ProtectedRoute>} />
-                            <Route path="/quiz/result" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
+                                {/* Quiz Flow */}
+                                {/* Protected Routes */}
+                                <Route path="/quiz/intro" element={<ProtectedRoute><QuizIntro /></ProtectedRoute>} />
+                                <Route path="/quiz/test" element={<ProtectedRoute><QuizScreen /></ProtectedRoute>} />
+                                <Route path="/quiz/result" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
 
-                            <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
-                            <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
-                            <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
-                            <Route path="/profile/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
-                            <Route path="/profile/lists/:userId" element={<ProtectedRoute><RedirectToList /></ProtectedRoute>} />
-                            <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
-                            <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
-                            <Route path="/shop/:shopId" element={<ProtectedRoute><RedirectToShop /></ProtectedRoute>} />
-                            <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
-                            <Route path="/profile/manage/ranking" element={<ProtectedRoute><ManageRankingScreen /></ProtectedRoute>} />
-                            <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
-                            <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
-                            <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />
+                                <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
+                                <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
+                                <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
+                                <Route path="/profile/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
+                                <Route path="/profile/lists/:userId" element={<ProtectedRoute><RedirectToList /></ProtectedRoute>} />
+                                <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
+                                <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
+                                <Route path="/shop/:shopId" element={<ProtectedRoute><RedirectToShop /></ProtectedRoute>} />
+                                <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
+                                <Route path="/profile/manage/ranking" element={<ProtectedRoute><ManageRankingScreen /></ProtectedRoute>} />
+                                <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
+                                <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
+                                <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />
 
-                            {/* Redirect old user profile link to new one */}
-                            <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />
+                                {/* Redirect old user profile link to new one */}
+                                <Route path="/user/:userId" element={<ProtectedRoute><RedirectToMainUser /></ProtectedRoute>} />
 
-                            {/* Public Shared List - No Auth Required */}
-                            <Route path="/s/:code" element={<ListDetailScreen />} />
-                        </Routes>
-                    )}
+                                {/* Public Shared List - No Auth Required */}
+                                <Route path="/s/:code" element={<ListDetailScreen />} />
+                            </Routes>
+                        )}
+                    </RankingProvider>
                 </BrowserRouter>
             </UserProvider>
         </GoogleOAuthProvider >

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
@@ -50,19 +49,42 @@ export const ManageRankingScreen = () => {
     // Let's build a flattened list for Reorder.Group
     // Items: [ {type:'header', tier:2}, ...goodItems, {type:'header', tier:1}, ...okItems, ... ]
 
-    // We separate items into 3 tiers to prevent dragging between them.
-    // Tier 2 (Good), Tier 1 (Ok), Tier 0 (Bad)
-    const [tier2Items, setTier2Items] = useState<RankingItem[]>([]);
-    const [tier1Items, setTier1Items] = useState<RankingItem[]>([]);
-    const [tier0Items, setTier0Items] = useState<RankingItem[]>([]);
+    // We separate items into tiers visually but need a single Reorder.Group to allow dragging between them.
+    // Logic: Flatten the list into [Header2, ...items2, Header1, ...items1, Header0, ...items0]
+    // User can drag items anywhere.
+    // On Save, we infer the tier based on which header the item is UNDER.
+
+    type FlattenedItem =
+        | { type: 'header', id: string, tier: number, title: string }
+        | { type: 'item', id: string, data: RankingItem };
+
+    const [flatList, setFlatList] = useState<FlattenedItem[]>([]);
 
     useEffect(() => {
         if (!loading) {
-            setTier2Items(originalItems.filter(i => i.satisfaction_tier === 2));
-            setTier1Items(originalItems.filter(i => i.satisfaction_tier === 1));
-            setTier0Items(originalItems.filter(i => i.satisfaction_tier === 0));
+            const newFlatList: FlattenedItem[] = [];
+
+            // Tier 2 (Delicious)
+            newFlatList.push({ type: 'header', id: 'header-2', tier: 2, title: t('write.basic.good', 'Delicious') });
+            originalItems.filter(i => i.satisfaction_tier === 2)
+                .sort((a, b) => a.rank - b.rank)
+                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+
+            // Tier 1 (Okay)
+            newFlatList.push({ type: 'header', id: 'header-1', tier: 1, title: t('write.basic.ok', 'Okay') });
+            originalItems.filter(i => i.satisfaction_tier === 1)
+                .sort((a, b) => a.rank - b.rank)
+                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+
+            // Tier 0 (Bad)
+            newFlatList.push({ type: 'header', id: 'header-0', tier: 0, title: t('write.basic.bad', 'Bad') });
+            originalItems.filter(i => i.satisfaction_tier === 0)
+                .sort((a, b) => a.rank - b.rank)
+                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+
+            setFlatList(newFlatList);
         }
-    }, [originalItems, loading]);
+    }, [originalItems, loading, t]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -73,18 +95,23 @@ export const ManageRankingScreen = () => {
             // Concatenate all tiers in order: Tier 2 -> Tier 1 -> Tier 0
             // Since they can't change tiers, we just use the current tier value.
 
-            [...tier2Items, ...tier1Items, ...tier0Items].forEach(item => {
-                payload.push({
-                    shop_id: item.shop_id,
-                    rank: rankCounter++,
-                    satisfaction_tier: item.satisfaction_tier // Keep original tier or enforce the list it's currently in? 
-                    // Since we split by tier, item.satisfaction_tier *should* match the list it is in. 
-                    // Actually, if we somehow started empty, users can't add items here anyway.
-                });
+            let currentTier = 2; // Default to top tier if above first header
+
+            flatList.forEach(item => {
+                if (item.type === 'header') {
+                    currentTier = item.tier;
+                } else {
+                    payload.push({
+                        shop_id: item.data.shop_id,
+                        rank: rankCounter++,
+                        satisfaction_tier: currentTier
+                    });
+                }
             });
 
             await RankingService.reorder(currentUser.id, payload);
             alert(t('common.saved', 'Saved'));
+            navigate(-1); // Back on success
         } catch (e) {
             console.error(e);
             alert("Failed to save order");
@@ -96,20 +123,12 @@ export const ManageRankingScreen = () => {
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
 
-        // Find the item to get shop_id
-        let targetShopId: number | null = null;
-        let foundInTier = -1;
+        let targetShopId: number | undefined; // Define targetShopId here
 
-        // Search in all tiers
-        if (tier2Items.some(i => i.id === deleteTargetId)) {
-            targetShopId = tier2Items.find(i => i.id === deleteTargetId)!.shop_id;
-            foundInTier = 2;
-        } else if (tier1Items.some(i => i.id === deleteTargetId)) {
-            targetShopId = tier1Items.find(i => i.id === deleteTargetId)!.shop_id;
-            foundInTier = 1;
-        } else if (tier0Items.some(i => i.id === deleteTargetId)) {
-            targetShopId = tier0Items.find(i => i.id === deleteTargetId)!.shop_id;
-            foundInTier = 0;
+        // Find the item to get shop_id
+        const targetItem = flatList.find(i => i.type === 'item' && i.data.id === deleteTargetId);
+        if (targetItem && targetItem.type === 'item') {
+            targetShopId = targetItem.data.shop_id;
         }
 
         if (!targetShopId) return;
@@ -117,9 +136,7 @@ export const ManageRankingScreen = () => {
         try {
             await RankingService.delete(targetShopId, currentUser.id);
             // Remove from UI
-            if (foundInTier === 2) setTier2Items(prev => prev.filter(i => i.id !== deleteTargetId));
-            if (foundInTier === 1) setTier1Items(prev => prev.filter(i => i.id !== deleteTargetId));
-            if (foundInTier === 0) setTier0Items(prev => prev.filter(i => i.id !== deleteTargetId));
+            setFlatList(prev => prev.filter(i => i.type !== 'item' || i.data.id !== deleteTargetId));
 
             setDeleteTargetId(null);
         } catch (e) {
@@ -162,59 +179,34 @@ export const ManageRankingScreen = () => {
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-                {/* Tier 2: Delicious */}
-                {tier2Items.length > 0 && (
-                    <div>
-                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
-                            {t('write.basic.good', 'Delicious')}
-                        </div>
-                        <Reorder.Group axis="y" values={tier2Items} onReorder={setTier2Items} className="space-y-2">
-                            {tier2Items.map(item => (
-                                <DraggableRankingItem
+                <Reorder.Group axis="y" values={flatList} onReorder={setFlatList} className="space-y-2">
+                    {flatList.map(item => {
+                        if (item.type === 'header') {
+                            return (
+                                <Reorder.Item
                                     key={item.id}
-                                    rankingItem={item}
-                                    onDelete={(id) => setDeleteTargetId(id)}
-                                />
-                            ))}
-                        </Reorder.Group>
-                    </div>
-                )}
+                                    value={item}
+                                    dragListener={false}
+                                    className="pt-4 pb-2"
+                                >
+                                    <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1">
+                                        {item.title}
+                                    </div>
+                                </Reorder.Item>
+                            );
+                        }
 
-                {/* Tier 1: Okay */}
-                {tier1Items.length > 0 && (
-                    <div>
-                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
-                            {t('write.basic.ok', 'Okay')}
-                        </div>
-                        <Reorder.Group axis="y" values={tier1Items} onReorder={setTier1Items} className="space-y-2">
-                            {tier1Items.map(item => (
-                                <DraggableRankingItem
-                                    key={item.id}
-                                    rankingItem={item}
-                                    onDelete={(id) => setDeleteTargetId(id)}
-                                />
-                            ))}
-                        </Reorder.Group>
-                    </div>
-                )}
-
-                {/* Tier 0: Bad */}
-                {tier0Items.length > 0 && (
-                    <div>
-                        <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 mb-2">
-                            {t('write.basic.bad', 'Bad')}
-                        </div>
-                        <Reorder.Group axis="y" values={tier0Items} onReorder={setTier0Items} className="space-y-2">
-                            {tier0Items.map(item => (
-                                <DraggableRankingItem
-                                    key={item.id}
-                                    rankingItem={item}
-                                    onDelete={(id) => setDeleteTargetId(id)}
-                                />
-                            ))}
-                        </Reorder.Group>
-                    </div>
-                )}
+                        // Item
+                        return (
+                            <DraggableRankingItem
+                                key={item.id}
+                                item={item} // Pass the wrapper too
+                                rankingItem={item.data}
+                                onDelete={(id) => setDeleteTargetId(id)}
+                            />
+                        );
+                    })}
+                </Reorder.Group>
 
             </div>
 
@@ -252,11 +244,12 @@ export const ManageRankingScreen = () => {
 // Sub-component for individual Draggable Items
 // Sub-component for individual Draggable Items
 interface DraggableRankingItemProps {
-    rankingItem: RankingItem; // Changed prop signature
+    item: any; // FlattenedItem wrapper required for Reorder to work properly if we pass value={item}
+    rankingItem: RankingItem;
     onDelete: (id: number) => void;
 }
 
-const DraggableRankingItem = ({ rankingItem, onDelete }: DraggableRankingItemProps) => {
+const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingItemProps) => {
     const dragControls = useDragControls();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -312,7 +305,8 @@ const DraggableRankingItem = ({ rankingItem, onDelete }: DraggableRankingItemPro
 
     return (
         <Reorder.Item
-            value={rankingItem} // Changed value to be the item itself
+            value={item} // Changed back to item so Reorder tracks the FlattenedItem
+
             dragListener={false}
             dragControls={dragControls}
             className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-pan-y shadow-sm active:shadow-md"

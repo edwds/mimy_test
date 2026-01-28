@@ -1,29 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 import { SearchShopStep } from './SearchShopStep';
-import { BasicInfoStep } from './BasicInfoStep';
+import { useLocation } from 'react-router-dom';
 import { WriteContentStep } from './WriteContentStep';
-import { RankingStep } from './RankingStep';
 import { ContentService } from '@/services/ContentService';
 import { ShopService } from '@/services/ShopService';
+import { useRanking } from '@/context/RankingContext';
 
 export const WriteFlow = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
+    const location = useLocation();
+    const { openRanking, isRankingOpen } = useRanking();
+
     const initialShopId = searchParams.get('shop_id');
+    const locationState = location.state as { step?: string; shop?: any; satisfaction?: any } | undefined;
 
     // Data Accumulation
-    const [type, setType] = useState<'review' | 'post'>('review'); // Default to review
-    const [selectedShop, setSelectedShop] = useState<any>(null);
-    const [basicInfo, setBasicInfo] = useState<{ satisfaction: string; visitDate: string; companions: any[] } | null>(null);
+    const [type] = useState<'review' | 'post'>('review'); // Default to review
+    const [selectedShop, setSelectedShop] = useState<any>(locationState?.shop || null);
+    const [satisfaction] = useState<'good' | 'ok' | 'bad'>(locationState?.satisfaction || 'good');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initial Step Logic
-    const [step, setStep] = useState<'SEARCH_SHOP' | 'BASIC_INFO' | 'RANKING' | 'OPTIONS' | 'WRITE_CONTENT' | 'LOADING'>(() => {
+    const [step, setStep] = useState<'SEARCH_SHOP' | 'WRITE_CONTENT' | 'LOADING'>(() => {
+        if (locationState?.step === 'WRITE_CONTENT') return 'WRITE_CONTENT';
         if (initialShopId) return 'LOADING'; // Wait for fetch
         return 'SEARCH_SHOP';
     });
@@ -38,7 +44,8 @@ export const WriteFlow = () => {
                 try {
                     const shopData = await ShopService.getById(Number(initialShopId));
                     setSelectedShop(shopData);
-                    setStep('BASIC_INFO');
+                    setStep('SEARCH_SHOP');
+                    openRanking(shopData);
                 } catch (error) {
                     console.error("Failed to fetch shop:", error);
                     alert("매장 정보를 불러올 수 없습니다.");
@@ -47,18 +54,15 @@ export const WriteFlow = () => {
             };
             fetchShop();
         }
-    }, [initialShopId, navigate]);
+    }, [initialShopId, navigate, openRanking]);
 
     // Handlers
     const handleShopSelect = (shop: any) => {
         setSelectedShop(shop);
-        setStep('BASIC_INFO');
+        openRanking(shop);
     };
 
-    const handleBasicInfoNext = (info: any) => {
-        setBasicInfo(info);
-        setStep('RANKING');
-    };
+
 
 
 
@@ -81,9 +85,9 @@ export const WriteFlow = () => {
                 video: [],
                 review_prop: {
                     shop_id: selectedShop.id,
-                    visit_date: contentData.visitDate || basicInfo?.visitDate || new Date().toISOString().split('T')[0],
+                    visit_date: contentData.visitDate || new Date().toISOString().split('T')[0],
                     companions: contentData.companions || [],
-                    satisfaction: basicInfo?.satisfaction
+                    satisfaction: satisfaction
                 },
                 keyword: contentData.keywords || [],
                 link_json: contentData.links || [],
@@ -99,16 +103,7 @@ export const WriteFlow = () => {
         }
     };
 
-    // Helper for "Evaluate Another"
-    const handleEvaluateAnother = () => {
-        // Reset states but keep user? 
-        setSelectedShop(null);
-        setBasicInfo(null);
-        setType('review');
-        setStep('SEARCH_SHOP');
-        // Clear query param if any
-        navigate('/write', { replace: true });
-    };
+
 
     // Helper for "Complete" (Submit empty review if needed - ACTUALLY ranking is already saved. 
     // Do we need to create a content entry for the ranking to appear in feed? 
@@ -125,58 +120,33 @@ export const WriteFlow = () => {
 
     return (
         <div className="relative h-full bg-background">
-            {step === 'SEARCH_SHOP' && (
-                <SearchShopStep
-                    onSelect={handleShopSelect}
-                    onBack={() => navigate('/main')}
-                />
-            )}
-
-            {step === 'BASIC_INFO' && selectedShop && (
-                <BasicInfoStep
-                    shopName={selectedShop.name}
-                    onNext={handleBasicInfoNext}
-                    onBack={() => {
-                        if (initialShopId) {
-                            navigate(-1);
-                        } else {
-                            setStep('SEARCH_SHOP');
-                        }
-                    }}
-                />
-            )}
-
-            {step === 'RANKING' && selectedShop && basicInfo && (
-                <RankingStep
-                    userId={currentUserId}
-                    currentShop={selectedShop}
-                    satisfaction={basicInfo.satisfaction}
-                    onWriteReview={() => {
-                        // Logic: User wants to write details.
-                        // We do NOT save default content yet, we let WriteContentStep do it.
-                        setStep('WRITE_CONTENT');
-                    }}
-                    onEvaluateAnother={async () => {
-                        // Ranking is already saved in RankingStep.
-                        // We just reset to start over.
-                        handleEvaluateAnother();
-                    }}
-                    onComplete={async () => {
-                        // Ranking is already saved in RankingStep.
-                        // We just exit to main.
-                        navigate('/main');
-                    }}
-                />
+            {(step === 'SEARCH_SHOP' || isRankingOpen) && (
+                <div className={cn("h-full transition-all duration-300", isRankingOpen ? "scale-95 opacity-50 blur-[1px] pointer-events-none" : "")}>
+                    <SearchShopStep
+                        onSelect={handleShopSelect}
+                        onBack={() => navigate('/main')}
+                    />
+                </div>
             )}
 
             {step === 'WRITE_CONTENT' && (
                 <WriteContentStep
                     mode={type}
                     shop={selectedShop}
-                    satisfaction={basicInfo?.satisfaction}
+                    satisfaction={satisfaction}
                     onNext={handleSubmitContent}
                     isSubmitting={isSubmitting}
-                    onBack={() => setStep('RANKING')} // Or go back to option selection? Ranking is done.
+                    onBack={() => {
+                        // Back from writing content -> Show overlay again or just go back to search?
+                        // If they were writing content, going back implies cancelling or re-ranking.
+                        // Open ranking for current shop again?
+                        if (selectedShop) {
+                            setStep('SEARCH_SHOP');
+                            openRanking(selectedShop);
+                        } else {
+                            setStep('SEARCH_SHOP');
+                        }
+                    }}
                 />
             )}
         </div>

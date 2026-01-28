@@ -190,6 +190,8 @@ const getDistanceText = (lat1: number, lon1: number, lat2: number, lon2: number)
     return `${d.toFixed(1)}km`;
 };
 
+import { useRanking } from '@/context/RankingContext';
+
 export const ContentCard = ({
     user,
     content,
@@ -201,6 +203,7 @@ export const ContentCard = ({
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const { user: currentUser, optimisticLikes, toggleOptimisticLike, coordinates } = useUser();
+    const { openRanking } = useRanking();
 
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
@@ -910,9 +913,20 @@ export const ContentCard = ({
                                     whileTap={{ scale: 0.9 }}
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        // Construct a minimal shop object compatible with RankingOverlay
+                                        // It needs id, name, food_kind/category, image_url/thumbnail_img
                                         const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
-                                        if (shopId) {
-                                            navigate(`/write?shop_id=${shopId}&type=review`);
+                                        const shopName = content.poi?.shop_name || content.review_prop?.shop_name;
+
+                                        if (shopId && shopName) {
+                                            const shopData = {
+                                                id: shopId,
+                                                name: shopName,
+                                                address: content.poi?.shop_address || content.review_prop?.shop_address,
+                                                image_url: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
+                                                // food_kind might be missing in content card data, but POI usually has basics
+                                            };
+                                            openRanking(shopData);
                                         } else {
                                             alert("매장 정보를 찾을 수 없습니다.");
                                         }
