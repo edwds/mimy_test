@@ -793,7 +793,12 @@ router.get("/ranking/candidates", async (req, res) => {
             ))
             .orderBy(users_ranking.rank);
 
-        res.json(candidates);
+        const totalCountRes = await db.select({ count: sql<number>`count(*)` })
+            .from(users_ranking)
+            .where(eq(users_ranking.user_id, userId));
+        const totalCount = Number(totalCountRes[0]?.count || 0);
+
+        res.json({ candidates, total_count: totalCount });
     } catch (error) {
         console.error("Fetch ranking candidates error:", error);
         res.status(500).json({ error: "Failed to fetch candidates" });

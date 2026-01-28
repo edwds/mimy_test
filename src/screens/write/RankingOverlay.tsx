@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Smile, Meh, Frown, X, Trophy } from 'lucide-react';
+import { Smile, Meh, Frown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
@@ -29,6 +29,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
     const [rankingMode, setRankingMode] = useState<'LOADING' | 'COMPARING' | 'DONE'>('LOADING');
 
     const [rankingResult, setRankingResult] = useState<{ rank: number, percentile?: number, total?: number } | null>(null);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Ranking Logic
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -50,9 +51,13 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
             const res = await fetch(`${API_BASE_URL}/api/content/ranking/candidates?user_id=${userId}&satisfaction_tier=${tier}&exclude_shop_id=${shop.id}`);
 
             if (res.ok) {
-                const data: Candidate[] = await res.json();
+                const json = await res.json();
+                const data: Candidate[] = json.candidates || json;
+                const total = json.total_count || 0;
+                setTotalCount(total);
+
                 if (data.length === 0) {
-                    await saveRank(0);
+                    await saveRank(0, total);
                     setRankingMode('DONE');
                     setStep('SUCCESS');
                 } else {
@@ -64,7 +69,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                 }
             } else {
                 // Fallback
-                await saveRank(0);
+                await saveRank(0, 0);
                 setStep('SUCCESS');
             }
         } catch (e) {
@@ -82,21 +87,30 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
         }
     };
 
-    const saveRank = async (insertIndex: number) => {
+    const saveRank = async (insertIndex: number, currentTotal?: number) => {
         try {
-            const res = await ContentService.applyRanking({
+            // Calculate Rank locally (Optimistic)
+            let myRank = 1;
+            if (candidates.length > 0) {
+                if (insertIndex < candidates.length) {
+                    myRank = candidates[insertIndex].rank;
+                } else {
+                    myRank = candidates[candidates.length - 1].rank + 1;
+                }
+            }
+
+            const safeTotal = (currentTotal !== undefined ? currentTotal : totalCount) + 1;
+            const percentile = Math.ceil((myRank / safeTotal) * 100);
+
+            setRankingResult({ rank: myRank, total: safeTotal, percentile });
+
+            // Send to server
+            await ContentService.applyRanking({
                 user_id: userId,
                 shop_id: shop.id,
                 insert_index: insertIndex,
                 satisfaction: satisfaction!
             });
-
-            // Calculate percentile
-            const rank = res.rank;
-            const total = res.total_count;
-            const percentile = total > 0 ? Math.ceil((rank / total) * 100) : undefined;
-
-            setRankingResult({ rank, total, percentile });
         } catch (error) {
             console.error("Failed to save rank", error);
             // Fallback
@@ -259,29 +273,21 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                 <div className="w-full h-[1px] bg-gray-100 border-t border-dashed border-gray-200 my-1" />
 
                                 {/* Ranking Result Badges */}
-                                <div className="flex items-center justify-center flex-wrap gap-2 w-full">
-                                    {/* Satisfaction Badge */}
-                                    <div className={cn(
-                                        "px-3 py-1.5 rounded-full font-bold text-sm border flex items-center gap-1.5",
-                                        satisfaction === 'good' ? "bg-orange-50 text-orange-600 border-orange-100" :
-                                            satisfaction === 'ok' ? "bg-yellow-50 text-yellow-600 border-yellow-100" :
-                                                "bg-gray-50 text-gray-600 border-gray-100"
-                                    )}>
-                                        {satisfaction === 'good' ? <Smile size={14} /> : satisfaction === 'ok' ? <Meh size={14} /> : <Frown size={14} />}
-                                        {t(`write.basic.${satisfaction}`)}
-                                    </div>
+                                <div className="flex items-center justify-center flex-wrap gap-3 w-full">
+                                    <SatisfactionRating
+                                        satisfaction={satisfaction!}
+                                        percentile={rankingResult?.percentile}
+                                        showPercentile={true}
+                                        size="lg"
+                                        showIcon={false}
+                                    />
 
-                                    {/* Rank Badge */}
-                                    <div className="px-3 py-1.5 rounded-full font-bold text-sm bg-gray-900 text-white border border-gray-900 flex items-center gap-1.5">
-                                        <Trophy size={14} className="text-yellow-400" />
-                                        <span>Rank 1</span>
-                                    </div>
-
-                                    {/* Percentile Badge (Mock) */}
-                                    {satisfaction !== 'bad' && (
-                                        <div className="px-3 py-1.5 rounded-full font-bold text-sm bg-gray-100 text-gray-600 border border-gray-200 flex items-center gap-1.5">
-                                            <span>Top 10%</span>
-                                        </div>
+                                    {rankingResult?.rank && rankingResult.rank > 0 && (
+                                        <RankingBadge
+                                            rank={rankingResult.rank}
+                                            size="lg"
+                                            variant="text"
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -290,9 +296,9 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
                                 {t('write.ranking.success_title', 'Ranking Updated!')}
                             </h2>
-                            <p className="text-gray-500 mb-8 max-w-[80%] mx-auto leading-relaxed text-sm">
-                                {t('write.ranking.success_desc', 'Your taste map has been updated.')}
-                            </p>
+                            <div className="text-gray-500 mb-8 max-w-[80%] mx-auto leading-relaxed text-sm whitespace-pre-wrap">
+                                <span dangerouslySetInnerHTML={{ __html: t('write.ranking.success_desc', { name: shop.name, defaultValue: `Ranking for ${shop.name} has been updated.` }) }} />
+                            </div>
 
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 w-full">
