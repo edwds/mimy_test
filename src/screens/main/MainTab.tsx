@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { ProfileScreen } from './ProfileScreen';
-import { SelectTypeStep } from '@/screens/write/SelectTypeStep';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
 import { HomeTab } from './HomeTab';
 import { LeaderboardTab } from './LeaderboardTab';
@@ -19,7 +18,6 @@ export const MainTab = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('home');
-    const [isWriteSheetOpen, setIsWriteSheetOpen] = useState(false);
     const [refreshTriggers, setRefreshTriggers] = useState({
         home: 0,
         discover: 0,
@@ -140,7 +138,7 @@ export const MainTab = () => {
 
                 <div className={cn("h-full w-full", activeTab === 'home' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <HomeTab
-                        onWrite={() => setIsWriteSheetOpen(true)}
+                        onWrite={() => navigate('/write')}
                         refreshTrigger={refreshTriggers.home}
                         isEnabled={allowedTabs.has('home')}
                     />
@@ -167,14 +165,7 @@ export const MainTab = () => {
 
             {/* Write Sheet */}
 
-            <SelectTypeStep
-                isOpen={isWriteSheetOpen}
-                onClose={() => setIsWriteSheetOpen(false)}
-                onSelect={(type) => {
-                    setIsWriteSheetOpen(false);
-                    navigate(`/write?type=${type}`);
-                }}
-            />
+
 
             {/* Bottom Navigation */}
             <nav className="border-t border-border bg-card/80 backdrop-blur-lg pb-6 shrink-0">
@@ -196,7 +187,7 @@ export const MainTab = () => {
                     <NavIcon
                         icon={<PlusCircle className="w-6 h-6" />}
                         label={t('common.write')}
-                        onClick={() => setIsWriteSheetOpen(true)}
+                        onClick={() => navigate('/write')}
                     />
 
                     <NavIcon
