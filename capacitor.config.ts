@@ -4,6 +4,11 @@ const config: CapacitorConfig = {
   appId: 'com.example.mimySocial',
   appName: 'Mimy',
   webDir: 'dist',
+  server: {
+    // Allow cleartext traffic for local development
+    allowNavigation: ['mimytest.vercel.app'],
+    androidScheme: 'https'
+  },
   plugins: {
     GoogleAuth: {
       scopes: ['profile', 'email'],
@@ -12,7 +17,8 @@ const config: CapacitorConfig = {
     }
   },
   ios: {
-    allowsBackForwardNavigationGestures: true
+    allowsBackForwardNavigationGestures: true,
+    contentInset: 'always'
   }
 };
 

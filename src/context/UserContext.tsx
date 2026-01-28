@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserService } from '@/services/UserService';
+import { clearTokens } from '@/lib/tokenStorage';
+import { authFetch } from '@/lib/authFetch';
 
 export interface User {
     id: number;
@@ -86,10 +88,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         try {
             // Call logout API to clear cookies
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-            await fetch(`${API_BASE_URL}/api/auth/logout`, {
-                method: 'POST',
-                credentials: 'include' // Include cookies
+            await authFetch(`${API_BASE_URL}/api/auth/logout`, {
+                method: 'POST'
             });
+
+            // Clear tokens from native storage
+            await clearTokens();
         } catch (error) {
             console.error('Logout error:', error);
         }

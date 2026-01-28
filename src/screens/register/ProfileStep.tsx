@@ -7,6 +7,8 @@ import { resizeImage } from '@/lib/image';
 import { API_BASE_URL } from '@/lib/api';
 
 import { useUser } from '@/context/UserContext';
+import { saveTokens } from '@/lib/tokenStorage';
+import { Capacitor } from '@capacitor/core';
 
 import { useTranslation } from 'react-i18next';
 
@@ -179,16 +181,15 @@ export const ProfileStep = () => {
                 }
 
                 if (response.ok) {
-                    const savedUser = await response.json();
+                    const data = await response.json();
+                    const { tokens } = data;
 
-                    if (!userId) {
-                        // If we just created, we need to login locally
-                        localStorage.setItem("mimy_user_id", savedUser.id.toString());
-                        // contextLogin might not be available if not wrapped properly or we reload?
-                        // But refreshUser works off localStorage
+                    // Save tokens for native apps
+                    if (tokens && Capacitor.isNativePlatform()) {
+                        await saveTokens(tokens.accessToken, tokens.refreshToken);
+                        console.log('[Register] Tokens saved for native platform');
                     }
 
-                    localStorage.setItem("mimy_user", "true");
                     await refreshUser(); // Update context with new profile info
 
                     // Clear temp reg data

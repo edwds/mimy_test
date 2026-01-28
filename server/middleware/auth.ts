@@ -24,9 +24,22 @@ export const requireAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Priority 1: JWT cookie
-    const token = req.cookies?.access_token;
+    // Priority 1: Authorization header (for mobile apps)
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyAccessToken(token);
+      if (payload) {
+        req.user = {
+          id: payload.userId,
+          email: payload.email
+        };
+        return next();
+      }
+    }
 
+    // Priority 2: JWT cookie (for web)
+    const token = req.cookies?.access_token;
     if (token) {
       const payload = verifyAccessToken(token);
       if (payload) {
@@ -38,7 +51,7 @@ export const requireAuth = async (
       }
     }
 
-    // Priority 2: Temporary dual-mode support for x-user-id header
+    // Priority 3: Temporary dual-mode support for x-user-id header
     // TODO: Remove this after 2 weeks (migration period)
     const userIdHeader = req.headers['x-user-id'];
     if (userIdHeader) {
@@ -78,9 +91,22 @@ export const optionalAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Try JWT cookie
-    const token = req.cookies?.access_token;
+    // Priority 1: Authorization header (for mobile apps)
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyAccessToken(token);
+      if (payload) {
+        req.user = {
+          id: payload.userId,
+          email: payload.email
+        };
+        return next();
+      }
+    }
 
+    // Priority 2: JWT cookie (for web)
+    const token = req.cookies?.access_token;
     if (token) {
       const payload = verifyAccessToken(token);
       if (payload) {
@@ -92,7 +118,7 @@ export const optionalAuth = async (
       }
     }
 
-    // Try legacy x-user-id header (dual-mode support)
+    // Priority 3: Legacy x-user-id header (dual-mode support)
     const userIdHeader = req.headers['x-user-id'];
     if (userIdHeader) {
       const userId = parseInt(userIdHeader as string, 10);

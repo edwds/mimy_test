@@ -1,13 +1,12 @@
 
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 
 export const UserService = {
     // Fetch full user details by ID
     fetchUser: async (userId: string | number) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-                credentials: 'include' // Include cookies
-            });
+            const response = await authFetch(`${API_BASE_URL}/api/users/${userId}`);
             if (response.ok) {
                 return await response.json();
             }
@@ -21,9 +20,7 @@ export const UserService = {
     // Get current authenticated user from JWT
     getCurrentUser: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-                credentials: 'include' // Include cookies
-            });
+            const response = await authFetch(`${API_BASE_URL}/api/auth/me`);
             if (response.ok) {
                 return await response.json();
             }
@@ -37,9 +34,7 @@ export const UserService = {
     // Get saved shops for a user
     getSavedShops: async (userId: number | string) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${userId}/saved_shops`, {
-                credentials: 'include' // Include cookies
-            });
+            const response = await authFetch(`${API_BASE_URL}/api/users/${userId}/saved_shops`);
             if (response.ok) {
                 return await response.json();
             }

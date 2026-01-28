@@ -1,5 +1,5 @@
-
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 
 export interface RankingItem {
     id: number;
@@ -18,28 +18,24 @@ export interface RankingItem {
 
 export const RankingService = {
     getAll: async (): Promise<RankingItem[]> => {
-        const res = await fetch(`${API_BASE_URL}/api/ranking/all`, {
-            credentials: 'include'
-        });
+        const res = await authFetch(`${API_BASE_URL}/api/ranking/all`);
         if (!res.ok) throw new Error('Failed to fetch rankings');
         return res.json();
     },
 
     delete: async (shopId: number) => {
-        const res = await fetch(`${API_BASE_URL}/api/ranking/${shopId}`, {
+        const res = await authFetch(`${API_BASE_URL}/api/ranking/${shopId}`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+            headers: { 'Content-Type': 'application/json' }
         });
         if (!res.ok) throw new Error('Failed to delete ranking');
         return res.json();
     },
 
     reorder: async (items: { shop_id: number; rank: number; satisfaction_tier: number }[]) => {
-        const res = await fetch(`${API_BASE_URL}/api/ranking/reorder`, {
+        const res = await authFetch(`${API_BASE_URL}/api/ranking/reorder`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ items })
         });
         if (!res.ok) throw new Error('Failed to reorder ranking');

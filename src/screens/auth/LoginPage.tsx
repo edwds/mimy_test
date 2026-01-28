@@ -5,6 +5,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { API_BASE_URL } from '@/lib/api';
 
 import { useUser } from '@/context/UserContext';
+import { saveTokens } from '@/lib/tokenStorage';
 
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
@@ -55,14 +56,21 @@ export const LoginPage = () => {
             });
 
             if (response.ok) {
-                const { user, isNew } = await response.json();
+                const data = await response.json();
+                const { user, isNew, tokens } = data;
 
                 if (isNew) {
                     // New User: Don't login yet, just go to register
                     localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
                     navigate('/register/phone');
                 } else {
-                    // Existing User: Login normally (JWT cookies already set by server)
+                    // Existing User: Save tokens for native apps
+                    if (tokens && Capacitor.isNativePlatform()) {
+                        await saveTokens(tokens.accessToken, tokens.refreshToken);
+                        console.log('[Login] Tokens saved for native platform');
+                    }
+
+                    // Login (JWT cookies already set by server for web)
                     await contextLogin(user.id.toString());
                     navigate('/main');
                 }

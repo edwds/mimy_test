@@ -58,7 +58,15 @@ router.post("/google", async (req, res) => {
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
-            return res.json({ user, isNew: false });
+            // Also return tokens in response body for mobile apps
+            return res.json({
+                user,
+                isNew: false,
+                tokens: {
+                    accessToken,
+                    refreshToken
+                }
+            });
         }
 
         // Return profile info for registration (Do NOT create yet)
@@ -130,7 +138,14 @@ router.post("/register", async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
-        res.json(user);
+        // Also return tokens in response body for mobile apps
+        res.json({
+            ...user,
+            tokens: {
+                accessToken,
+                refreshToken
+            }
+        });
     } catch (error: any) {
         console.error("Registration error:", error);
         if (error.code === '23505') {
