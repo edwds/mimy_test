@@ -61,24 +61,39 @@ export const LoginPage = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('[Login] Response data:', { hasUser: !!data.user, hasTokens: !!data.tokens, isNew: data.isNew });
+                console.log('[Login] Response data:', {
+                    hasUser: !!data.user,
+                    hasTokens: !!data.tokens,
+                    isNew: data.isNew,
+                    userId: data.user?.id,
+                    tokenKeys: data.tokens ? Object.keys(data.tokens) : []
+                });
 
                 const { user, isNew, tokens } = data;
 
                 if (isNew) {
                     // New User: Don't login yet, just go to register
+                    console.log('[Login] New user detected, redirecting to registration');
                     localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
                     navigate('/register/phone');
                 } else {
+                    console.log('[Login] Existing user, platform:', Capacitor.isNativePlatform() ? 'Native' : 'Web');
+                    console.log('[Login] Tokens available:', !!tokens);
+
                     // Existing User: Save tokens for native apps
                     if (tokens && Capacitor.isNativePlatform()) {
+                        console.log('[Login] Attempting to save tokens for native platform...');
+                        console.log('[Login] Token types:', typeof tokens.accessToken, typeof tokens.refreshToken);
+
                         const saved = await saveTokens(tokens.accessToken, tokens.refreshToken);
                         if (!saved) {
-                            console.error('[Login] Failed to save tokens, cannot proceed');
+                            console.error('[Login] ❌ Failed to save tokens, cannot proceed');
                             alert('Failed to save login credentials. Please try again.');
                             return;
                         }
-                        console.log('[Login] Tokens saved and verified for native platform');
+                        console.log('[Login] ✅ Tokens saved and verified for native platform');
+                    } else if (Capacitor.isNativePlatform() && !tokens) {
+                        console.error('[Login] ❌ Native platform but no tokens in response!');
                     } else {
                         // Web: Wait for browser to process Set-Cookie headers
                         console.log('[Login] Web platform, waiting for cookies to be set...');
