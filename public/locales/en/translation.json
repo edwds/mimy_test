@@ -203,6 +203,7 @@
             "save": "Save",
             "saved_date": "Saved:",
             "record": "Record",
+            "evaluated": "Completed",
             "match_tooltip": "This is a personalized score based on reviews from people with similar tastes. (3.00 = Neutral)"
         }
     },
@@ -211,7 +212,9 @@
         "saved": "Saved",
         "wants_to_go": "Wants to go",
         "directions": "Directions",
-        "share": "Share"
+        "share": "Share",
+        "evaluate": "Record",
+        "evaluated": "Completed"
     },
     "vs_card": {
         "title": "Which taste do you prefer?",

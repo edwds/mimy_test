@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Bookmark, Check, ListOrdered, HelpCircle } from 'lucide-react';
+import { MapPin, Bookmark, Check, Plus, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
@@ -220,7 +220,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                                 </>
                             ) : (
                                 <>
-                                    <ListOrdered className="w-4 h-4 mr-2" />
+                                    <Plus className="w-4 h-4 mr-2" />
                                     {t('discovery.shop_card.record')}
                                 </>
                             )}
