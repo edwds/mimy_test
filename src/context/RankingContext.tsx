@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RankingOverlay } from '@/screens/write/RankingOverlay';
+import { useUser } from './UserContext';
 
 interface RankingContextType {
     openRanking: (shop: any) => void;
@@ -14,7 +15,8 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const navigate = useNavigate();
-    const currentUserId = Number(localStorage.getItem("mimy_user_id") || 0);
+    const { user } = useUser();
+    const currentUserId = user?.id || 0;
 
     const openRanking = (shop: any) => {
         setSelectedShop(shop);

@@ -7,6 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { ContentService } from '@/services/ContentService';
 import { SatisfactionRating } from '@/components/SatisfactionRating';
 import { RankingBadge } from '@/components/RankingBadge';
+import { authFetch } from '@/lib/authFetch';
 
 interface Props {
     shop: any;
@@ -49,7 +50,8 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
         setRankingMode('LOADING');
         try {
             const tier = mapSatisfactionToTier(satisfaction!);
-            const res = await fetch(`${API_BASE_URL}/api/content/ranking/candidates?user_id=${userId}&satisfaction_tier=${tier}&exclude_shop_id=${shop.id}`);
+            console.log('[RankingOverlay] Fetching candidates for tier:', tier, 'userId:', userId);
+            const res = await authFetch(`${API_BASE_URL}/api/content/ranking/candidates?user_id=${userId}&satisfaction_tier=${tier}&exclude_shop_id=${shop.id}`);
 
             if (res.ok) {
                 const json = await res.json();
@@ -57,14 +59,23 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                 const total = json.total_count || 0;
                 const higherCount = json.higher_tier_count || 0;
 
+                console.log('[RankingOverlay] Candidates response:', {
+                    candidatesCount: data.length,
+                    totalCount: total,
+                    higherCount: higherCount,
+                    candidates: data
+                });
+
                 setTotalCount(total);
                 setBaseRank(higherCount);
 
                 if (data.length === 0) {
+                    console.log('[RankingOverlay] No candidates, skipping comparison');
                     await saveRank(0, total, higherCount);
                     setRankingMode('DONE');
                     setStep('SUCCESS');
                 } else {
+                    console.log('[RankingOverlay] Setting up comparison with', data.length, 'candidates');
                     setCandidates(data);
                     setMinIdx(0);
                     setMaxIdx(data.length - 1);
@@ -72,6 +83,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                     setRankingMode('COMPARING');
                 }
             } else {
+                console.error('[RankingOverlay] Failed to fetch candidates, status:', res.status);
                 // Fallback
                 await saveRank(0, 0, 0);
                 setStep('SUCCESS');
