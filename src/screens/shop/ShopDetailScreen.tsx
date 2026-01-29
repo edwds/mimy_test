@@ -347,79 +347,82 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                     {/* Shop Info & Actions */}
                     <div className="px-6 pt-8">
                         {/* Badge / Score Section (Moved from Hero) */}
-                        <div className="mb-3">
-                            {shop.my_review_stats ? (
-                                <div className="flex items-center gap-2">
-                                    {/* Satisfaction & Badge */}
-                                    <div className={cn(
-                                        "font-bold px-2.5 py-1 rounded-full border text-xs flex items-center gap-1.5",
-                                        shop.my_review_stats.satisfaction === 2
-                                            ? "bg-orange-50 text-orange-600 border-orange-100"
-                                            : "bg-gray-100 text-gray-700 border-gray-200"
-                                    )}>
-                                        {/* Satisfaction Text */}
-                                        {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
-                                            shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
+                        {(shop.my_review_stats || shop.shop_user_match_score != null) && (
+                            <div className="mb-3">
+                                {shop.my_review_stats ? (
+                                    <div className="flex items-center gap-2">
+                                        {/* Satisfaction & Badge */}
+                                        <div className={cn(
+                                            "font-bold px-2.5 py-1 rounded-full border text-xs flex items-center gap-1.5",
+                                            shop.my_review_stats.satisfaction === 2
+                                                ? "bg-orange-50 text-orange-600 border-orange-100"
+                                                : "bg-gray-100 text-gray-700 border-gray-200"
+                                        )}>
+                                            {/* Satisfaction Text */}
+                                            {shop.my_review_stats.satisfaction === 2 ? '맛있어요' :
+                                                shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
-                                        {/* Separator */}
-                                        {shop.my_review_stats.satisfaction != null && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                            <span className="opacity-20 mx-0.5 bg-current w-[1px] h-3 block"></span>
-                                        )}
-
-                                        {/* Tier Info */}
-                                        {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
-                                            <span>
-                                                상위 {shop.my_review_stats.percentile}%
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Rank Text */}
-                                    {shop.my_review_stats.rank > 0 && (
-                                        <div className="font-bold text-sm text-gray-900 flex items-center gap-1">
-                                            {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
-                                                <span>🏆</span>
+                                            {/* Separator */}
+                                            {shop.my_review_stats.satisfaction != null && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                                <span className="opacity-20 mx-0.5 bg-current w-[1px] h-3 block"></span>
                                             )}
-                                            {shop.my_review_stats.rank}위
+
+                                            {/* Tier Info */}
+                                            {shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                                <span>
+                                                    상위 {shop.my_review_stats.percentile}%
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            ) : (
-                                shop.shop_user_match_score != null && (
-                                    <div className="relative inline-block z-10" ref={tooltipRef}>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShowTooltip(!showTooltip);
-                                            }}
-                                            className="text-xs font-bold text-gray-900 bg-gray-100 pl-3 pr-2 py-1.5 rounded-full border border-gray-200 flex items-center gap-1.5 active:bg-gray-200 transition-colors"
-                                        >
-                                            <span className="text-gray-500">예상 평가</span>
-                                            <span className="text-orange-600">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
-                                            <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
-                                        </button>
-                                        {showTooltip && (
-                                            <div
-                                                className="absolute left-0 top-full mt-2 w-56 p-3 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-50 text-left leading-relaxed animate-in fade-in zoom-in-95 duration-200"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <p>{t('discovery.shop_card.match_tooltip')}</p>
-                                                <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+
+                                        {/* Rank Text */}
+                                        {shop.my_review_stats.rank > 0 && (
+                                            <div className="font-bold text-sm text-gray-900 flex items-center gap-1">
+                                                {(shop.my_review_stats.percentile <= 5 || shop.my_review_stats.rank <= 10) && (
+                                                    <span>🏆</span>
+                                                )}
+                                                {shop.my_review_stats.rank}위
                                             </div>
                                         )}
                                     </div>
-                                )
-                            )}
-                        </div>
+                                ) : (
+                                    shop.shop_user_match_score != null && (
+                                        <div className="relative inline-block z-10" ref={tooltipRef}>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowTooltip(!showTooltip);
+                                                }}
+                                                className="text-xs font-bold text-gray-900 bg-gray-100 pl-3 pr-2 py-1.5 rounded-full border border-gray-200 flex items-center gap-1.5 active:bg-gray-200 transition-colors"
+                                            >
+                                                <span className="text-gray-500">예상 평가</span>
+                                                <span className="text-orange-600">{scoreToTasteRatingStep(shop.shop_user_match_score).toFixed(2)}</span>
+                                                <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
+                                            </button>
+                                            {showTooltip && (
+                                                <div
+                                                    className="absolute left-0 top-full mt-2 w-56 p-3 bg-gray-900/95 text-white text-xs rounded-xl shadow-xl z-50 text-left leading-relaxed animate-in fade-in zoom-in-95 duration-200"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <p>{t('discovery.shop_card.match_tooltip')}</p>
+                                                    <div className="absolute left-4 -top-1 w-2 h-2 bg-gray-900/95 rotate-45" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        )}
                         {/* Title Section (Name + Kind) */}
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex-1 mr-2">
-                                <h1 className="text-2xl font-bold text-gray-900 leading-tight flex items-center flex-wrap gap-2">
+                                <h1 className="text-2xl font-bold text-gray-900 leading-tight break-all">
                                     {shop.name}
-                                    <span className="text-sm text-gray-400 font-normal align-middle">
-                                        {shop.food_kind || 'Restaurant'}
-                                    </span>
-
+                                    {shop.food_kind && (
+                                        <span className="text-sm text-gray-400 font-normal ml-2">
+                                            {shop.food_kind}
+                                        </span>
+                                    )}
                                 </h1>
                             </div>
                         </div>
