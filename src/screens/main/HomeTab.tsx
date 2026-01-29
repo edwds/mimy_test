@@ -33,6 +33,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const { user: currentUser, loading: isUserLoading } = useUser();
     const [activeChip, setActiveChip] = useState("popular");
     const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
+    const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -222,12 +223,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
         const handleRankingUpdate = (shopId: number) => {
             console.log('[HomeTab] Ranking updated for shop:', shopId);
-            // Refetch feed to get updated POI data
-            setPage(1);
-            setHasMore(true);
-            setItems([]);
-            setHasInitialFetch(false);
-            fetchFeed(1);
+            // Trigger refetch via state change
+            setRankingRefreshTrigger(prev => prev + 1);
         };
 
         registerCallback(handleRankingUpdate);
@@ -236,6 +233,17 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             unregisterCallback();
         };
     }, [isEnabled]);
+
+    // Handle ranking refresh trigger
+    useEffect(() => {
+        if (rankingRefreshTrigger > 0) {
+            setPage(1);
+            setHasMore(true);
+            setItems([]);
+            setHasInitialFetch(false);
+            // fetchFeed will be called by the main useEffect below
+        }
+    }, [rankingRefreshTrigger]);
 
     // Fetch Interstitial candidates (VS & Hate)
     useEffect(() => {

@@ -36,6 +36,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const [searchParams] = useSearchParams();
     const { registerCallback, unregisterCallback } = useRanking();
     const [shops, setShops] = useState<any[]>([]);
+    const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
     const navigationOrderRef = useRef<number[]>([]); // Store sorted order for navigation to prevent UI flickering
@@ -177,8 +178,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
         const handleRankingUpdate = (shopId: number) => {
             console.log('[DiscoveryTab] Ranking updated for shop:', shopId);
-            // Refetch shops to get updated my_review_stats
-            fetchShops();
+            setRankingRefreshTrigger(prev => prev + 1);
         };
 
         registerCallback(handleRankingUpdate);
@@ -187,6 +187,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             unregisterCallback();
         };
     }, [isEnabled]);
+
+    // Handle ranking refresh trigger
+    useEffect(() => {
+        if (rankingRefreshTrigger > 0) {
+            fetchShops();
+        }
+    }, [rankingRefreshTrigger]);
 
     const handleSave = async (shopId: number) => {
         // Optimistic Update

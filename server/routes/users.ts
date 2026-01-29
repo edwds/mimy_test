@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "../db/index.js";
 import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard } from "../db/schema.js";
 import { eq, and, desc, sql, ilike, isNotNull, inArray } from "drizzle-orm";
-import { getShopMatchScores } from "../utils/enricher.js";
+import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache } from "../redis.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 
@@ -270,6 +270,7 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
 
         const shopIds = savedShops.map(s => s.id);
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
+        const reviewStatsMap = await getShopReviewStats(shopIds, uid);
 
         // Fetch My Rank (if viewer is looking at their own saved list, or public list)
         // Usually 'my_rank' refers to the ranking of the VIEWER (uid), not the list owner (id).
@@ -289,12 +290,13 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
             myRanks.forEach(r => myRanksMap.set(r.shop_id, r.rank));
         }
 
-        // Enrich with is_saved=true and match_score
+        // Enrich with is_saved=true, match_score, and my_review_stats
         const enriched = savedShops.map(shop => ({
             ...shop,
             is_saved: true,
             shop_user_match_score: matchScoresMap.get(shop.id) || null,
-            my_rank: myRanksMap.get(shop.id) || null
+            my_rank: myRanksMap.get(shop.id) || null,
+            my_review_stats: reviewStatsMap.get(shop.id) || null
         }));
 
         res.json(enriched);

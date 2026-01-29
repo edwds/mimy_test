@@ -28,6 +28,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const navigate = useNavigate();
     const { user, loading, refreshUser } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
+    const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const [searchParams] = useSearchParams();
 
     // Tabs
@@ -177,12 +178,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
         const handleRankingUpdate = (shopId: number) => {
             console.log('[ProfileScreen] Ranking updated for shop:', shopId);
-            // Refetch based on active tab
-            if (activeTab === 'content') {
-                refetchContent();
-            } else if (activeTab === 'saved') {
-                fetchSaved();
-            }
+            setRankingRefreshTrigger(prev => prev + 1);
         };
 
         registerCallback(handleRankingUpdate);
@@ -190,7 +186,18 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         return () => {
             unregisterCallback();
         };
-    }, [isEnabled, activeTab]);
+    }, [isEnabled]);
+
+    // Handle ranking refresh trigger
+    useEffect(() => {
+        if (rankingRefreshTrigger > 0) {
+            if (activeTab === 'content') {
+                refetchContent();
+            } else if (activeTab === 'saved') {
+                fetchSaved();
+            }
+        }
+    }, [rankingRefreshTrigger, activeTab]);
 
 
 
