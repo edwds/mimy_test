@@ -44,5 +44,10 @@ export const ShopService = {
 
         if (!response.ok) throw new Error('Failed to toggle save');
         return response.json();
+    },
+    getTopRated: async (limit: number = 20) => {
+        const response = await authFetch(`${API_BASE_URL}/api/shops/top-rated?limit=${limit}`);
+        if (!response.ok) throw new Error('Failed to fetch top-rated shops');
+        return response.json();
     }
 };

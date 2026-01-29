@@ -692,4 +692,119 @@ router.post("/import-google", async (req, res) => {
     }
 });
 
+// GET /api/shops/top-rated - Get globally top-rated shops (cold start)
+router.get("/top-rated", optionalAuth, async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit as string) || 20;
+        const uid = req.user?.id || 0;
+
+        // Get shops with highest Good (tier=2) satisfaction ratings
+        // Criteria:
+        // 1. Minimum 10 total ratings for reliability
+        // 2. Sort by Good ratio (good_count / total_count) descending
+        // 3. Secondary sort by total_count descending for tiebreakers
+        const topRatedQuery = await db.execute(sql`
+            WITH shop_stats AS (
+                SELECT
+                    shop_id,
+                    COUNT(*) as total_count,
+                    SUM(CASE WHEN satisfaction_tier = 2 THEN 1 ELSE 0 END) as good_count,
+                    SUM(CASE WHEN satisfaction_tier = 1 THEN 1 ELSE 0 END) as ok_count,
+                    SUM(CASE WHEN satisfaction_tier = 0 THEN 1 ELSE 0 END) as bad_count,
+                    ROUND(
+                        (SUM(CASE WHEN satisfaction_tier = 2 THEN 1 ELSE 0 END)::float / COUNT(*)) * 100,
+                        1
+                    ) as good_ratio
+                FROM users_ranking
+                GROUP BY shop_id
+                HAVING COUNT(*) >= 10
+            )
+            SELECT
+                s.id,
+                s.name,
+                s.description,
+                s.address_full,
+                s.address_region,
+                s.thumbnail_img,
+                s.kind,
+                s.food_kind,
+                s.lat,
+                s.lon,
+                s.catchtable_ref,
+                ss.total_count,
+                ss.good_count,
+                ss.ok_count,
+                ss.bad_count,
+                ss.good_ratio
+            FROM shop_stats ss
+            JOIN shops s ON s.id = ss.shop_id
+            ORDER BY ss.good_ratio DESC, ss.total_count DESC
+            LIMIT ${limit}
+        `);
+
+        const results = topRatedQuery.rows as any[];
+
+        if (results.length === 0) {
+            return res.json([]);
+        }
+
+        // Enrich with user-specific data (my_rank, saved status)
+        const shopIds = results.map(s => s.id);
+
+        // Get user's rankings for these shops
+        const myRankingsMap = new Map<number, any>();
+        if (uid > 0) {
+            const myRankings = await db.select({
+                shop_id: users_ranking.shop_id,
+                rank: users_ranking.rank,
+                satisfaction_tier: users_ranking.satisfaction_tier
+            })
+                .from(users_ranking)
+                .where(and(
+                    eq(users_ranking.user_id, uid),
+                    inArray(users_ranking.shop_id, shopIds)
+                ));
+
+            myRankings.forEach(r => {
+                myRankingsMap.set(r.shop_id, r);
+            });
+        }
+
+        // Get saved status
+        const savedSet = new Set<number>();
+        if (uid > 0) {
+            const savedList = await db.select({
+                shop_id: users_wantstogo.shop_id
+            })
+                .from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, uid),
+                    inArray(users_wantstogo.shop_id, shopIds),
+                    eq(users_wantstogo.is_deleted, false)
+                ));
+
+            savedList.forEach(s => savedSet.add(s.shop_id));
+        }
+
+        // Enrich results
+        const enrichedResults = results.map(shop => {
+            const myRanking = myRankingsMap.get(shop.id);
+            return {
+                ...shop,
+                my_rank: myRanking?.rank || null,
+                my_review_stats: myRanking ? {
+                    rank: myRanking.rank,
+                    satisfaction: myRanking.satisfaction_tier
+                } : null,
+                is_saved: savedSet.has(shop.id)
+            };
+        });
+
+        res.json(enrichedResults);
+    } catch (error: any) {
+        console.error("Top rated shops error:", error);
+        res.status(500).json({ error: "Failed to fetch top-rated shops" });
+    }
+});
+
 export default router;

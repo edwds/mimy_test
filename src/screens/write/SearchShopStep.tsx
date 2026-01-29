@@ -35,6 +35,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
+    const [topRatedShops, setTopRatedShops] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [googleResults, setGoogleResults] = useState<any[]>([]);
 
@@ -59,8 +60,18 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
         }
     };
 
+    const fetchTopRated = async () => {
+        try {
+            const topRated = await ShopService.getTopRated(20);
+            setTopRatedShops(topRated || []);
+        } catch (error) {
+            console.error('Failed to fetch top-rated shops:', error);
+        }
+    };
+
     useEffect(() => {
         fetchSaved();
+        fetchTopRated();
     }, []);
 
     // Register ranking update callback
@@ -75,6 +86,12 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
             ));
             // Update results
             setResults(prev => prev.map(shop =>
+                shop.id === data.shopId
+                    ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
+                    : shop
+            ));
+            // Update topRatedShops
+            setTopRatedShops(prev => prev.map(shop =>
                 shop.id === data.shopId
                     ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
                     : shop
@@ -374,7 +391,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                         </div>
                     )
                 ) : (
-                    // Default View: Saved Shops
+                    // Default View: Saved Shops or Top Rated
                     <div className="space-y-6">
                         {savedShops.length > 0 && (
                             <div>
@@ -437,7 +454,66 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                             </div>
                         )}
 
-                        {savedShops.length === 0 && (
+                        {/* Show Top Rated if no saved shops */}
+                        {savedShops.length === 0 && topRatedShops.length > 0 && (
+                            <div>
+                                <div className="mb-4 px-1">
+                                    <h3 className="text-sm font-bold text-muted-foreground mb-1">모두가 좋아하는 맛집</h3>
+                                    <p className="text-xs text-muted-foreground/70">많은 사람들에게 Good 평가를 받은 레스토랑입니다</p>
+                                </div>
+                                <ul className="space-y-3">
+                                    {topRatedShops.map((shop) => (
+                                        <li key={shop.id}>
+                                            <button
+                                                onClick={() => onSelect(shop)}
+                                                className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
+                                            >
+                                                <div className="grid grid-cols-[64px_1fr_auto] gap-4 items-start">
+                                                    {/* Thumb */}
+                                                    <div
+                                                        className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
+                                                        style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
+                                                    >
+                                                        {!shop.thumbnail_img && (
+                                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/50">
+                                                                <Utensils className="w-6 h-6" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Text */}
+                                                    <div className="min-w-0 py-1">
+                                                        <div className="flex items-center gap-2 mb-1 min-w-0">
+                                                            <span className="font-bold text-foreground text-lg truncate leading-tight">
+                                                                {shop.name}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                👍 {shop.good_ratio}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                            <span className="truncate">{shop.address_region || shop.address_full}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Badge */}
+                                                    {shop.my_rank && (
+                                                        <div className="self-center">
+                                                            <div className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-white px-2.5 py-1.5 rounded-full border border-gray-200 shadow-xs whitespace-nowrap">
+                                                                <Check size={12} strokeWidth={3} className="text-gray-500" />
+                                                                <span>{getOrdinalRank(shop.my_rank)}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {savedShops.length === 0 && topRatedShops.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 opacity-40">
                                 <Utensils className="w-12 h-12 text-gray-300 mb-4" />
                                 <p className="text-sm font-medium">{t('write.search.empty_saved')}</p>
