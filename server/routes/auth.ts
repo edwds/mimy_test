@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
+import { users, clusters } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -176,7 +176,25 @@ router.get("/me", requireAuth, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        res.json(user);
+        // Add cluster info if available
+        let clusterInfo = null;
+        if (user.taste_cluster) {
+            const clusterId = parseInt(user.taste_cluster);
+            if (!isNaN(clusterId)) {
+                const cluster = await db.select().from(clusters).where(eq(clusters.cluster_id, clusterId)).limit(1);
+                if (cluster.length > 0) {
+                    clusterInfo = {
+                        cluster_name: cluster[0].name,
+                        cluster_tagline: cluster[0].tagline
+                    };
+                }
+            }
+        }
+
+        res.json({
+            ...user,
+            ...clusterInfo
+        });
     } catch (error: any) {
         console.error("Get current user error:", error);
         res.status(500).json({ error: "Failed to get user" });
