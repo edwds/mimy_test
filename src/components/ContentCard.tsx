@@ -478,7 +478,7 @@ export const ContentCard = ({
 
                                 return (
                                     <span className={cn(
-                                        "text-[11px] font-medium px-1.5 py-0.5 rounded-md shrink-0",
+                                        "text-[11px] font-medium shrink-0",
                                         getTasteBadgeStyle(matchScore)
                                     )}>
                                         {user.cluster_name}
@@ -865,7 +865,6 @@ export const ContentCard = ({
                         address: shopAddress,
                         thumbnail_img: shopThumbnail
                     }}
-                    visitCount={visitCount}
                     distance={
                         coordinates && content.poi?.lat && content.poi?.lon
                             ? getDistanceText(coordinates.lat, coordinates.lon, content.poi.lat, content.poi.lon)
