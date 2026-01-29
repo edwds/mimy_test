@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, PlusCircle, Bookmark, Share, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL, WEB_BASE_URL } from '@/lib/api';
-import { ShopService } from '@/services/ShopService';
 import { UserService } from '@/services/UserService';
 import { useUser } from '@/context/UserContext';
-import { useRanking } from '@/context/RankingContext';
 import { cn, formatVisitDate } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 import { Share as CapacitorShare } from '@capacitor/share';
 import { authFetch } from '@/lib/authFetch';
+import { ShopInfoCard } from '@/components/ShopInfoCard';
 
 interface ListItem {
     rank: number;
@@ -76,6 +75,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const [author, setAuthor] = useState<ListAuthor | null>(null);
     const [savedShopIds, setSavedShopIds] = useState<Set<number>>(new Set());
     const [listUpdatedAt, setListUpdatedAt] = useState<string | null>(null);
+    const [isDarkBackground, setIsDarkBackground] = useState(true); // Default to dark (white icons)
 
     useEffect(() => {
         const fetchEverything = async () => {
@@ -218,6 +218,51 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     };
 
 
+    // Analyze image brightness
+    const analyzeImageBrightness = useCallback((imageUrl: string) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.src = imageUrl;
+
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+
+                // Sample from top portion of image where buttons are
+                canvas.width = img.width;
+                canvas.height = Math.min(img.height, 200);
+                ctx.drawImage(img, 0, 0, img.width, canvas.height, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let brightnessSum = 0;
+
+                // Calculate average brightness
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    // Calculate perceived brightness
+                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+                    brightnessSum += brightness;
+                }
+
+                const avgBrightness = brightnessSum / (data.length / 4);
+                // If average brightness > 128, it's a light background
+                setIsDarkBackground(avgBrightness <= 128);
+            } catch (error) {
+                console.error('Failed to analyze image brightness:', error);
+                setIsDarkBackground(true); // Default to dark
+            }
+        };
+
+        img.onerror = () => {
+            setIsDarkBackground(true); // Default to dark on error
+        };
+    }, []);
+
     const handleBack = () => {
         // If there is history (key is not default), go back.
         // Otherwise, fallback to profile.
@@ -259,6 +304,15 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
     const coverImage = getCoverImage();
 
+    // Analyze background image brightness when cover image changes
+    useEffect(() => {
+        if (coverImage) {
+            analyzeImageBrightness(coverImage);
+        } else {
+            setIsDarkBackground(true); // Gradient background is dark
+        }
+    }, [coverImage, analyzeImageBrightness]);
+
     return (
         <div className="flex flex-col h-full bg-background relative">
             {/* Fixed Top Navigation */}
@@ -277,7 +331,9 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 -ml-2 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white"
+                                : isDarkBackground
+                                    ? "text-white hover:text-white"
+                                    : "text-black hover:text-black"
                         )}
                         onClick={handleBack}
                     >
@@ -303,7 +359,9 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white"
+                                : isDarkBackground
+                                    ? "text-white hover:text-white"
+                                    : "text-black hover:text-black"
                         )}
                         onClick={handleShare}
                     >
@@ -394,7 +452,6 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                                 <RankingListItem
                                     key={`${item.shop.id}-${index}`}
                                     item={item}
-                                    user={author}
                                     initialIsSaved={savedShopIds.has(item.shop.id)}
                                 />
                             ))}
@@ -413,44 +470,16 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 };
 
 // Custom Ranking List Item Component
-const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean }) => {
+const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; initialIsSaved?: boolean }) => {
     const { shop, rank, satisfaction_tier, review_text, review_images, my_review_stats } = item;
     const navigate = useNavigate();
-    const { t, i18n } = useTranslation();
-    const { openRanking } = useRanking();
-    const [isSaved, setIsSaved] = useState(initialIsSaved);
-    const hasMyRanking = !!my_review_stats;
-
-    const handleToggleSave = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const newState = !isSaved;
-        setIsSaved(newState); // Optimistic update
-        try {
-            await ShopService.toggleSave(shop.id);
-        } catch (error) {
-            console.error("Failed to toggle save", error);
-            setIsSaved(!newState); // Revert
-        }
-    };
 
     // Derive satisfaction string
     const tierMap: Record<number, string> = { 1: 'good', 2: 'good', 3: 'ok', 4: 'bad' };
     const satisfaction = tierMap[satisfaction_tier] || '';
 
-    const getRankingTier = (rank: number, total: number | undefined): number | null => {
-        if (!total || total < 50) return null;
-        const percentage = (rank / total) * 100;
-        const tiers = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90];
-        for (const tier of tiers) {
-            if (percentage <= tier) return tier;
-        }
-        return null;
-    };
-
-    const rankingCount = user?.stats?.content_count;
-
+    // Get display image from review images
     let displayImage = shop.thumbnail_img;
-
     if (review_images) {
         if (Array.isArray(review_images) && review_images.length > 0) {
             displayImage = review_images[0];
@@ -468,149 +497,33 @@ const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListIte
         }
     }
 
+    // Update shop object with display image
+    const shopWithImage = { ...shop, thumbnail_img: displayImage };
+
     return (
-        <div
-            className="flex flex-col py-4 border-b border-border/40 gap-3 cursor-pointer group"
-            onClick={() => {
-                const current = new URLSearchParams(window.location.search);
-                current.set('viewShop', String(shop.id));
-                navigate({ search: current.toString() });
-            }}
-        >
-            {/* Top Row: Thumbnail + Info + Actions */}
-            <div className="flex items-start gap-3">
-                {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 relative border border-border/60 shadow-sm">
-                    {displayImage ? (
-                        <img src={displayImage} alt={shop.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                            <div className="w-2 h-2 rounded-full bg-gray-300" />
-                        </div>
-                    )}
-                </div>
+        <div className="flex flex-col py-4 border-b border-border/40 gap-3">
+            {/* Shop Info Card */}
+            <ShopInfoCard
+                shop={shopWithImage}
+                rank={rank}
+                satisfaction={satisfaction as 'good' | 'ok' | 'bad' | undefined}
+                initialIsBookmarked={initialIsSaved}
+                my_review_stats={my_review_stats}
+                showActions={true}
+                onClick={() => {
+                    const current = new URLSearchParams(window.location.search);
+                    current.set('viewShop', String(shop.id));
+                    navigate({ search: current.toString() });
+                }}
+                className="p-0 bg-transparent rounded-none active:bg-gray-50/50"
+            />
 
-                {/* Info */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center h-16 py-0.5">
-                    <h3 className="font-bold text-[17px] leading-tight truncate text-foreground mb-1">{shop.name}</h3>
-                    <div className="flex items-center text-[13px] text-muted-foreground gap-1.5 truncate">
-                        <span className="truncate">{shop.food_kind}</span>
-                        <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
-                        <span className="truncate">{shop.address_region || shop.address_full?.split(' ')[1]}</span>
-                    </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 self-center pl-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                            "h-9 w-9 p-0 rounded-lg transition-colors",
-                            hasMyRanking
-                                ? "bg-primary/10 text-primary border-primary/20"
-                                : "bg-white border-gray-200 text-gray-600"
-                        )}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            openRanking({ ...shop, my_review_stats: item.my_review_stats });
-                        }}
-                    >
-                        {hasMyRanking ? (
-                            <Check className="w-4 h-4" strokeWidth={2.5} />
-                        ) : (
-                            <PlusCircle className="w-4 h-4" />
-                        )}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                            "h-9 w-9 p-0 rounded-lg border-gray-200",
-                            isSaved ? "text-primary" : "text-gray-400"
-                        )}
-                        onClick={handleToggleSave}
-                    >
-                        <Bookmark className={cn("w-4 h-4", isSaved && "fill-current")} />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Bottom Row: Content (Satisfaction + Rank + Text) */}
-            {(satisfaction || review_text || (typeof rank === 'number' && rank > 0)) && (
-                <div>
-                    {/* Satisfaction Badge + Rank Line */}
-                    {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
-                        <div className="flex items-center gap-2 mb-2">
-                            {/* Badge */}
-                            {(satisfaction || (rankingCount && rankingCount >= 50)) && (
-                                <span className={cn(
-                                    "font-bold px-2 py-0.5 rounded-md border text-xs flex items-center gap-1.5",
-                                    satisfaction === 'good'
-                                        ? "text-orange-600 border-orange-100 bg-orange-50/50"
-                                        : "text-gray-500 border-gray-100 bg-gray-50/50"
-                                )}>
-                                    {satisfaction && t(`write.basic.${satisfaction}`)}
-
-                                    {/* Separator */}
-                                    {satisfaction && typeof rank === 'number' && rank > 0 && getRankingTier(rank, rankingCount) && (
-                                        <span className="opacity-20">|</span>
-                                    )}
-
-                                    {/* Tier Text */}
-                                    {typeof rank === 'number' && rank > 0 && (() => {
-                                        const tier = getRankingTier(rank, rankingCount);
-                                        return tier ? (
-                                            <span>{t('common.top')} {tier}%</span>
-                                        ) : null;
-                                    })()}
-                                </span>
-                            )}
-
-                            {/* Raw Rank if prominent */}
-                            {/* Raw Rank if prominent */}
-                            {typeof rank === 'number' && rank > 0 && (() => {
-                                // Localized Rank Display
-                                const isKo = i18n.language.startsWith('ko');
-                                let rankText = `#${rank}`;
-
-                                if (isKo) {
-                                    rankText = `${rank}위`;
-                                } else {
-                                    // English Ordinals
-                                    const pr = new Intl.PluralRules('en-US', { type: 'ordinal' });
-                                    const suffixes = new Map([
-                                        ['one', 'st'],
-                                        ['two', 'nd'],
-                                        ['few', 'rd'],
-                                        ['other', 'th'],
-                                    ]);
-                                    const rule = pr.select(rank);
-                                    const suffix = suffixes.get(rule);
-                                    rankText = `${rank}${suffix}`;
-                                }
-
-                                return (
-                                    <span className="font-semibold text-xs text-foreground/60">
-                                        {rankText}
-                                    </span>
-                                );
-                            })()}
-                        </div>
-                    )}
-
-                    {/* Review Text */}
-                    {review_text ? (
-                        <div className="relative">
-                            <p className="pl-1 text-xs text-foreground/80 leading-relaxed line-clamp-2">
-                                {review_text}
-                            </p>
-                        </div>
-                    ) : shop.description ? (
-                        <p className="pl-1 text-xs text-muted-foreground line-clamp-2">
-                            {shop.description}
-                        </p>
-                    ) : null}
+            {/* Review Text */}
+            {review_text && (
+                <div className="relative">
+                    <p className="pl-1 text-xs text-foreground/80 leading-relaxed line-clamp-2">
+                        {review_text}
+                    </p>
                 </div>
             )}
         </div>

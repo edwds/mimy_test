@@ -2,12 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, PlusCircle, Check } from 'lucide-react';
+import { Heart, Send, MessageCircle, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
-import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
 import { CommentSheet } from './CommentSheet';
+import { ShopInfoCard } from './ShopInfoCard';
 
 type Satisfaction = 'best' | 'good' | 'ok' | string;
 
@@ -191,8 +191,6 @@ const getDistanceText = (lat1: number, lon1: number, lat2: number, lon2: number)
     return `${d.toFixed(1)}km`;
 };
 
-import { useRanking } from '@/context/RankingContext';
-
 export const ContentCard = ({
     user,
     content,
@@ -204,7 +202,6 @@ export const ContentCard = ({
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const { user: currentUser, optimisticLikes, toggleOptimisticLike, coordinates } = useUser();
-    const { openRanking } = useRanking();
 
     const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
@@ -860,146 +857,28 @@ export const ContentCard = ({
 
 
             {/* Shop Info Card */}
-            {
-                shopName && !hideShopInfo && (
-                    <div
-                        className="mx-5 mb-4 p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative cursor-pointer"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            const sid = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
-                            if (sid) {
-                                const current = new URLSearchParams(window.location.search);
-                                current.set('viewShop', String(sid));
-                                navigate({ search: current.toString() });
-                            }
-                        }}
-                    >
-                        {/* Image Wrapper with Badge */}
-                        <div className="relative flex-shrink-0">
-
-                            <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden">
-                                {shopThumbnail ? (
-                                    <img src={shopThumbnail} alt="Shop" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">🏢</div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <div className="font-bold text-[14px] text-gray-900 truncate">{shopName}</div>
-
-                                {/* Satisfaction after shop name */}
-
-                            </div>
-
-                            <div className="text-[12px] text-gray-500 truncate mt-0.5">
-                                {shopAddress || 'Location Info'}
-                                {coordinates && content.poi?.lat && content.poi?.lon && (
-                                    <>
-                                        <span className="mx-1 opacity-30">|</span>
-                                        <span>{getDistanceText(coordinates.lat, coordinates.lon, content.poi.lat, content.poi.lon)}</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Shop actions: Reserve + Bookmark */}
-                        <div className="flex items-center gap-4 mr-2">
-                            {/* Evaluate Button (Always visible, shows Check icon when completed) */}
-                            <motion.button
-                                type="button"
-                                whileTap={{ scale: 0.9 }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Construct a minimal shop object compatible with RankingOverlay
-                                    // It needs id, name, food_kind/category, image_url/thumbnail_img
-                                    const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
-                                    const shopName = content.poi?.shop_name || content.review_prop?.shop_name;
-
-                                    if (shopId && shopName) {
-                                        const shopData = {
-                                            id: shopId,
-                                            name: shopName,
-                                            address: content.poi?.shop_address || content.review_prop?.shop_address,
-                                            thumbnail_img: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
-                                        };
-                                        openRanking(shopData);
-                                    } else {
-                                        alert("매장 정보를 찾을 수 없습니다.");
-                                    }
-                                }}
-                                className={cn(
-                                    "transition-colors p-1",
-                                    (content.poi?.my_review_stats || content.review_prop?.my_review_stats)
-                                        ? "text-primary"
-                                        : "text-gray-400 hover:text-gray-600"
-                                )}
-                                aria-label="Evaluate"
-                            >
-                                {(content.poi?.my_review_stats || content.review_prop?.my_review_stats) ? (
-                                    <Check size={22} />
-                                ) : (
-                                    <PlusCircle size={22} />
-                                )}
-                            </motion.button>
-
-                            {/* Bookmark Button */}
-                            <motion.button
-                                type="button"
-                                whileTap={{ scale: 0.8 }}
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!currentUser) return;
-
-                                    // Optimistic Update
-                                    const prevBookmarked = isPoiBookmarked;
-                                    setIsPoiBookmarked(!prevBookmarked);
-
-                                    try {
-                                        // Use standardized endpoint: POST /api/shops/:id/save with authFetch
-                                        const shopId = content.poi?.shop_id || (content.review_prop as any)?.shop_id;
-                                        const res = await authFetch(`${API_BASE_URL}/api/shops/${shopId}/save`, {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({})
-                                        });
-
-                                        if (res.ok) {
-                                            const data = await res.json();
-                                            // Sync with true server state to avoid 'opposite' issues
-                                            if (typeof data.is_saved === 'boolean') {
-                                                setIsPoiBookmarked(data.is_saved);
-                                            }
-                                        } else {
-                                            // Revert if request failed
-                                            setIsPoiBookmarked(prevBookmarked);
-                                        }
-                                    } catch (e) {
-                                        console.error(e);
-                                        // Revert on error
-                                        setIsPoiBookmarked(prevBookmarked);
-                                    }
-                                }}
-                                className={cn(
-                                    'transition-colors p-1',
-                                    isPoiBookmarked ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'
-                                )}
-                                aria-label="Bookmark shop"
-                            >
-                                <motion.div
-                                    initial={false}
-                                    animate={{ scale: isPoiBookmarked ? [1, 1.4, 1] : 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <Bookmark size={22} className={cn(isPoiBookmarked && 'fill-orange-600')} />
-                                </motion.div>
-                            </motion.button>
-                        </div>
-                    </div>
-                )
-            }
+            {shopName && !hideShopInfo && (
+                <ShopInfoCard
+                    shop={{
+                        id: content.poi?.shop_id || (content.review_prop as any)?.shop_id,
+                        name: shopName,
+                        address: shopAddress,
+                        thumbnail_img: shopThumbnail
+                    }}
+                    rank={rank}
+                    satisfaction={satisfaction as 'good' | 'ok' | 'bad' | undefined}
+                    visitCount={visitCount}
+                    distance={
+                        coordinates && content.poi?.lat && content.poi?.lon
+                            ? getDistanceText(coordinates.lat, coordinates.lon, content.poi.lat, content.poi.lon)
+                            : undefined
+                    }
+                    initialIsBookmarked={isPoiBookmarked}
+                    my_review_stats={content.poi?.my_review_stats || content.review_prop?.my_review_stats}
+                    showActions={showActions}
+                    className="mx-5 mb-4"
+                />
+            )}
 
             {/* Free Post Badge (if no shop info) */}
 
