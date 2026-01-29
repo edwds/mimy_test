@@ -31,8 +31,14 @@ export const ManageHateScreen = () => {
     }, [user?.id]);
 
     const loadHistory = () => {
+        if (!user?.id) return;
+
         setLoading(true);
-        fetch(`${API_BASE_URL}/api/hate/history?user_id=${user?.id}`)
+        fetch(`${API_BASE_URL}/api/hate/history`, {
+            headers: {
+                'x-user-id': String(user.id)
+            }
+        })
             .then(res => res.json())
             .then(data => setHistory(Array.isArray(data) ? data : []))
             .catch(console.error)

@@ -31,8 +31,14 @@ export const ManageVsScreen = () => {
     }, [user?.id]);
 
     const loadHistory = () => {
+        if (!user?.id) return;
+
         setLoading(true);
-        fetch(`${API_BASE_URL}/api/vs/history?user_id=${user?.id}`)
+        fetch(`${API_BASE_URL}/api/vs/history`, {
+            headers: {
+                'x-user-id': String(user.id)
+            }
+        })
             .then(res => res.json())
             .then(data => setHistory(Array.isArray(data) ? data : []))
             .catch(console.error)

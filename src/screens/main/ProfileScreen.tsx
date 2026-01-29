@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, CloudDownload } from 'lucide-react';
+import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -396,7 +396,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}
-                            icon={<Grid className="w-4 h-4" />}
+                            icon={null}
                             label={t('profile.tabs.content')}
                         />
                         <TabButton
@@ -408,7 +408,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'saved'}
                             onClick={() => handleTabChange('saved')}
-                            icon={<Bookmark className="w-4 h-4" />}
+                            icon={null}
                             label={t('profile.tabs.saved')}
                         />
                     </div>
@@ -423,11 +423,8 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : contents.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 px-6">
-                                    <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
-                                        <Grid className="w-9 h-9 text-muted-foreground/40" />
-                                    </div>
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed max-w-sm">
+                                <div className="flex flex-col items-center justify-center py-12 px-6">
+                                    <p className="text-sm text-center text-muted-foreground">
                                         {t('profile.empty.content', '게시물이 없습니다')}
                                     </p>
                                 </div>
@@ -459,10 +456,27 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'list' && (
                         <div className="pb-20 px-5 pt-4">
-                            {!loadingLists && lists.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 px-6">
+                            {/* Always show button at the top right */}
+                            <div className="mb-4 flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                    onClick={() => navigate('/profile/manage/ranking')}
+                                >
+                                    <ListOrdered className="w-3.5 h-3.5" />
+                                    {t('profile.menu.manage_ranking', 'Manage Ranking')}
+                                </Button>
+                            </div>
+
+                            {loadingLists ? (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : lists.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-8 px-6">
                                     {/* Circular Progress */}
-                                    <div className="relative w-28 h-28 mb-6">
+                                    <div className="relative w-24 h-24 mb-4">
                                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                                             {/* Background circle */}
                                             <circle
@@ -491,124 +505,81 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl font-bold text-foreground">
+                                            <span className="text-xl font-bold text-foreground">
                                                 {user.stats?.ranking_count || 0}
                                             </span>
                                             <span className="text-xs text-muted-foreground">/ 30</span>
                                         </div>
                                     </div>
 
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6 max-w-sm">
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-3 max-w-sm">
                                         {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요')}
                                     </p>
 
-                                    <p className="text-xs text-center text-muted-foreground/80">
+                                    <p className="text-xs text-center text-muted-foreground/70">
                                         {30 - (user.stats?.ranking_count || 0) > 0
                                             ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
                                             : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
                                         }
                                     </p>
-
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-1.5 h-9 text-sm font-semibold rounded-full border-gray-300 mt-6"
-                                        onClick={() => navigate('/profile/manage/ranking')}
-                                    >
-                                        <ListOrdered className="w-4 h-4" />
-                                        {t('profile.menu.manage_ranking', 'Manage Ranking')}
-                                    </Button>
                                 </div>
                             ) : (
-                                <>
-                                    <div className="mb-4 flex justify-end">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
-                                            onClick={() => navigate('/profile/manage/ranking')}
-                                        >
-                                            <ListOrdered className="w-3.5 h-3.5" />
-                                            {t('profile.menu.manage_ranking', 'Manage Ranking')}
-                                        </Button>
-                                    </div>
+                                lists.map((list) => (
+                                    <ListCard
+                                        key={list.id}
+                                        id={list.id}
+                                        type={list.type}
+                                        title={list.title}
+                                        count={list.count}
+                                        updatedAt={list.updated_at}
+                                        author={list.author}
+                                        onPress={() => {
+                                            const query = new URLSearchParams(searchParams);
+                                            query.set('viewListUser', String(user.id));
 
-                                    {lists.map((list) => (
-                                        <ListCard
-                                            key={list.id}
-                                            id={list.id}
-                                            type={list.type}
-                                            title={list.title}
-                                            count={list.count}
-                                            updatedAt={list.updated_at}
-                                            author={list.author}
-                                            onPress={() => {
-                                                const query = new URLSearchParams(searchParams);
-                                                query.set('viewListUser', String(user.id));
+                                            // Set list params
+                                            query.set('type', list.type);
+                                            if (list.value) query.set('value', list.value);
+                                            if (list.title) query.set('title', list.title);
 
-                                                // Set list params
-                                                query.set('type', list.type);
-                                                if (list.value) query.set('value', list.value);
-                                                if (list.title) query.set('title', list.title);
-
-                                                // Navigate while keeping current path (keeps activeTab='profile')
-                                                navigate({ search: query.toString() });
-                                            }}
-                                        />
-                                    ))}
-                                </>
-                            )}
-
-                            {loadingLists && (
-                                <div className="flex justify-center py-20">
-                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                                </div>
+                                            // Navigate while keeping current path (keeps activeTab='profile')
+                                            navigate({ search: query.toString() });
+                                        }}
+                                    />
+                                ))
                             )}
                         </div>
                     )}
 
                     {activeTab === 'saved' && (
                         <div className="pb-20 px-5 pt-4">
+                            {/* Always show button at the top right */}
+                            <div className="mb-4 flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                    onClick={() => navigate('/profile/import')}
+                                >
+                                    <CloudDownload className="w-3.5 h-3.5" />
+                                    {t('profile.import_btn', '장소 가져오기')}
+                                </Button>
+                            </div>
+
                             {loadingSaved ? (
                                 <div className="flex justify-center py-20">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : savedShops.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 px-6">
-                                    <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
-                                        <Bookmark className="w-9 h-9 text-muted-foreground/40" />
-                                    </div>
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6 max-w-sm">
+                                <div className="flex flex-col items-center justify-center py-8 px-6">
+                                    <p className="text-sm text-center text-muted-foreground">
                                         {t('profile.empty.saved', '저장된 장소가 없습니다.')}
                                     </p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-1.5 h-9 text-sm font-semibold rounded-full border-gray-300"
-                                        onClick={() => navigate('/profile/import')}
-                                    >
-                                        <CloudDownload className="w-4 h-4" />
-                                        {t('profile.import_btn', '장소 가져오기')}
-                                    </Button>
                                 </div>
                             ) : (
-                                <>
-                                    <div className="mb-4 flex justify-end">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
-                                            onClick={() => navigate('/profile/import')}
-                                        >
-                                            <CloudDownload className="w-3.5 h-3.5" />
-                                            {t('profile.import_btn')}
-                                        </Button>
-                                    </div>
-
-                                    {savedShops.map((shop: any) => (
-                                        <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
-                                    ))}
-                                </>
+                                savedShops.map((shop: any) => (
+                                    <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
+                                ))
                             )}
                         </div>
                     )}
@@ -627,7 +598,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     );
 };
 
-const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
+const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode | null; label: string }) => (
     <button
         onClick={onClick}
         className={cn(
