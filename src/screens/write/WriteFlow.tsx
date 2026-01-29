@@ -12,10 +12,14 @@ import { Capacitor } from '@capacitor/core';
 import { getAccessToken } from '@/lib/tokenStorage';
 
 export const WriteFlow = () => {
+    console.log('[WriteFlow] Component rendering');
+
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
     const location = useLocation();
+    console.log('[WriteFlow] Location:', location.pathname, 'State:', location.state);
+
     const { openRanking, isRankingOpen, registerCallback, unregisterCallback } = useRanking();
 
     const initialShopId = searchParams.get('shop_id');
@@ -70,65 +74,66 @@ export const WriteFlow = () => {
         }
     }, [initialShopId, navigate, openRanking]);
 
-    // Store the latest satisfaction data from ranking
-    const rankingDataRef = useRef<any>(null);
-
-    // Use ref to store callback handler - prevents unmounting on state change
-    const handleRankingCompleteRef = useRef((data: any) => {
-        console.log('[WriteFlow] Ranking complete callback received:', data);
-
-        // Store data in ref instead of immediately updating state
-        rankingDataRef.current = data;
-    });
-
-    // Update ref on every render to capture latest closure
-    handleRankingCompleteRef.current = (data: any) => {
-        console.log('[WriteFlow] Ranking complete callback received:', data);
-        rankingDataRef.current = data;
-    };
-
-    // Watch for ranking overlay close and transition to write content
-    useEffect(() => {
-        if (!isRankingOpen && rankingDataRef.current && step === 'SEARCH_SHOP') {
-            console.log('[WriteFlow] Ranking closed, transitioning to WRITE_CONTENT with data:', rankingDataRef.current);
-
-            const data = rankingDataRef.current;
-
-            // Update satisfaction from ranking data
-            if (data.my_review_stats?.satisfaction !== undefined) {
-                const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
-                    0: 'bad',
-                    1: 'ok',
-                    2: 'good'
-                };
-                const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
-                setSatisfaction(newSatisfaction);
-            }
-
-            // Move to write content step
-            setStep('WRITE_CONTENT');
-
-            // Clear the ref
-            rankingDataRef.current = null;
-        }
-    }, [isRankingOpen, step]);
+    // Track if callback has been processed to prevent duplicate state updates
+    const callbackProcessedRef = useRef(false);
+    const isMountedRef = useRef(true);
 
     // Register callback for ranking completion - only once on mount
     useEffect(() => {
-        console.log('[WriteFlow] Registering ranking callback');
+        console.log('[WriteFlow] Mounting, registering ranking callback');
+        isMountedRef.current = true;
 
-        // Register a stable wrapper that calls the ref
-        const stableCallback = (data: any) => {
-            handleRankingCompleteRef.current(data);
+        const handleRankingComplete = (data: any) => {
+            console.log('[WriteFlow] Ranking complete callback received:', data);
+            console.log('[WriteFlow] isMounted:', isMountedRef.current, 'callbackProcessed:', callbackProcessedRef.current);
+
+            // Prevent duplicate processing
+            if (callbackProcessedRef.current) {
+                console.log('[WriteFlow] Callback already processed, skipping');
+                return;
+            }
+
+            if (!isMountedRef.current) {
+                console.log('[WriteFlow] Component not mounted, skipping callback');
+                return;
+            }
+
+            callbackProcessedRef.current = true;
+
+            // Use setTimeout to ensure state updates happen after RankingContext cleanup
+            setTimeout(() => {
+                if (!isMountedRef.current) {
+                    console.log('[WriteFlow] Component unmounted during timeout, skipping state update');
+                    return;
+                }
+
+                console.log('[WriteFlow] Processing ranking data, transitioning to WRITE_CONTENT');
+
+                // Update satisfaction from ranking data
+                if (data.my_review_stats?.satisfaction !== undefined) {
+                    const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
+                        0: 'bad',
+                        1: 'ok',
+                        2: 'good'
+                    };
+                    const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
+                    setSatisfaction(newSatisfaction);
+                }
+
+                // Move to write content step
+                setStep('WRITE_CONTENT');
+            }, 100); // Increased delay to 100ms
         };
 
-        registerCallback('WriteFlow', stableCallback);
+        registerCallback('WriteFlow', handleRankingComplete);
 
         return () => {
-            console.log('[WriteFlow] Component unmounting, unregistering callback');
+            console.log('[WriteFlow] Unmounting, unregistering callback');
+            isMountedRef.current = false;
             unregisterCallback('WriteFlow');
+            callbackProcessedRef.current = false;
         };
-    }, []); // Empty deps - only register on mount, unregister on unmount
+    }, []); // Empty deps - only register once on mount
 
     // Handlers
     const handleShopSelect = (shop: any) => {

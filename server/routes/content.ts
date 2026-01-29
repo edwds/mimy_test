@@ -729,6 +729,26 @@ router.post("/ranking/apply", requireAuth, async (req, res) => {
                 .where(and(eq(users_ranking.user_id, user_id), gt(users_ranking.satisfaction_tier, new_tier)));
             const higherTierCount = Number(higherTierCountRes[0]?.count || 0);
 
+            console.log('[Ranking Apply] Calculation:', {
+                user_id,
+                shop_id,
+                satisfaction,
+                new_tier,
+                higherTierCount,
+                insert_index,
+                calculated_rank: higherTierCount + insert_index + 1
+            });
+
+            // Debug: Check what tiers exist
+            const tierDebug = await tx.select({
+                tier: users_ranking.satisfaction_tier,
+                count: sql<number>`count(*)`
+            })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, user_id))
+                .groupBy(users_ranking.satisfaction_tier);
+            console.log('[Ranking Apply] Tier distribution:', tierDebug);
+
             const new_global_rank = higherTierCount + insert_index + 1;
 
             await tx.update(users_ranking)
