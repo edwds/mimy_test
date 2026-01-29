@@ -10,6 +10,7 @@ import { ShopService } from '@/services/ShopService';
 import { useRanking } from '@/context/RankingContext';
 import { Capacitor } from '@capacitor/core';
 import { getAccessToken } from '@/lib/tokenStorage';
+import { useUser } from '@/context/UserContext';
 
 export const WriteFlow = () => {
     console.log('[WriteFlow] Component rendering');
@@ -21,6 +22,7 @@ export const WriteFlow = () => {
     console.log('[WriteFlow] Location:', location.pathname, 'State:', location.state);
 
     const { openRanking, isRankingOpen, registerCallback, unregisterCallback } = useRanking();
+    const { user } = useUser();
 
     const initialShopId = searchParams.get('shop_id');
     const locationState = location.state as { step?: string; shop?: any; satisfaction?: any } | undefined;
@@ -38,8 +40,9 @@ export const WriteFlow = () => {
         return 'SEARCH_SHOP';
     });
 
-    // Get real user ID
-    const currentUserId = Number(localStorage.getItem("mimy_user_id") || 0);
+    // Get real user ID from context
+    const currentUserId = user?.id || 0;
+    console.log('[WriteFlow] Current user ID:', currentUserId);
 
     // Sync state with location updates (Critical for same-route navigation from RankingContext)
     useEffect(() => {
