@@ -470,7 +470,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     onClick={() => navigate('/profile/manage/ranking')}
                                 >
                                     <ListOrdered className="w-3.5 h-3.5" />
-                                    {t('profile.manage_ranking', 'Manage Ranking')}
+                                    {t('profile.menu.manage_ranking', 'Manage Ranking')}
                                 </Button>
                             </div>
 
@@ -501,7 +501,9 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             {!loadingLists && lists.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                                     <List className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">{t('profile.empty.lists')}</p>
+                                    <p className="text-sm text-center px-8 leading-relaxed">
+                                        {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요')}
+                                    </p>
                                 </div>
                             )}
 

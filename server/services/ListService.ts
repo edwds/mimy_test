@@ -29,7 +29,8 @@ export const ListService = {
             .limit(1);
         const lastUpdated = latestUpdateRes[0]?.updated_at || new Date();
 
-        if (overallCount >= 10) {
+        const minRankings = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
+        if (overallCount >= minRankings) {
             resultLists.push({
                 id: 'overall',
                 type: 'OVERALL',

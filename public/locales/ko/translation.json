@@ -261,6 +261,7 @@
         "empty": {
             "content": "게시물이 없습니다",
             "lists": "공개된 리스트가 없습니다",
+            "lists_requirement": "30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요",
             "shared": "함께 저장한 장소가 없습니다.",
             "saved": "저장된 장소가 없습니다.",
             "list_detail": "이 리스트에 항목이 없습니다."
@@ -279,7 +280,8 @@
             "quiz_confirm": "퀴즈를 다시 진행하면 취향 프로필이 업데이트됩니다. 계속하시겠습니까?",
             "coming_soon": "준비 중입니다!",
             "manage_vs": "호불호 관리",
-            "manage_hate": "못 먹는 음식 관리"
+            "manage_hate": "못 먹는 음식 관리",
+            "manage_ranking": "랭킹 관리"
         },
         "manage": {
             "vs": {
@@ -299,6 +301,7 @@
             "ranking": {
                 "title": "랭킹 관리",
                 "warning": "랭킹을 삭제하면 작성된 리뷰도 함께 삭제됩니다.",
+                "confirm_delete": "랭킹을 삭제하시겠습니까?",
                 "confirm_delete_desc": "이 작업은 되돌릴 수 없습니다. 관련된 리뷰도 영구적으로 삭제됩니다."
             }
         },

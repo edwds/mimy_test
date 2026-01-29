@@ -154,7 +154,7 @@ export const ManageRankingScreen = () => {
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                     <ArrowLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold">{t('profile.manage_ranking', 'Manage Ranking')}</h1>
+                <h1 className="text-lg font-bold">{t('profile.menu.manage_ranking', 'Manage Ranking')}</h1>
                 <Button
                     variant="ghost"
                     size="sm"
@@ -170,7 +170,7 @@ export const ManageRankingScreen = () => {
             <div className="bg-orange-50 p-4 text-xs text-orange-800 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>
-                    {t('profile.manage_ranking_warning', 'Deleting a ranking will also delete the associated review.')}
+                    {t('profile.manage.ranking.warning', 'Deleting a ranking will also delete the associated review.')}
                 </span>
             </div>
 
@@ -212,9 +212,9 @@ export const ManageRankingScreen = () => {
             {deleteTargetId && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6 animate-in fade-in">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl scale-100">
-                        <h3 className="font-bold text-lg mb-2">{t('common.confirm_delete', 'Delete Ranking?')}</h3>
+                        <h3 className="font-bold text-lg mb-2">{t('profile.manage.ranking.confirm_delete', 'Delete Ranking?')}</h3>
                         <p className="text-sm text-gray-600 mb-6">
-                            {t('profile.confirm_delete_ranking_desc', 'This action cannot be undone. The associated review will also be deleted.')}
+                            {t('profile.manage.ranking.confirm_delete_desc', 'This action cannot be undone. The associated review will also be deleted.')}
                         </p>
                         <div className="flex gap-3">
                             <Button

@@ -253,6 +253,7 @@
         "empty": {
             "content": "No contents yet",
             "lists": "No public lists",
+            "lists_requirement": "Complete 30+ rankings to create your personalized restaurant ranking list",
             "shared": "No shared saved places found.",
             "saved": "No saved places.",
             "list_detail": "No items in this list."
@@ -271,7 +272,8 @@
             "quiz_confirm": "Retaking the quiz will update your taste profile. Continue?",
             "coming_soon": "Coming soon!",
             "manage_vs": "Manage Preferences",
-            "manage_hate": "Manage Dislikes"
+            "manage_hate": "Manage Dislikes",
+            "manage_ranking": "Manage Ranking"
         },
         "manage": {
             "vs": {
@@ -287,6 +289,12 @@
                 "vote_more": "Check more foods",
                 "eat": "Eat",
                 "not_eat": "Don't Eat"
+            },
+            "ranking": {
+                "title": "Manage Ranking",
+                "warning": "Deleting a ranking will also delete the associated review.",
+                "confirm_delete": "Delete Ranking?",
+                "confirm_delete_desc": "This action cannot be undone. The associated review will also be deleted."
             }
         },
         "settings": {
