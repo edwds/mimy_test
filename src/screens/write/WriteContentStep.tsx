@@ -160,7 +160,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 try {
                     console.log('[WriteContentStep] Starting upload for file:', file.name, 'size:', file.size, 'type:', file.type);
 
-                    // iOS Fix: Verify file is valid before upload
+                    // Verify file is valid before upload
                     if (!file.size || file.size === 0) {
                         console.error('[WriteContentStep] ❌ File is empty, skipping upload');
                         setMediaItems(prev => prev.map(m =>
@@ -170,65 +170,42 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     }
 
                     const formData = new FormData();
-                    // iOS Fix: Explicitly specify filename as third parameter
                     formData.append('file', file, file.name);
 
                     // Get auth token for native platforms
                     const token = await getAccessToken();
                     console.log('[WriteContentStep] Token available:', !!token);
 
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', `${API_BASE_URL}/api/upload`);
-
-                    // Add auth header if token exists (native platform)
+                    // Build headers
+                    const headers: Record<string, string> = {};
                     if (token) {
-                        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                        headers['Authorization'] = `Bearer ${token}`;
                         console.log('[WriteContentStep] Added auth header');
-                    } else {
-                        // For web: credentials are sent via cookies
-                        xhr.withCredentials = true;
                     }
 
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            const percent = (e.loaded / e.total) * 100;
-                            setMediaItems(prev => prev.map(m =>
-                                m.id === item.id ? { ...m, progress: percent } : m
-                            ));
-                        }
-                    };
+                    console.log('[WriteContentStep] Starting fetch upload...');
+                    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+                        method: 'POST',
+                        headers,
+                        body: formData,
+                        credentials: token ? undefined : 'include' // Use credentials for web only
+                    });
 
-                    xhr.onload = () => {
-                        console.log('[WriteContentStep] Upload response status:', xhr.status);
-                        if (xhr.status === 200) {
-                            try {
-                                const data = JSON.parse(xhr.response);
-                                console.log('[WriteContentStep] ✅ Upload success:', data.url);
-                                setMediaItems(prev => prev.map(m =>
-                                    m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
-                                ));
-                            } catch (e) {
-                                console.error('[WriteContentStep] ❌ Failed to parse response:', e);
-                                setMediaItems(prev => prev.map(m =>
-                                    m.id === item.id ? { ...m, status: 'error' } : m
-                                ));
-                            }
-                        } else {
-                            console.error('[WriteContentStep] ❌ Upload failed:', xhr.status, xhr.responseText);
-                            setMediaItems(prev => prev.map(m =>
-                                m.id === item.id ? { ...m, status: 'error' } : m
-                            ));
-                        }
-                    };
+                    console.log('[WriteContentStep] Upload response status:', response.status);
 
-                    xhr.onerror = () => {
-                        console.error('[WriteContentStep] ❌ Upload network error');
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('[WriteContentStep] ✅ Upload success:', data.url);
+                        setMediaItems(prev => prev.map(m =>
+                            m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                        ));
+                    } else {
+                        const errorText = await response.text();
+                        console.error('[WriteContentStep] ❌ Upload failed:', response.status, errorText);
                         setMediaItems(prev => prev.map(m =>
                             m.id === item.id ? { ...m, status: 'error' } : m
                         ));
-                    };
-
-                    xhr.send(formData);
+                    }
                 } catch (error) {
                     console.error('[WriteContentStep] ❌ Upload exception:', error);
                     setMediaItems(prev => prev.map(m =>
