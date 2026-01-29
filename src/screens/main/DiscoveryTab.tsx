@@ -53,6 +53,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Track if initial load is done to prevent unwanted fetches on map center changes
     const [initialLoadDone, setInitialLoadDone] = useState(false);
 
+    // Track if user has performed a search (to change bottom sheet title)
+    const [hasSearched, setHasSearched] = useState(false);
+
     const fetchShops = async (options: { hideSearchButton?: boolean; excludeRanked?: boolean; useBounds?: boolean } = {}) => {
         const { hideSearchButton = false, excludeRanked = true, useBounds = false } = options;
 
@@ -84,6 +87,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
                 // Reset selected shop to show bottom sheet with new results
                 setSelectedShopId(null);
+
+                // Mark as searched when using bounds (Search Here button)
+                if (useBounds) {
+                    setHasSearched(true);
+                }
 
                 // If switching to saved and we have data, maybe center on the first one?
                 if (showSavedOnly && data.length > 0 && data[0].lat && data[0].lon) {
@@ -437,6 +445,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     shops={shops}
                     selectedShopId={null}
                     onSave={handleSave}
+                    isInitialLoad={!hasSearched && !showSavedOnly}
                 />
             )}
 

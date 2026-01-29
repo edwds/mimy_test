@@ -42,11 +42,12 @@ interface Props {
     shops: any[];
     selectedShopId?: number | null;
     onSave?: (id: number) => void;
+    isInitialLoad?: boolean; // Flag to indicate if this is the initial discovery load
 }
 
-export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
-    // 0: Collapsed (just peek), 1: List View (half), 2: Expanded (full)
-    const [snapState, setSnapState] = useState<'peek' | 'half' | 'full'>('half');
+export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad = false }: Props) => {
+    // 0: Collapsed (just peek), 1: List View (half), 2: Expanded (80%)
+    const [snapState, setSnapState] = useState<'peek' | 'half' | 'expanded'>('half');
     const controls = useAnimation();
     const dragControls = useDragControls();
     const sheetRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         const variants = {
             peek: { y: "calc(100% - 130px)" }, // Peek height
             half: { y: "50%" },
-            full: { y: "calc(env(safe-area-inset-top) + 110px)" } // Stop below search bar
+            expanded: { y: "20%" } // Max 80% of screen height
         };
         controls.start(variants[snapState]);
     }, [snapState, controls]);
@@ -78,21 +79,20 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
         const velocity = info.velocity.y;
         const currentY = sheetRef.current?.getBoundingClientRect().y || 0;
         const screenH = window.innerHeight;
-        // Adjust ratio calc since full is not 0
         const ratio = currentY / screenH;
 
         // Velocity threshold for flicks
         if (velocity < -400) { // Flick Up
             if (snapState === 'peek') setSnapState('half');
-            else setSnapState('full');
+            else setSnapState('expanded');
         } else if (velocity > 400) { // Flick Down
-            if (snapState === 'full') setSnapState('half');
+            if (snapState === 'expanded') setSnapState('half');
             else setSnapState('peek');
         } else {
-            // Position based snapping
-            if (ratio > 0.8) setSnapState('peek');
-            else if (ratio > 0.4) setSnapState('half'); // slightly higher threshold
-            else setSnapState('full');
+            // Position based snapping (3 states: peek, half, expanded)
+            if (ratio > 0.65) setSnapState('peek');      // > 65% = peek
+            else if (ratio > 0.35) setSnapState('half');  // 35-65% = half
+            else setSnapState('expanded');                // < 35% = expanded (max 80%)
         }
     };
 
@@ -106,8 +106,8 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
             dragControls={dragControls}
             dragListener={false} // Only allow drag from specific areas
             dragMomentum={false} // Prevent overshooting
-            dragConstraints={{ top: 0 }} // Allow full range, snap back prevents getting stuck
-            dragElastic={0.05} // Stiffer resistance
+            dragConstraints={{ top: 0, bottom: 0 }} // Constrain within bounds
+            dragElastic={{ top: 0.05, bottom: 0.2 }} // Stiffer resistance at top
             onDragEnd={handleDragEnd}
             className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform rounded-t-3xl`}
             style={{ touchAction: 'none' }}
@@ -124,19 +124,27 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
 
                 {/* Header */}
                 <div
-                    className="flex justify-between items-center mb-0 px-5 pb-4"
+                    className="flex flex-col mb-0 px-5 pb-4"
                     onPointerDown={(e) => dragControls.start(e)}
                 >
                     <h2 className="text-lg font-bold">
-                        {selectedShopId ? t('discovery.bottom_sheet.selected_shop') : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
+                        {selectedShopId
+                            ? t('discovery.bottom_sheet.selected_shop')
+                            : isInitialLoad
+                                ? t('discovery.bottom_sheet.initial_title')
+                                : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
                     </h2>
-                    {/* Close button removed as requested */}
+                    {!selectedShopId && isInitialLoad && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {t('discovery.bottom_sheet.initial_subtitle')}
+                        </p>
+                    )}
                 </div>
             </div>
 
-            {/* Content (Scrollable only when full) */}
+            {/* Content (Scrollable only when expanded) */}
             <div
-                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'full' ? 'overflow-y-auto' : 'overflow-hidden touch-none pointer-events-none'
+                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'expanded' ? 'overflow-y-auto' : 'overflow-hidden touch-none pointer-events-none'
                     }`}
                 // Re-enable pointer events for clicks even when hidden, but prevent scroll?
                 // Actually 'pointer-events-none' kills clicks. We want clicks.
@@ -144,11 +152,11 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave }: Props) => {
                 style={{
                     pointerEvents: 'auto'
                 }}
-                data-scroll-container={snapState === 'full' ? "true" : undefined}
+                data-scroll-container={snapState === 'expanded' ? "true" : undefined}
                 onPointerDown={(e) => {
-                    // Allow dragging content only if not full (e.g. peek/half state)
+                    // Allow dragging content only if not expanded (e.g. peek/half state)
                     // Or if we are at the very top and pulling down? (Hard to detect reliably without blocking scroll)
-                    if (snapState !== 'full') {
+                    if (snapState !== 'expanded') {
                         dragControls.start(e);
                     }
                 }}

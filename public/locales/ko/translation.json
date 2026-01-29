@@ -197,6 +197,8 @@
         "bottom_sheet": {
             "selected_shop": "선택된 매장",
             "nearby_shops": "주변 맛집 {{count}}곳",
+            "initial_title": "아직 안가보셨다면 여긴 어때요",
+            "initial_subtitle": "방문하지 않은 곳 중 좋아할 것 같은 곳이에요",
             "no_shop_info": "매장 정보를 찾을 수 없습니다.",
             "no_nearby": "주변에 맛집이 없습니다.",
             "reserve_alert": "캐치테이블 예약 준비중"

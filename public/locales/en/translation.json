@@ -189,6 +189,8 @@
         "bottom_sheet": {
             "selected_shop": "Selected Shop",
             "nearby_shops": "Nearby Shops {{count}}",
+            "initial_title": "How about trying these?",
+            "initial_subtitle": "Places you haven't visited that match your taste",
             "no_shop_info": "Shop info not found.",
             "no_nearby": "No shops nearby.",
             "reserve_alert": "CatchTable reservation coming soon"
