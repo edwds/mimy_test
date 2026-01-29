@@ -10,7 +10,7 @@ import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
 import { cn, formatVisitDate } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
-import { Share as CapacitorShare } from '@capacitor/core';
+import { Share as CapacitorShare } from '@capacitor/share';
 import { authFetch } from '@/lib/authFetch';
 
 interface ListItem {
