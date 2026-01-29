@@ -16,10 +16,37 @@ export const SettingsScreen = () => {
     const [newId, setNewId] = useState('');
     const [savingId, setSavingId] = useState(false);
 
-    const handleLogout = () => {
-        if (window.confirm(t('profile.menu.logout_confirm'))) {
-            logout();
-            navigate('/login');
+    const handleLogout = async () => {
+        console.log('[SettingsScreen] Logout button clicked');
+
+        try {
+            // Use native dialog on mobile, browser confirm on web
+            let confirmed = false;
+
+            if (Capacitor.isNativePlatform()) {
+                const result = await Dialog.confirm({
+                    title: t('profile.menu.logout_confirm') || 'Are you sure you want to logout?',
+                    message: '',
+                    okButtonTitle: t('common.confirm') || 'OK',
+                    cancelButtonTitle: t('common.cancel') || 'Cancel'
+                });
+                confirmed = result.value;
+                console.log('[SettingsScreen] Native dialog result:', confirmed);
+            } else {
+                confirmed = window.confirm(t('profile.menu.logout_confirm'));
+                console.log('[SettingsScreen] Web confirm result:', confirmed);
+            }
+
+            if (confirmed) {
+                console.log('[SettingsScreen] Logout confirmed, calling logout()');
+                await logout();
+                console.log('[SettingsScreen] Logout completed');
+                // Note: logout() already redirects to /start via window.location.href
+            } else {
+                console.log('[SettingsScreen] Logout cancelled');
+            }
+        } catch (error) {
+            console.error('[SettingsScreen] Logout error:', error);
         }
     };
 
