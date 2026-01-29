@@ -297,8 +297,8 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             {/* POI + Ranking Bundle */}
                             <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6 flex flex-col items-center gap-4">
                                 <div className="flex flex-col items-center text-center gap-2">
-                                    {shop.thumbnail_img ? (
-                                        <img src={shop.thumbnail_img} alt={shop.name} className="w-20 h-20 rounded-2xl object-cover bg-gray-100 border border-gray-100 shadow-sm" />
+                                    {(shop.thumbnail_img || shop.image_url) ? (
+                                        <img src={shop.thumbnail_img || shop.image_url} alt={shop.name} className="w-20 h-20 rounded-2xl object-cover bg-gray-100 border border-gray-100 shadow-sm" />
                                     ) : (
                                         <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center text-3xl">🏪</div>
                                     )}

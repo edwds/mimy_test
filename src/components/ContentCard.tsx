@@ -923,8 +923,7 @@ export const ContentCard = ({
                                             id: shopId,
                                             name: shopName,
                                             address: content.poi?.shop_address || content.review_prop?.shop_address,
-                                            image_url: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
-                                            // food_kind might be missing in content card data, but POI usually has basics
+                                            thumbnail_img: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
                                         };
                                         openRanking(shopData);
                                     } else {
