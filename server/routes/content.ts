@@ -6,6 +6,7 @@ import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import { ListService } from "../services/ListService.js";
 import { LeaderboardService } from "../services/LeaderboardService.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
+import { getShopReviewStats } from "../utils/enricher.js";
 
 const router = Router();
 

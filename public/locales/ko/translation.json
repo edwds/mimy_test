@@ -274,7 +274,7 @@
             "list_detail": "이 리스트에 항목이 없습니다."
         },
         "list_detail": {
-            "items_count": "개의 맛집"
+            "items_count": "{{count}}개의 맛집"
         },
         "shared_count": "함께 <strong>{{count}}</strong>곳을 저장했어요!",
         "menu": {

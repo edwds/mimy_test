@@ -86,12 +86,18 @@ router.get("/:code", async (req, res) => {
                 profile_image: users.profile_image
             }).from(users).where(eq(users.id, userId)).limit(1);
 
+            // 4. Get most recent updated_at from items
+            const mostRecentUpdate = items.length > 0 && items[0].updated_at
+                ? items[0].updated_at
+                : null;
+
             return {
                 items,
                 author: user[0],
                 title,
                 type,
-                value
+                value,
+                updated_at: mostRecentUpdate
             };
         }, 600); // Cache for 10 minutes
 

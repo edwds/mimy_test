@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Loader2, Calendar, Bookmark, Share } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle, Bookmark, Share, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL, WEB_BASE_URL } from '@/lib/api';
 import { ShopService } from '@/services/ShopService';
 import { UserService } from '@/services/UserService';
 import { useUser } from '@/context/UserContext';
-import { cn } from '@/lib/utils';
+import { useRanking } from '@/context/RankingContext';
+import { cn, formatVisitDate } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
-import { Share as CapacitorShare } from '@capacitor/share';
+import { Share as CapacitorShare } from '@capacitor/core';
 import { authFetch } from '@/lib/authFetch';
 
 interface ListItem {
@@ -17,8 +18,15 @@ interface ListItem {
     satisfaction: string;
     shop: any;
     satisfaction_tier: number;
+    updated_at?: string;
     review_text?: string;
     review_images?: string[] | string; // jsonb array of strings, or string if raw
+    my_review_stats?: {
+        satisfaction: number;
+        rank: number;
+        percentile: number;
+        total_reviews: number;
+    } | null;
 }
 
 interface ListAuthor {
@@ -27,7 +35,9 @@ interface ListAuthor {
     profile_image?: string;
     stats?: {
         content_count: number;
+        ranking_count: number;
     };
+    updated_at?: string;
 }
 
 interface ListDetailProps {
@@ -65,6 +75,8 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     // However, usually userId is available. Let's fetch basic user info if we can.
     const [author, setAuthor] = useState<ListAuthor | null>(null);
     const [savedShopIds, setSavedShopIds] = useState<Set<number>>(new Set());
+    const [myRankings, setMyRankings] = useState<Map<number, any>>(new Map());
+    const [listUpdatedAt, setListUpdatedAt] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchEverything = async () => {
@@ -72,12 +84,27 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
             setLoading(true);
             try {
-                // 0. Fetch My Saved Shops (to check bookmark status)
+                // 0. Fetch My Saved Shops & Rankings (to check bookmark and ranking status)
                 if (user?.id) {
                     const saved = await UserService.getSavedShops(user.id);
                     // Ensure we map to numbers
                     const ids = new Set<number>(saved.map((s: any) => Number(s.id)));
                     setSavedShopIds(ids);
+
+                    // Fetch my rankings
+                    try {
+                        const rankRes = await authFetch(`${API_BASE_URL}/api/ranking/user/${user.id}`);
+                        if (rankRes.ok) {
+                            const rankings = await rankRes.json();
+                            const rankMap = new Map();
+                            rankings.forEach((r: any) => {
+                                rankMap.set(r.shop_id, r);
+                            });
+                            setMyRankings(rankMap);
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch rankings:', e);
+                    }
                 }
 
                 if (code) {
@@ -87,6 +114,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         const data = await res.json();
                         setItems(data.items);
                         setAuthor(data.author);
+                        setListUpdatedAt(data.updated_at);
 
                         // Dynamic Title Generation
                         let displayTitle = data.title;
@@ -109,11 +137,14 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         setAuthor(userData);
                     }
 
-                    // 2. Fetch List Items
+                    // 2. Fetch List Items with my ranking info
                     const query = new URLSearchParams({
                         type: listType,
                         value: listValue
                     });
+                    if (user?.id) {
+                        query.set('viewer_id', String(user.id));
+                    }
 
                     // Also set title for non-shared view if it's generic "Ranking"
                     if (title === 'Ranking' || !searchParams.get('title')) {
@@ -127,6 +158,11 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     if (listRes.ok) {
                         const listData = await listRes.json();
                         setItems(listData);
+
+                        // Get most recent updated_at from items
+                        if (listData.length > 0 && listData[0].updated_at) {
+                            setListUpdatedAt(listData[0].updated_at);
+                        }
                     }
                 }
             } catch (error) {
@@ -254,10 +290,10 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 -ml-2 transition-colors hover:bg-transparent",
+                            "rounded-full w-10 h-10 -ml-2 transition-colors",
                             isScrolled
-                                ? "text-foreground hover:text-foreground"
-                                : "text-white hover:text-white"
+                                ? "text-foreground hover:text-foreground hover:bg-muted"
+                                : "text-white hover:text-white bg-black/30 backdrop-blur-sm hover:bg-black/40"
                         )}
                         onClick={handleBack}
                     >
@@ -280,10 +316,10 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 transition-colors hover:bg-transparent",
+                            "rounded-full w-10 h-10 transition-colors",
                             isScrolled
-                                ? "text-foreground hover:text-foreground"
-                                : "text-white hover:text-white"
+                                ? "text-foreground hover:text-foreground hover:bg-muted"
+                                : "text-white hover:text-white bg-black/30 backdrop-blur-sm hover:bg-black/40"
                         )}
                         onClick={handleShare}
                     >
@@ -341,23 +377,29 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                                 </h1>
 
                                 {/* Meta Info */}
-                                <div className="flex items-center gap-1 text-sm text-foreground/80 font-medium">
+                                <div className="flex items-center gap-2 text-sm text-foreground/80 font-medium flex-wrap">
                                     {author && (
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-6 h-6 rounded-full bg-muted overflow-hidden border border-white/10">
-                                                {author.profile_image ? (
-                                                    <img src={author.profile_image} alt={author.nickname} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-gray-500" />
-                                                )}
+                                        <>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-6 h-6 rounded-full bg-muted overflow-hidden border border-white/10">
+                                                    {author.profile_image ? (
+                                                        <img src={author.profile_image} alt={author.nickname} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gray-500" />
+                                                    )}
+                                                </div>
+                                                <span className="text-foreground font-semibold">{author.nickname}</span>
                                             </div>
-                                            <span className="text-foreground hover:underline">{author.nickname}</span>
-                                        </div>
+                                            <span className="text-foreground/40">•</span>
+                                        </>
                                     )}
-                                    <span className="text-foreground/40">•</span>
-                                    <span>{items.length} spots</span>
-                                    <span className="text-foreground/40">•</span>
-                                    <span>{new Date().toLocaleDateString()}</span>
+                                    <span>{t('profile.list_detail.items_count', '{{count}} spots', { count: items.length })}</span>
+                                    {listUpdatedAt && (
+                                        <>
+                                            <span className="text-foreground/40">•</span>
+                                            <span>{formatVisitDate(listUpdatedAt, t)}</span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -370,6 +412,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                                     item={item}
                                     user={author}
                                     initialIsSaved={savedShopIds.has(item.shop.id)}
+                                    myRanking={myRankings.get(item.shop.id)}
                                 />
                             ))}
 
@@ -387,11 +430,13 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 };
 
 // Custom Ranking List Item Component
-const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean }) => {
+const RankingListItem = ({ item, user, initialIsSaved = false, myRanking }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean; myRanking?: any }) => {
     const { shop, rank, satisfaction_tier, review_text, review_images } = item;
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
+    const { openRanking } = useRanking();
     const [isSaved, setIsSaved] = useState(initialIsSaved);
+    const hasMyRanking = !!myRanking;
 
     const handleToggleSave = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -473,34 +518,37 @@ const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListIte
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 self-center pl-2">
+                <div className="flex items-center gap-2 self-center pl-2">
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 w-10 p-0 rounded-full border-gray-200 text-gray-600"
+                        className={cn(
+                            "h-9 w-9 p-0 rounded-full transition-colors",
+                            hasMyRanking
+                                ? "bg-primary/10 text-primary border-primary/20"
+                                : "bg-white border-gray-200 text-gray-600"
+                        )}
                         onClick={(e) => {
                             e.stopPropagation();
-                            // Reserve Logic
-                            const ref = shop.catchtable_ref;
-                            if (ref) {
-                                window.open(`https://app.catchtable.co.kr/ct/shop/${ref}`, '_blank');
-                            } else {
-                                alert("예약 링크가 없습니다.");
-                            }
+                            openRanking({ ...shop, my_review_stats: myRanking });
                         }}
                     >
-                        <Calendar className="w-5 h-5" />
+                        {hasMyRanking ? (
+                            <Check className="w-4 h-4" strokeWidth={2.5} />
+                        ) : (
+                            <PlusCircle className="w-4 h-4" />
+                        )}
                     </Button>
                     <Button
                         variant="outline"
                         size="sm"
                         className={cn(
-                            "h-10 w-10 p-0 rounded-full border-gray-200 text-gray-600",
+                            "h-9 w-9 p-0 rounded-full border-gray-200",
                             isSaved ? "text-primary" : "text-gray-400"
                         )}
                         onClick={handleToggleSave}
                     >
-                        <Bookmark className={cn("w-5 h-5", isSaved && "fill-current")} />
+                        <Bookmark className={cn("w-4 h-4", isSaved && "fill-current")} />
                     </Button>
                 </div>
             </div>

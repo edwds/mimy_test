@@ -431,12 +431,25 @@ router.get("/:id/lists/detail", async (req, res) => {
         const id = parseInt(req.params.id);
         const type = req.query.type as string; // OVERALL, REGION, CATEGORY
         const value = req.query.value as string;
+        const viewerId = req.query.viewer_id ? parseInt(req.query.viewer_id as string) : null;
 
         const cacheKey = `lists:${id}:detail:${type}:${value || 'all'}`;
 
         const results = await getOrSetCache(cacheKey, async () => {
             return await ListService.fetchUserListDetail(id, type, value);
         }, 3600);
+
+        // If viewer_id is provided, enrich with viewer's ranking stats
+        if (viewerId && results.length > 0) {
+            const shopIds = results.map((item: any) => item.shop.id);
+            const { getShopReviewStats } = await import("../utils/enricher.js");
+            const reviewStatsMap = await getShopReviewStats(shopIds, viewerId);
+
+            // Enrich each item with my_review_stats
+            results.forEach((item: any) => {
+                item.my_review_stats = reviewStatsMap.get(item.shop.id) || null;
+            });
+        }
 
         res.json(results);
 

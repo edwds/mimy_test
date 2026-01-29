@@ -271,7 +271,7 @@
             "list_detail": "No items in this list."
         },
         "list_detail": {
-            "items_count": "items"
+            "items_count": "spots"
         },
         "shared_count": "You tracked <strong>{{count}}</strong> places together!",
         "menu": {
