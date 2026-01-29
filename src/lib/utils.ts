@@ -128,7 +128,7 @@ export function scoreToTasteRatingRaw(score: number): number {
     }
 }
 
-export function scoreToTasteRatingStep(score: number, step: number = 0.05): number {
+export function scoreToTasteRatingStep(score: number, step: number = 0.01): number {
     const raw = scoreToTasteRatingRaw(score);
     const snapped = Math.round(raw / step) * step;
     return parseFloat(snapped.toFixed(2));
