@@ -99,4 +99,29 @@ router.get("/history", optionalAuth, async (req, res) => {
     }
 });
 
+// DELETE /api/hate/:id/vote
+// Delete user's vote for a specific prop
+router.delete("/:id/vote", requireAuth, async (req, res) => {
+    try {
+        const propId = parseInt(req.params.id);
+        const user_id = req.user!.id;
+
+        if (isNaN(propId)) {
+            return res.status(400).json({ error: "Invalid prop ID" });
+        }
+
+        await db.delete(hate_result)
+            .where(and(
+                eq(hate_result.user_id, user_id),
+                eq(hate_result.prop_id, propId)
+            ));
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error("Delete vote error:", error);
+        res.status(500).json({ error: "Failed to delete vote" });
+    }
+});
+
 export default router;

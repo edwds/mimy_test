@@ -10,6 +10,8 @@
         "saved": "Saved",
         "cancel": "Cancel",
         "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close",
         "confirm_delete": "Are you sure you want to delete?",
         "already_recorded": "Already recorded",
         "edit_record": "Would you like to edit?",
@@ -293,14 +295,18 @@
                 "empty": "No preferences selected yet.",
                 "vote_more": "Vote on more foods",
                 "item_a": "A",
-                "item_b": "B"
+                "item_b": "B",
+                "delete_confirm": "Delete this vote?",
+                "edit_hint": "Click on an option to change your choice"
             },
             "hate": {
                 "title": "Manage Dislikes",
                 "empty": "No disliked foods registered.",
                 "vote_more": "Check more foods",
                 "eat": "Eat",
-                "not_eat": "Don't Eat"
+                "not_eat": "Don't Eat",
+                "delete_confirm": "Delete this selection?",
+                "edit_hint": "Click on a button to change your choice"
             },
             "ranking": {
                 "title": "Manage Ranking",

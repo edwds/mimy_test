@@ -11,6 +11,8 @@
         "saved": "저장되었습니다",
         "cancel": "취소",
         "delete": "삭제",
+        "edit": "수정",
+        "close": "닫기",
         "confirm_delete": "삭제하시겠습니까?",
         "already_recorded": "이미 기록을 남긴 곳입니다",
         "edit_record": "수정하시겠습니까?",
@@ -296,14 +298,18 @@
                 "empty": "아직 선택한 호불호가 없습니다.",
                 "vote_more": "더 많은 음식 평가하기",
                 "item_a": "A",
-                "item_b": "B"
+                "item_b": "B",
+                "delete_confirm": "이 선택을 삭제하시겠습니까?",
+                "edit_hint": "원하는 옵션을 클릭하여 선택을 변경하세요"
             },
             "hate": {
                 "title": "못 먹는 음식 관리",
                 "empty": "등록된 못 먹는 음식이 없습니다.",
                 "vote_more": "더 체크하러 가기",
                 "eat": "먹음",
-                "not_eat": "안먹음"
+                "not_eat": "안먹음",
+                "delete_confirm": "이 선택을 삭제하시겠습니까?",
+                "edit_hint": "버튼을 클릭하여 선택을 변경하세요"
             },
             "ranking": {
                 "title": "랭킹 관리",

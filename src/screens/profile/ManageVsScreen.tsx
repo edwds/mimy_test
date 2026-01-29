@@ -5,7 +5,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, Pencil, Trash2 } from 'lucide-react';
 
 interface VsHistoryItem {
     id: number;
@@ -21,17 +21,76 @@ export const ManageVsScreen = () => {
     const navigate = useNavigate();
     const [history, setHistory] = useState<VsHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [updatingId, setUpdatingId] = useState<number | null>(null);
 
     useEffect(() => {
         if (user?.id) {
-            setLoading(true);
-            fetch(`${API_BASE_URL}/api/vs/history?user_id=${user.id}`)
-                .then(res => res.json())
-                .then(data => setHistory(Array.isArray(data) ? data : []))
-                .catch(console.error)
-                .finally(() => setLoading(false));
+            loadHistory();
         }
     }, [user?.id]);
+
+    const loadHistory = () => {
+        setLoading(true);
+        fetch(`${API_BASE_URL}/api/vs/history?user_id=${user?.id}`)
+            .then(res => res.json())
+            .then(data => setHistory(Array.isArray(data) ? data : []))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    };
+
+    const handleUpdate = async (id: number, newSelection: 'A' | 'B') => {
+        if (!user?.id || updatingId) return;
+
+        setUpdatingId(id);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': String(user.id)
+                },
+                body: JSON.stringify({ selection: newSelection })
+            });
+
+            if (response.ok) {
+                setHistory(prev => prev.map(item =>
+                    item.id === id ? { ...item, selected_value: newSelection } : item
+                ));
+                setEditingId(null);
+            }
+        } catch (error) {
+            console.error('Failed to update vote:', error);
+        } finally {
+            setUpdatingId(null);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!user?.id || updatingId) return;
+
+        if (!confirm(t('manage.vs.delete_confirm', 'Delete this vote?'))) {
+            return;
+        }
+
+        setUpdatingId(id);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
+                method: 'DELETE',
+                headers: {
+                    'x-user-id': String(user.id)
+                }
+            });
+
+            if (response.ok) {
+                setHistory(prev => prev.filter(item => item.id !== id));
+            }
+        } catch (error) {
+            console.error('Failed to delete vote:', error);
+        } finally {
+            setUpdatingId(null);
+        }
+    };
 
     return (
         <div className="flex flex-col h-full bg-background relative">
@@ -56,41 +115,93 @@ export const ManageVsScreen = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {history.map(item => (
-                            <div key={item.id} className="bg-muted/10 rounded-xl p-4 border border-border/50">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "flex-1 p-3 rounded-lg text-center font-medium transition-all relative overflow-hidden",
-                                        item.selected_value === 'A'
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "bg-muted/50 text-muted-foreground opacity-70"
-                                    )}>
-                                        {item.item_a}
-                                        {item.selected_value === 'A' && (
-                                            <div className="absolute top-1 right-1">
-                                                <Check size={12} strokeWidth={4} />
-                                            </div>
+                        {history.map(item => {
+                            const isEditing = editingId === item.id;
+                            const isUpdating = updatingId === item.id;
+
+                            return (
+                                <div key={item.id} className="bg-muted/10 rounded-xl p-4 border border-border/50">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div
+                                            className={cn(
+                                                "flex-1 p-3 rounded-lg text-center font-medium transition-all relative overflow-hidden",
+                                                isEditing
+                                                    ? "cursor-pointer hover:bg-primary/10 border-2 border-border"
+                                                    : item.selected_value === 'A'
+                                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                                        : "bg-muted/50 text-muted-foreground opacity-70"
+                                            )}
+                                            onClick={() => isEditing && !isUpdating && handleUpdate(item.id, 'A')}
+                                        >
+                                            {item.item_a}
+                                            {!isEditing && item.selected_value === 'A' && (
+                                                <div className="absolute top-1 right-1">
+                                                    <Check size={12} strokeWidth={4} />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="text-xs font-black text-muted-foreground">VS</div>
+
+                                        <div
+                                            className={cn(
+                                                "flex-1 p-3 rounded-lg text-center font-medium transition-all relative overflow-hidden",
+                                                isEditing
+                                                    ? "cursor-pointer hover:bg-primary/10 border-2 border-border"
+                                                    : item.selected_value === 'B'
+                                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                                        : "bg-muted/50 text-muted-foreground opacity-70"
+                                            )}
+                                            onClick={() => isEditing && !isUpdating && handleUpdate(item.id, 'B')}
+                                        >
+                                            {item.item_b}
+                                            {!isEditing && item.selected_value === 'B' && (
+                                                <div className="absolute top-1 right-1">
+                                                    <Check size={12} strokeWidth={4} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        {isEditing ? (
+                                            <button
+                                                onClick={() => setEditingId(null)}
+                                                disabled={isUpdating}
+                                                className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-50"
+                                            >
+                                                {t('common.cancel', 'Cancel')}
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => setEditingId(item.id)}
+                                                    disabled={isUpdating}
+                                                    className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    <Pencil size={14} />
+                                                    {t('common.edit', 'Edit')}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    disabled={isUpdating}
+                                                    className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    {t('common.delete', 'Delete')}
+                                                </button>
+                                            </>
                                         )}
                                     </div>
 
-                                    <div className="text-xs font-black text-muted-foreground">VS</div>
-
-                                    <div className={cn(
-                                        "flex-1 p-3 rounded-lg text-center font-medium transition-all relative overflow-hidden",
-                                        item.selected_value === 'B'
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "bg-muted/50 text-muted-foreground opacity-70"
-                                    )}>
-                                        {item.item_b}
-                                        {item.selected_value === 'B' && (
-                                            <div className="absolute top-1 right-1">
-                                                <Check size={12} strokeWidth={4} />
-                                            </div>
-                                        )}
-                                    </div>
+                                    {isEditing && (
+                                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                                            {t('manage.vs.edit_hint', 'Click on an option to change your choice')}
+                                        </p>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
