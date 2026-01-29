@@ -53,6 +53,11 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                     const vsHistory = Array.isArray(vsData) ? vsData : [];
                     const hateHistoryData = Array.isArray(hateData) ? hateData : [];
 
+                    console.log('[TasteProfileSheet] VS Data:', vsHistory);
+                    console.log('[TasteProfileSheet] Hate Data:', hateHistoryData);
+                    console.log('[TasteProfileSheet] VS Count:', vsHistory.length);
+                    console.log('[TasteProfileSheet] Hate NOT_EAT Count:', hateHistoryData.filter((h: any) => h.selection === 'NOT_EAT').length);
+
                     setHistory(vsHistory);
                     setHateHistory(hateHistoryData);
 
@@ -103,10 +108,10 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 </button>
 
                 {/* Content Container */}
-                <div className="flex-1 flex flex-col p-8 z-10 relative">
+                <div className="flex-1 flex flex-col p-8 z-10 relative min-h-0">
 
-                    {/* Main Content: Name & Tagline */}
-                    <div className="flex-1 flex flex-col justify-center text-center">
+                    {/* Main Content: Name & Tagline - Fixed height to prevent shift */}
+                    <div className="h-[200px] flex flex-col justify-center text-center shrink-0">
                         <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
                         <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                             {data?.cluster_tagline || 'Discovering your unique taste journey.'}

@@ -227,11 +227,11 @@ export const WriteFlow = () => {
 
 
     if (step === 'LOADING') {
-        return <div className="h-full bg-background flex items-center justify-center">Loading...</div>;
+        return <div className="h-full bg-background flex items-center justify-center max-w-md mx-auto w-full">Loading...</div>;
     }
 
     return (
-        <div className="relative h-full bg-background">
+        <div className="relative h-full bg-background max-w-md mx-auto w-full">
             {(step === 'SEARCH_SHOP' || isRankingOpen) && (
                 <div className={cn("h-full transition-all duration-300", isRankingOpen ? "scale-95 opacity-50 blur-[1px] pointer-events-none" : "")}>
                     <SearchShopStep

@@ -93,7 +93,7 @@ export const MainTab = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden">
+        <div className="flex flex-col h-full bg-background overflow-hidden max-w-md mx-auto w-full">
             <main className="flex-1 overflow-hidden relative min-h-0">
                 {/* Stacked Screens */}
                 {(() => {
