@@ -106,7 +106,7 @@ export const MapContainer = ({
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maptilersdk.Map | null>(null);
     const markers = useRef<Map<string, maptilersdk.Marker>>(new Map());
-    const prevParams = useRef<{ center?: [number, number], offset?: number }>({});
+    const initialCenterApplied = useRef(false);
 
     // Initialize Map
     useEffect(() => {
@@ -336,31 +336,19 @@ export const MapContainer = ({
         };
     }, [selectedShopId, shops]);
 
-    // Handle Centering
+    // Handle Initial Centering (only once at startup)
+    // After initial setup, map position is controlled by user interaction and selectedShopId
     useEffect(() => {
-        if (!map.current || !center) return;
-        const prev = prevParams.current;
-        const sameCenter = prev.center && prev.center[0] === center[0] && prev.center[1] === center[1];
-        const sameOffset = prev.offset === bottomSheetOffset;
+        if (!map.current || !center || initialCenterApplied.current) return;
 
-        if (sameCenter && sameOffset) return;
-        prevParams.current = { center, offset: bottomSheetOffset };
-
-        let targetCenter: [number, number] = [center[1], center[0]];
-
-        if (bottomSheetOffset && bottomSheetOffset > 0) {
-            const point = map.current.project(targetCenter as any);
-            const newPoint = point.add(new maptilersdk.Point(0, bottomSheetOffset));
-            const unprojected = map.current.unproject(newPoint);
-            targetCenter = [unprojected.lng, unprojected.lat];
-        }
+        initialCenterApplied.current = true;
 
         map.current.flyTo({
-            center: targetCenter,
+            center: [center[1], center[0]],
             duration: 1000,
             essential: true
         });
-    }, [center, bottomSheetOffset]);
+    }, [center]);
 
     // Auto-fly to selected shop when selectedShopId changes
     useEffect(() => {

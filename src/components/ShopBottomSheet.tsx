@@ -144,22 +144,12 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
 
             {/* Content (Scrollable only when expanded) */}
             <div
-                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'expanded' ? 'overflow-y-auto' : 'overflow-hidden touch-none pointer-events-none'
+                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'expanded' ? 'overflow-y-auto' : 'overflow-hidden'
                     }`}
-                // Re-enable pointer events for clicks even when hidden, but prevent scroll?
-                // Actually 'pointer-events-none' kills clicks. We want clicks.
-                // Just overflow-hidden + removing stopPropagation allows the drag to bubble.
                 style={{
                     pointerEvents: 'auto'
                 }}
                 data-scroll-container={snapState === 'expanded' ? "true" : undefined}
-                onPointerDown={(e) => {
-                    // Allow dragging content only if not expanded (e.g. peek/half state)
-                    // Or if we are at the very top and pulling down? (Hard to detect reliably without blocking scroll)
-                    if (snapState !== 'expanded') {
-                        dragControls.start(e);
-                    }
-                }}
             >
                 {displayedShops.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
