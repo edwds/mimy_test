@@ -117,7 +117,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                                     shop.my_review_stats.satisfaction === 1 ? '괜찮아요' : '별로예요'}
 
                                 {/* Separator if both exist */}
-                                {shop.my_review_stats.satisfaction && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
+                                {shop.my_review_stats.satisfaction != null && shop.my_review_stats.rank > 0 && shop.my_review_stats.total_reviews >= 50 && (
                                     <span className="opacity-40 mx-0.5">|</span>
                                 )}
 

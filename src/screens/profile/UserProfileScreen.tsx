@@ -9,9 +9,11 @@ import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
 import { ListCard } from '@/components/ListCard';
 import { useUser } from '@/context/UserContext';
+import { useRanking } from '@/context/RankingContext';
 import { User } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '@/lib/authFetch';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -26,7 +28,10 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const params = useParams();
     const userId = propUserId || params.userId;
     const { user: currentUser } = useUser(); // Me
+    const { registerCallback, unregisterCallback } = useRanking();
     const [searchParams] = useSearchParams();
+    const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
+    const lastUpdatedShopIdRef = useRef<number | null>(null);
 
     // Target User State
     const [user, setUser] = useState<User | null>(null);
@@ -227,6 +232,74 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             setContentPage(prev => prev + 1);
         }
     };
+
+    // Ranking Update Callback
+    useEffect(() => {
+        const handleRankingUpdate = (shopId: number) => {
+            console.log('[UserProfileScreen] Ranking updated for shop:', shopId);
+            lastUpdatedShopIdRef.current = shopId;
+            setRankingRefreshTrigger(prev => prev + 1);
+        };
+
+        registerCallback(handleRankingUpdate);
+
+        return () => {
+            unregisterCallback();
+        };
+    }, [registerCallback, unregisterCallback]);
+
+    // Handle ranking refresh trigger - Update only the specific item
+    useEffect(() => {
+        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
+            const shopId = lastUpdatedShopIdRef.current;
+            console.log('[UserProfileScreen] Fetching updated stats for shop:', shopId);
+
+            const fetchUpdatedData = async () => {
+                try {
+                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
+                    if (response.ok) {
+                        const shopData = await response.json();
+
+                        if (activeTab === 'content') {
+                            // Update contents array - POI or review_prop
+                            setContents(prevContents => prevContents.map(item => {
+                                if (item.poi?.shop_id === shopId) {
+                                    return {
+                                        ...item,
+                                        poi: {
+                                            ...item.poi,
+                                            my_review_stats: shopData.my_review_stats
+                                        }
+                                    };
+                                }
+                                if (item.review_prop?.shop_id === shopId) {
+                                    return {
+                                        ...item,
+                                        review_prop: {
+                                            ...item.review_prop,
+                                            my_review_stats: shopData.my_review_stats
+                                        }
+                                    };
+                                }
+                                return item;
+                            }));
+                        } else if (activeTab === 'saved') {
+                            // Update commonShops array
+                            setCommonShops(prevShops => prevShops.map(shop =>
+                                shop.id === shopId
+                                    ? { ...shop, my_review_stats: shopData.my_review_stats }
+                                    : shop
+                            ));
+                        }
+                    }
+                } catch (error) {
+                    console.error('[UserProfileScreen] Failed to fetch updated stats:', error);
+                }
+            };
+
+            fetchUpdatedData();
+        }
+    }, [rankingRefreshTrigger, activeTab]);
 
     // Saved (Wants to go) - Overlap Logic
     const [commonShops, setCommonShops] = useState<any[]>([]);

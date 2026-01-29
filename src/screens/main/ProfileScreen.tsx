@@ -29,6 +29,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const { user, loading, refreshUser } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
+    const lastUpdatedShopIdRef = useRef<number | null>(null);
     const [searchParams] = useSearchParams();
 
     // Tabs
@@ -151,33 +152,13 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         fetchSaved();
     }, [user?.id, activeTab]);
 
-    // Refetch content (extracted for reuse)
-    const refetchContent = async () => {
-        if (!user?.id || activeTab !== 'content') return;
-
-        setContentPage(1);
-        setLoadingContent(true);
-        try {
-            const response = await authFetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}&page=1&limit=20`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.length < 20) setHasMoreContent(false);
-                else setHasMoreContent(true);
-                setContents(data);
-            }
-        } catch (e) {
-            console.error('Failed to reload content', e);
-        } finally {
-            setLoadingContent(false);
-        }
-    };
-
     // Ranking Update Callback
     useEffect(() => {
         if (!isEnabled) return;
 
         const handleRankingUpdate = (shopId: number) => {
             console.log('[ProfileScreen] Ranking updated for shop:', shopId);
+            lastUpdatedShopIdRef.current = shopId;
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
@@ -188,14 +169,56 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         };
     }, [isEnabled]);
 
-    // Handle ranking refresh trigger
+    // Handle ranking refresh trigger - Update only the specific item
     useEffect(() => {
-        if (rankingRefreshTrigger > 0) {
-            if (activeTab === 'content') {
-                refetchContent();
-            } else if (activeTab === 'saved') {
-                fetchSaved();
-            }
+        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
+            const shopId = lastUpdatedShopIdRef.current;
+            console.log('[ProfileScreen] Fetching updated stats for shop:', shopId);
+
+            const fetchUpdatedData = async () => {
+                try {
+                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
+                    if (response.ok) {
+                        const shopData = await response.json();
+
+                        if (activeTab === 'content') {
+                            // Update contents array - POI or review_prop
+                            setContents(prevContents => prevContents.map(item => {
+                                if (item.poi?.shop_id === shopId) {
+                                    return {
+                                        ...item,
+                                        poi: {
+                                            ...item.poi,
+                                            my_review_stats: shopData.my_review_stats
+                                        }
+                                    };
+                                }
+                                if (item.review_prop?.shop_id === shopId) {
+                                    return {
+                                        ...item,
+                                        review_prop: {
+                                            ...item.review_prop,
+                                            my_review_stats: shopData.my_review_stats
+                                        }
+                                    };
+                                }
+                                return item;
+                            }));
+                        } else if (activeTab === 'saved') {
+                            // Update savedShops array
+                            setSavedShops(prevShops => prevShops.map(shop =>
+                                shop.id === shopId
+                                    ? { ...shop, my_review_stats: shopData.my_review_stats }
+                                    : shop
+                            ));
+                        }
+                    }
+                } catch (error) {
+                    console.error('[ProfileScreen] Failed to fetch updated stats:', error);
+                }
+            };
+
+            fetchUpdatedData();
         }
     }, [rankingRefreshTrigger, activeTab]);
 
