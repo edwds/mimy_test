@@ -703,7 +703,7 @@ router.get("/top-rated", optionalAuth, async (req, res) => {
         // 1. Minimum 10 total ratings for reliability
         // 2. Sort by Good ratio (good_count / total_count) descending
         // 3. Secondary sort by total_count descending for tiebreakers
-        const topRatedQuery = await db.execute(sql`
+        const topRatedQuery = await db.execute(sql.raw(`
             WITH shop_stats AS (
                 SELECT
                     shop_id,
@@ -740,7 +740,7 @@ router.get("/top-rated", optionalAuth, async (req, res) => {
             JOIN shops s ON s.id = ss.shop_id
             ORDER BY ss.good_ratio DESC, ss.total_count DESC
             LIMIT ${limit}
-        `);
+        `));
 
         const results = topRatedQuery.rows as any[];
 

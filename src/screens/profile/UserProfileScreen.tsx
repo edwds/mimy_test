@@ -392,7 +392,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             <div
                 ref={measureHeader}
                 className={cn(
-                    "fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-[100] px-4 pb-2 transition-transform duration-300 flex items-center gap-2 pointer-events-none",
+                    "fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-background/95 backdrop-blur-sm z-[100] px-4 pb-2 transition-transform duration-300 flex items-center gap-2 pointer-events-none",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
                 style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}

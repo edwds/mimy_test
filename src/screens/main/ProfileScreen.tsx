@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload } from 'lucide-react';
+import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -396,7 +396,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}
-                            icon={null}
+                            icon={<Grid className="w-4 h-4" />}
                             label={t('profile.tabs.content')}
                         />
                         <TabButton
@@ -408,7 +408,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'saved'}
                             onClick={() => handleTabChange('saved')}
-                            icon={null}
+                            icon={<Bookmark className="w-4 h-4" />}
                             label={t('profile.tabs.saved')}
                         />
                     </div>
