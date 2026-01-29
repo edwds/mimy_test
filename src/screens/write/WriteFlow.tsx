@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -70,35 +70,40 @@ export const WriteFlow = () => {
         }
     }, [initialShopId, navigate, openRanking]);
 
-    // Register callback for ranking completion
+    // Memoize ranking completion handler
+    const handleRankingComplete = useCallback((data: any) => {
+        console.log('[WriteFlow] Ranking complete callback received:', data);
+
+        // Update satisfaction from ranking data
+        if (data.my_review_stats?.satisfaction !== undefined) {
+            const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
+                0: 'bad',
+                1: 'ok',
+                2: 'good'
+            };
+            const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
+            setSatisfaction(newSatisfaction);
+        }
+
+        // Move to write content step
+        setStep('WRITE_CONTENT');
+    }, []);
+
+    // Register callback for ranking completion - only once on mount
+    const isCallbackRegistered = useRef(false);
     useEffect(() => {
-        console.log('[WriteFlow] Registering ranking callback');
-
-        const handleRankingComplete = (data: any) => {
-            console.log('[WriteFlow] Ranking complete callback received:', data);
-
-            // Update satisfaction from ranking data
-            if (data.my_review_stats?.satisfaction !== undefined) {
-                const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
-                    0: 'bad',
-                    1: 'ok',
-                    2: 'good'
-                };
-                const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
-                setSatisfaction(newSatisfaction);
-            }
-
-            // Move to write content step
-            setStep('WRITE_CONTENT');
-        };
-
-        registerCallback('WriteFlow', handleRankingComplete);
+        if (!isCallbackRegistered.current) {
+            console.log('[WriteFlow] Registering ranking callback');
+            registerCallback('WriteFlow', handleRankingComplete);
+            isCallbackRegistered.current = true;
+        }
 
         return () => {
             console.log('[WriteFlow] Unregistering ranking callback');
             unregisterCallback('WriteFlow');
+            isCallbackRegistered.current = false;
         };
-    }, [registerCallback, unregisterCallback]);
+    }, [handleRankingComplete, registerCallback, unregisterCallback]);
 
     // Handlers
     const handleShopSelect = (shop: any) => {
