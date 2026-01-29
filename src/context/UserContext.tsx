@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserService } from '@/services/UserService';
 import { clearTokens } from '@/lib/tokenStorage';
 import { authFetch } from '@/lib/authFetch';
@@ -43,7 +43,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
     const [authFailed, setAuthFailed] = useState<boolean>(false);
 
-    const fetchUserData = async (skipAuthFailedCheck = false) => {
+    const fetchUserData = useCallback(async (skipAuthFailedCheck = false) => {
         console.log('[UserContext] fetchUserData called, authFailed:', authFailed, 'skipCheck:', skipAuthFailedCheck);
 
         // Prevent infinite retries if auth fails (unless explicitly skipped)
@@ -75,7 +75,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
         setLoading(false);
         console.log('[UserContext] fetchUserData completed, loading=false');
-    };
+    }, [authFailed]);
 
     useEffect(() => {
         console.log('[UserContext] Initial mount, fetching user data');
@@ -96,9 +96,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const refreshUser = async () => {
+    const refreshUser = useCallback(async () => {
         await fetchUserData();
-    };
+    }, [fetchUserData]);
 
     const login = async (_userId: string) => {
         console.log('[UserContext] login called with userId:', _userId);
