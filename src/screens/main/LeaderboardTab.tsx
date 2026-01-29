@@ -9,6 +9,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '@/lib/authFetch';
 
 
 interface LeaderboardItem {
@@ -57,7 +58,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
             setLoading(true);
             try {
                 const [leaderboardRes, user] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/users/leaderboard?filter=${filter}`),
+                    authFetch(`${API_BASE_URL}/api/users/leaderboard?filter=${filter}`),
                     UserService.getCurrentUser()
                 ]);
 

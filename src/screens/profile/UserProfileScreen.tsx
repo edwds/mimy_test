@@ -13,6 +13,7 @@ import { useRanking } from '@/context/RankingContext';
 import { User } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '@/lib/authFetch';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -67,7 +68,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
             setLoadingUser(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/api/users/${userId}?viewerId=${currentUser?.id}`);
+                const res = await authFetch(`${API_BASE_URL}/api/users/${userId}?viewerId=${currentUser?.id}`);
                 if (res.ok) {
                     const data = await res.json();
                     setUser(data);
@@ -153,7 +154,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         } : null);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/users/${user.id}/follow`, {
+            const res = await authFetch(`${API_BASE_URL}/api/users/${user.id}/follow`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ followerId: currentUser.id })
@@ -209,7 +210,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             else setIsFetchingMore(true);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/content/user/${targetId}?user_id=${currentUser?.id || ''}&page=${contentPage}&limit=20`);
+                const response = await authFetch(`${API_BASE_URL}/api/content/user/${targetId}?user_id=${currentUser?.id || ''}&page=${contentPage}&limit=20`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.length < 20) setHasMoreContent(false);
@@ -303,11 +304,11 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             setLoadingSaved(true);
             try {
                 // Fetch target user's saved list
-                const resTarget = await fetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
+                const resTarget = await authFetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
                 const targetSaved = await resTarget.json();
 
                 // Fetch my saved list
-                const resMe = await fetch(`${API_BASE_URL}/api/users/${currentUser.id}/saved_shops`);
+                const resMe = await authFetch(`${API_BASE_URL}/api/users/${currentUser.id}/saved_shops`);
                 const mySaved = await resMe.json();
 
                 if (Array.isArray(targetSaved) && Array.isArray(mySaved)) {
@@ -333,7 +334,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
             setLoadingLists(true);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/users/${targetId}/lists`);
+                const response = await authFetch(`${API_BASE_URL}/api/users/${targetId}/lists`);
                 if (response.ok) {
                     const data = await response.json();
                     setLists(data);

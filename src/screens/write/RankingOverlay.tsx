@@ -342,21 +342,36 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 w-full">
                                 <Button
-                                    onClick={() => onComplete('WRITE_REVIEW', { satisfaction: rankingResult?.satisfaction || satisfaction })}
+                                    onClick={() => onComplete('WRITE_REVIEW', {
+                                        satisfaction: rankingResult?.satisfaction || satisfaction,
+                                        rank: rankingResult?.rank,
+                                        percentile: rankingResult?.percentile,
+                                        total_reviews: rankingResult?.total || totalCount
+                                    })}
                                     className="w-full py-6 text-lg rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-white font-bold"
                                 >
                                     {t('write.ranking.write_review', 'Write a Review')}
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    onClick={() => onComplete('EVALUATE_ANOTHER')}
+                                    onClick={() => onComplete('EVALUATE_ANOTHER', {
+                                        satisfaction: rankingResult?.satisfaction || satisfaction,
+                                        rank: rankingResult?.rank,
+                                        percentile: rankingResult?.percentile,
+                                        total_reviews: rankingResult?.total || totalCount
+                                    })}
                                     className="w-full py-6 text-lg rounded-2xl border-gray-200 text-gray-700 hover:bg-gray-50 font-bold bg-white"
                                 >
                                     {t('write.ranking.evaluate_another', 'Evaluate Another')}
                                 </Button>
                                 <Button
                                     variant="ghost"
-                                    onClick={() => onComplete('QUIT')}
+                                    onClick={() => onComplete('QUIT', {
+                                        satisfaction: rankingResult?.satisfaction || satisfaction,
+                                        rank: rankingResult?.rank,
+                                        percentile: rankingResult?.percentile,
+                                        total_reviews: rankingResult?.total || totalCount
+                                    })}
                                     className="text-gray-400 hover:text-gray-600 font-medium"
                                 >
                                     {t('write.ranking.quit', "Start Later")}

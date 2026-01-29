@@ -277,14 +277,14 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     useEffect(() => {
         if (currentUser?.id) {
             console.log("Fetching interstitial candidates for user:", currentUser.id);
-            const fetchVs = fetch(`${API_BASE_URL}/api/vs/candidates?user_id=${currentUser.id}`)
+            const fetchVs = authFetch(`${API_BASE_URL}/api/vs/candidates?user_id=${currentUser.id}`)
                 .then(res => res.json())
                 .catch(err => {
                     console.error("Failed to fetch VS candidates", err);
                     return [];
                 });
 
-            const fetchHate = fetch(`${API_BASE_URL}/api/hate/candidates?user_id=${currentUser.id}`)
+            const fetchHate = authFetch(`${API_BASE_URL}/api/hate/candidates?user_id=${currentUser.id}`)
                 .then(res => res.json())
                 .catch(err => {
                     console.error("Failed to fetch Hate candidates", err);
