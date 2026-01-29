@@ -57,6 +57,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     const isScrolling = useRef(false);
     const touchStartY = useRef(0);
     const initialScrollTop = useRef(0);
+    const isDraggingHandle = useRef(false);
 
     // If a shop is selected, show only that shop.
     const displayedShops = selectedShopId
@@ -91,6 +92,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     }, [snapState, controls]);
 
     const handleDragEnd = (_: any, info: PanInfo) => {
+        isDraggingHandle.current = false;
         const velocity = info.velocity.y;
 
         // Simple logic: down motion = collapse to half, up motion = expand
@@ -131,7 +133,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             <div
                 className="flex-shrink-0 touch-none"
                 onPointerDown={(e) => {
-                    // Only start drag if pulling down from expanded state or header area
+                    isDraggingHandle.current = true;
                     dragControls.start(e);
                 }}
             >
@@ -166,13 +168,13 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                     WebkitOverflowScrolling: 'touch'
                 }}
                 onTouchStart={(e) => {
-                    if (!contentRef.current) return;
+                    if (!contentRef.current || isDraggingHandle.current) return;
                     touchStartY.current = e.touches[0].clientY;
                     initialScrollTop.current = contentRef.current.scrollTop;
                     isScrolling.current = false;
                 }}
                 onTouchMove={(e) => {
-                    if (!contentRef.current) return;
+                    if (!contentRef.current || isDraggingHandle.current) return;
 
                     const touchY = e.touches[0].clientY;
                     const deltaY = touchStartY.current - touchY;
