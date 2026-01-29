@@ -18,7 +18,7 @@ export const WriteFlow = () => {
     const [searchParams] = useSearchParams();
 
     const location = useLocation();
-    const { openRanking, isRankingOpen } = useRanking();
+    const { openRanking, isRankingOpen, registerCallback, unregisterCallback } = useRanking();
 
     const initialShopId = searchParams.get('shop_id');
     const locationState = location.state as { step?: string; shop?: any; satisfaction?: any } | undefined;
@@ -72,6 +72,36 @@ export const WriteFlow = () => {
         }
     }, [initialShopId, navigate, openRanking]);
 
+    // Register callback for ranking completion
+    useEffect(() => {
+        console.log('[WriteFlow] Registering ranking callback');
+
+        const handleRankingComplete = (data: any) => {
+            console.log('[WriteFlow] Ranking complete callback received:', data);
+
+            // Update satisfaction from ranking data
+            if (data.my_review_stats?.satisfaction !== undefined) {
+                const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
+                    0: 'bad',
+                    1: 'ok',
+                    2: 'good'
+                };
+                const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
+                setSatisfaction(newSatisfaction);
+            }
+
+            // Move to write content step
+            setStep('WRITE_CONTENT');
+        };
+
+        registerCallback('WriteFlow', handleRankingComplete);
+
+        return () => {
+            console.log('[WriteFlow] Unregistering ranking callback');
+            unregisterCallback('WriteFlow');
+        };
+    }, [registerCallback, unregisterCallback]);
+
     // Handlers
     const handleShopSelect = (shop: any) => {
         setSelectedShop(shop);
@@ -106,9 +136,8 @@ export const WriteFlow = () => {
                 console.log('[WriteFlow] ✅ Token verified, proceeding with submission');
             }
 
-            // Prepare payload
+            // Prepare payload (user_id is NOT needed - backend gets it from JWT)
             const payload = {
-                user_id: currentUserId,
                 type,
                 text: contentData.text,
                 img: contentData.images,
@@ -124,18 +153,27 @@ export const WriteFlow = () => {
                 img_text: contentData.imgText || []
             };
 
-            console.log('[WriteFlow] Submitting content...');
-            await ContentService.create(payload);
-            console.log('[WriteFlow] ✅ Content created successfully');
+            console.log('[WriteFlow] Submitting content with payload:', {
+                type: payload.type,
+                textLength: payload.text?.length,
+                imageCount: payload.img?.length,
+                shopId: payload.review_prop.shop_id
+            });
+
+            const result = await ContentService.create(payload);
+            console.log('[WriteFlow] ✅ Content created successfully, result:', result);
             navigate('/main');
         } catch (error: any) {
             console.error('[WriteFlow] ❌ Submit failed:', error);
+            console.error('[WriteFlow] Error type:', typeof error);
+            console.error('[WriteFlow] Error message:', error?.message);
+            console.error('[WriteFlow] Error stack:', error?.stack);
 
-            if (error.message?.includes('Authentication required')) {
+            if (error.message?.includes('로그인')) {
                 alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
                 navigate('/login');
             } else {
-                alert(error.message || t('discovery.alerts.save_failed'));
+                alert(error.message || '글 등록에 실패했습니다.');
             }
             setIsSubmitting(false);
         }
