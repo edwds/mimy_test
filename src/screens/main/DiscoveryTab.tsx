@@ -16,15 +16,6 @@ import { AnimatePresence } from 'framer-motion';
 import { authFetch } from '@/lib/authFetch';
 import { useRanking } from '@/context/RankingContext';
 
-const getSessionSeed = () => {
-    let seed = sessionStorage.getItem('discovery_seed');
-    if (!seed) {
-        seed = Math.random().toString(36).substring(7);
-        sessionStorage.setItem('discovery_seed', seed);
-    }
-    return seed;
-};
-
 interface Props {
     isActive: boolean;
     refreshTrigger?: number;
@@ -38,7 +29,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const [shops, setShops] = useState<any[]>([]);
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
-    const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
     const navigationOrderRef = useRef<number[]>([]); // Store sorted order for navigation to prevent UI flickering
 
@@ -46,8 +36,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
     const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
 
-    // Bound Search State
-    const [bounds, setBounds] = useState<{ minLat: number, maxLat: number, minLon: number, maxLon: number } | null>(null);
+    // Search State
     const [showSearchHere, setShowSearchHere] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -60,25 +49,20 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Cluster "Freeze" State - prevents auto-refetch on move if we are viewing a cluster
     const [viewingCluster, setViewingCluster] = useState(false);
 
-    const fetchShops = async (useBounds = false) => {
+    const fetchShops = async (hideSearchButton = false) => {
         setIsLoading(true);
         try {
-            let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
+            let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50`;
 
             if (showSavedOnly) {
                 url = `${API_BASE_URL}/api/users/me/saved_shops`;
-            } else if (useBounds && bounds) {
-                url += `&minLat=${bounds.minLat}&maxLat=${bounds.maxLat}&minLon=${bounds.minLon}&maxLon=${bounds.maxLon}`;
-            } else if (useBounds === false && !showSavedOnly && mapCenter) {
-                // Initial load with mapCenter logic if we want to default to "Nearby" without explicit bounds
-                // But better to expect bounds to be passed if useBounds is true.
-                // If useBounds is false (initial "discovery" feed), the backend just returns random shops.
-                // User Requirement: "Fetch 50 shops based on current location"
-                // So we should actually pass bounds or coordinates.
-                // Let's modify logic to support lat/lon simply?
-                // Backend supports BBox. Let's stick to BBox.
-
-                // If we have no bounds but have a center (initial load), maybe we construct a box?
+            } else if (mapCenter) {
+                // Pass center point for personalized discovery (10km radius, match score sorted)
+                url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}`;
+            } else {
+                // No location yet, cannot fetch personalized discovery
+                setIsLoading(false);
+                return;
             }
 
             const res = await authFetch(url);
@@ -88,7 +72,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 setShops(data);
 
                 // If switching to saved and we have data, maybe center on the first one?
-                // data is sorted by created_at desc.
                 if (showSavedOnly && data.length > 0 && data[0].lat && data[0].lon) {
                     setMapCenter([data[0].lat, data[0].lon]);
                 }
@@ -97,7 +80,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             console.error(e);
         } finally {
             setIsLoading(false);
-            if (useBounds) setShowSearchHere(false);
+            if (hideSearchButton) setShowSearchHere(false);
         }
     };
 
@@ -117,57 +100,25 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setMapCenter([latitude, longitude]);
-
-                    // Construct 5km approx bounding box (approx 0.045 deg lat, ~0.05 deg lon)
-                    const delta = 0.05;
-                    const initialBounds = {
-                        minLat: latitude - delta,
-                        maxLat: latitude + delta,
-                        minLon: longitude - delta,
-                        maxLon: longitude + delta
-                    };
-                    setBounds(initialBounds);
-
-                    // Fetch directly with bounds logic (custom call)
-                    // We need to pass these bounds to fetchShops manually since state might not be flushed.
-                    // Actually refactoring fetchShops to take bounds arg is cleaner.
-                    fetchShopsWithBounds(initialBounds);
                 },
                 (error) => {
                     console.error("Location init error", error);
-                    // Fallback to random/default
-                    fetchShops();
                 }
             );
-        } else {
-            fetchShops();
         }
     }, [isEnabled, refreshTrigger]);
 
-    const fetchShopsWithBounds = async (customBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
-        setIsLoading(true);
-        try {
-            // Always use discovery endpoint with bounds
-            let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50&seed=${seedRef.current}`;
-            url += `&minLat=${customBounds.minLat}&maxLat=${customBounds.maxLat}&minLon=${customBounds.minLon}&maxLon=${customBounds.maxLon}`;
+    // Fetch shops when mapCenter is set
+    useEffect(() => {
+        if (mapCenter && !showSavedOnly) {
+            fetchShops();
+        }
+    }, [mapCenter]);
 
-            const res = await authFetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                setShops(data);
-            }
-        } catch (e) { console.error(e); }
-        finally { setIsLoading(false); }
-    };
 
     // Refresh Listener
     useEffect(() => {
         if (refreshTrigger && refreshTrigger > 0) {
-            const newSeed = Math.random().toString(36).substring(7);
-            sessionStorage.setItem('discovery_seed', newSeed);
-            seedRef.current = newSeed;
-            // Also reset filter?
-            // setShowSavedOnly(false); // Maybe? Let's keep filter if user wants.
             setViewingCluster(false); // Reset cluster view on refresh
             fetchShops();
         }
@@ -260,16 +211,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
     };
 
-    const handleMoveEnd = (newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
+    const handleMoveEnd = (_newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
         // Only show button if we are NOT in saved mode AND not viewing a cluster explicitly
         if (!showSavedOnly && !viewingCluster) {
-            setBounds(newBounds);
             setShowSearchHere(true);
         }
         // If viewing cluster, we might want to allow "Search Here" to break out of it?
         // Yes, if user moves map, they might want to search new area.
         if (viewingCluster) {
-            setBounds(newBounds);
             setShowSearchHere(true);
         }
     };

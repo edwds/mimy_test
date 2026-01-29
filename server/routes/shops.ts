@@ -38,67 +38,59 @@ const getClusterName = (id: string | number | null) => {
 router.get("/discovery", optionalAuth, async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 20;
-        const seed = req.query.seed || 'default_seed';
+        const limit = parseInt(req.query.limit as string) || 50;
 
-        // Bounding Box Params & Validation
-        const rawMinLat = parseFloat(req.query.minLat as string);
-        const rawMaxLat = parseFloat(req.query.maxLat as string);
-        const rawMinLon = parseFloat(req.query.minLon as string);
-        const rawMaxLon = parseFloat(req.query.maxLon as string);
-
-        const hasBBox = Number.isFinite(rawMinLat) && Number.isFinite(rawMaxLat) &&
-            Number.isFinite(rawMinLon) && Number.isFinite(rawMaxLon);
-
-        // Cache Key for generic discovery (no bbox, or bucketed bbox? BBox makes it hard. Skip cache if bbox present)
-        const canCache = !hasBBox;
-        const cacheKey = `discovery:seed:${seed}:page:${page}:limit:${limit}`;
+        // Center point (user's current location)
+        const centerLat = parseFloat(req.query.lat as string);
+        const centerLon = parseFloat(req.query.lon as string);
 
         // Get user ID from JWT
         const uid = req.user?.id || 0;
 
-        const fetchDiscovery = async () => {
-            let query = db.select({
-                id: shops.id,
-                name: shops.name,
-                description: shops.description,
-                address_full: shops.address_full,
-                thumbnail_img: shops.thumbnail_img,
-                kind: shops.kind,
-                lat: shops.lat,
-                lon: shops.lon,
-                catchtable_ref: shops.catchtable_ref
-            }).from(shops).$dynamic();
+        // Require location and user login for personalized discovery
+        if (!Number.isFinite(centerLat) || !Number.isFinite(centerLon)) {
+            return res.status(400).json({ error: "Location (lat, lon) is required" });
+        }
 
-            if (hasBBox) {
-                query = query.where(and(
-                    sql`${shops.lat} >= ${rawMinLat}`,
-                    sql`${shops.lat} <= ${rawMaxLat}`,
-                    sql`${shops.lon} >= ${rawMinLon}`,
-                    sql`${shops.lon} <= ${rawMaxLon}`
-                ));
-            }
+        if (!uid) {
+            return res.status(401).json({ error: "Authentication required for personalized discovery" });
+        }
 
-            // Consistent Sort
-            const results = await query
-                .orderBy(sql`md5(${shops.id}::text || ${seed})`)
-                .limit(limit)
-                .offset((page - 1) * limit);
+        // Calculate 10km bounding box (approximately 0.09 degrees)
+        const latDelta = 0.09; // ~10km in latitude
+        const lonDelta = 0.09; // ~10km in longitude (varies by latitude, but close enough)
+        const rawMinLat = centerLat - latDelta;
+        const rawMaxLat = centerLat + latDelta;
+        const rawMinLon = centerLon - lonDelta;
+        const rawMaxLon = centerLon + lonDelta;
 
-            if (results.length === 0) return [];
+        // Fetch shops within 10km radius, excluding visited shops
+        const shopsQuery = await db.execute(sql`
+            SELECT
+                s.id,
+                s.name,
+                s.description,
+                s.address_full,
+                s.thumbnail_img,
+                s.kind,
+                s.food_kind,
+                s.lat,
+                s.lon,
+                s.catchtable_ref
+            FROM shops s
+            LEFT JOIN users_ranking ur ON ur.shop_id = s.id AND ur.user_id = ${uid}
+            WHERE s.lat >= ${rawMinLat}
+                AND s.lat <= ${rawMaxLat}
+                AND s.lon >= ${rawMinLon}
+                AND s.lon <= ${rawMaxLon}
+                AND ur.id IS NULL
+            LIMIT 200
+        `);
 
-            // Note: We only cache the "Base List". Enrichment (Saved, Snippets) should ideally be separate or cached carefully.
-            // But since snippets depend on "viewerScores" (personalization), we cannot cache snippets globally if we use viewer scores.
-            // If uid=0, it's safe.
-            // If uid > 0, we should fetch base list from cache, then enrich.
-            return results;
-        };
+        let baseResults = shopsQuery.rows as any[];
 
-        let baseResults;
-        if (canCache) {
-            baseResults = await getOrSetCache(cacheKey, fetchDiscovery, 3600);
-        } else {
-            baseResults = await fetchDiscovery();
+        if (baseResults.length === 0) {
+            return res.json([]);
         }
 
         if (baseResults.length === 0) {
@@ -209,7 +201,17 @@ router.get("/discovery", optionalAuth, async (req, res) => {
             my_review_stats: reviewStatsMap.get(shop.id) || null
         }));
 
-        res.json(enriched);
+        // 4. Sort by match score (highest first) and apply limit
+        const sorted = enriched.sort((a, b) => {
+            const scoreA = a.shop_user_match_score ?? -1;
+            const scoreB = b.shop_user_match_score ?? -1;
+            return scoreB - scoreA;
+        });
+
+        const paginated = sorted.slice((page - 1) * limit, page * limit);
+
+        console.log(`[Discovery] Returning ${paginated.length} shops sorted by match score for user ${uid}`);
+        res.json(paginated);
 
     } catch (error) {
         console.error("Discovery feed error:", error);
@@ -371,10 +373,25 @@ router.get("/:id", optionalAuth, async (req, res) => {
         const matchScoresMap = await getShopMatchScores([id], uid);
         const reviewStatsMap = await getShopReviewStats([id], uid);
 
+        // Check if saved by user
+        let isSaved = false;
+        if (uid > 0) {
+            const savedCheck = await db.select({ shop_id: users_wantstogo.shop_id })
+                .from(users_wantstogo)
+                .where(and(
+                    eq(users_wantstogo.user_id, uid),
+                    eq(users_wantstogo.shop_id, id),
+                    eq(users_wantstogo.is_deleted, false)
+                ))
+                .limit(1);
+            isSaved = savedCheck.length > 0;
+        }
+
         res.json({
             ...shopData,
             shop_user_match_score: matchScoresMap.get(id) || null,
-            my_review_stats: reviewStatsMap.get(id) || null
+            my_review_stats: reviewStatsMap.get(id) || null,
+            is_saved: isSaved
         });
     } catch (error) {
         console.error("Shop details error:", error);
