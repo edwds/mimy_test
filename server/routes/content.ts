@@ -920,6 +920,7 @@ router.get("/user/:userId", async (req, res) => {
         const visitCountMap = new Map<number, number>();
 
         // Batch Fetching
+        let reviewStatsMap = new Map<number, any>();
         if (shopIds.size > 0) {
             const sIds = Array.from(shopIds);
             const shopList = await db.select().from(shops).where(inArray(shops.id, sIds));
@@ -928,6 +929,11 @@ router.get("/user/:userId", async (req, res) => {
             const rankings = await db.select().from(users_ranking)
                 .where(and(eq(users_ranking.user_id, userId), inArray(users_ranking.shop_id, sIds)));
             rankings.forEach(r => rankMap.set(getRankKey(r.user_id, r.shop_id), r.rank));
+
+            // Get my_review_stats for viewer (if viewing own content or if viewer is specified)
+            if (viewerId) {
+                reviewStatsMap = await getShopReviewStats(sIds, viewerId);
+            }
 
             // Visit Counts (N+1 Fix)
             const rawVisits = await db.execute(sql.raw(`
@@ -1041,6 +1047,7 @@ router.get("/user/:userId", async (req, res) => {
                 }
 
                 if (shop) {
+                    const myReviewStats = reviewStatsMap.get(sid) || null;
                     enrichedProp = {
                         ...enrichedProp,
                         shop_name: shop.name,
@@ -1048,7 +1055,8 @@ router.get("/user/:userId", async (req, res) => {
                         thumbnail_img: shop.thumbnail_img,
                         rank: rank || null,
                         visit_count: visitCount,
-                        companions_info: displayCompanions
+                        companions_info: displayCompanions,
+                        my_review_stats: myReviewStats
                     };
                     poi = {
                         shop_id: sid,
@@ -1061,7 +1069,8 @@ router.get("/user/:userId", async (req, res) => {
                         is_bookmarked: isSaved,
                         catchtable_ref: shop.catchtable_ref,
                         lat: shop.lat,
-                        lon: shop.lon
+                        lon: shop.lon,
+                        my_review_stats: myReviewStats
                     };
                 }
             }

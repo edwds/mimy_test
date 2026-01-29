@@ -11,7 +11,11 @@
         "saved": "저장되었습니다",
         "cancel": "취소",
         "delete": "삭제",
-        "confirm_delete": "삭제하시겠습니까?"
+        "confirm_delete": "삭제하시겠습니까?",
+        "already_recorded": "이미 기록을 남긴 곳입니다",
+        "edit_record": "수정하시겠습니까?",
+        "no": "아니요",
+        "yes_edit": "네, 수정할게요"
     },
     "nav": {
         "home": "홈",

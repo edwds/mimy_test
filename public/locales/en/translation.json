@@ -5,7 +5,16 @@
         "confirm": "Confirm",
         "vs": "VS",
         "write": "Write",
-        "top": "Top"
+        "top": "Top",
+        "save": "Save",
+        "saved": "Saved",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete?",
+        "already_recorded": "Already recorded",
+        "edit_record": "Would you like to edit?",
+        "no": "No",
+        "yes_edit": "Yes, edit"
     },
     "nav": {
         "home": "Home",

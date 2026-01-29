@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useCallback, useMemo } 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RankingOverlay } from '@/screens/write/RankingOverlay';
 import { useUser } from './UserContext';
+import { useTranslation } from 'react-i18next';
 
 interface RankingUpdateData {
     shopId: number;
@@ -24,8 +25,11 @@ interface RankingContextType {
 const RankingContext = createContext<RankingContextType | undefined>(undefined);
 
 export const RankingProvider = ({ children }: { children: ReactNode }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedShop, setSelectedShop] = useState<any>(null);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [pendingShop, setPendingShop] = useState<any>(null);
     const [updateCallbacks, setUpdateCallbacks] = useState<Map<string, (data: RankingUpdateData) => void>>(new Map());
     const navigate = useNavigate();
     const location = useLocation();
@@ -33,8 +37,28 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const currentUserId = user?.id || 0;
 
     const openRanking = useCallback((shop: any) => {
-        setSelectedShop(shop);
-        setIsOpen(true);
+        // Check if already recorded
+        if (shop.my_review_stats) {
+            setPendingShop(shop);
+            setShowConfirmDialog(true);
+        } else {
+            setSelectedShop(shop);
+            setIsOpen(true);
+        }
+    }, []);
+
+    const confirmEdit = useCallback(() => {
+        setShowConfirmDialog(false);
+        if (pendingShop) {
+            setSelectedShop(pendingShop);
+            setIsOpen(true);
+            setPendingShop(null);
+        }
+    }, [pendingShop]);
+
+    const cancelEdit = useCallback(() => {
+        setShowConfirmDialog(false);
+        setPendingShop(null);
     }, []);
 
     const closeRanking = useCallback(() => {
@@ -144,6 +168,33 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
                     onClose={closeRanking}
                     onComplete={handleComplete}
                 />
+            )}
+
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelEdit} />
+                    <div className="relative bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl animate-in zoom-in-95 duration-200">
+                        <h3 className="font-bold text-lg mb-2 text-center">{t('common.already_recorded')}</h3>
+                        <p className="text-sm text-gray-600 mb-6 text-center">
+                            {t('common.edit_record')}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={cancelEdit}
+                                className="flex-1 h-11 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                                {t('common.no')}
+                            </button>
+                            <button
+                                onClick={confirmEdit}
+                                className="flex-1 h-11 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors"
+                            >
+                                {t('common.yes_edit')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </RankingContext.Provider>
     );

@@ -12,6 +12,7 @@ interface Props {
 }
 
 import { UserService } from '@/services/UserService';
+import { useRanking } from '@/context/RankingContext';
 
 const getOrdinalRank = (rank: number) => {
     // Simple ordinal logic
@@ -30,6 +31,7 @@ const getOrdinalRank = (rank: number) => {
 
 export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const { t } = useTranslation();
+    const { registerCallback, unregisterCallback } = useRanking();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
@@ -44,21 +46,47 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const [selectedGoogleShop, setSelectedGoogleShop] = useState<any>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchSaved = async () => {
-            try {
-                const user = await UserService.getCurrentUser();
-                if (user?.id) {
-                    const saved = await UserService.getSavedShops(user.id);
-                    setSavedShops(saved || []);
-                }
-            } catch (error) {
-                console.error('Failed to fetch saved shops:', error);
-                // Silently fail - user might not be logged in
+    const fetchSaved = async () => {
+        try {
+            const user = await UserService.getCurrentUser();
+            if (user?.id) {
+                const saved = await UserService.getSavedShops(user.id);
+                setSavedShops(saved || []);
             }
-        };
+        } catch (error) {
+            console.error('Failed to fetch saved shops:', error);
+            // Silently fail - user might not be logged in
+        }
+    };
+
+    useEffect(() => {
         fetchSaved();
     }, []);
+
+    // Register ranking update callback
+    useEffect(() => {
+        const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
+            console.log('[SearchShopStep] Ranking updated:', data);
+            // Update savedShops
+            setSavedShops(prev => prev.map(shop =>
+                shop.id === data.shopId
+                    ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
+                    : shop
+            ));
+            // Update results
+            setResults(prev => prev.map(shop =>
+                shop.id === data.shopId
+                    ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
+                    : shop
+            ));
+        };
+
+        registerCallback('SearchShopStep', handleRankingUpdate);
+
+        return () => {
+            unregisterCallback('SearchShopStep');
+        };
+    }, [registerCallback, unregisterCallback]);
 
     useEffect(() => {
         setIsGoogleMode(false);
