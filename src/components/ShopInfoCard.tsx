@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Check, PlusCircle, Bookmark } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -17,7 +16,6 @@ export interface ShopInfoCardProps {
         food_kind?: string;
         address_region?: string;
     };
-    visitCount?: number;
     distance?: string;
     initialIsBookmarked?: boolean;
     my_review_stats?: any;
