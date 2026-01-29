@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RankingOverlay } from '@/screens/write/RankingOverlay';
 import { useUser } from './UserContext';
@@ -32,15 +32,15 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const { user } = useUser();
     const currentUserId = user?.id || 0;
 
-    const openRanking = (shop: any) => {
+    const openRanking = useCallback((shop: any) => {
         setSelectedShop(shop);
         setIsOpen(true);
-    };
+    }, []);
 
-    const closeRanking = () => {
+    const closeRanking = useCallback(() => {
         setIsOpen(false);
         setSelectedShop(null);
-    };
+    }, []);
 
     const registerCallback = useCallback((id: string, callback: (data: RankingUpdateData) => void) => {
         setUpdateCallbacks(prev => {
@@ -68,10 +68,13 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
             subscriberCount: updateCallbacks.size
         });
 
+        // Store shop before clearing it
+        const currentShop = selectedShop;
+
         // Notify ALL subscribers that ranking was updated with optimistic data
-        if (selectedShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
+        if (currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
             const updateData: RankingUpdateData = {
-                shopId: selectedShop.id,
+                shopId: currentShop.id,
                 my_review_stats: {
                     satisfaction: data.satisfaction === 'good' ? 2 : data.satisfaction === 'ok' ? 1 : 0,
                     rank: data.rank || 0,
@@ -88,40 +91,54 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
             });
         } else {
             console.log('[RankingContext] ❌ Not notifying:', {
-                hasShopId: !!selectedShop?.id,
+                hasShopId: !!currentShop?.id,
                 hasData: !!data,
                 hasSatisfaction: data?.satisfaction !== undefined,
                 subscriberCount: updateCallbacks.size
             });
         }
 
-        setIsOpen(false);
-        if (action === 'WRITE_REVIEW') {
-            // Only navigate if not already on /write route
-            // This prevents remounting WriteFlow when callback is already handling the transition
-            if (location.pathname !== '/write') {
-                console.log('[RankingContext] Navigating to /write from:', location.pathname);
-                navigate('/write', {
-                    state: {
-                        step: 'WRITE_CONTENT',
-                        shop: selectedShop,
-                        satisfaction: data?.satisfaction || 'good'
-                    }
-                });
+        // Use setTimeout to defer state updates until after callbacks complete
+        // This prevents unmounting the component that's handling the callback
+        setTimeout(() => {
+            setIsOpen(false);
+            setSelectedShop(null);
+
+            if (action === 'WRITE_REVIEW') {
+                // Only navigate if not already on /write route
+                // This prevents remounting WriteFlow when callback is already handling the transition
+                if (location.pathname !== '/write') {
+                    console.log('[RankingContext] Navigating to /write from:', location.pathname);
+                    navigate('/write', {
+                        state: {
+                            step: 'WRITE_CONTENT',
+                            shop: currentShop,
+                            satisfaction: data?.satisfaction || 'good'
+                        }
+                    });
+                } else {
+                    console.log('[RankingContext] Already on /write, letting callback handle transition');
+                }
+            } else if (action === 'EVALUATE_ANOTHER') {
+                // Go to search
+                navigate('/write', { replace: true });
             } else {
-                console.log('[RankingContext] Already on /write, letting callback handle transition');
+                // Stay where we are, just closed overlay
             }
-        } else if (action === 'EVALUATE_ANOTHER') {
-            // Go to search
-            navigate('/write', { replace: true });
-        } else {
-            // Stay where we are, just closed overlay
-        }
-        setSelectedShop(null);
+        }, 0);
     };
 
+    // Memoize context value to prevent unnecessary re-renders
+    const contextValue = useMemo(() => ({
+        openRanking,
+        closeRanking,
+        isRankingOpen: isOpen,
+        registerCallback,
+        unregisterCallback
+    }), [isOpen, openRanking, closeRanking, registerCallback, unregisterCallback]);
+
     return (
-        <RankingContext.Provider value={{ openRanking, closeRanking, isRankingOpen: isOpen, registerCallback, unregisterCallback }}>
+        <RankingContext.Provider value={contextValue}>
             {children}
             {isOpen && selectedShop && (
                 <RankingOverlay
