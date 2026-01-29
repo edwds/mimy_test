@@ -16,7 +16,8 @@
         "already_recorded": "Already recorded",
         "edit_record": "Would you like to edit?",
         "no": "No",
-        "yes_edit": "Yes, edit"
+        "yes_edit": "Yes, edit",
+        "restaurant": "Restaurant"
     },
     "nav": {
         "home": "Home",
@@ -126,12 +127,17 @@
         },
         "ranking": {
             "title": "Which place was better?",
+            "new": "New",
             "new_label": "New!",
+            "this_place": "This place",
             "vs": "VS",
             "tip": "(Tip: Choose the place that was more memorable)",
             "success_title": "Ranking Updated!",
             "success_desc": "Your experience at <1>{{name}}</1><br />has been added to your ranking.",
-            "confirm": "Confirm"
+            "confirm": "Confirm",
+            "write_review": "Write a Review",
+            "evaluate_another": "Evaluate Another",
+            "quit": "Start Later"
         }
     },
     "register": {

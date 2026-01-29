@@ -213,7 +213,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             )}
                             <div>
                                 <h3 className="font-bold text-xl text-gray-900 leading-tight">{shop.name}</h3>
-                                <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || 'Restaurant'}</p>
+                                <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || t('common.restaurant', 'Restaurant')}</p>
                                 <p className="text-xs text-gray-400 mt-0.5">{shop.address?.split(' ').slice(0, 2).join(' ')}</p>
                             </div>
                         </div>
@@ -265,14 +265,14 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                             onClick={() => handleChoice('NEW')}
                                             className="p-5 rounded-2xl border-2 border-primary bg-white shadow-sm active:scale-[0.98] transition-all relative overflow-hidden group hover:border-primary/80"
                                         >
-                                            <div className="absolute top-0 left-0 bg-primary text-white text-xs px-2 py-1 rounded-br-lg font-bold">New</div>
+                                            <div className="absolute top-0 left-0 bg-primary text-white text-xs px-2 py-1 rounded-br-lg font-bold">{t('write.ranking.new', 'New')}</div>
                                             <div className="text-center">
                                                 <div className="text-xl font-bold text-gray-900 mb-1">{shop.name}</div>
                                                 <div className="text-sm text-gray-400">{t('write.ranking.this_place', 'This place')}</div>
                                             </div>
                                         </button>
 
-                                        <div className="text-center text-xs font-bold text-gray-300 uppercase tracking-widest">VS</div>
+                                        <div className="text-center text-xs font-bold text-gray-300 uppercase tracking-widest">{t('write.ranking.vs', 'VS')}</div>
 
                                         <button
                                             onClick={() => handleChoice('EXISTING')}
@@ -316,7 +316,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                     )}
                                     <div>
                                         <h3 className="font-bold text-xl text-gray-900 leading-tight">{shop.name}</h3>
-                                        <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || 'Restaurant'}</p>
+                                        <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || t('common.restaurant', 'Restaurant')}</p>
                                     </div>
                                 </div>
 

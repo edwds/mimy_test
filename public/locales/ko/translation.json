@@ -17,7 +17,8 @@
         "already_recorded": "이미 기록을 남긴 곳입니다",
         "edit_record": "수정하시겠습니까?",
         "no": "아니요",
-        "yes_edit": "네, 수정할게요"
+        "yes_edit": "네, 수정할게요",
+        "restaurant": "음식점"
     },
     "nav": {
         "home": "홈",
@@ -128,12 +129,17 @@
             "title": "어떤 곳이 더 좋았나요?",
             "overall_title": "전체 랭킹",
             "ranking_suffix": "랭킹",
+            "new": "새로운 곳",
             "new_label": "New!",
+            "this_place": "이 곳",
             "vs": "VS",
             "tip": "(Tip: 더 기억에 남는 곳을 선택해주세요)",
             "success_title": "랭킹 업데이트!",
             "success_desc": "<1>{{name}}</1>에서의 경험이<br />당신의 랭킹에 추가되었습니다.",
-            "confirm": "확인"
+            "confirm": "확인",
+            "write_review": "리뷰 작성하기",
+            "evaluate_another": "다른 곳 평가하기",
+            "quit": "나중에 작성하기"
         }
     },
     "register": {
