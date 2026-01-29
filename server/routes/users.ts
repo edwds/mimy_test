@@ -151,7 +151,7 @@ router.get("/:id", async (req, res) => {
         // Stats Counts & Is Following (Parallel)
         // Stats Counts
         // Wrapped in transaction to enforce "no parallel workers" setting to avoid "parallel worker failed to initialize" error
-        const { contentCount, followerCount, followingCount, isFollowingRes } = await db.transaction(async (tx) => {
+        const { contentCount, followerCount, followingCount, rankingCount, isFollowingRes } = await db.transaction(async (tx) => {
             // Disable parallel workers for this transaction
             await tx.execute(sql`SET LOCAL max_parallel_workers_per_gather = 0`);
 
@@ -170,7 +170,12 @@ router.get("/:id", async (req, res) => {
                 .from(users_follow)
                 .where(eq(users_follow.follower_id, id));
 
-            // 4. Is Following Check
+            // 4. Ranking Count
+            const rankingCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, id));
+
+            // 5. Is Following Check
             let isFollowing = false;
             if (viewerId) {
                 const check = await tx.select().from(users_follow)
@@ -185,6 +190,7 @@ router.get("/:id", async (req, res) => {
                 contentCount: Number(contentCountRes[0]?.count || 0),
                 followerCount: Number(followerCountRes[0]?.count || 0),
                 followingCount: Number(followingCountRes[0]?.count || 0),
+                rankingCount: Number(rankingCountRes[0]?.count || 0),
                 isFollowingRes: isFollowing
             };
         });
@@ -197,7 +203,8 @@ router.get("/:id", async (req, res) => {
             stats: {
                 content_count: contentCount,
                 follower_count: followerCount,
-                following_count: followingCount
+                following_count: followingCount,
+                ranking_count: rankingCount
             },
             is_following: isFollowingRes
         });

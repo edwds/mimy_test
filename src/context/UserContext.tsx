@@ -20,6 +20,7 @@ export interface User {
         content_count: number;
         follower_count: number;
         following_count: number;
+        ranking_count: number;
     };
     taste_result?: any;
 }

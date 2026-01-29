@@ -254,6 +254,9 @@
             "content": "No contents yet",
             "lists": "No public lists",
             "lists_requirement": "Complete 30+ rankings to create your personalized restaurant ranking list",
+            "progress": "Progress",
+            "remaining": "{{count}} more to create your list",
+            "refresh": "Refresh to see your list",
             "shared": "No shared saved places found.",
             "saved": "No saved places.",
             "list_detail": "No items in this list."

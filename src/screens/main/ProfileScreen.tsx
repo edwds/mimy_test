@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -407,16 +407,19 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}
+                            icon={<Grid className="w-4 h-4" />}
                             label={t('profile.tabs.content')}
                         />
                         <TabButton
                             active={activeTab === 'list'}
                             onClick={() => handleTabChange('list')}
+                            icon={<List className="w-4 h-4" />}
                             label={t('profile.tabs.list')}
                         />
                         <TabButton
                             active={activeTab === 'saved'}
                             onClick={() => handleTabChange('saved')}
+                            icon={<Bookmark className="w-4 h-4" />}
                             label={t('profile.tabs.saved')}
                         />
                     </div>
@@ -499,11 +502,37 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             ))}
 
                             {!loadingLists && lists.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                                    <List className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm text-center px-8 leading-relaxed">
+                                <div className="flex flex-col items-center justify-center py-20 px-8">
+                                    <List className="w-10 h-10 mb-4 opacity-20 text-muted-foreground" />
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6">
                                         {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요')}
                                     </p>
+
+                                    {/* Progress Bar */}
+                                    <div className="w-full max-w-xs">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-medium text-muted-foreground">
+                                                {t('profile.empty.progress', '진행률')}
+                                            </span>
+                                            <span className="text-xs font-bold text-foreground">
+                                                {user.stats?.ranking_count || 0} / 30
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                                                style={{
+                                                    width: `${Math.min(((user.stats?.ranking_count || 0) / 30) * 100, 100)}%`
+                                                }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-center text-muted-foreground mt-3">
+                                            {30 - (user.stats?.ranking_count || 0) > 0
+                                                ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
+                                                : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
                             )}
 
@@ -559,15 +588,16 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     );
 };
 
-const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
+const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
     <button
         onClick={onClick}
         className={cn(
-            'flex-1 py-3 text-sm font-medium transition-all relative',
+            'flex-1 py-3 text-sm font-medium transition-all relative flex flex-col items-center gap-1',
             active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
         )}
     >
-        {label}
+        {icon}
+        <span>{label}</span>
         {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />}
     </button>
 );

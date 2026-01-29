@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { users, clusters, content, users_follow, users_ranking } from "../db/schema.js";
+import { eq, sql, and } from "drizzle-orm";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -191,9 +191,33 @@ router.get("/me", requireAuth, async (req, res) => {
             }
         }
 
+        // Get stats (including ranking count)
+        const stats = await db.transaction(async (tx) => {
+            await tx.execute(sql`SET LOCAL max_parallel_workers_per_gather = 0`);
+
+            const contentCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(content)
+                .where(and(eq(content.user_id, userId), eq(content.is_deleted, false)));
+
+            const followerCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(users_follow)
+                .where(eq(users_follow.following_id, userId));
+
+            const rankingCountRes = await tx.select({ count: sql<number>`count(*)` })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, userId));
+
+            return {
+                content_count: Number(contentCountRes[0]?.count || 0),
+                follower_count: Number(followerCountRes[0]?.count || 0),
+                ranking_count: Number(rankingCountRes[0]?.count || 0)
+            };
+        });
+
         res.json({
             ...user,
-            ...clusterInfo
+            ...clusterInfo,
+            stats
         });
     } catch (error: any) {
         console.error("Get current user error:", error);

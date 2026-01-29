@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Grid, List, Loader2, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Link as LinkIcon, Grid, List, Loader2, ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
@@ -531,9 +531,9 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 {/* Tabs */}
                 <div className="bg-background sticky top-0 z-10 border-b border-border/50 mb-2">
                     <div className="flex w-full px-0">
-                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} label={t('profile.tabs.content')} />
-                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} label={t('profile.tabs.list')} />
-                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} label={t('profile.tabs.shared')} />
+                        <TabButton active={activeTab === "content"} onClick={() => handleTabChange("content")} icon={<Grid className="w-4 h-4" />} label={t('profile.tabs.content')} />
+                        <TabButton active={activeTab === "list"} onClick={() => handleTabChange("list")} icon={<List className="w-4 h-4" />} label={t('profile.tabs.list')} />
+                        <TabButton active={activeTab === "saved"} onClick={() => handleTabChange("saved")} icon={<Users className="w-4 h-4" />} label={t('profile.tabs.shared')} />
                     </div>
                 </div>
 
@@ -663,15 +663,16 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     );
 };
 
-const TabButton = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
+const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
     <button
         onClick={onClick}
-        className={`flex-1 py-3 text-sm font-medium transition-all relative ${active
+        className={`flex-1 py-3 text-sm font-medium transition-all relative flex flex-col items-center gap-1 ${active
             ? "text-foreground"
             : "text-muted-foreground hover:text-foreground/80"
             }`}
     >
-        {label}
+        {icon}
+        <span>{label}</span>
         {active && (
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />
         )}
