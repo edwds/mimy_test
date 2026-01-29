@@ -75,7 +75,6 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     // However, usually userId is available. Let's fetch basic user info if we can.
     const [author, setAuthor] = useState<ListAuthor | null>(null);
     const [savedShopIds, setSavedShopIds] = useState<Set<number>>(new Set());
-    const [myRankings, setMyRankings] = useState<Map<number, any>>(new Map());
     const [listUpdatedAt, setListUpdatedAt] = useState<string | null>(null);
 
     useEffect(() => {
@@ -84,27 +83,12 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
             setLoading(true);
             try {
-                // 0. Fetch My Saved Shops & Rankings (to check bookmark and ranking status)
+                // 0. Fetch My Saved Shops (to check bookmark status)
                 if (user?.id) {
                     const saved = await UserService.getSavedShops(user.id);
                     // Ensure we map to numbers
                     const ids = new Set<number>(saved.map((s: any) => Number(s.id)));
                     setSavedShopIds(ids);
-
-                    // Fetch my rankings
-                    try {
-                        const rankRes = await authFetch(`${API_BASE_URL}/api/ranking/user/${user.id}`);
-                        if (rankRes.ok) {
-                            const rankings = await rankRes.json();
-                            const rankMap = new Map();
-                            rankings.forEach((r: any) => {
-                                rankMap.set(r.shop_id, r);
-                            });
-                            setMyRankings(rankMap);
-                        }
-                    } catch (e) {
-                        console.error('Failed to fetch rankings:', e);
-                    }
                 }
 
                 if (code) {
@@ -293,7 +277,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 -ml-2 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white bg-black/30 backdrop-blur-sm hover:bg-black/40"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleBack}
                     >
@@ -319,7 +303,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white bg-black/30 backdrop-blur-sm hover:bg-black/40"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleShare}
                     >
@@ -412,7 +396,6 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                                     item={item}
                                     user={author}
                                     initialIsSaved={savedShopIds.has(item.shop.id)}
-                                    myRanking={myRankings.get(item.shop.id)}
                                 />
                             ))}
 
@@ -430,13 +413,13 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 };
 
 // Custom Ranking List Item Component
-const RankingListItem = ({ item, user, initialIsSaved = false, myRanking }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean; myRanking?: any }) => {
-    const { shop, rank, satisfaction_tier, review_text, review_images } = item;
+const RankingListItem = ({ item, user, initialIsSaved = false }: { item: ListItem; user: ListAuthor | null; initialIsSaved?: boolean }) => {
+    const { shop, rank, satisfaction_tier, review_text, review_images, my_review_stats } = item;
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const { openRanking } = useRanking();
     const [isSaved, setIsSaved] = useState(initialIsSaved);
-    const hasMyRanking = !!myRanking;
+    const hasMyRanking = !!my_review_stats;
 
     const handleToggleSave = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -523,14 +506,14 @@ const RankingListItem = ({ item, user, initialIsSaved = false, myRanking }: { it
                         variant="outline"
                         size="sm"
                         className={cn(
-                            "h-9 w-9 p-0 rounded-full transition-colors",
+                            "h-9 w-9 p-0 rounded-lg transition-colors",
                             hasMyRanking
                                 ? "bg-primary/10 text-primary border-primary/20"
                                 : "bg-white border-gray-200 text-gray-600"
                         )}
                         onClick={(e) => {
                             e.stopPropagation();
-                            openRanking({ ...shop, my_review_stats: myRanking });
+                            openRanking({ ...shop, my_review_stats: item.my_review_stats });
                         }}
                     >
                         {hasMyRanking ? (
@@ -543,7 +526,7 @@ const RankingListItem = ({ item, user, initialIsSaved = false, myRanking }: { it
                         variant="outline"
                         size="sm"
                         className={cn(
-                            "h-9 w-9 p-0 rounded-full border-gray-200",
+                            "h-9 w-9 p-0 rounded-lg border-gray-200",
                             isSaved ? "text-primary" : "text-gray-400"
                         )}
                         onClick={handleToggleSave}
