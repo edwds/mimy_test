@@ -865,8 +865,6 @@ export const ContentCard = ({
                         address: shopAddress,
                         thumbnail_img: shopThumbnail
                     }}
-                    rank={rank}
-                    satisfaction={satisfaction as 'good' | 'ok' | 'bad' | undefined}
                     visitCount={visitCount}
                     distance={
                         coordinates && content.poi?.lat && content.poi?.lon

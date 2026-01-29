@@ -17,8 +17,6 @@ export interface ShopInfoCardProps {
         food_kind?: string;
         address_region?: string;
     };
-    rank?: number;
-    satisfaction?: 'good' | 'ok' | 'bad';
     visitCount?: number;
     distance?: string;
     initialIsBookmarked?: boolean;
@@ -30,8 +28,6 @@ export interface ShopInfoCardProps {
 
 export const ShopInfoCard = ({
     shop,
-    rank,
-    satisfaction,
     visitCount,
     distance,
     initialIsBookmarked = false,
@@ -87,13 +83,6 @@ export const ShopInfoCard = ({
         }
     };
 
-    const getRankBadgeColor = () => {
-        if (!satisfaction) return 'text-gray-500 border-gray-100 bg-gray-50/50';
-        return satisfaction === 'good'
-            ? 'text-orange-600 border-orange-100 bg-orange-50/50'
-            : 'text-gray-500 border-gray-100 bg-gray-50/50';
-    };
-
     return (
         <div
             className={cn(
@@ -115,22 +104,10 @@ export const ShopInfoCard = ({
 
             {/* Info */}
             <div className="flex-1 min-w-0 flex flex-col gap-1">
-                {/* Top: Name & Badge */}
-                <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-[15px] text-gray-900 leading-tight truncate">
-                        {shop.name}
-                    </h3>
-                    {(rank || satisfaction) && (
-                        <span className={cn(
-                            "font-bold px-1.5 py-0.5 rounded border text-[11px] whitespace-nowrap flex-shrink-0",
-                            getRankBadgeColor()
-                        )}>
-                            {satisfaction && t(`write.basic.${satisfaction}`)}
-                            {satisfaction && rank && <span className="opacity-20 mx-0.5">|</span>}
-                            {rank && `#${rank}`}
-                        </span>
-                    )}
-                </div>
+                {/* Shop Name */}
+                <h3 className="font-bold text-[15px] text-gray-900 leading-tight truncate">
+                    {shop.name}
+                </h3>
 
                 {/* Bottom: Address & Visit & Distance */}
                 <div className="flex items-center text-[13px] text-gray-500 gap-1">

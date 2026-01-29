@@ -473,6 +473,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; initialIsSaved?: boolean }) => {
     const { shop, rank, satisfaction_tier, review_text, review_images, my_review_stats } = item;
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     // Derive satisfaction string
     const tierMap: Record<number, string> = { 1: 'good', 2: 'good', 3: 'ok', 4: 'bad' };
@@ -505,8 +506,6 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
             {/* Shop Info Card */}
             <ShopInfoCard
                 shop={shopWithImage}
-                rank={rank}
-                satisfaction={satisfaction as 'good' | 'ok' | 'bad' | undefined}
                 initialIsBookmarked={initialIsSaved}
                 my_review_stats={my_review_stats}
                 showActions={true}
@@ -517,6 +516,22 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
                 }}
                 className="p-0 bg-transparent rounded-none active:bg-gray-50/50"
             />
+
+            {/* Rank & Satisfaction Badge */}
+            {(rank || satisfaction) && (
+                <div className="flex items-center gap-2">
+                    <span className={cn(
+                        "font-bold px-2 py-0.5 rounded-md border text-xs",
+                        satisfaction === 'good'
+                            ? "text-orange-600 border-orange-100 bg-orange-50/50"
+                            : "text-gray-500 border-gray-100 bg-gray-50/50"
+                    )}>
+                        {satisfaction && t(`write.basic.${satisfaction}`)}
+                        {satisfaction && rank && <span className="opacity-20 mx-1">|</span>}
+                        {rank && `#${rank}`}
+                    </span>
+                </div>
+            )}
 
             {/* Review Text */}
             {review_text && (
