@@ -95,16 +95,27 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
     }, []);
 
     const handleConfirm = () => {
+        console.log('[ImageEditModal] handleConfirm called, items:', items.length);
+
         const finalFiles: File[] = items.map((item, index) => {
             if (item.blob) {
+                console.log('[ImageEditModal] Converting blob to File for item', index, 'blob size:', item.blob.size);
                 // iOS Fix: Normalize filename and explicitly set MIME type
                 const normalizedName = `image_${Date.now()}_${index}.jpg`;
-                return new File([item.blob], normalizedName, {
+                const file = new File([item.blob], normalizedName, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
                 });
+                console.log('[ImageEditModal] Created File:', file.name, 'size:', file.size, 'type:', file.type);
+                return file;
             }
+            console.log('[ImageEditModal] Using original file for item', index);
             return item.file;
+        });
+
+        console.log('[ImageEditModal] Final files:', finalFiles.length);
+        finalFiles.forEach((f, i) => {
+            console.log(`  [${i}]: ${f.name}, ${f.size} bytes, ${f.type}`);
         });
 
         // Pass the original file of the first item to preserve EXIF data
@@ -112,6 +123,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
         // Extract texts
         const imgTexts = items.map(i => i.imgText || "");
 
+        console.log('[ImageEditModal] Calling onEditingComplete with', finalFiles.length, 'files');
         onEditingComplete(finalFiles, originalFirstFile, imgTexts);
         onClose();
     };
