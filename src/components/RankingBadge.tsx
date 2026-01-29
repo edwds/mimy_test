@@ -1,62 +1,52 @@
 import { useTranslation } from 'react-i18next';
-import { Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
     rank: number;
+    percentile?: number;
     className?: string;
     size?: 'sm' | 'md' | 'lg';
     variant?: 'badge' | 'text';
 }
 
-export const RankingBadge = ({ rank, className, size = 'md', variant = 'badge' }: Props) => {
-    const { t } = useTranslation();
+export const RankingBadge = ({ rank, percentile, className, size = 'md', variant = 'badge' }: Props) => {
+    const { i18n } = useTranslation();
 
     const getSizeClasses = () => {
         switch (size) {
-            case 'sm': return "text-xs";
-            case 'lg': return "text-lg";
+            case 'sm': return "text-[11px]";
+            case 'lg': return "text-[15px]";
             default: return "text-sm";
-        }
-    };
-
-    const getBadgeSizeClasses = () => {
-        switch (size) {
-            case 'sm': return "px-2 py-1 gap-1";
-            case 'lg': return "px-5 py-2.5 gap-2";
-            default: return "px-3 py-1.5 gap-1.5";
-        }
-    };
-
-    const getIconSize = () => {
-        switch (size) {
-            case 'sm': return 12;
-            case 'lg': return 18;
-            default: return 14;
         }
     };
 
     if (rank <= 0) return null;
 
+    // Show trophy emoji if rank <= 10 OR percentile <= 5
+    const showTrophy = rank <= 10 || (percentile && percentile <= 5);
+
+    // Korean format: 트로피 + {rank}위
+    // English format: 트로피 + #{rank} (or Rank #{rank})
+    const isKorean = i18n.language.startsWith('ko');
+
     if (variant === 'text') {
         return (
-            <span className={cn("font-bold text-gray-900", getSizeClasses(), className)}>
-                {rank}{t('common.rank_suffix', { defaultValue: '위' })}
+            <span className={cn("font-bold text-gray-900 flex items-center gap-0.5", getSizeClasses(), className)}>
+                {showTrophy && <span>🏆</span>}
+                {isKorean ? `${rank}위` : `#${rank}`}
             </span>
         );
     }
 
+    // Badge variant - compact style matching ShopCard
     return (
         <div className={cn(
-            "rounded-full font-bold bg-gray-900 text-white border border-gray-900 flex items-center shadow-sm",
+            "font-bold flex items-center gap-0.5",
             getSizeClasses(),
-            getBadgeSizeClasses(),
             className
         )}>
-            <Trophy size={getIconSize()} className="text-yellow-400 fill-current" />
-            <span>
-                #{rank}
-            </span>
+            {showTrophy && <span>🏆</span>}
+            <span>{isKorean ? `${rank}위` : `#${rank}`}</span>
         </div>
     );
 };

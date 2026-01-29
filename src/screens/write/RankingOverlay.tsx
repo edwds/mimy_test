@@ -280,7 +280,14 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                         >
                                             <div className="text-center">
                                                 <div className="text-lg font-bold text-gray-900 mb-1">{candidates[compareIdx].shop_name}</div>
-                                                <div className="text-sm text-gray-400">Rank {candidates[compareIdx].rank}</div>
+                                                <div className="text-sm text-gray-400">
+                                                    <RankingBadge
+                                                        rank={candidates[compareIdx].rank}
+                                                        size="md"
+                                                        variant="text"
+                                                        className="justify-center"
+                                                    />
+                                                </div>
                                             </div>
                                         </button>
                                     </div>
@@ -329,6 +336,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                     {rankingResult?.rank && rankingResult.rank > 0 && (
                                         <RankingBadge
                                             rank={rankingResult.rank}
+                                            percentile={rankingResult.percentile}
                                             size="lg"
                                             variant="text"
                                         />

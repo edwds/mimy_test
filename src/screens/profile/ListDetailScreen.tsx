@@ -546,7 +546,12 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
                         </span>
                     )}
                     {rank && rank > 0 && (
-                        <RankingBadge rank={rank} size="sm" variant="badge" />
+                        <RankingBadge
+                            rank={rank}
+                            percentile={my_review_stats?.percentile}
+                            size="sm"
+                            variant="badge"
+                        />
                     )}
                 </div>
             )}
