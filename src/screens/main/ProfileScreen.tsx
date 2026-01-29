@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -546,13 +546,16 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'saved' && (
                         <div className="pb-20 px-5 pt-4">
-                            <div className="mb-4">
-                                <button
-                                    className="w-full py-3 px-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-center gap-2 text-primary hover:bg-primary/10 transition-colors"
+                            <div className="mb-4 flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
                                     onClick={() => navigate('/profile/import')}
                                 >
-                                    <span className="font-semibold text-sm">{t('profile.import_btn')}</span>
-                                </button>
+                                    <Download className="w-3.5 h-3.5" />
+                                    {t('profile.import_btn')}
+                                </Button>
                             </div>
 
                             {savedShops.map((shop: any) => (
