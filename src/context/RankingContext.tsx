@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RankingOverlay } from '@/screens/write/RankingOverlay';
 import { useUser } from './UserContext';
@@ -31,13 +31,13 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         setSelectedShop(null);
     };
 
-    const registerCallback = (callback: (shopId: number) => void) => {
+    const registerCallback = useCallback((callback: (shopId: number) => void) => {
         setUpdateCallback(() => callback);
-    };
+    }, []);
 
-    const unregisterCallback = () => {
+    const unregisterCallback = useCallback(() => {
         setUpdateCallback(null);
-    };
+    }, []);
 
     const handleComplete = (action: 'WRITE_REVIEW' | 'EVALUATE_ANOTHER' | 'QUIT', data?: any) => {
         // Notify subscribers that ranking was updated

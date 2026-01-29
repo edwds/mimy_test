@@ -218,6 +218,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
     // Ranking Update Callback
     useEffect(() => {
+        if (!isEnabled) return;
+
         const handleRankingUpdate = (shopId: number) => {
             console.log('[HomeTab] Ranking updated for shop:', shopId);
             // Refetch feed to get updated POI data
@@ -228,14 +230,12 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             fetchFeed(1);
         };
 
-        if (isEnabled) {
-            registerCallback(handleRankingUpdate);
-        }
+        registerCallback(handleRankingUpdate);
 
         return () => {
             unregisterCallback();
         };
-    }, [isEnabled, registerCallback, unregisterCallback]);
+    }, [isEnabled]);
 
     // Fetch Interstitial candidates (VS & Hate)
     useEffect(() => {

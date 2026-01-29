@@ -173,6 +173,8 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     // Ranking Update Callback
     useEffect(() => {
+        if (!isEnabled) return;
+
         const handleRankingUpdate = (shopId: number) => {
             console.log('[ProfileScreen] Ranking updated for shop:', shopId);
             // Refetch based on active tab
@@ -183,14 +185,12 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             }
         };
 
-        if (isEnabled) {
-            registerCallback(handleRankingUpdate);
-        }
+        registerCallback(handleRankingUpdate);
 
         return () => {
             unregisterCallback();
         };
-    }, [isEnabled, activeTab, user?.id, registerCallback, unregisterCallback]);
+    }, [isEnabled, activeTab]);
 
 
 

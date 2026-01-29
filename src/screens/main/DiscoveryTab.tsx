@@ -173,20 +173,20 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Ranking Update Callback
     useEffect(() => {
+        if (!isEnabled) return;
+
         const handleRankingUpdate = (shopId: number) => {
             console.log('[DiscoveryTab] Ranking updated for shop:', shopId);
             // Refetch shops to get updated my_review_stats
             fetchShops();
         };
 
-        if (isEnabled) {
-            registerCallback(handleRankingUpdate);
-        }
+        registerCallback(handleRankingUpdate);
 
         return () => {
             unregisterCallback();
         };
-    }, [isEnabled, registerCallback, unregisterCallback]);
+    }, [isEnabled]);
 
     const handleSave = async (shopId: number) => {
         // Optimistic Update
