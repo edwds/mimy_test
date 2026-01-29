@@ -666,7 +666,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
     <button
         onClick={onClick}
-        className={`flex-1 py-3 text-sm font-medium transition-all relative flex flex-col items-center gap-1 ${active
+        className={`flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5 ${active
             ? "text-foreground"
             : "text-muted-foreground hover:text-foreground/80"
             }`}

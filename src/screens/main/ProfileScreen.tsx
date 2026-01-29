@@ -592,7 +592,7 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick:
     <button
         onClick={onClick}
         className={cn(
-            'flex-1 py-3 text-sm font-medium transition-all relative flex flex-col items-center gap-1',
+            'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
             active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
         )}
     >
