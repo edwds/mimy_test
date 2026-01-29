@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2, Share } from 'lucide-react';
@@ -76,7 +76,6 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const [author, setAuthor] = useState<ListAuthor | null>(null);
     const [savedShopIds, setSavedShopIds] = useState<Set<number>>(new Set());
     const [listUpdatedAt, setListUpdatedAt] = useState<string | null>(null);
-    const [isDarkBackground, setIsDarkBackground] = useState(true); // Default to dark (white icons)
 
     useEffect(() => {
         const fetchEverything = async () => {
@@ -226,66 +225,19 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     };
 
 
-    // Analyze image brightness
-    const analyzeImageBrightness = useCallback((imageUrl: string) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.src = imageUrl;
-
-        img.onload = () => {
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) return;
-
-                // Sample from top portion of image where buttons are
-                canvas.width = img.width;
-                canvas.height = Math.min(img.height, 200);
-                ctx.drawImage(img, 0, 0, img.width, canvas.height, 0, 0, canvas.width, canvas.height);
-
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-                let brightnessSum = 0;
-
-                // Calculate average brightness
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    // Calculate perceived brightness
-                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
-                    brightnessSum += brightness;
-                }
-
-                const avgBrightness = brightnessSum / (data.length / 4);
-                const isDark = avgBrightness <= 128;
-                console.log('[ListDetailScreen] Image brightness analyzed:', {
-                    avgBrightness: avgBrightness.toFixed(2),
-                    isDark,
-                    imageUrl
-                });
-                // If average brightness > 128, it's a light background
-                setIsDarkBackground(isDark);
-            } catch (error) {
-                console.error('Failed to analyze image brightness:', error);
-                setIsDarkBackground(true); // Default to dark
-            }
-        };
-
-        img.onerror = () => {
-            console.warn('[ListDetailScreen] Failed to load image for brightness analysis:', imageUrl);
-            setIsDarkBackground(true); // Default to dark on error
-        };
-    }, []);
-
     const handleBack = () => {
-        // If there is history (key is not default), go back.
-        // Otherwise, fallback to profile.
-        if (location.key !== 'default') {
+        console.log('[ListDetailScreen] handleBack called', {
+            locationKey: location.key,
+            userId,
+            pathname: location.pathname
+        });
+
+        // Always try to go back first
+        if (window.history.length > 1) {
             navigate(-1);
         } else {
-            // Fallback to viewing the user profile if no history
-            navigate(`/main?viewUser=${userId}`, { replace: true });
+            // Fallback to main profile
+            navigate('/main/profile', { replace: true });
         }
     };
 
@@ -319,15 +271,6 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 
     const coverImage = getCoverImage();
 
-    // Analyze background image brightness when cover image changes
-    useEffect(() => {
-        if (coverImage) {
-            analyzeImageBrightness(coverImage);
-        } else {
-            setIsDarkBackground(true); // Gradient background is dark
-        }
-    }, [coverImage, analyzeImageBrightness]);
-
     return (
         <div className="flex flex-col h-full bg-background relative">
             {/* Fixed Top Navigation */}
@@ -346,9 +289,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 -ml-2 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : isDarkBackground
-                                    ? "text-white hover:text-white"
-                                    : "text-black hover:text-black"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleBack}
                     >
@@ -374,9 +315,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             "rounded-full w-10 h-10 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : isDarkBackground
-                                    ? "text-white hover:text-white"
-                                    : "text-black hover:text-black"
+                                : "text-white hover:text-white"
                         )}
                         onClick={handleShare}
                     >
@@ -420,6 +359,9 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             ) : (
                                 <div className="absolute inset-0 z-0 bg-gradient-to-br from-gray-800 to-gray-900" />
                             )}
+
+                            {/* Top Black Dim for Button Visibility */}
+                            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent z-10" />
 
                             {/* Gradient Overlay for Text Readability */}
                             <div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/60 to-transparent" />

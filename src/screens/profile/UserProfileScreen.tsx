@@ -397,7 +397,14 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 )}
                 style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
             >
-                <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate(-1)}>
+                <Button variant="ghost" size="icon" className="-ml-2" onClick={() => {
+                    console.log('[UserProfileScreen] Back button clicked');
+                    if (window.history.length > 1) {
+                        navigate(-1);
+                    } else {
+                        navigate('/main/profile', { replace: true });
+                    }
+                }}>
                     <ArrowLeft className="w-6 h-6" />
                 </Button>
                 {loadingUser ? (
