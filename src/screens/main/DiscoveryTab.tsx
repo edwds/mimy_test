@@ -308,11 +308,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 })
                 .map(s => s.id);
             navigationOrderRef.current = sortedIds;
-
-            // FIX: Update map center to the selected shop
-            // This ensures logic in MapContainer (useEffect on center/offset) flies to the correct location
-            // instead of the stale mapCenter state (which might still be the user's initial location).
-            setMapCenter([selected.lat, selected.lon]);
         } else {
             // Fallback: just current order
             navigationOrderRef.current = shops.map(s => s.id);
@@ -384,10 +379,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
         if (nextShop) {
             setSelectedShopId(nextShop.id); // Triggers re-render with new key
-
-            if (nextShop.lat && nextShop.lon) {
-                setMapCenter([nextShop.lat, nextShop.lon]);
-            }
         }
 
         // Update URL (Replace history for carousel navigation)

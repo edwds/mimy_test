@@ -362,6 +362,30 @@ export const MapContainer = ({
         });
     }, [center, bottomSheetOffset]);
 
+    // Auto-fly to selected shop when selectedShopId changes
+    useEffect(() => {
+        if (!map.current || !selectedShopId) return;
+
+        const selectedShop = shops.find(s => s.id === selectedShopId);
+        if (!selectedShop || !selectedShop.lat || !selectedShop.lon) return;
+
+        let targetCenter: [number, number] = [selectedShop.lon, selectedShop.lat];
+
+        // Adjust for bottom sheet offset if present
+        if (bottomSheetOffset && bottomSheetOffset > 0) {
+            const point = map.current.project(targetCenter as any);
+            const newPoint = point.add(new maptilersdk.Point(0, bottomSheetOffset));
+            const unprojected = map.current.unproject(newPoint);
+            targetCenter = [unprojected.lng, unprojected.lat];
+        }
+
+        map.current.flyTo({
+            center: targetCenter,
+            duration: 800,
+            essential: true
+        });
+    }, [selectedShopId, bottomSheetOffset]);
+
     return (
         <div className="w-full h-full relative">
             <div ref={mapContainer} className="absolute inset-0" />
