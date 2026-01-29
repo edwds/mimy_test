@@ -10,6 +10,8 @@ import { API_BASE_URL } from '@/lib/api';
 import { ImageEditModal } from './ImageEditModal';
 import { UserSelectModal } from './UserSelectModal';
 import exifr from 'exifr';
+import { getAccessToken } from '@/lib/tokenStorage';
+import { Capacitor } from '@capacitor/core';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -151,47 +153,79 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         // Start uploads
         newItems.forEach(item => {
             if (!item.file) return;
-            const formData = new FormData();
-            formData.append('file', item.file);
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE_URL}/api/upload`);
+            // Async upload with authentication
+            (async () => {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', item.file);
 
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = (e.loaded / e.total) * 100;
-                    setMediaItems(prev => prev.map(m =>
-                        m.id === item.id ? { ...m, progress: percent } : m
-                    ));
-                }
-            };
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', `${API_BASE_URL}/api/upload`);
 
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    try {
-                        const data = JSON.parse(xhr.response);
-                        setMediaItems(prev => prev.map(m =>
-                            m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
-                        ));
-                    } catch (e) {
+                    // Add authentication header for native platforms
+                    if (Capacitor.isNativePlatform()) {
+                        console.log('[WriteContentStep] Native platform detected, adding auth header for upload');
+                        const token = await getAccessToken();
+                        if (token) {
+                            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                            console.log('[WriteContentStep] ✅ Auth header added to upload request');
+                        } else {
+                            console.error('[WriteContentStep] ❌ No token found for upload!');
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                            return;
+                        }
+                    }
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, progress: percent } : m
+                            ));
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        console.log('[WriteContentStep] Upload response status:', xhr.status);
+                        if (xhr.status === 200) {
+                            try {
+                                const data = JSON.parse(xhr.response);
+                                console.log('[WriteContentStep] ✅ Upload success:', data.url);
+                                setMediaItems(prev => prev.map(m =>
+                                    m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                                ));
+                            } catch (e) {
+                                console.error('[WriteContentStep] ❌ Failed to parse upload response:', e);
+                                setMediaItems(prev => prev.map(m =>
+                                    m.id === item.id ? { ...m, status: 'error' } : m
+                                ));
+                            }
+                        } else {
+                            console.error('[WriteContentStep] ❌ Upload failed with status:', xhr.status, xhr.responseText);
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        console.error('[WriteContentStep] ❌ Upload network error');
                         setMediaItems(prev => prev.map(m =>
                             m.id === item.id ? { ...m, status: 'error' } : m
                         ));
-                    }
-                } else {
+                    };
+
+                    xhr.send(formData);
+                } catch (error) {
+                    console.error('[WriteContentStep] ❌ Upload exception:', error);
                     setMediaItems(prev => prev.map(m =>
                         m.id === item.id ? { ...m, status: 'error' } : m
                     ));
                 }
-            };
-
-            xhr.onerror = () => {
-                setMediaItems(prev => prev.map(m =>
-                    m.id === item.id ? { ...m, status: 'error' } : m
-                ));
-            };
-
-            xhr.send(formData);
+            })();
         });
     };
 

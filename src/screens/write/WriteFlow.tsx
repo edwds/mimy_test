@@ -70,8 +70,8 @@ export const WriteFlow = () => {
         }
     }, [initialShopId, navigate, openRanking]);
 
-    // Memoize ranking completion handler
-    const handleRankingComplete = useCallback((data: any) => {
+    // Use ref to store callback handler - prevents unmounting on state change
+    const handleRankingCompleteRef = useRef((data: any) => {
         console.log('[WriteFlow] Ranking complete callback received:', data);
 
         // Update satisfaction from ranking data
@@ -87,23 +87,41 @@ export const WriteFlow = () => {
 
         // Move to write content step
         setStep('WRITE_CONTENT');
-    }, []);
+    });
 
-    // Register callback for ranking completion - only once on mount
-    const isCallbackRegistered = useRef(false);
-    useEffect(() => {
-        if (!isCallbackRegistered.current) {
-            console.log('[WriteFlow] Registering ranking callback');
-            registerCallback('WriteFlow', handleRankingComplete);
-            isCallbackRegistered.current = true;
+    // Update ref on every render to capture latest state setters
+    handleRankingCompleteRef.current = (data: any) => {
+        console.log('[WriteFlow] Ranking complete callback received:', data);
+
+        if (data.my_review_stats?.satisfaction !== undefined) {
+            const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
+                0: 'bad',
+                1: 'ok',
+                2: 'good'
+            };
+            const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
+            setSatisfaction(newSatisfaction);
         }
 
-        return () => {
-            console.log('[WriteFlow] Unregistering ranking callback');
-            unregisterCallback('WriteFlow');
-            isCallbackRegistered.current = false;
+        setStep('WRITE_CONTENT');
+    };
+
+    // Register callback for ranking completion - only once on mount
+    useEffect(() => {
+        console.log('[WriteFlow] Registering ranking callback');
+
+        // Register a stable wrapper that calls the ref
+        const stableCallback = (data: any) => {
+            handleRankingCompleteRef.current(data);
         };
-    }, [handleRankingComplete, registerCallback, unregisterCallback]);
+
+        registerCallback('WriteFlow', stableCallback);
+
+        return () => {
+            console.log('[WriteFlow] Component unmounting, unregistering callback');
+            unregisterCallback('WriteFlow');
+        };
+    }, []); // Empty deps - only register on mount, unregister on unmount
 
     // Handlers
     const handleShopSelect = (shop: any) => {
