@@ -28,7 +28,6 @@ export interface ShopInfoCardProps {
 
 export const ShopInfoCard = ({
     shop,
-    visitCount,
     distance,
     initialIsBookmarked = false,
     my_review_stats,
@@ -36,7 +35,6 @@ export const ShopInfoCard = ({
     onClick,
     className
 }: ShopInfoCardProps) => {
-    const { t } = useTranslation();
     const navigate = useNavigate();
     const { openRanking } = useRanking();
     const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
@@ -109,17 +107,11 @@ export const ShopInfoCard = ({
                     {shop.name}
                 </h3>
 
-                {/* Bottom: Address & Visit & Distance */}
+                {/* Bottom: Address & Distance */}
                 <div className="flex items-center text-[13px] text-gray-500 gap-1">
                     {shop.address && <span className="truncate">{shop.address}</span>}
                     {!shop.address && shop.address_region && (
                         <span className="truncate">{shop.address_region}</span>
-                    )}
-                    {visitCount && (
-                        <>
-                            <span className="mx-1 opacity-30">|</span>
-                            <span>{visitCount}{t('content.visit_info.nth', 'th visit')}</span>
-                        </>
                     )}
                     {distance && (
                         <>

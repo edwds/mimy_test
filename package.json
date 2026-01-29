@@ -10,7 +10,12 @@
     "build": "tsc -p tsconfig.app.json && vite build",
     "server": "tsx watch server/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "check-dummy-users": "tsx server/scripts/checkDummyUsers.ts",
+    "distribute-content": "tsx server/scripts/distributeContent.ts",
+    "verify-distribution": "tsx server/scripts/verifyDistribution.ts",
+    "check-content": "tsx server/scripts/checkContent.ts",
+    "fix-content-deleted": "tsx server/scripts/fixContentDeleted.ts"
   },
   "keywords": [],
   "author": "",
