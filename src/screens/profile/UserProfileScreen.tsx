@@ -241,10 +241,10 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
-        registerCallback(handleRankingUpdate);
+        registerCallback('UserProfileScreen', handleRankingUpdate);
 
         return () => {
-            unregisterCallback();
+            unregisterCallback('UserProfileScreen');
         };
     }, [registerCallback, unregisterCallback]);
 

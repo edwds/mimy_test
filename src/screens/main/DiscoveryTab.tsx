@@ -183,10 +183,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
-        registerCallback(handleRankingUpdate);
+        registerCallback('DiscoveryTab', handleRankingUpdate);
 
         return () => {
-            unregisterCallback();
+            unregisterCallback('DiscoveryTab');
         };
     }, [isEnabled]);
 

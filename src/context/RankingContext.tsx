@@ -17,8 +17,8 @@ interface RankingContextType {
     openRanking: (shop: any) => void;
     closeRanking: () => void;
     isRankingOpen: boolean;
-    registerCallback: (callback: (data: RankingUpdateData) => void) => void;
-    unregisterCallback: () => void;
+    registerCallback: (id: string, callback: (data: RankingUpdateData) => void) => void;
+    unregisterCallback: (id: string) => void;
 }
 
 const RankingContext = createContext<RankingContextType | undefined>(undefined);
@@ -26,7 +26,7 @@ const RankingContext = createContext<RankingContextType | undefined>(undefined);
 export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedShop, setSelectedShop] = useState<any>(null);
-    const [updateCallback, setUpdateCallback] = useState<((data: RankingUpdateData) => void) | null>(null);
+    const [updateCallbacks, setUpdateCallbacks] = useState<Map<string, (data: RankingUpdateData) => void>>(new Map());
     const navigate = useNavigate();
     const { user } = useUser();
     const currentUserId = user?.id || 0;
@@ -41,19 +41,34 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         setSelectedShop(null);
     };
 
-    const registerCallback = useCallback((callback: (data: RankingUpdateData) => void) => {
-        setUpdateCallback(() => callback);
+    const registerCallback = useCallback((id: string, callback: (data: RankingUpdateData) => void) => {
+        setUpdateCallbacks(prev => {
+            const next = new Map(prev);
+            next.set(id, callback);
+            console.log(`[RankingContext] Registered callback for: ${id}, total: ${next.size}`);
+            return next;
+        });
     }, []);
 
-    const unregisterCallback = useCallback(() => {
-        setUpdateCallback(null);
+    const unregisterCallback = useCallback((id: string) => {
+        setUpdateCallbacks(prev => {
+            const next = new Map(prev);
+            next.delete(id);
+            console.log(`[RankingContext] Unregistered callback for: ${id}, remaining: ${next.size}`);
+            return next;
+        });
     }, []);
 
     const handleComplete = (action: 'WRITE_REVIEW' | 'EVALUATE_ANOTHER' | 'QUIT', data?: any) => {
-        console.log('[RankingContext] handleComplete called:', { action, data, selectedShop: selectedShop?.id, hasCallback: !!updateCallback });
+        console.log('[RankingContext] handleComplete called:', {
+            action,
+            data,
+            selectedShop: selectedShop?.id,
+            subscriberCount: updateCallbacks.size
+        });
 
-        // Notify subscribers that ranking was updated with optimistic data
-        if (updateCallback && selectedShop?.id && data && data.satisfaction !== undefined) {
+        // Notify ALL subscribers that ranking was updated with optimistic data
+        if (selectedShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
             const updateData: RankingUpdateData = {
                 shopId: selectedShop.id,
                 my_review_stats: {
@@ -63,14 +78,19 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
                     total_reviews: data.total_reviews || 0
                 }
             };
-            console.log('[RankingContext] ✅ Notifying with optimistic data:', updateData);
-            updateCallback(updateData);
+            console.log(`[RankingContext] ✅ Notifying ${updateCallbacks.size} subscribers:`, updateData);
+
+            // Notify all subscribers
+            updateCallbacks.forEach((callback, id) => {
+                console.log(`[RankingContext] → Notifying: ${id}`);
+                callback(updateData);
+            });
         } else {
             console.log('[RankingContext] ❌ Not notifying:', {
-                hasCallback: !!updateCallback,
                 hasShopId: !!selectedShop?.id,
                 hasData: !!data,
-                hasSatisfaction: data?.satisfaction !== undefined
+                hasSatisfaction: data?.satisfaction !== undefined,
+                subscriberCount: updateCallbacks.size
             });
         }
 

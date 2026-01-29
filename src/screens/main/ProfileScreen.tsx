@@ -162,10 +162,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
-        registerCallback(handleRankingUpdate);
+        registerCallback('ProfileScreen', handleRankingUpdate);
 
         return () => {
-            unregisterCallback();
+            unregisterCallback('ProfileScreen');
         };
     }, [isEnabled]);
 

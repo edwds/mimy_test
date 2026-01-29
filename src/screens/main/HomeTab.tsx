@@ -228,10 +228,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
-        registerCallback(handleRankingUpdate);
+        registerCallback('HomeTab', handleRankingUpdate);
 
         return () => {
-            unregisterCallback();
+            unregisterCallback('HomeTab');
         };
     }, [isEnabled]);
 
