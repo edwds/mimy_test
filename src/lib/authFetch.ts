@@ -56,7 +56,7 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
         bodyText = String(response.data);
       }
 
-      console.log('[authFetch] Response body text (first 100 chars):', bodyText.substring(0, 100));
+      console.log('[authFetch] Response body text (first 100 chars):', bodyText.slice(0, 100));
 
       // Convert CapacitorHttp response to fetch Response
       const fetchResponse = new Response(bodyText, {

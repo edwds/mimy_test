@@ -65,18 +65,27 @@ export function generateRefreshToken(userId: number): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
+    console.log('[verifyAccessToken] Verifying token, length:', token?.length);
+    console.log('[verifyAccessToken] Token preview:', token?.slice(0, 50) + '...');
+
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: 'mimy-api',
       audience: 'mimy-client'
     }) as AccessTokenPayload;
 
     if (decoded.type !== 'access') {
+      console.error('[verifyAccessToken] ❌ Invalid token type:', decoded.type);
       return null;
     }
 
+    console.log('[verifyAccessToken] ✅ Token valid, userId:', decoded.userId);
     return decoded;
-  } catch (error) {
+  } catch (error: any) {
     // Token expired, invalid, or malformed
+    console.error('[verifyAccessToken] ❌ Token verification failed:', error.message);
+    if (error.name === 'TokenExpiredError') {
+      console.error('[verifyAccessToken] Token expired at:', error.expiredAt);
+    }
     return null;
   }
 }

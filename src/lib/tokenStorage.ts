@@ -154,7 +154,7 @@ export const getAuthHeader = async (): Promise<{ Authorization?: string }> => {
 
   if (token) {
     console.log('[getAuthHeader] ✅ Token found, length:', token.length);
-    console.log('[getAuthHeader] Token preview:', token.substring(0, 20) + '...');
+    console.log('[getAuthHeader] Token preview:', token.slice(0, 20) + '...');
     return { Authorization: `Bearer ${token}` };
   }
 

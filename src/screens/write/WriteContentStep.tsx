@@ -102,10 +102,25 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.length) return;
-        setPendingFiles(Array.from(e.target.files));
+        console.log('[WriteContentStep] File input changed');
+        console.log('[WriteContentStep] Files selected:', e.target.files?.length);
+
+        if (!e.target.files?.length) {
+            console.log('[WriteContentStep] ❌ No files selected');
+            return;
+        }
+
+        const files = Array.from(e.target.files);
+        console.log('[WriteContentStep] File details:', files.map(f => ({
+            name: f.name,
+            size: f.size,
+            type: f.type
+        })));
+
+        setPendingFiles(files);
         setIsEditModalOpen(true);
         e.target.value = '';
+        console.log('[WriteContentStep] Opening ImageEditModal with', files.length, 'files');
     };
 
     const handleEditingComplete = (files: File[], originalFirstFile?: File, imgTexts?: string[]) => {
@@ -169,42 +184,93 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         return;
                     }
 
-                    const formData = new FormData();
-                    formData.append('file', file, file.name);
-
                     // Get auth token for native platforms
                     const token = await getAccessToken();
                     console.log('[WriteContentStep] Token available:', !!token);
 
-                    // Build headers
-                    const headers: Record<string, string> = {};
+                    // iOS Fix: Convert to base64 for native platforms
                     if (token) {
-                        headers['Authorization'] = `Bearer ${token}`;
-                        console.log('[WriteContentStep] Added auth header');
-                    }
+                        console.log('[WriteContentStep] Native platform detected, using base64 upload');
 
-                    console.log('[WriteContentStep] Starting fetch upload...');
-                    const response = await fetch(`${API_BASE_URL}/api/upload`, {
-                        method: 'POST',
-                        headers,
-                        body: formData,
-                        credentials: token ? undefined : 'include' // Use credentials for web only
-                    });
+                        // Convert file to base64
+                        const reader = new FileReader();
 
-                    console.log('[WriteContentStep] Upload response status:', response.status);
+                        reader.onload = async () => {
+                            try {
+                                const base64Data = (reader.result as string).split(',')[1];
+                                console.log('[WriteContentStep] Base64 conversion complete, length:', base64Data.length);
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log('[WriteContentStep] ✅ Upload success:', data.url);
-                        setMediaItems(prev => prev.map(m =>
-                            m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
-                        ));
+                                const response = await fetch(`${API_BASE_URL}/api/upload/base64`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({
+                                        filename: file.name,
+                                        mimetype: file.type,
+                                        data: base64Data
+                                    })
+                                });
+
+                                console.log('[WriteContentStep] Upload response status:', response.status);
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    console.log('[WriteContentStep] ✅ Upload success:', data.url);
+                                    setMediaItems(prev => prev.map(m =>
+                                        m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                                    ));
+                                } else {
+                                    const errorText = await response.text();
+                                    console.error('[WriteContentStep] ❌ Upload failed:', response.status, errorText);
+                                    setMediaItems(prev => prev.map(m =>
+                                        m.id === item.id ? { ...m, status: 'error' } : m
+                                    ));
+                                }
+                            } catch (error) {
+                                console.error('[WriteContentStep] ❌ Upload exception:', error);
+                                setMediaItems(prev => prev.map(m =>
+                                    m.id === item.id ? { ...m, status: 'error' } : m
+                                ));
+                            }
+                        };
+
+                        reader.onerror = () => {
+                            console.error('[WriteContentStep] ❌ FileReader error');
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                        };
+
+                        reader.readAsDataURL(file);
                     } else {
-                        const errorText = await response.text();
-                        console.error('[WriteContentStep] ❌ Upload failed:', response.status, errorText);
-                        setMediaItems(prev => prev.map(m =>
-                            m.id === item.id ? { ...m, status: 'error' } : m
-                        ));
+                        // Web: Use FormData
+                        console.log('[WriteContentStep] Web platform, using FormData upload');
+                        const formData = new FormData();
+                        formData.append('file', file, file.name);
+
+                        const response = await fetch(`${API_BASE_URL}/api/upload`, {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'include'
+                        });
+
+                        console.log('[WriteContentStep] Upload response status:', response.status);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('[WriteContentStep] ✅ Upload success:', data.url);
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                            ));
+                        } else {
+                            const errorText = await response.text();
+                            console.error('[WriteContentStep] ❌ Upload failed:', response.status, errorText);
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                        }
                     }
                 } catch (error) {
                     console.error('[WriteContentStep] ❌ Upload exception:', error);
