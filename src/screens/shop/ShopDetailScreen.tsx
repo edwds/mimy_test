@@ -442,7 +442,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                             </div>
                         </div>
 
-                        {/* Actions Row: Directions / Save / Evaluate */}
+                        {/* Actions Row: Directions / Evaluate / Save */}
                         <div className="flex gap-2.5 mb-8">
                             <button
                                 onClick={() => {
@@ -458,27 +458,14 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                             </button>
 
                             <button
-                                onClick={handleBookmark}
-                                className={cn(
-                                    "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
-                                    shop.is_saved
-                                        ? "bg-red-50 border-red-100 text-red-500"
-                                        : "bg-white border-gray-200 text-gray-700"
-                                )}
-                            >
-                                <Bookmark size={16} className={cn(shop.is_saved && "fill-current")} />
-                                {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
-                            </button>
-
-                            <button
                                 onClick={() => {
                                     openRanking(shop);
                                 }}
                                 className={cn(
-                                    "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold",
+                                    "flex-1 h-12 rounded-xl flex items-center justify-center gap-1.5 text-sm font-bold transition-opacity hover:opacity-80",
                                     shop.my_review_stats
-                                        ? "bg-primary/5 border-primary/20 text-primary" // Completed Style
-                                        : "bg-white border-gray-200 text-gray-700" // Default Style
+                                        ? "bg-primary/10 text-primary" // Completed Style
+                                        : "bg-muted text-foreground" // Default Style
                                 )}
                             >
                                 {shop.my_review_stats ? (
@@ -492,6 +479,19 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                         {t('shop.evaluate', 'Evaluate')}
                                     </>
                                 )}
+                            </button>
+
+                            <button
+                                onClick={handleBookmark}
+                                className={cn(
+                                    "flex-1 h-12 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-bold transition-colors",
+                                    shop.is_saved
+                                        ? "bg-primary/10 text-primary border-primary/20"
+                                        : "bg-transparent text-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                <Bookmark size={16} className={cn(shop.is_saved && "fill-current")} />
+                                {shop.is_saved ? t('shop.saved', 'Saved') : t('shop.wants_to_go', 'Wants to go')}
                             </button>
                         </div>
                     </div>
