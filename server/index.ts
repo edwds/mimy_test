@@ -23,8 +23,8 @@ const port = process.env.PORT || 3001;
 // CORS configuration with credentials support
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://mimytest.vercel.app', 'https://www.mimytest.vercel.app']
-        : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4173'],
+        ? ['https://mimytest.vercel.app', 'https://www.mimytest.vercel.app', 'capacitor://localhost', 'ionic://localhost']
+        : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4173', 'capacitor://localhost', 'ionic://localhost'],
     credentials: true, // Allow cookies to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
