@@ -79,10 +79,20 @@ export const LoginPage = () => {
                             return;
                         }
                         console.log('[Login] Tokens saved and verified for native platform');
+                    } else {
+                        // Web: Wait for browser to process Set-Cookie headers
+                        console.log('[Login] Web platform, waiting for cookies to be set...');
+                        await new Promise(resolve => setTimeout(resolve, 200));
                     }
 
                     // Login (JWT cookies already set by server for web)
+                    console.log('[Login] Calling contextLogin with userId:', user.id);
                     await contextLogin(user.id.toString());
+                    console.log('[Login] contextLogin completed');
+
+                    // Give a moment for UserContext to update
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    console.log('[Login] Navigating to /main');
                     navigate('/main');
                 }
             } else if (response.status === 403) {
