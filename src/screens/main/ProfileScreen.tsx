@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, Download } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, CloudDownload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -553,7 +553,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
                                     onClick={() => navigate('/profile/import')}
                                 >
-                                    <Download className="w-3.5 h-3.5" />
+                                    <CloudDownload className="w-3.5 h-3.5" />
                                     {t('profile.import_btn')}
                                 </Button>
                             </div>

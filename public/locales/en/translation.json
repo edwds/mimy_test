@@ -336,7 +336,7 @@
             "fail": "Failed to update ID",
             "error": "Error updating ID"
         },
-        "import_btn": "Import from other platforms",
+        "import_btn": "Import Places",
         "unsave_fail": "Failed to unsave"
     },
     "date": {
