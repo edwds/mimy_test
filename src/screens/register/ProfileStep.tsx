@@ -187,8 +187,13 @@ export const ProfileStep = () => {
 
                     // Save tokens for native apps
                     if (tokens && Capacitor.isNativePlatform()) {
-                        await saveTokens(tokens.accessToken, tokens.refreshToken);
-                        console.log('[Register] Tokens saved for native platform');
+                        const saved = await saveTokens(tokens.accessToken, tokens.refreshToken);
+                        if (!saved) {
+                            console.error('[Register] Failed to save tokens, cannot proceed');
+                            alert('Failed to save login credentials. Please try again.');
+                            return;
+                        }
+                        console.log('[Register] Tokens saved and verified for native platform');
                     }
 
                     await refreshUser(); // Update context with new profile info

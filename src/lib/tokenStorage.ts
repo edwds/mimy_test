@@ -13,19 +13,33 @@ export const isNativePlatform = () => {
 
 /**
  * Save JWT tokens (only for native platforms)
+ * Returns true if save was successful and verified
  */
-export const saveTokens = async (accessToken: string, refreshToken: string) => {
+export const saveTokens = async (accessToken: string, refreshToken: string): Promise<boolean> => {
   if (!isNativePlatform()) {
     // On web, tokens are stored in HttpOnly cookies by the server
-    return;
+    return true;
   }
 
   try {
     await Preferences.set({ key: TOKEN_KEY, value: accessToken });
     await Preferences.set({ key: REFRESH_TOKEN_KEY, value: refreshToken });
     console.log('[TokenStorage] Tokens saved to Preferences');
+
+    // Verify tokens were saved correctly
+    const savedAccessToken = await getAccessToken();
+    const savedRefreshToken = await getRefreshToken();
+
+    if (savedAccessToken === accessToken && savedRefreshToken === refreshToken) {
+      console.log('[TokenStorage] Token save verified successfully');
+      return true;
+    } else {
+      console.error('[TokenStorage] Token verification failed');
+      return false;
+    }
   } catch (error) {
     console.error('[TokenStorage] Failed to save tokens:', error);
+    return false;
   }
 };
 

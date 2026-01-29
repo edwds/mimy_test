@@ -72,8 +72,13 @@ export const LoginPage = () => {
                 } else {
                     // Existing User: Save tokens for native apps
                     if (tokens && Capacitor.isNativePlatform()) {
-                        await saveTokens(tokens.accessToken, tokens.refreshToken);
-                        console.log('[Login] Tokens saved for native platform');
+                        const saved = await saveTokens(tokens.accessToken, tokens.refreshToken);
+                        if (!saved) {
+                            console.error('[Login] Failed to save tokens, cannot proceed');
+                            alert('Failed to save login credentials. Please try again.');
+                            return;
+                        }
+                        console.log('[Login] Tokens saved and verified for native platform');
                     }
 
                     // Login (JWT cookies already set by server for web)
