@@ -16,9 +16,19 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   // For native platforms, use CapacitorHttp
   if (isNativePlatform()) {
     console.log('[authFetch] Using CapacitorHttp for native platform');
+    console.log('[authFetch] URL:', url);
+    console.log('[authFetch] Method:', options.method || 'GET');
 
     const authHeader = await getAuthHeader();
+    console.log('[authFetch] Auth header:', authHeader);
+
+    if (!authHeader.Authorization) {
+      console.error('[authFetch] ⚠️ WARNING: No Authorization token found!');
+      console.error('[authFetch] This request will likely fail with 401');
+    }
+
     Object.assign(headers, authHeader);
+    console.log('[authFetch] Final headers:', headers);
 
     try {
       const response: HttpResponse = await CapacitorHttp.request({

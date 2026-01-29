@@ -3,12 +3,23 @@ import { authFetch } from '@/lib/authFetch';
 
 export const ContentService = {
     create: async (data: any) => {
+        console.log('[ContentService] Creating content...');
         const response = await authFetch(`${API_BASE_URL}/api/content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
-        if (!response.ok) throw new Error('Failed to create content');
+        console.log('[ContentService] Response status:', response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[ContentService] Create failed:', response.status, errorText);
+
+            if (response.status === 401) {
+                throw new Error('Authentication required. Please log in again.');
+            }
+            throw new Error(`Failed to create content: ${errorText || response.statusText}`);
+        }
         return response.json();
     },
     submitRanking: async (data: { shop_id: number; sort_key: number }) => {
