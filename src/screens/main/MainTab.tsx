@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Home, Compass, Trophy, User, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
@@ -168,7 +169,10 @@ export const MainTab = () => {
 
 
             {/* Bottom Navigation */}
-            <nav className="border-t border-border bg-card/80 backdrop-blur-lg pb-6 shrink-0">
+            <nav
+                className="border-t border-border bg-card/80 backdrop-blur-lg shrink-0"
+                style={{ paddingBottom: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-bottom) + 0.5rem)' : '0.5rem' }}
+            >
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
                         icon={<Home className="w-6 h-6" />}
