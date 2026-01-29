@@ -55,7 +55,7 @@ export const RankingBadge = ({ rank, className, size = 'md', variant = 'badge' }
         )}>
             <Trophy size={getIconSize()} className="text-yellow-400 fill-current" />
             <span>
-                Rank {rank}
+                #{rank}
             </span>
         </div>
     );

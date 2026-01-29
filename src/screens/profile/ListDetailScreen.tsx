@@ -11,6 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share as CapacitorShare } from '@capacitor/share';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
+import { RankingBadge } from '@/components/RankingBadge';
 
 interface ListItem {
     rank: number;
@@ -144,8 +145,15 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         setItems(listData);
 
                         // Get most recent updated_at from items
-                        if (listData.length > 0 && listData[0].updated_at) {
-                            setListUpdatedAt(listData[0].updated_at);
+                        if (listData.length > 0) {
+                            const mostRecent = listData.reduce((latest: any, item: any) => {
+                                if (!item.updated_at) return latest;
+                                if (!latest) return item.updated_at;
+                                return new Date(item.updated_at) > new Date(latest) ? item.updated_at : latest;
+                            }, null);
+                            if (mostRecent) {
+                                setListUpdatedAt(mostRecent);
+                            }
                         }
                     }
                 }
@@ -250,8 +258,14 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                 }
 
                 const avgBrightness = brightnessSum / (data.length / 4);
+                const isDark = avgBrightness <= 128;
+                console.log('[ListDetailScreen] Image brightness analyzed:', {
+                    avgBrightness: avgBrightness.toFixed(2),
+                    isDark,
+                    imageUrl
+                });
                 // If average brightness > 128, it's a light background
-                setIsDarkBackground(avgBrightness <= 128);
+                setIsDarkBackground(isDark);
             } catch (error) {
                 console.error('Failed to analyze image brightness:', error);
                 setIsDarkBackground(true); // Default to dark
@@ -259,6 +273,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
         };
 
         img.onerror = () => {
+            console.warn('[ListDetailScreen] Failed to load image for brightness analysis:', imageUrl);
             setIsDarkBackground(true); // Default to dark on error
         };
     }, []);
@@ -519,28 +534,37 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
 
             {/* Rank & Satisfaction Badge */}
             {(rank || satisfaction) && (
-                <div className="flex items-center gap-2">
-                    <span className={cn(
-                        "font-bold px-2 py-0.5 rounded-md border text-xs",
-                        satisfaction === 'good'
-                            ? "text-orange-600 border-orange-100 bg-orange-50/50"
-                            : "text-gray-500 border-gray-100 bg-gray-50/50"
-                    )}>
-                        {satisfaction && t(`write.basic.${satisfaction}`)}
-                        {satisfaction && rank && <span className="opacity-20 mx-1">|</span>}
-                        {rank && `#${rank}`}
-                    </span>
+                <div className="flex items-center gap-2 pl-1">
+                    {satisfaction && (
+                        <span className={cn(
+                            "font-bold px-2 py-0.5 rounded border text-[11px] whitespace-nowrap",
+                            satisfaction === 'good'
+                                ? "text-orange-600 border-orange-100 bg-orange-50/50"
+                                : "text-gray-500 border-gray-100 bg-gray-50/50"
+                        )}>
+                            {t(`write.basic.${satisfaction}`)}
+                        </span>
+                    )}
+                    {rank && rank > 0 && (
+                        <RankingBadge rank={rank} size="sm" variant="badge" />
+                    )}
                 </div>
             )}
 
-            {/* Review Text */}
-            {review_text && (
+            {/* Review Text or Shop Description */}
+            {review_text ? (
                 <div className="relative">
                     <p className="pl-1 text-xs text-foreground/80 leading-relaxed line-clamp-2">
                         {review_text}
                     </p>
                 </div>
-            )}
+            ) : shop.description ? (
+                <div className="relative">
+                    <p className="pl-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        {shop.description}
+                    </p>
+                </div>
+            ) : null}
         </div>
     );
 };
