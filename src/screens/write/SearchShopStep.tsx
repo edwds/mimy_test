@@ -487,8 +487,8 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                             <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                                 {shop.name}
                                                             </span>
-                                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                                👍 {shop.good_ratio}%
+                                                            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                {shop.food_kind || '음식점'}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
