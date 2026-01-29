@@ -43,11 +43,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
     const [authFailed, setAuthFailed] = useState<boolean>(false);
 
-    const fetchUserData = async () => {
-        console.log('[UserContext] fetchUserData called, authFailed:', authFailed);
+    const fetchUserData = async (skipAuthFailedCheck = false) => {
+        console.log('[UserContext] fetchUserData called, authFailed:', authFailed, 'skipCheck:', skipAuthFailedCheck);
 
-        // Prevent infinite retries if auth fails
-        if (authFailed) {
+        // Prevent infinite retries if auth fails (unless explicitly skipped)
+        if (authFailed && !skipAuthFailedCheck) {
             console.log('[UserContext] Auth already failed, skipping fetch');
             setLoading(false);
             return;
@@ -103,10 +103,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const login = async (_userId: string) => {
         console.log('[UserContext] login called with userId:', _userId);
         // Server already set JWT cookies during login/register
-        // Reset auth failed flag and fetch user data
+        // Skip authFailed check since we're explicitly logging in
         setAuthFailed(false);
-        console.log('[UserContext] authFailed reset to false, calling fetchUserData...');
-        await fetchUserData();
+        console.log('[UserContext] authFailed reset to false, calling fetchUserData with skipCheck=true...');
+        await fetchUserData(true); // Skip authFailed check due to React state timing
         console.log('[UserContext] login completed');
     };
 
