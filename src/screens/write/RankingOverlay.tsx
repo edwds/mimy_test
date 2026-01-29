@@ -114,12 +114,17 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
 
     const saveRank = async (insertIndex: number, currentTotal?: number, currentBaseRank?: number) => {
         try {
+            console.log('[RankingOverlay] saveRank called with insertIndex:', insertIndex, 'currentTotal:', currentTotal, 'currentBaseRank:', currentBaseRank);
+            console.log('[RankingOverlay] Candidates length:', candidates.length, 'baseRank:', baseRank, 'totalCount:', totalCount);
+
             // Send to server and get actual ranking data
             const response = await ContentService.applyRanking({
                 shop_id: shop.id,
                 insert_index: insertIndex,
                 satisfaction: satisfaction!
             });
+
+            console.log('[RankingOverlay] Server response:', response);
 
             // Use server response instead of cached calculation
             if (response && response.rank && response.total_count) {

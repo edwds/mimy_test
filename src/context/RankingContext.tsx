@@ -98,34 +98,31 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
             });
         }
 
-        // Use setTimeout to defer state updates until after callbacks complete
-        // This prevents unmounting the component that's handling the callback
-        setTimeout(() => {
-            setIsOpen(false);
-            setSelectedShop(null);
+        // Close overlay immediately after notifying callbacks
+        setIsOpen(false);
+        setSelectedShop(null);
 
-            if (action === 'WRITE_REVIEW') {
-                // Only navigate if not already on /write route
-                // This prevents remounting WriteFlow when callback is already handling the transition
-                if (location.pathname !== '/write') {
-                    console.log('[RankingContext] Navigating to /write from:', location.pathname);
-                    navigate('/write', {
-                        state: {
-                            step: 'WRITE_CONTENT',
-                            shop: currentShop,
-                            satisfaction: data?.satisfaction || 'good'
-                        }
-                    });
-                } else {
-                    console.log('[RankingContext] Already on /write, letting callback handle transition');
-                }
-            } else if (action === 'EVALUATE_ANOTHER') {
-                // Go to search
-                navigate('/write', { replace: true });
+        if (action === 'WRITE_REVIEW') {
+            // Only navigate if not already on /write route
+            // This prevents remounting WriteFlow when callback is already handling the transition
+            if (location.pathname !== '/write') {
+                console.log('[RankingContext] Navigating to /write from:', location.pathname);
+                navigate('/write', {
+                    state: {
+                        step: 'WRITE_CONTENT',
+                        shop: currentShop,
+                        satisfaction: data?.satisfaction || 'good'
+                    }
+                });
             } else {
-                // Stay where we are, just closed overlay
+                console.log('[RankingContext] Already on /write, letting callback handle transition');
             }
-        }, 0);
+        } else if (action === 'EVALUATE_ANOTHER') {
+            // Go to search
+            navigate('/write', { replace: true });
+        } else {
+            // Stay where we are, just closed overlay
+        }
     };
 
     // Memoize context value to prevent unnecessary re-renders

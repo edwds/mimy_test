@@ -70,41 +70,48 @@ export const WriteFlow = () => {
         }
     }, [initialShopId, navigate, openRanking]);
 
+    // Store the latest satisfaction data from ranking
+    const rankingDataRef = useRef<any>(null);
+
     // Use ref to store callback handler - prevents unmounting on state change
     const handleRankingCompleteRef = useRef((data: any) => {
         console.log('[WriteFlow] Ranking complete callback received:', data);
 
-        // Update satisfaction from ranking data
-        if (data.my_review_stats?.satisfaction !== undefined) {
-            const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
-                0: 'bad',
-                1: 'ok',
-                2: 'good'
-            };
-            const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
-            setSatisfaction(newSatisfaction);
-        }
-
-        // Move to write content step
-        setStep('WRITE_CONTENT');
+        // Store data in ref instead of immediately updating state
+        rankingDataRef.current = data;
     });
 
-    // Update ref on every render to capture latest state setters
+    // Update ref on every render to capture latest closure
     handleRankingCompleteRef.current = (data: any) => {
         console.log('[WriteFlow] Ranking complete callback received:', data);
-
-        if (data.my_review_stats?.satisfaction !== undefined) {
-            const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
-                0: 'bad',
-                1: 'ok',
-                2: 'good'
-            };
-            const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
-            setSatisfaction(newSatisfaction);
-        }
-
-        setStep('WRITE_CONTENT');
+        rankingDataRef.current = data;
     };
+
+    // Watch for ranking overlay close and transition to write content
+    useEffect(() => {
+        if (!isRankingOpen && rankingDataRef.current && step === 'SEARCH_SHOP') {
+            console.log('[WriteFlow] Ranking closed, transitioning to WRITE_CONTENT with data:', rankingDataRef.current);
+
+            const data = rankingDataRef.current;
+
+            // Update satisfaction from ranking data
+            if (data.my_review_stats?.satisfaction !== undefined) {
+                const tierMap: Record<number, 'good' | 'ok' | 'bad'> = {
+                    0: 'bad',
+                    1: 'ok',
+                    2: 'good'
+                };
+                const newSatisfaction = tierMap[data.my_review_stats.satisfaction] || 'good';
+                setSatisfaction(newSatisfaction);
+            }
+
+            // Move to write content step
+            setStep('WRITE_CONTENT');
+
+            // Clear the ref
+            rankingDataRef.current = null;
+        }
+    }, [isRankingOpen, step]);
 
     // Register callback for ranking completion - only once on mount
     useEffect(() => {
