@@ -50,19 +50,28 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const handleComplete = (action: 'WRITE_REVIEW' | 'EVALUATE_ANOTHER' | 'QUIT', data?: any) => {
+        console.log('[RankingContext] handleComplete called:', { action, data, selectedShop: selectedShop?.id, hasCallback: !!updateCallback });
+
         // Notify subscribers that ranking was updated with optimistic data
-        if (updateCallback && selectedShop?.id && data) {
+        if (updateCallback && selectedShop?.id && data && data.satisfaction !== undefined) {
             const updateData: RankingUpdateData = {
                 shopId: selectedShop.id,
-                my_review_stats: data.rank && data.satisfaction !== undefined ? {
+                my_review_stats: {
                     satisfaction: data.satisfaction === 'good' ? 2 : data.satisfaction === 'ok' ? 1 : 0,
                     rank: data.rank || 0,
                     percentile: data.percentile || 0,
                     total_reviews: data.total_reviews || 0
-                } : null
+                }
             };
-            console.log('[RankingContext] Notifying with optimistic data:', updateData);
+            console.log('[RankingContext] ✅ Notifying with optimistic data:', updateData);
             updateCallback(updateData);
+        } else {
+            console.log('[RankingContext] ❌ Not notifying:', {
+                hasCallback: !!updateCallback,
+                hasShopId: !!selectedShop?.id,
+                hasData: !!data,
+                hasSatisfaction: data?.satisfaction !== undefined
+            });
         }
 
         setIsOpen(false);
