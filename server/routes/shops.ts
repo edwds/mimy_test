@@ -44,6 +44,9 @@ router.get("/discovery", optionalAuth, async (req, res) => {
         const centerLat = parseFloat(req.query.lat as string);
         const centerLon = parseFloat(req.query.lon as string);
 
+        // Exclude ranked shops (default: true for initial load, false for map search)
+        const excludeRanked = req.query.excludeRanked !== 'false';
+
         // Get user ID from JWT
         const uid = req.user?.id || 0;
 
@@ -64,7 +67,11 @@ router.get("/discovery", optionalAuth, async (req, res) => {
         const rawMinLon = centerLon - lonDelta;
         const rawMaxLon = centerLon + lonDelta;
 
-        // Fetch shops within 10km radius, excluding visited shops
+        // Fetch shops within 10km radius
+        // For initial load (excludeRanked=true): exclude shops user has already ranked
+        // For map exploration (excludeRanked=false): include all shops for comprehensive discovery
+        const excludeClause = excludeRanked ? sql`AND ur.id IS NULL` : sql``;
+
         const shopsQuery = await db.execute(sql`
             SELECT
                 s.id,
@@ -83,7 +90,7 @@ router.get("/discovery", optionalAuth, async (req, res) => {
                 AND s.lat <= ${rawMaxLat}
                 AND s.lon >= ${rawMinLon}
                 AND s.lon <= ${rawMaxLon}
-                AND ur.id IS NULL
+                ${excludeClause}
             LIMIT 200
         `);
 

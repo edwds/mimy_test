@@ -49,7 +49,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Cluster "Freeze" State - prevents auto-refetch on move if we are viewing a cluster
     const [viewingCluster, setViewingCluster] = useState(false);
 
-    const fetchShops = async (hideSearchButton = false) => {
+    const fetchShops = async (options: { hideSearchButton?: boolean; excludeRanked?: boolean } = {}) => {
+        const { hideSearchButton = false, excludeRanked = true } = options;
+
         setIsLoading(true);
         try {
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50`;
@@ -58,7 +60,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 url = `${API_BASE_URL}/api/users/me/saved_shops`;
             } else if (mapCenter) {
                 // Pass center point for personalized discovery (10km radius, match score sorted)
-                url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}`;
+                // excludeRanked=true: initial load (exclude already ranked shops)
+                // excludeRanked=false: map search (include all shops for comprehensive discovery)
+                url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}&excludeRanked=${excludeRanked}`;
             } else {
                 // No location yet, cannot fetch personalized discovery
                 setIsLoading(false);
@@ -449,7 +453,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 {/* Search Here Button */}
                 {showSearchHere && !showSavedOnly && (
                     <button
-                        onClick={() => fetchShops(true)}
+                        onClick={() => fetchShops({ hideSearchButton: true, excludeRanked: false })}
                         className="animate-in fade-in slide-in-from-top-2 bg-white text-primary font-bold px-4 py-2 rounded-full shadow-lg text-sm border border-primary/20 flex items-center gap-2 active:scale-95 transition-transform"
                     >
                         {isLoading ? t('discovery.searching') : t('discovery.search_here')}
