@@ -54,6 +54,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     const contentRef = useRef<HTMLDivElement>(null);
     const { t } = useTranslation();
     const prevFirstShopId = useRef<number | null>(shops[0]?.id || null);
+    const scrollStartY = useRef<number>(0);
 
     // If a shop is selected, show only that shop.
     const displayedShops = selectedShopId
@@ -101,8 +102,8 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
         const screenH = window.innerHeight;
         const ratio = currentY / screenH;
 
-        // Lower velocity threshold for more responsive feel (native-like)
-        if (Math.abs(velocity) > 300) {
+        // Very low velocity threshold for immediate response
+        if (Math.abs(velocity) > 200) {
             // Velocity-based snap (flick gesture)
             if (velocity < 0) { // Flick Up
                 if (snapState === 'peek') setSnapState('half');
@@ -128,22 +129,16 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             animate={controls}
             transition={{
                 type: "spring",
-                damping: 28,
-                stiffness: 280,
-                mass: 1.0,
-                velocity: 0
+                damping: 35,
+                stiffness: 350,
+                mass: 0.5
             }}
             drag="y"
             dragControls={dragControls}
-            dragListener={false} // Only allow drag from specific areas
-            dragMomentum={true} // Enable momentum for natural feel
+            dragListener={false}
+            dragMomentum={false} // Disable momentum for tighter control
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.1, bottom: 0.15 }} // Moderate resistance
-            dragTransition={{
-                bounceStiffness: 300,
-                bounceDamping: 20,
-                power: 0.2
-            }}
+            dragElastic={0.02} // Minimal resistance for smooth feel
             onDragEnd={handleDragEnd}
             className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform rounded-t-3xl`}
             style={{ touchAction: 'none' }}
@@ -178,15 +173,31 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                 </div>
             </div>
 
-            {/* Content (Scrollable only when expanded) */}
+            {/* Content (Scrollable when half or expanded) */}
             <div
                 ref={contentRef}
-                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'expanded' ? 'overflow-y-auto' : 'overflow-hidden'
+                className={`flex-1 px-4 pb-24 transition-all ${snapState === 'peek' ? 'overflow-hidden' : 'overflow-y-auto'
                     }`}
                 style={{
                     pointerEvents: 'auto'
                 }}
-                data-scroll-container={snapState === 'expanded' ? "true" : undefined}
+                onTouchStart={(e) => {
+                    scrollStartY.current = e.touches[0].clientY;
+                }}
+                onTouchMove={(e) => {
+                    // If user is scrolling down in half state, expand to show more content
+                    if (snapState === 'half' && contentRef.current) {
+                        const deltaY = scrollStartY.current - e.touches[0].clientY;
+                        const isScrollingDown = deltaY > 0;
+                        const isAtTop = contentRef.current.scrollTop === 0;
+
+                        // If scrolling down and at top, expand
+                        if (isScrollingDown && isAtTop && deltaY > 10) {
+                            setSnapState('expanded');
+                        }
+                    }
+                }}
+                data-scroll-container={snapState !== 'peek' ? "true" : undefined}
             >
                 {displayedShops.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
