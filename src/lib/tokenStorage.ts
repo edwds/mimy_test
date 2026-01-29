@@ -81,19 +81,33 @@ export const getRefreshToken = async (): Promise<string | null> => {
 
 /**
  * Clear all tokens
+ * Returns true if tokens were successfully cleared and verified
  */
-export const clearTokens = async () => {
+export const clearTokens = async (): Promise<boolean> => {
   if (!isNativePlatform()) {
     // On web, cookies are cleared by server /logout endpoint
-    return;
+    return true;
   }
 
   try {
     await Preferences.remove({ key: TOKEN_KEY });
     await Preferences.remove({ key: REFRESH_TOKEN_KEY });
-    console.log('[TokenStorage] Tokens cleared');
+    console.log('[TokenStorage] Tokens removed from Preferences');
+
+    // Verify tokens were actually deleted
+    const checkAccess = await getAccessToken();
+    const checkRefresh = await getRefreshToken();
+
+    if (checkAccess === null && checkRefresh === null) {
+      console.log('[TokenStorage] Token deletion verified successfully');
+      return true;
+    } else {
+      console.error('[TokenStorage] Token deletion verification failed');
+      return false;
+    }
   } catch (error) {
     console.error('[TokenStorage] Failed to clear tokens:', error);
+    return false;
   }
 };
 

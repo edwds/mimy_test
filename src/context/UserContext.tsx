@@ -67,6 +67,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
+        console.log('[UserContext] Initial mount, fetching user data');
         fetchUserData();
 
         // Initial Geolocation Fetch
@@ -96,19 +97,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const logout = async () => {
+        console.log('[UserContext] Logout initiated');
+
         try {
             // Call logout API to clear cookies
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
             await authFetch(`${API_BASE_URL}/api/auth/logout`, {
                 method: 'POST'
             });
-
-            // Clear tokens from native storage
-            await clearTokens();
+            console.log('[UserContext] Logout API call successful');
         } catch (error) {
-            console.error('Logout error:', error);
+            console.error('[UserContext] Logout API error:', error);
+            // Continue with local cleanup even if API fails
         }
+
+        // Clear tokens from native storage
+        const tokensCleared = await clearTokens();
+        if (!tokensCleared) {
+            console.error('[UserContext] Failed to clear tokens');
+        }
+
+        // Reset auth state
         setUser(null);
+        setAuthFailed(false); // Reset auth failed flag for next login
+        console.log('[UserContext] User state and auth flag cleared');
+
+        // Redirect to start page
         window.location.href = '/start';
     };
 
