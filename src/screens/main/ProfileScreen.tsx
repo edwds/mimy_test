@@ -225,14 +225,6 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const handleTabChange = (newTab: ProfileTabType) => {
         setActiveTab(newTab);
         setIsHeaderVisible(true);
-
-        // Reset scroll to top when changing tabs
-        requestAnimationFrame(() => {
-            const el = containerRef.current;
-            if (el) {
-                el.scrollTo({ top: 0, behavior: 'auto' });
-            }
-        });
     };
 
     const handleUnsave = async (shopId: number) => {
