@@ -37,7 +37,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const { registerCallback, unregisterCallback } = useRanking();
     const [shops, setShops] = useState<any[]>([]);
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
-    const lastUpdatedShopIdRef = useRef<number | null>(null);
+    const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
     const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
     const navigationOrderRef = useRef<number[]>([]); // Store sorted order for navigation to prevent UI flickering
@@ -177,9 +177,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     useEffect(() => {
         if (!isEnabled) return;
 
-        const handleRankingUpdate = (shopId: number) => {
-            console.log('[DiscoveryTab] Ranking updated for shop:', shopId);
-            lastUpdatedShopIdRef.current = shopId;
+        const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
+            console.log('[DiscoveryTab] Ranking updated:', data);
+            lastUpdateDataRef.current = data;
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
@@ -190,31 +190,18 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         };
     }, [isEnabled]);
 
-    // Handle ranking refresh trigger - Update only the specific shop
+    // Handle ranking refresh trigger - Optimistic update
     useEffect(() => {
-        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
-            const shopId = lastUpdatedShopIdRef.current;
-            console.log('[DiscoveryTab] Fetching updated stats for shop:', shopId);
+        if (rankingRefreshTrigger > 0 && lastUpdateDataRef.current) {
+            const { shopId, my_review_stats } = lastUpdateDataRef.current;
+            console.log('[DiscoveryTab] ⚡ Optimistic update for shop:', shopId);
 
-            const fetchUpdatedShop = async () => {
-                try {
-                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
-                    if (response.ok) {
-                        const shopData = await response.json();
-
-                        // Update shops array with new my_review_stats
-                        setShops(prevShops => prevShops.map(shop =>
-                            shop.id === shopId
-                                ? { ...shop, my_review_stats: shopData.my_review_stats }
-                                : shop
-                        ));
-                    }
-                } catch (error) {
-                    console.error('[DiscoveryTab] Failed to fetch updated shop:', error);
-                }
-            };
-
-            fetchUpdatedShop();
+            // Immediately update shops array with the ranking data
+            setShops(prevShops => prevShops.map(shop =>
+                shop.id === shopId
+                    ? { ...shop, my_review_stats }
+                    : shop
+            ));
         }
     }, [rankingRefreshTrigger]);
 

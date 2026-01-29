@@ -13,7 +13,6 @@ import { useRanking } from '@/context/RankingContext';
 import { User } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
-import { authFetch } from '@/lib/authFetch';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -31,7 +30,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const { registerCallback, unregisterCallback } = useRanking();
     const [searchParams] = useSearchParams();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
-    const lastUpdatedShopIdRef = useRef<number | null>(null);
+    const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
 
     // Target User State
     const [user, setUser] = useState<User | null>(null);
@@ -235,9 +234,9 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
     // Ranking Update Callback
     useEffect(() => {
-        const handleRankingUpdate = (shopId: number) => {
-            console.log('[UserProfileScreen] Ranking updated for shop:', shopId);
-            lastUpdatedShopIdRef.current = shopId;
+        const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
+            console.log('[UserProfileScreen] Ranking updated:', data);
+            lastUpdateDataRef.current = data;
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
@@ -248,56 +247,43 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         };
     }, [registerCallback, unregisterCallback]);
 
-    // Handle ranking refresh trigger - Update only the specific item
+    // Handle ranking refresh trigger - Optimistic update
     useEffect(() => {
-        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
-            const shopId = lastUpdatedShopIdRef.current;
-            console.log('[UserProfileScreen] Fetching updated stats for shop:', shopId);
+        if (rankingRefreshTrigger > 0 && lastUpdateDataRef.current) {
+            const { shopId, my_review_stats } = lastUpdateDataRef.current;
+            console.log('[UserProfileScreen] ⚡ Optimistic update for shop:', shopId);
 
-            const fetchUpdatedData = async () => {
-                try {
-                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
-                    if (response.ok) {
-                        const shopData = await response.json();
-
-                        if (activeTab === 'content') {
-                            // Update contents array - POI or review_prop
-                            setContents(prevContents => prevContents.map(item => {
-                                if (item.poi?.shop_id === shopId) {
-                                    return {
-                                        ...item,
-                                        poi: {
-                                            ...item.poi,
-                                            my_review_stats: shopData.my_review_stats
-                                        }
-                                    };
-                                }
-                                if (item.review_prop?.shop_id === shopId) {
-                                    return {
-                                        ...item,
-                                        review_prop: {
-                                            ...item.review_prop,
-                                            my_review_stats: shopData.my_review_stats
-                                        }
-                                    };
-                                }
-                                return item;
-                            }));
-                        } else if (activeTab === 'saved') {
-                            // Update commonShops array
-                            setCommonShops(prevShops => prevShops.map(shop =>
-                                shop.id === shopId
-                                    ? { ...shop, my_review_stats: shopData.my_review_stats }
-                                    : shop
-                            ));
-                        }
+            if (activeTab === 'content') {
+                // Update contents array - POI or review_prop
+                setContents(prevContents => prevContents.map(item => {
+                    if (item.poi?.shop_id === shopId) {
+                        return {
+                            ...item,
+                            poi: {
+                                ...item.poi,
+                                my_review_stats
+                            }
+                        };
                     }
-                } catch (error) {
-                    console.error('[UserProfileScreen] Failed to fetch updated stats:', error);
-                }
-            };
-
-            fetchUpdatedData();
+                    if (item.review_prop?.shop_id === shopId) {
+                        return {
+                            ...item,
+                            review_prop: {
+                                ...item.review_prop,
+                                my_review_stats
+                            }
+                        };
+                    }
+                    return item;
+                }));
+            } else if (activeTab === 'saved') {
+                // Update commonShops array
+                setCommonShops(prevShops => prevShops.map(shop =>
+                    shop.id === shopId
+                        ? { ...shop, my_review_stats }
+                        : shop
+                ));
+            }
         }
     }, [rankingRefreshTrigger, activeTab]);
 

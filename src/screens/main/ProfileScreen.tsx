@@ -29,7 +29,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const { user, loading, refreshUser } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
-    const lastUpdatedShopIdRef = useRef<number | null>(null);
+    const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
     const [searchParams] = useSearchParams();
 
     // Tabs
@@ -156,9 +156,9 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     useEffect(() => {
         if (!isEnabled) return;
 
-        const handleRankingUpdate = (shopId: number) => {
-            console.log('[ProfileScreen] Ranking updated for shop:', shopId);
-            lastUpdatedShopIdRef.current = shopId;
+        const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
+            console.log('[ProfileScreen] Ranking updated:', data);
+            lastUpdateDataRef.current = data;
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
@@ -169,56 +169,43 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         };
     }, [isEnabled]);
 
-    // Handle ranking refresh trigger - Update only the specific item
+    // Handle ranking refresh trigger - Optimistic update
     useEffect(() => {
-        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
-            const shopId = lastUpdatedShopIdRef.current;
-            console.log('[ProfileScreen] Fetching updated stats for shop:', shopId);
+        if (rankingRefreshTrigger > 0 && lastUpdateDataRef.current) {
+            const { shopId, my_review_stats } = lastUpdateDataRef.current;
+            console.log('[ProfileScreen] ⚡ Optimistic update for shop:', shopId);
 
-            const fetchUpdatedData = async () => {
-                try {
-                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
-                    if (response.ok) {
-                        const shopData = await response.json();
-
-                        if (activeTab === 'content') {
-                            // Update contents array - POI or review_prop
-                            setContents(prevContents => prevContents.map(item => {
-                                if (item.poi?.shop_id === shopId) {
-                                    return {
-                                        ...item,
-                                        poi: {
-                                            ...item.poi,
-                                            my_review_stats: shopData.my_review_stats
-                                        }
-                                    };
-                                }
-                                if (item.review_prop?.shop_id === shopId) {
-                                    return {
-                                        ...item,
-                                        review_prop: {
-                                            ...item.review_prop,
-                                            my_review_stats: shopData.my_review_stats
-                                        }
-                                    };
-                                }
-                                return item;
-                            }));
-                        } else if (activeTab === 'saved') {
-                            // Update savedShops array
-                            setSavedShops(prevShops => prevShops.map(shop =>
-                                shop.id === shopId
-                                    ? { ...shop, my_review_stats: shopData.my_review_stats }
-                                    : shop
-                            ));
-                        }
+            if (activeTab === 'content') {
+                // Update contents array - POI or review_prop
+                setContents(prevContents => prevContents.map(item => {
+                    if (item.poi?.shop_id === shopId) {
+                        return {
+                            ...item,
+                            poi: {
+                                ...item.poi,
+                                my_review_stats
+                            }
+                        };
                     }
-                } catch (error) {
-                    console.error('[ProfileScreen] Failed to fetch updated stats:', error);
-                }
-            };
-
-            fetchUpdatedData();
+                    if (item.review_prop?.shop_id === shopId) {
+                        return {
+                            ...item,
+                            review_prop: {
+                                ...item.review_prop,
+                                my_review_stats
+                            }
+                        };
+                    }
+                    return item;
+                }));
+            } else if (activeTab === 'saved') {
+                // Update savedShops array
+                setSavedShops(prevShops => prevShops.map(shop =>
+                    shop.id === shopId
+                        ? { ...shop, my_review_stats }
+                        : shop
+                ));
+            }
         }
     }, [rankingRefreshTrigger, activeTab]);
 

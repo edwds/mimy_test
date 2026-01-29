@@ -221,10 +221,10 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     useEffect(() => {
         if (!isEnabled) return;
 
-        const handleRankingUpdate = (shopId: number) => {
-            console.log('[HomeTab] Ranking updated for shop:', shopId);
-            // Store shopId and trigger refetch
-            lastUpdatedShopIdRef.current = shopId;
+        const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
+            console.log('[HomeTab] Ranking updated:', data);
+            // Store data and trigger update
+            lastUpdateDataRef.current = data;
             setRankingRefreshTrigger(prev => prev + 1);
         };
 
@@ -235,53 +235,41 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         };
     }, [isEnabled]);
 
-    // Ref to store last updated shopId
-    const lastUpdatedShopIdRef = useRef<number | null>(null);
+    // Ref to store last updated data
+    const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
 
-    // Handle ranking refresh trigger - Update only the specific card
+    // Handle ranking refresh trigger - Optimistic update (no server fetch needed)
     useEffect(() => {
-        if (rankingRefreshTrigger > 0 && lastUpdatedShopIdRef.current) {
-            const shopId = lastUpdatedShopIdRef.current;
-            console.log('[HomeTab] Ranking updated, fetching my_review_stats for shop:', shopId);
+        if (rankingRefreshTrigger > 0 && lastUpdateDataRef.current) {
+            const { shopId, my_review_stats } = lastUpdateDataRef.current;
+            console.log('[HomeTab] ⚡ Optimistic update for shop:', shopId, my_review_stats);
 
-            // Fetch updated my_review_stats for this specific shop
-            const fetchUpdatedStats = async () => {
-                try {
-                    const response = await authFetch(`${API_BASE_URL}/api/shops/${shopId}`);
-                    if (response.ok) {
-                        const shopData = await response.json();
-
-                        // Update items that contain this shop in POI or review_prop
-                        setItems(prevItems => prevItems.map(item => {
-                            // Update POI
-                            if (item.poi?.shop_id === shopId) {
-                                return {
-                                    ...item,
-                                    poi: {
-                                        ...item.poi,
-                                        my_review_stats: shopData.my_review_stats
-                                    }
-                                };
-                            }
-                            // Update review_prop
-                            if (item.review_prop?.shop_id === shopId) {
-                                return {
-                                    ...item,
-                                    review_prop: {
-                                        ...item.review_prop,
-                                        my_review_stats: shopData.my_review_stats
-                                    }
-                                };
-                            }
-                            return item;
-                        }));
-                    }
-                } catch (error) {
-                    console.error('[HomeTab] Failed to fetch updated stats:', error);
+            // Immediately update items with the ranking data we already have
+            setItems(prevItems => prevItems.map(item => {
+                // Update POI
+                if (item.poi?.shop_id === shopId) {
+                    console.log('[HomeTab] ✅ Updated POI for shop:', shopId);
+                    return {
+                        ...item,
+                        poi: {
+                            ...item.poi,
+                            my_review_stats
+                        }
+                    };
                 }
-            };
-
-            fetchUpdatedStats();
+                // Update review_prop
+                if (item.review_prop?.shop_id === shopId) {
+                    console.log('[HomeTab] ✅ Updated review_prop for shop:', shopId);
+                    return {
+                        ...item,
+                        review_prop: {
+                            ...item.review_prop,
+                            my_review_stats
+                        }
+                    };
+                }
+                return item;
+            }));
         }
     }, [rankingRefreshTrigger]);
 
