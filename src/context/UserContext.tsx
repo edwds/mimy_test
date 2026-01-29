@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { UserService } from '@/services/UserService';
 import { clearTokens } from '@/lib/tokenStorage';
 import { authFetch } from '@/lib/authFetch';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorCookies } from '@capacitor/core';
 
 export interface User {
     id: number;
@@ -112,7 +114,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         console.log('[UserContext] Logout initiated');
 
         try {
-            // Call logout API to clear cookies
+            // Call logout API to clear server-side session
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
             await authFetch(`${API_BASE_URL}/api/auth/logout`, {
                 method: 'POST'
@@ -123,10 +125,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             // Continue with local cleanup even if API fails
         }
 
-        // Clear tokens from native storage
+        // Clear tokens from native storage (Preferences)
         const tokensCleared = await clearTokens();
         if (!tokensCleared) {
-            console.error('[UserContext] Failed to clear tokens');
+            console.error('[UserContext] Failed to clear Preferences tokens');
+        }
+
+        // Clear WebView cookies (iOS/Android)
+        if (Capacitor.isNativePlatform()) {
+            try {
+                console.log('[UserContext] Clearing WebView cookies...');
+                await CapacitorCookies.clearAllCookies();
+                console.log('[UserContext] ✅ WebView cookies cleared');
+            } catch (error) {
+                console.error('[UserContext] ❌ Failed to clear WebView cookies:', error);
+            }
         }
 
         // Reset auth state
