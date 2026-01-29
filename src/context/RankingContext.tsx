@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { RankingOverlay } from '@/screens/write/RankingOverlay';
 import { useUser } from './UserContext';
 
@@ -28,6 +28,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const [selectedShop, setSelectedShop] = useState<any>(null);
     const [updateCallbacks, setUpdateCallbacks] = useState<Map<string, (data: RankingUpdateData) => void>>(new Map());
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useUser();
     const currentUserId = user?.id || 0;
 
@@ -96,15 +97,20 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
 
         setIsOpen(false);
         if (action === 'WRITE_REVIEW') {
-            // Navigate to write flow with state to skip search
-            // Use navigation state to pass params
-            navigate('/write', {
-                state: {
-                    step: 'WRITE_CONTENT',
-                    shop: selectedShop,
-                    satisfaction: data?.satisfaction || 'good'
-                }
-            });
+            // Only navigate if not already on /write route
+            // This prevents remounting WriteFlow when callback is already handling the transition
+            if (location.pathname !== '/write') {
+                console.log('[RankingContext] Navigating to /write from:', location.pathname);
+                navigate('/write', {
+                    state: {
+                        step: 'WRITE_CONTENT',
+                        shop: selectedShop,
+                        satisfaction: data?.satisfaction || 'good'
+                    }
+                });
+            } else {
+                console.log('[RankingContext] Already on /write, letting callback handle transition');
+            }
         } else if (action === 'EVALUATE_ANOTHER') {
             // Go to search
             navigate('/write', { replace: true });
