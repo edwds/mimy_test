@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { ShopCard } from '@/components/ShopCard';
 import { useUser } from '@/context/UserContext';
+import { useRanking } from '@/context/RankingContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { ListCard } from '@/components/ListCard';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +27,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user, loading, refreshUser } = useUser();
+    const { registerCallback, unregisterCallback } = useRanking();
     const [searchParams] = useSearchParams();
 
     // Tabs
@@ -130,23 +132,65 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     }, [user?.id, activeTab, refreshTrigger]);
 
     // Fetch saved shops
-    useEffect(() => {
-        const fetchSaved = async () => {
-            if (!user?.id || activeTab !== 'saved') return;
+    const fetchSaved = async () => {
+        if (!user?.id || activeTab !== 'saved') return;
 
-            setLoadingSaved(true);
-            try {
-                const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
-                if (response.ok) setSavedShops(await response.json());
-            } catch (e) {
-                console.error('Failed to load saved shops', e);
-            } finally {
-                setLoadingSaved(false);
+        setLoadingSaved(true);
+        try {
+            const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
+            if (response.ok) setSavedShops(await response.json());
+        } catch (e) {
+            console.error('Failed to load saved shops', e);
+        } finally {
+            setLoadingSaved(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSaved();
+    }, [user?.id, activeTab]);
+
+    // Refetch content (extracted for reuse)
+    const refetchContent = async () => {
+        if (!user?.id || activeTab !== 'content') return;
+
+        setContentPage(1);
+        setLoadingContent(true);
+        try {
+            const response = await authFetch(`${API_BASE_URL}/api/content/user/${user.id}?user_id=${user.id}&page=1&limit=20`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.length < 20) setHasMoreContent(false);
+                else setHasMoreContent(true);
+                setContents(data);
+            }
+        } catch (e) {
+            console.error('Failed to reload content', e);
+        } finally {
+            setLoadingContent(false);
+        }
+    };
+
+    // Ranking Update Callback
+    useEffect(() => {
+        const handleRankingUpdate = (shopId: number) => {
+            console.log('[ProfileScreen] Ranking updated for shop:', shopId);
+            // Refetch based on active tab
+            if (activeTab === 'content') {
+                refetchContent();
+            } else if (activeTab === 'saved') {
+                fetchSaved();
             }
         };
 
-        fetchSaved();
-    }, [user?.id, activeTab]);
+        if (isEnabled) {
+            registerCallback(handleRankingUpdate);
+        }
+
+        return () => {
+            unregisterCallback();
+        };
+    }, [isEnabled, activeTab, user?.id, registerCallback, unregisterCallback]);
 
 
 

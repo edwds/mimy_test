@@ -9,6 +9,7 @@ import { HateCard } from '@/components/HateCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
+import { useRanking } from '@/context/RankingContext';
 import { authFetch } from '@/lib/authFetch';
 
 // Force deploy check
@@ -22,6 +23,7 @@ const CHIPS = ["popular", "follow", "near", "like"];
 
 export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = true }) => {
     const { t } = useTranslation();
+    const { registerCallback, unregisterCallback } = useRanking();
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
     const [interstitialItems, setInterstitialItems] = useState<any[]>([]);
@@ -213,6 +215,27 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
             }
         }
     }, [refreshTrigger]);
+
+    // Ranking Update Callback
+    useEffect(() => {
+        const handleRankingUpdate = (shopId: number) => {
+            console.log('[HomeTab] Ranking updated for shop:', shopId);
+            // Refetch feed to get updated POI data
+            setPage(1);
+            setHasMore(true);
+            setItems([]);
+            setHasInitialFetch(false);
+            fetchFeed(1);
+        };
+
+        if (isEnabled) {
+            registerCallback(handleRankingUpdate);
+        }
+
+        return () => {
+            unregisterCallback();
+        };
+    }, [isEnabled, registerCallback, unregisterCallback]);
 
     // Fetch Interstitial candidates (VS & Hate)
     useEffect(() => {

@@ -7,6 +7,8 @@ interface RankingContextType {
     openRanking: (shop: any) => void;
     closeRanking: () => void;
     isRankingOpen: boolean;
+    registerCallback: (callback: (shopId: number) => void) => void;
+    unregisterCallback: () => void;
 }
 
 const RankingContext = createContext<RankingContextType | undefined>(undefined);
@@ -14,6 +16,7 @@ const RankingContext = createContext<RankingContextType | undefined>(undefined);
 export const RankingProvider = ({ children }: { children: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedShop, setSelectedShop] = useState<any>(null);
+    const [updateCallback, setUpdateCallback] = useState<((shopId: number) => void) | null>(null);
     const navigate = useNavigate();
     const { user } = useUser();
     const currentUserId = user?.id || 0;
@@ -28,7 +31,20 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         setSelectedShop(null);
     };
 
+    const registerCallback = (callback: (shopId: number) => void) => {
+        setUpdateCallback(() => callback);
+    };
+
+    const unregisterCallback = () => {
+        setUpdateCallback(null);
+    };
+
     const handleComplete = (action: 'WRITE_REVIEW' | 'EVALUATE_ANOTHER' | 'QUIT', data?: any) => {
+        // Notify subscribers that ranking was updated
+        if (updateCallback && selectedShop?.id) {
+            updateCallback(selectedShop.id);
+        }
+
         setIsOpen(false);
         if (action === 'WRITE_REVIEW') {
             // Navigate to write flow with state to skip search
@@ -50,7 +66,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <RankingContext.Provider value={{ openRanking, closeRanking, isRankingOpen: isOpen }}>
+        <RankingContext.Provider value={{ openRanking, closeRanking, isRankingOpen: isOpen, registerCallback, unregisterCallback }}>
             {children}
             {isOpen && selectedShop && (
                 <RankingOverlay

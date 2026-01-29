@@ -14,6 +14,7 @@ import { SelectedShopCard } from '@/components/discovery/SelectedShopCard';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
 import { authFetch } from '@/lib/authFetch';
+import { useRanking } from '@/context/RankingContext';
 
 const getSessionSeed = () => {
     let seed = sessionStorage.getItem('discovery_seed');
@@ -33,6 +34,7 @@ interface Props {
 export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnabled = true }) => {
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
+    const { registerCallback, unregisterCallback } = useRanking();
     const [shops, setShops] = useState<any[]>([]);
     const seedRef = useRef(getSessionSeed());
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
@@ -168,6 +170,23 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             fetchShops();
         }
     }, [refreshTrigger]);
+
+    // Ranking Update Callback
+    useEffect(() => {
+        const handleRankingUpdate = (shopId: number) => {
+            console.log('[DiscoveryTab] Ranking updated for shop:', shopId);
+            // Refetch shops to get updated my_review_stats
+            fetchShops();
+        };
+
+        if (isEnabled) {
+            registerCallback(handleRankingUpdate);
+        }
+
+        return () => {
+            unregisterCallback();
+        };
+    }, [isEnabled, registerCallback, unregisterCallback]);
 
     const handleSave = async (shopId: number) => {
         // Optimistic Update

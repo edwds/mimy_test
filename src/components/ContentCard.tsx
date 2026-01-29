@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, ListOrdered } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, ListOrdered, Check } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
@@ -907,37 +907,44 @@ export const ContentCard = ({
 
                         {/* Shop actions: Reserve + Bookmark */}
                         <div className="flex items-center gap-4 mr-2">
-                            {/* Evaluate Button (Only if NOT evaluated) */}
-                            {!(content.poi?.my_review_stats || content.review_prop?.my_review_stats) && (
-                                <motion.button
-                                    type="button"
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Construct a minimal shop object compatible with RankingOverlay
-                                        // It needs id, name, food_kind/category, image_url/thumbnail_img
-                                        const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
-                                        const shopName = content.poi?.shop_name || content.review_prop?.shop_name;
+                            {/* Evaluate Button (Always visible, shows Check icon when completed) */}
+                            <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.9 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Construct a minimal shop object compatible with RankingOverlay
+                                    // It needs id, name, food_kind/category, image_url/thumbnail_img
+                                    const shopId = content.poi?.shop_id || content.review_prop?.shop_id;
+                                    const shopName = content.poi?.shop_name || content.review_prop?.shop_name;
 
-                                        if (shopId && shopName) {
-                                            const shopData = {
-                                                id: shopId,
-                                                name: shopName,
-                                                address: content.poi?.shop_address || content.review_prop?.shop_address,
-                                                image_url: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
-                                                // food_kind might be missing in content card data, but POI usually has basics
-                                            };
-                                            openRanking(shopData);
-                                        } else {
-                                            alert("매장 정보를 찾을 수 없습니다.");
-                                        }
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                                    aria-label="Evaluate"
-                                >
+                                    if (shopId && shopName) {
+                                        const shopData = {
+                                            id: shopId,
+                                            name: shopName,
+                                            address: content.poi?.shop_address || content.review_prop?.shop_address,
+                                            image_url: content.poi?.thumbnail_img || content.review_prop?.thumbnail_img,
+                                            // food_kind might be missing in content card data, but POI usually has basics
+                                        };
+                                        openRanking(shopData);
+                                    } else {
+                                        alert("매장 정보를 찾을 수 없습니다.");
+                                    }
+                                }}
+                                className={cn(
+                                    "transition-colors p-1",
+                                    (content.poi?.my_review_stats || content.review_prop?.my_review_stats)
+                                        ? "text-primary"
+                                        : "text-gray-400 hover:text-gray-600"
+                                )}
+                                aria-label="Evaluate"
+                            >
+                                {(content.poi?.my_review_stats || content.review_prop?.my_review_stats) ? (
+                                    <Check size={22} />
+                                ) : (
                                     <ListOrdered size={22} />
-                                </motion.button>
-                            )}
+                                )}
+                            </motion.button>
 
                             {/* Bookmark Button */}
                             <motion.button
