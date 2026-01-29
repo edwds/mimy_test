@@ -50,6 +50,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Cluster "Freeze" State - prevents auto-refetch on move if we are viewing a cluster
     const [viewingCluster, setViewingCluster] = useState(false);
 
+    // Track if initial load is done to prevent unwanted fetches on map center changes
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
+
     const fetchShops = async (options: { hideSearchButton?: boolean; excludeRanked?: boolean; useBounds?: boolean } = {}) => {
         const { hideSearchButton = false, excludeRanked = true, useBounds = false } = options;
 
@@ -78,6 +81,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             if (res.ok) {
                 const data = await res.json();
                 setShops(data);
+
+                // Reset selected shop to show bottom sheet with new results
+                setSelectedShopId(null);
 
                 // If switching to saved and we have data, maybe center on the first one?
                 if (showSavedOnly && data.length > 0 && data[0].lat && data[0].lon) {
@@ -108,6 +114,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setMapCenter([latitude, longitude]);
+                    // Fetch shops for initial load only
+                    if (!initialLoadDone) {
+                        fetchShops({ excludeRanked: true });
+                        setInitialLoadDone(true);
+                    }
                 },
                 (error) => {
                     console.error("Location init error", error);
@@ -115,13 +126,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             );
         }
     }, [isEnabled, refreshTrigger]);
-
-    // Fetch shops when mapCenter is set
-    useEffect(() => {
-        if (mapCenter && !showSavedOnly) {
-            fetchShops();
-        }
-    }, [mapCenter]);
 
 
     // Refresh Listener
