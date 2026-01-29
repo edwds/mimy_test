@@ -114,11 +114,6 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setMapCenter([latitude, longitude]);
-                    // Fetch shops for initial load only
-                    if (!initialLoadDone) {
-                        fetchShops({ excludeRanked: true });
-                        setInitialLoadDone(true);
-                    }
                 },
                 (error) => {
                     console.error("Location init error", error);
@@ -126,6 +121,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             );
         }
     }, [isEnabled, refreshTrigger]);
+
+    // Fetch shops when mapCenter is set for the first time
+    useEffect(() => {
+        if (mapCenter && !initialLoadDone && !showSavedOnly) {
+            fetchShops({ excludeRanked: true });
+            setInitialLoadDone(true);
+        }
+    }, [mapCenter, initialLoadDone, showSavedOnly]);
 
 
     // Refresh Listener

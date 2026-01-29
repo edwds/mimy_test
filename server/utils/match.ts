@@ -131,8 +131,8 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
     // map [-1, 1] -> [0, 100]
     const finalScore = 50 * (scoreRaw + 1);
 
-    // Keep 1 decimal place precision
-    const preciseScore = Math.round(finalScore * 10) / 10;
+    // Keep 2 decimal places precision (0.01 unit)
+    const preciseScore = Math.round(finalScore * 100) / 100;
 
     // Clamp just in case
     return Math.max(0, Math.min(100, preciseScore));
