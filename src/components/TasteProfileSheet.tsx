@@ -90,7 +90,7 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
             {/* The Card */}
             <div
                 className={cn(
-                    `relative w-full max-w-sm aspect-[2/3] ${bgGradient} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 transform`,
+                    `relative w-full max-w-sm max-h-[600px] ${bgGradient} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 transform`,
                     isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-90 opacity-0 translate-y-10"
                 )}
             >
@@ -105,8 +105,8 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 {/* Content Container */}
                 <div className="flex-1 flex flex-col p-8 z-10 relative min-h-0">
 
-                    {/* Main Content: Name & Tagline - Fixed height to prevent shift */}
-                    <div className="h-[200px] flex flex-col justify-center text-center shrink-0">
+                    {/* Main Content: Name & Tagline */}
+                    <div className="min-h-[180px] flex flex-col justify-center text-center shrink-0">
                         <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
                         <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                             {data?.cluster_tagline || 'Discovering your unique taste journey.'}

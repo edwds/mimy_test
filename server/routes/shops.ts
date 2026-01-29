@@ -695,61 +695,46 @@ router.post("/import-google", async (req, res) => {
 // GET /api/shops/top-rated - Get globally top-rated shops (cold start)
 router.get("/top-rated", optionalAuth, async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit as string) || 20;
+        console.log('[top-rated] Starting request');
         const uid = req.user?.id || 0;
+        console.log('[top-rated] User ID:', uid);
 
-        // Get shops with highest Good (tier=2) satisfaction ratings
-        // Criteria:
-        // 1. Minimum 10 total ratings for reliability
-        // 2. Sort by Good ratio (good_count / total_count) descending
-        // 3. Secondary sort by total_count descending for tiebreakers
-        const topRatedQuery = await db.execute(sql`
-            WITH shop_stats AS (
-                SELECT
-                    shop_id,
-                    COUNT(*) as total_count,
-                    SUM(CASE WHEN satisfaction_tier = 2 THEN 1 ELSE 0 END) as good_count,
-                    SUM(CASE WHEN satisfaction_tier = 1 THEN 1 ELSE 0 END) as ok_count,
-                    SUM(CASE WHEN satisfaction_tier = 0 THEN 1 ELSE 0 END) as bad_count,
-                    ROUND(
-                        (SUM(CASE WHEN satisfaction_tier = 2 THEN 1 ELSE 0 END)::float / COUNT(*)) * 100,
-                        1
-                    ) as good_ratio
-                FROM users_ranking
-                GROUP BY shop_id
-                HAVING COUNT(*) >= 10
+        // Use Drizzle ORM instead of raw SQL
+        const rankedShops = await db
+            .select({
+                shop_id: users_ranking.shop_id,
+                total_count: sql<number>`COUNT(*)`,
+                good_count: sql<number>`SUM(CASE WHEN ${users_ranking.satisfaction_tier} = 2 THEN 1 ELSE 0 END)`,
+                ok_count: sql<number>`SUM(CASE WHEN ${users_ranking.satisfaction_tier} = 1 THEN 1 ELSE 0 END)`,
+                bad_count: sql<number>`SUM(CASE WHEN ${users_ranking.satisfaction_tier} = 0 THEN 1 ELSE 0 END)`,
+            })
+            .from(users_ranking)
+            .groupBy(users_ranking.shop_id)
+            .having(sql`COUNT(*) >= 10`)
+            .orderBy(
+                sql`SUM(CASE WHEN ${users_ranking.satisfaction_tier} = 2 THEN 1 ELSE 0 END)::float / COUNT(*) DESC`,
+                sql`COUNT(*) DESC`
             )
-            SELECT
-                s.id,
-                s.name,
-                s.description,
-                s.address_full,
-                s.address_region,
-                s.thumbnail_img,
-                s.kind,
-                s.food_kind,
-                s.lat,
-                s.lon,
-                s.catchtable_ref,
-                ss.total_count,
-                ss.good_count,
-                ss.ok_count,
-                ss.bad_count,
-                ss.good_ratio
-            FROM shop_stats ss
-            JOIN shops s ON s.id = ss.shop_id
-            ORDER BY ss.good_ratio DESC, ss.total_count DESC
-            LIMIT 20
-        `);
+            .limit(20);
 
-        const results = topRatedQuery.rows as any[];
+        console.log('[top-rated] Found ranked shops:', rankedShops.length);
 
-        if (results.length === 0) {
+        if (rankedShops.length === 0) {
             return res.json([]);
         }
 
-        // Enrich with user-specific data (my_rank, saved status)
-        const shopIds = results.map(s => s.id);
+        const shopIds = rankedShops.map(s => s.shop_id);
+
+        // Get shop details
+        const shopDetails = await db
+            .select()
+            .from(shops)
+            .where(inArray(shops.id, shopIds));
+
+        console.log('[top-rated] Found shop details:', shopDetails.length);
+
+        // Create a map for easy lookup
+        const shopMap = new Map(shopDetails.map(s => [s.id, s]));
 
         // Get user's rankings for these shops
         const myRankingsMap = new Map<number, any>();
@@ -786,24 +771,46 @@ router.get("/top-rated", optionalAuth, async (req, res) => {
             savedList.forEach(s => savedSet.add(s.shop_id));
         }
 
-        // Enrich results
-        const enrichedResults = results.map(shop => {
-            const myRanking = myRankingsMap.get(shop.id);
+        // Combine results
+        const results = rankedShops.map(stat => {
+            const shop = shopMap.get(stat.shop_id);
+            if (!shop) return null;
+
+            const myRanking = myRankingsMap.get(stat.shop_id);
+            const goodRatio = Math.round((Number(stat.good_count) / Number(stat.total_count)) * 100 * 10) / 10;
+
             return {
-                ...shop,
+                id: shop.id,
+                name: shop.name,
+                description: shop.description,
+                address_full: shop.address_full,
+                address_region: shop.address_region,
+                thumbnail_img: shop.thumbnail_img,
+                kind: shop.kind,
+                food_kind: shop.food_kind,
+                lat: shop.lat,
+                lon: shop.lon,
+                catchtable_ref: shop.catchtable_ref,
+                total_count: Number(stat.total_count),
+                good_count: Number(stat.good_count),
+                ok_count: Number(stat.ok_count),
+                bad_count: Number(stat.bad_count),
+                good_ratio: goodRatio,
                 my_rank: myRanking?.rank || null,
                 my_review_stats: myRanking ? {
                     rank: myRanking.rank,
                     satisfaction: myRanking.satisfaction_tier
                 } : null,
-                is_saved: savedSet.has(shop.id)
+                is_saved: savedSet.has(stat.shop_id)
             };
-        });
+        }).filter(Boolean);
 
-        res.json(enrichedResults);
+        console.log('[top-rated] Returning results:', results.length);
+        res.json(results);
     } catch (error: any) {
-        console.error("Top rated shops error:", error);
-        res.status(500).json({ error: "Failed to fetch top-rated shops" });
+        console.error("[top-rated] Error:", error);
+        console.error("[top-rated] Error stack:", error.stack);
+        res.status(500).json({ error: "Failed to fetch top-rated shops", details: error.message });
     }
 });
 

@@ -276,7 +276,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
             {/* Fixed Top Navigation */}
             <div
                 className={cn(
-                    "fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-4 py-3 transition-all duration-300 border-b pointer-events-none",
+                    "fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[448px] z-[100] flex items-center justify-between px-4 py-3 transition-all duration-300 border-b pointer-events-none",
                     isScrolled ? "bg-background/95 backdrop-blur-md border-border/10 shadow-sm" : "bg-transparent border-transparent shadow-none"
                 )}
                 style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
