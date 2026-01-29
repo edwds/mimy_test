@@ -28,7 +28,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
     const [satisfaction, setSatisfaction] = useState<'good' | 'ok' | 'bad' | null>(null);
     const [rankingMode, setRankingMode] = useState<'LOADING' | 'COMPARING' | 'DONE'>('LOADING');
 
-    const [rankingResult, setRankingResult] = useState<{ rank: number, percentile?: number, total?: number } | null>(null);
+    const [rankingResult, setRankingResult] = useState<{ rank: number, percentile?: number, total?: number, satisfaction?: 'good' | 'ok' | 'bad' } | null>(null);
     const [totalCount, setTotalCount] = useState(0);
     const [baseRank, setBaseRank] = useState(0);
 
@@ -91,31 +91,54 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
         }
     };
 
+    const mapTierToSatisfaction = (tier: number): 'good' | 'ok' | 'bad' => {
+        switch (tier) {
+            case 2: return 'good';
+            case 1: return 'ok';
+            case 0: return 'bad';
+            default: return 'good';
+        }
+    };
+
     const saveRank = async (insertIndex: number, currentTotal?: number, currentBaseRank?: number) => {
         try {
-            // Calculate Rank locally (Optimistic)
-            const safeBase = currentBaseRank !== undefined ? currentBaseRank : baseRank;
-            let myRank = safeBase + 1;
-
-            if (candidates.length > 0) {
-                if (insertIndex < candidates.length) {
-                    myRank = candidates[insertIndex].rank;
-                } else {
-                    myRank = candidates[candidates.length - 1].rank + 1;
-                }
-            }
-
-            const safeTotal = (currentTotal !== undefined ? currentTotal : totalCount) + 1;
-            const percentile = Math.ceil((myRank / safeTotal) * 100);
-
-            setRankingResult({ rank: myRank, total: safeTotal, percentile });
-
-            // Send to server
-            await ContentService.applyRanking({
+            // Send to server and get actual ranking data
+            const response = await ContentService.applyRanking({
                 shop_id: shop.id,
                 insert_index: insertIndex,
                 satisfaction: satisfaction!
             });
+
+            // Use server response instead of cached calculation
+            if (response && response.rank && response.total_count) {
+                const percentile = Math.ceil((response.rank / response.total_count) * 100);
+                const serverSatisfaction = response.satisfaction_tier !== undefined
+                    ? mapTierToSatisfaction(response.satisfaction_tier)
+                    : satisfaction!;
+
+                setRankingResult({
+                    rank: response.rank,
+                    total: response.total_count,
+                    percentile,
+                    satisfaction: serverSatisfaction
+                });
+            } else {
+                // Fallback to calculation only if server doesn't return data
+                const safeBase = currentBaseRank !== undefined ? currentBaseRank : baseRank;
+                let myRank = safeBase + 1;
+
+                if (candidates.length > 0) {
+                    if (insertIndex < candidates.length) {
+                        myRank = candidates[insertIndex].rank;
+                    } else {
+                        myRank = candidates[candidates.length - 1].rank + 1;
+                    }
+                }
+
+                const safeTotal = (currentTotal !== undefined ? currentTotal : totalCount) + 1;
+                const percentile = Math.ceil((myRank / safeTotal) * 100);
+                setRankingResult({ rank: myRank, total: safeTotal, percentile });
+            }
         } catch (error) {
             console.error("Failed to save rank", error);
             // Fallback
@@ -279,7 +302,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                 {/* Ranking Result Badges */}
                                 <div className="flex items-center justify-center flex-wrap gap-3 w-full">
                                     <SatisfactionRating
-                                        satisfaction={satisfaction!}
+                                        satisfaction={rankingResult?.satisfaction || satisfaction!}
                                         percentile={rankingResult?.percentile}
                                         showPercentile={true}
                                         size="lg"
@@ -307,7 +330,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-3 w-full">
                                 <Button
-                                    onClick={() => onComplete('WRITE_REVIEW', { satisfaction })}
+                                    onClick={() => onComplete('WRITE_REVIEW', { satisfaction: rankingResult?.satisfaction || satisfaction })}
                                     className="w-full py-6 text-lg rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-white font-bold"
                                 >
                                     {t('write.ranking.write_review', 'Write a Review')}
