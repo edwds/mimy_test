@@ -174,10 +174,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     if (token) {
                         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                         console.log('[WriteContentStep] Added auth header');
+                    } else {
+                        // For web: credentials are sent via cookies
+                        xhr.withCredentials = true;
                     }
-
-                    // For web: credentials are sent via cookies automatically
-                    xhr.withCredentials = true;
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
