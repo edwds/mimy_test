@@ -153,12 +153,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         // Start uploads
         newItems.forEach(item => {
             if (!item.file) return;
+            const file = item.file; // Capture file for async closure
 
             // Async upload with authentication
             (async () => {
                 try {
                     const formData = new FormData();
-                    formData.append('file', item.file);
+                    formData.append('file', file);
 
                     const xhr = new XMLHttpRequest();
                     xhr.open('POST', `${API_BASE_URL}/api/upload`);
