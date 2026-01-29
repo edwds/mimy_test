@@ -35,6 +35,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Map & Sheet State
     const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
     const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
+    const [mapBounds, setMapBounds] = useState<{ minLat: number, maxLat: number, minLon: number, maxLon: number } | null>(null);
 
     // Search State
     const [showSearchHere, setShowSearchHere] = useState(false);
@@ -49,8 +50,8 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Cluster "Freeze" State - prevents auto-refetch on move if we are viewing a cluster
     const [viewingCluster, setViewingCluster] = useState(false);
 
-    const fetchShops = async (options: { hideSearchButton?: boolean; excludeRanked?: boolean } = {}) => {
-        const { hideSearchButton = false, excludeRanked = true } = options;
+    const fetchShops = async (options: { hideSearchButton?: boolean; excludeRanked?: boolean; useBounds?: boolean } = {}) => {
+        const { hideSearchButton = false, excludeRanked = true, useBounds = false } = options;
 
         setIsLoading(true);
         try {
@@ -58,8 +59,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
             if (showSavedOnly) {
                 url = `${API_BASE_URL}/api/users/me/saved_shops`;
+            } else if (useBounds && mapBounds) {
+                // Use current map viewport bounds (for "Search Here" button)
+                url += `&minLat=${mapBounds.minLat}&maxLat=${mapBounds.maxLat}&minLon=${mapBounds.minLon}&maxLon=${mapBounds.maxLon}&excludeRanked=${excludeRanked}`;
             } else if (mapCenter) {
-                // Pass center point for personalized discovery (10km radius, match score sorted)
+                // Use center point for personalized discovery (10km radius, match score sorted)
                 // excludeRanked=true: initial load (exclude already ranked shops)
                 // excludeRanked=false: map search (include all shops for comprehensive discovery)
                 url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}&excludeRanked=${excludeRanked}`;
@@ -215,7 +219,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
     };
 
-    const handleMoveEnd = (_newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
+    const handleMoveEnd = (newBounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => {
+        // Store current map bounds for "Search Here" functionality
+        setMapBounds(newBounds);
+
         // Only show button if we are NOT in saved mode AND not viewing a cluster explicitly
         if (!showSavedOnly && !viewingCluster) {
             setShowSearchHere(true);
@@ -453,7 +460,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 {/* Search Here Button */}
                 {showSearchHere && !showSavedOnly && (
                     <button
-                        onClick={() => fetchShops({ hideSearchButton: true, excludeRanked: false })}
+                        onClick={() => fetchShops({ hideSearchButton: true, excludeRanked: false, useBounds: true })}
                         className="animate-in fade-in slide-in-from-top-2 bg-white text-primary font-bold px-4 py-2 rounded-full shadow-lg text-sm border border-primary/20 flex items-center gap-2 active:scale-95 transition-transform"
                     >
                         {isLoading ? t('discovery.searching') : t('discovery.search_here')}

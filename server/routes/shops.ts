@@ -40,34 +40,49 @@ router.get("/discovery", optionalAuth, async (req, res) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 50;
 
-        // Center point (user's current location)
-        const centerLat = parseFloat(req.query.lat as string);
-        const centerLon = parseFloat(req.query.lon as string);
-
         // Exclude ranked shops (default: true for initial load, false for map search)
         const excludeRanked = req.query.excludeRanked !== 'false';
 
         // Get user ID from JWT
         const uid = req.user?.id || 0;
 
-        // Require location and user login for personalized discovery
-        if (!Number.isFinite(centerLat) || !Number.isFinite(centerLon)) {
-            return res.status(400).json({ error: "Location (lat, lon) is required" });
-        }
-
         if (!uid) {
             return res.status(401).json({ error: "Authentication required for personalized discovery" });
         }
 
-        // Calculate 10km bounding box (approximately 0.09 degrees)
-        const latDelta = 0.09; // ~10km in latitude
-        const lonDelta = 0.09; // ~10km in longitude (varies by latitude, but close enough)
-        const rawMinLat = centerLat - latDelta;
-        const rawMaxLat = centerLat + latDelta;
-        const rawMinLon = centerLon - lonDelta;
-        const rawMaxLon = centerLon + lonDelta;
+        let rawMinLat: number, rawMaxLat: number, rawMinLon: number, rawMaxLon: number;
 
-        // Fetch shops within 10km radius
+        // Check if bounds are provided (for map search)
+        const hasMinLat = req.query.minLat && !isNaN(parseFloat(req.query.minLat as string));
+        const hasMaxLat = req.query.maxLat && !isNaN(parseFloat(req.query.maxLat as string));
+        const hasMinLon = req.query.minLon && !isNaN(parseFloat(req.query.minLon as string));
+        const hasMaxLon = req.query.maxLon && !isNaN(parseFloat(req.query.maxLon as string));
+
+        if (hasMinLat && hasMaxLat && hasMinLon && hasMaxLon) {
+            // Use provided bounds (map viewport search)
+            rawMinLat = parseFloat(req.query.minLat as string);
+            rawMaxLat = parseFloat(req.query.maxLat as string);
+            rawMinLon = parseFloat(req.query.minLon as string);
+            rawMaxLon = parseFloat(req.query.maxLon as string);
+        } else {
+            // Use center point with 10km radius (initial load)
+            const centerLat = parseFloat(req.query.lat as string);
+            const centerLon = parseFloat(req.query.lon as string);
+
+            if (!Number.isFinite(centerLat) || !Number.isFinite(centerLon)) {
+                return res.status(400).json({ error: "Location (lat, lon) or bounds (minLat, maxLat, minLon, maxLon) required" });
+            }
+
+            // Calculate 10km bounding box (approximately 0.09 degrees)
+            const latDelta = 0.09; // ~10km in latitude
+            const lonDelta = 0.09; // ~10km in longitude (varies by latitude, but close enough)
+            rawMinLat = centerLat - latDelta;
+            rawMaxLat = centerLat + latDelta;
+            rawMinLon = centerLon - lonDelta;
+            rawMaxLon = centerLon + lonDelta;
+        }
+
+        // Fetch shops within specified bounds
         // For initial load (excludeRanked=true): exclude shops user has already ranked
         // For map exploration (excludeRanked=false): include all shops for comprehensive discovery
         const excludeClause = excludeRanked ? sql`AND ur.id IS NULL` : sql``;
@@ -229,7 +244,7 @@ router.get("/discovery", optionalAuth, async (req, res) => {
 // POST /api/shops/:id/save
 router.post("/:id/save", requireAuth, async (req, res) => {
     try {
-        const shopId = parseInt(req.params.id);
+        const shopId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
         const userId = req.user!.id; // Get from JWT
 
         if (isNaN(shopId)) {
@@ -359,7 +374,7 @@ router.get("/search", optionalAuth, async (req, res) => {
 // GET /api/shops/:id
 router.get("/:id", optionalAuth, async (req, res) => {
     try {
-        const id = parseInt(req.params.id);
+        const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
         if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
         // Get user ID from JWT
