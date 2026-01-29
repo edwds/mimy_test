@@ -454,75 +454,104 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'list' && (
                         <div className="pb-20 px-5 pt-4">
-                            <div className="mb-4 flex justify-end">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
-                                    onClick={() => navigate('/profile/manage/ranking')}
-                                >
-                                    <ListOrdered className="w-3.5 h-3.5" />
-                                    {t('profile.menu.manage_ranking', 'Manage Ranking')}
-                                </Button>
-                            </div>
+                            {!loadingLists && lists.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 px-6">
+                                    {/* Circular Progress */}
+                                    <div className="relative w-28 h-28 mb-6">
+                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                            {/* Background circle */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r="42"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="8"
+                                                className="text-muted/20"
+                                            />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r="42"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="8"
+                                                strokeLinecap="round"
+                                                className="text-primary transition-all duration-500 ease-out"
+                                                style={{
+                                                    strokeDasharray: `${2 * Math.PI * 42}`,
+                                                    strokeDashoffset: `${2 * Math.PI * 42 * (1 - Math.min((user.stats?.ranking_count || 0) / 30, 1))}`
+                                                }}
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <span className="text-2xl font-bold text-foreground">
+                                                {user.stats?.ranking_count || 0}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">/ 30</span>
+                                        </div>
+                                    </div>
 
-                            {lists.map((list) => (
-                                <ListCard
-                                    key={list.id}
-                                    id={list.id}
-                                    type={list.type}
-                                    title={list.title}
-                                    count={list.count}
-                                    updatedAt={list.updated_at}
-                                    author={list.author}
-                                    onPress={() => {
-                                        const query = new URLSearchParams(searchParams);
-                                        query.set('viewListUser', String(user.id));
-
-                                        // Set list params
-                                        query.set('type', list.type);
-                                        if (list.value) query.set('value', list.value);
-                                        if (list.title) query.set('title', list.title);
-
-                                        // Navigate while keeping current path (keeps activeTab='profile')
-                                        navigate({ search: query.toString() });
-                                    }}
-                                />
-                            ))}
-
-                            {!loadingLists && lists.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 px-8">
-                                    <List className="w-10 h-10 mb-4 opacity-20 text-muted-foreground" />
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6">
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6 max-w-sm">
                                         {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요')}
                                     </p>
 
-                                    {/* Progress Bar */}
-                                    <div className="w-full max-w-xs">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-medium text-muted-foreground">
-                                                {t('profile.empty.progress', '진행률')}
-                                            </span>
-                                            <span className="text-xs font-bold text-foreground">
-                                                {user.stats?.ranking_count || 0} / 30
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-                                                style={{
-                                                    width: `${Math.min(((user.stats?.ranking_count || 0) / 30) * 100, 100)}%`
-                                                }}
-                                            />
-                                        </div>
-                                        <p className="text-xs text-center text-muted-foreground mt-3">
-                                            {30 - (user.stats?.ranking_count || 0) > 0
-                                                ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
-                                                : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
-                                            }
-                                        </p>
-                                    </div>
+                                    <p className="text-xs text-center text-muted-foreground/80">
+                                        {30 - (user.stats?.ranking_count || 0) > 0
+                                            ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
+                                            : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
+                                        }
+                                    </p>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 h-9 text-sm font-semibold rounded-full border-gray-300 mt-6"
+                                        onClick={() => navigate('/profile/manage/ranking')}
+                                    >
+                                        <ListOrdered className="w-4 h-4" />
+                                        {t('profile.menu.manage_ranking', 'Manage Ranking')}
+                                    </Button>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="mb-4 flex justify-end">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                            onClick={() => navigate('/profile/manage/ranking')}
+                                        >
+                                            <ListOrdered className="w-3.5 h-3.5" />
+                                            {t('profile.menu.manage_ranking', 'Manage Ranking')}
+                                        </Button>
+                                    </div>
+
+                                    {lists.map((list) => (
+                                        <ListCard
+                                            key={list.id}
+                                            id={list.id}
+                                            type={list.type}
+                                            title={list.title}
+                                            count={list.count}
+                                            updatedAt={list.updated_at}
+                                            author={list.author}
+                                            onPress={() => {
+                                                const query = new URLSearchParams(searchParams);
+                                                query.set('viewListUser', String(user.id));
+
+                                                // Set list params
+                                                query.set('type', list.type);
+                                                if (list.value) query.set('value', list.value);
+                                                if (list.title) query.set('title', list.title);
+
+                                                // Navigate while keeping current path (keeps activeTab='profile')
+                                                navigate({ search: query.toString() });
+                                            }}
+                                        />
+                                    ))}
+                                </>
                             )}
 
                             {loadingLists && (
