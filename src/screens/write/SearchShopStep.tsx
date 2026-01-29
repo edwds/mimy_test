@@ -46,10 +46,15 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
     useEffect(() => {
         const fetchSaved = async () => {
-            const user = await UserService.getCurrentUser();
-            if (user?.id) {
-                const saved = await UserService.getSavedShops(user.id);
-                setSavedShops(saved || []);
+            try {
+                const user = await UserService.getCurrentUser();
+                if (user?.id) {
+                    const saved = await UserService.getSavedShops(user.id);
+                    setSavedShops(saved || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch saved shops:', error);
+                // Silently fail - user might not be logged in
             }
         };
         fetchSaved();

@@ -39,19 +39,29 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
+    const [authFailed, setAuthFailed] = useState<boolean>(false);
 
     const fetchUserData = async () => {
+        // Prevent infinite retries if auth fails
+        if (authFailed) {
+            setLoading(false);
+            return;
+        }
+
         try {
             // Fetch current user from JWT cookie
             const userData = await UserService.getCurrentUser();
             if (userData) {
                 setUser(userData);
+                setAuthFailed(false); // Reset on success
             } else {
                 setUser(null);
+                setAuthFailed(true); // Mark as failed to prevent retries
             }
         } catch (error) {
             console.error("Failed to fetch user in context", error);
             setUser(null);
+            setAuthFailed(true); // Mark as failed to prevent retries
         }
         setLoading(false);
     };
@@ -80,7 +90,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (_userId: string) => {
         // Server already set JWT cookies during login/register
-        // Just fetch user data (userId parameter kept for backward compatibility)
+        // Reset auth failed flag and fetch user data
+        setAuthFailed(false);
         await fetchUserData();
     };
 
