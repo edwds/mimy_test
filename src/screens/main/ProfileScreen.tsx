@@ -58,7 +58,6 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     // Scroll + Header
     const containerRef = useRef<HTMLDivElement>(null);
-    const scrollPositions = useRef<Record<string, number>>({});
     const { isVisible: isHeaderVisible, setIsVisible: setIsHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
 
     // Header height measurement
@@ -224,17 +223,15 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     };
 
     const handleTabChange = (newTab: ProfileTabType) => {
-        const el = containerRef.current;
-        if (el) scrollPositions.current[activeTab] = el.scrollTop;
-
         setActiveTab(newTab);
         setIsHeaderVisible(true);
 
+        // Reset scroll to top when changing tabs
         requestAnimationFrame(() => {
-            const el2 = containerRef.current;
-            if (!el2) return;
-            const savedPos = scrollPositions.current[newTab] ?? 0;
-            el2.scrollTo({ top: savedPos, behavior: 'auto' });
+            const el = containerRef.current;
+            if (el) {
+                el.scrollTo({ top: 0, behavior: 'auto' });
+            }
         });
     };
 
