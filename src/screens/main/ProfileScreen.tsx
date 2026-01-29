@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { MapPin, Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, CloudDownload } from 'lucide-react';
+import { Link as LinkIcon, Edit2, Grid, List, Settings, Loader2, ListOrdered, Bookmark, CloudDownload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -418,36 +418,41 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 <div className="min-h-[300px] bg-muted/5">
                     {activeTab === 'content' && (
                         <div className="pb-20">
-                            {contents.map((content: any) => (
-                                <div key={content.id} className="mb-8">
-                                    <ContentCard
-                                        user={{
-                                            id: user.id,
-                                            nickname: user.nickname || 'User',
-                                            account_id: user.account_id,
-                                            profile_image: user.profile_image,
-                                        }}
-                                        content={content}
-                                    />
-                                </div>
-                            ))}
-
-                            {!loadingContent && contents.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                                    <Grid className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">{t('profile.empty.content')}</p>
-                                </div>
-                            )}
-
-                            {isFetchingMore && (
-                                <div className="flex justify-center py-4">
-                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                                </div>
-                            )}
-                            {loadingContent && (
+                            {loadingContent ? (
                                 <div className="flex justify-center py-20">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
+                            ) : contents.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 px-6">
+                                    <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
+                                        <Grid className="w-9 h-9 text-muted-foreground/40" />
+                                    </div>
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed max-w-sm">
+                                        {t('profile.empty.content', '게시물이 없습니다')}
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    {contents.map((content: any) => (
+                                        <div key={content.id} className="mb-8">
+                                            <ContentCard
+                                                user={{
+                                                    id: user.id,
+                                                    nickname: user.nickname || 'User',
+                                                    account_id: user.account_id,
+                                                    profile_image: user.profile_image,
+                                                }}
+                                                content={content}
+                                            />
+                                        </div>
+                                    ))}
+
+                                    {isFetchingMore && (
+                                        <div className="flex justify-center py-4">
+                                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
@@ -564,33 +569,46 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'saved' && (
                         <div className="pb-20 px-5 pt-4">
-                            <div className="mb-4 flex justify-end">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
-                                    onClick={() => navigate('/profile/import')}
-                                >
-                                    <CloudDownload className="w-3.5 h-3.5" />
-                                    {t('profile.import_btn')}
-                                </Button>
-                            </div>
-
-                            {savedShops.map((shop: any) => (
-                                <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
-                            ))}
-
-                            {!loadingSaved && savedShops.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                                    <MapPin className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">{t('profile.empty.saved')}</p>
-                                </div>
-                            )}
-
-                            {loadingSaved && (
+                            {loadingSaved ? (
                                 <div className="flex justify-center py-20">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
+                            ) : savedShops.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 px-6">
+                                    <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
+                                        <Bookmark className="w-9 h-9 text-muted-foreground/40" />
+                                    </div>
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-6 max-w-sm">
+                                        {t('profile.empty.saved', '저장된 장소가 없습니다.')}
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 h-9 text-sm font-semibold rounded-full border-gray-300"
+                                        onClick={() => navigate('/profile/import')}
+                                    >
+                                        <CloudDownload className="w-4 h-4" />
+                                        {t('profile.import_btn', '장소 가져오기')}
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="mb-4 flex justify-end">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                            onClick={() => navigate('/profile/import')}
+                                        >
+                                            <CloudDownload className="w-3.5 h-3.5" />
+                                            {t('profile.import_btn')}
+                                        </Button>
+                                    </div>
+
+                                    {savedShops.map((shop: any) => (
+                                        <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
+                                    ))}
+                                </>
                             )}
                         </div>
                     )}
