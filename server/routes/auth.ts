@@ -48,6 +48,7 @@ router.post("/google", async (req, res) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                path: '/',
                 maxAge: 15 * 60 * 1000 // 15 minutes
             });
 
@@ -55,8 +56,12 @@ router.post("/google", async (req, res) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
+
+            console.log('[Auth] Cookies set for user:', user.id);
+            console.log('[Auth] Cookie settings - secure:', process.env.NODE_ENV === 'production', 'sameSite:', process.env.NODE_ENV === 'production' ? 'none' : 'lax');
 
             // Also return tokens in response body for mobile apps
             return res.json({
@@ -128,6 +133,7 @@ router.post("/register", async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
             maxAge: 15 * 60 * 1000 // 15 minutes
         });
 
@@ -135,8 +141,12 @@ router.post("/register", async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
+
+        console.log('[Auth] Cookies set for new user:', user.id);
+        console.log('[Auth] Cookie settings - secure:', process.env.NODE_ENV === 'production', 'sameSite:', process.env.NODE_ENV === 'production' ? 'none' : 'lax');
 
         // Also return tokens in response body for mobile apps
         res.json({
@@ -202,6 +212,7 @@ router.post("/refresh", async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
             maxAge: 15 * 60 * 1000 // 15 minutes
         });
 
@@ -218,12 +229,14 @@ router.post("/logout", async (req, res) => {
         res.clearCookie('access_token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
         });
         res.clearCookie('refresh_token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
         });
 
         res.json({ success: true, message: "Logged out successfully" });

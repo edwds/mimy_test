@@ -84,16 +84,30 @@ export const LoginPage = () => {
                     if (tokens && Capacitor.isNativePlatform()) {
                         console.log('[Login] Attempting to save tokens for native platform...');
                         console.log('[Login] Token types:', typeof tokens.accessToken, typeof tokens.refreshToken);
+                        console.log('[Login] Access token length:', tokens.accessToken?.length);
+                        console.log('[Login] Refresh token length:', tokens.refreshToken?.length);
 
                         const saved = await saveTokens(tokens.accessToken, tokens.refreshToken);
                         if (!saved) {
                             console.error('[Login] ❌ Failed to save tokens, cannot proceed');
-                            alert('Failed to save login credentials. Please try again.');
+                            alert('로그인 정보 저장에 실패했습니다. 다시 시도해주세요.');
                             return;
                         }
-                        console.log('[Login] ✅ Tokens saved and verified for native platform');
+                        console.log('[Login] ✅ Tokens saved successfully');
+
+                        // Double-check by reading token back
+                        const { getAccessToken } = await import('@/lib/tokenStorage');
+                        const verifyToken = await getAccessToken();
+                        if (!verifyToken) {
+                            console.error('[Login] ❌ Token verification failed - cannot read back saved token!');
+                            alert('로그인 정보 확인에 실패했습니다. 앱을 재시작해주세요.');
+                            return;
+                        }
+                        console.log('[Login] ✅ Token verified successfully, length:', verifyToken.length);
                     } else if (Capacitor.isNativePlatform() && !tokens) {
                         console.error('[Login] ❌ Native platform but no tokens in response!');
+                        alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
+                        return;
                     } else {
                         // Web: Wait for browser to process Set-Cookie headers
                         console.log('[Login] Web platform, waiting for cookies to be set...');

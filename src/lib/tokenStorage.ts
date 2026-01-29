@@ -149,10 +149,15 @@ export const getAuthHeader = async (): Promise<{ Authorization?: string }> => {
     return {};
   }
 
+  console.log('[getAuthHeader] Attempting to retrieve token...');
   const token = await getAccessToken();
+
   if (token) {
+    console.log('[getAuthHeader] ✅ Token found, length:', token.length);
+    console.log('[getAuthHeader] Token preview:', token.substring(0, 20) + '...');
     return { Authorization: `Bearer ${token}` };
   }
 
+  console.error('[getAuthHeader] ❌ No token found in storage!');
   return {};
 };

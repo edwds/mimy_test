@@ -9,6 +9,8 @@ import { WriteContentStep } from './WriteContentStep';
 import { ContentService } from '@/services/ContentService';
 import { ShopService } from '@/services/ShopService';
 import { useRanking } from '@/context/RankingContext';
+import { Capacitor } from '@capacitor/core';
+import { getAccessToken } from '@/lib/tokenStorage';
 
 export const WriteFlow = () => {
     const { t } = useTranslation();
@@ -90,6 +92,20 @@ export const WriteFlow = () => {
                 return;
             }
 
+            // Verify authentication token for native platforms
+            if (Capacitor.isNativePlatform()) {
+                console.log('[WriteFlow] Native platform detected, verifying token...');
+                const token = await getAccessToken();
+                if (!token) {
+                    console.error('[WriteFlow] ❌ No access token found!');
+                    alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                    navigate('/login');
+                    setIsSubmitting(false);
+                    return;
+                }
+                console.log('[WriteFlow] ✅ Token verified, proceeding with submission');
+            }
+
             // Prepare payload
             const payload = {
                 user_id: currentUserId,
@@ -108,11 +124,19 @@ export const WriteFlow = () => {
                 img_text: contentData.imgText || []
             };
 
+            console.log('[WriteFlow] Submitting content...');
             await ContentService.create(payload);
+            console.log('[WriteFlow] ✅ Content created successfully');
             navigate('/main');
-        } catch (error) {
-            console.error(error);
-            alert(t('discovery.alerts.save_failed'));
+        } catch (error: any) {
+            console.error('[WriteFlow] ❌ Submit failed:', error);
+
+            if (error.message?.includes('Authentication required')) {
+                alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                navigate('/login');
+            } else {
+                alert(error.message || t('discovery.alerts.save_failed'));
+            }
             setIsSubmitting(false);
         }
     };

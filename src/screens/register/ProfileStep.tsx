@@ -187,13 +187,31 @@ export const ProfileStep = () => {
 
                     // Save tokens for native apps
                     if (tokens && Capacitor.isNativePlatform()) {
+                        console.log('[Register] Saving tokens for native platform...');
+                        console.log('[Register] Access token length:', tokens.accessToken?.length);
+                        console.log('[Register] Refresh token length:', tokens.refreshToken?.length);
+
                         const saved = await saveTokens(tokens.accessToken, tokens.refreshToken);
                         if (!saved) {
-                            console.error('[Register] Failed to save tokens, cannot proceed');
-                            alert('Failed to save login credentials. Please try again.');
+                            console.error('[Register] ❌ Failed to save tokens, cannot proceed');
+                            alert('로그인 정보 저장에 실패했습니다. 다시 시도해주세요.');
                             return;
                         }
-                        console.log('[Register] Tokens saved and verified for native platform');
+                        console.log('[Register] ✅ Tokens saved successfully');
+
+                        // Double-check by reading token back
+                        const { getAccessToken } = await import('@/lib/tokenStorage');
+                        const verifyToken = await getAccessToken();
+                        if (!verifyToken) {
+                            console.error('[Register] ❌ Token verification failed - cannot read back saved token!');
+                            alert('로그인 정보 확인에 실패했습니다. 앱을 재시작해주세요.');
+                            return;
+                        }
+                        console.log('[Register] ✅ Token verified successfully, length:', verifyToken.length);
+                    } else if (Capacitor.isNativePlatform() && !tokens) {
+                        console.error('[Register] ❌ Native platform but no tokens in response!');
+                        alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
+                        return;
                     }
 
                     await refreshUser(); // Update context with new profile info
