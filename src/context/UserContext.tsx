@@ -42,28 +42,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [authFailed, setAuthFailed] = useState<boolean>(false);
 
     const fetchUserData = async () => {
+        console.log('[UserContext] fetchUserData called, authFailed:', authFailed);
+
         // Prevent infinite retries if auth fails
         if (authFailed) {
+            console.log('[UserContext] Auth already failed, skipping fetch');
             setLoading(false);
             return;
         }
 
         try {
+            console.log('[UserContext] Calling UserService.getCurrentUser()...');
             // Fetch current user from JWT cookie
             const userData = await UserService.getCurrentUser();
+            console.log('[UserContext] getCurrentUser result:', userData ? 'User found (id: ' + userData.id + ')' : 'No user');
+
             if (userData) {
                 setUser(userData);
                 setAuthFailed(false); // Reset on success
+                console.log('[UserContext] ✅ User set successfully');
             } else {
                 setUser(null);
                 setAuthFailed(true); // Mark as failed to prevent retries
+                console.log('[UserContext] ❌ No user data, setting authFailed=true');
             }
         } catch (error) {
-            console.error("Failed to fetch user in context", error);
+            console.error('[UserContext] ❌ Failed to fetch user in context', error);
             setUser(null);
             setAuthFailed(true); // Mark as failed to prevent retries
         }
         setLoading(false);
+        console.log('[UserContext] fetchUserData completed, loading=false');
     };
 
     useEffect(() => {
@@ -90,10 +99,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const login = async (_userId: string) => {
+        console.log('[UserContext] login called with userId:', _userId);
         // Server already set JWT cookies during login/register
         // Reset auth failed flag and fetch user data
         setAuthFailed(false);
+        console.log('[UserContext] authFailed reset to false, calling fetchUserData...');
         await fetchUserData();
+        console.log('[UserContext] login completed');
     };
 
     const logout = async () => {
