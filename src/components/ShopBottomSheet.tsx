@@ -92,7 +92,6 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     }, [snapState, controls]);
 
     const handleDragEnd = (_: any, info: PanInfo) => {
-        isDraggingHandle.current = false;
         const velocity = info.velocity.y;
 
         // Simple logic: down motion = collapse to half, up motion = expand
@@ -106,6 +105,11 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             // No strong velocity, maintain current state
             // Could add position-based logic here if needed
         }
+
+        // Reset flag after a delay to ensure all touch events are processed
+        setTimeout(() => {
+            isDraggingHandle.current = false;
+        }, 100);
     };
 
     return (
@@ -130,25 +134,36 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             style={{ touchAction: 'none' }}
         >
             {/* Draggable Area Container */}
-            <div className="flex-shrink-0">
-                {/* Handle Bar - Only this area is draggable */}
+            <div className="flex-shrink-0 relative" style={{ pointerEvents: 'none' }}>
+                {/* Handle Bar - Absolute positioned to prevent touch event conflicts */}
                 <div
-                    className="pt-3 pb-2 flex justify-center w-full cursor-grab active:cursor-grabbing touch-none"
+                    className="pt-3 pb-2 flex justify-center w-full cursor-grab active:cursor-grabbing"
+                    style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
                     onPointerDown={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         isDraggingHandle.current = true;
                         dragControls.start(e);
                     }}
                     onTouchStart={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         isDraggingHandle.current = true;
+                    }}
+                    onTouchMove={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                    onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                     }}
                 >
                     <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
                 </div>
 
                 {/* Header - Not draggable */}
-                <div className="flex flex-col mb-0 px-5 pb-4">
+                <div className="flex flex-col mb-0 px-5 pb-4" style={{ pointerEvents: 'auto' }}>
                     <h2 className="text-lg font-bold">
                         {selectedShopId
                             ? t('discovery.bottom_sheet.selected_shop')
@@ -179,29 +194,36 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                     isScrolling.current = false;
                 }}
                 onTouchMove={(e) => {
-                    if (!contentRef.current || isDraggingHandle.current) return;
+                    if (!contentRef.current) return;
+
+                    // CRITICAL: Ignore all touch events if handle is being dragged
+                    if (isDraggingHandle.current) {
+                        return;
+                    }
 
                     const touchY = e.touches[0].clientY;
                     const deltaY = touchStartY.current - touchY;
                     const currentScrollTop = contentRef.current.scrollTop;
 
-                    // Detect scroll intent
-                    if (Math.abs(deltaY) > 5) {
+                    // Detect scroll intent (require more movement)
+                    if (Math.abs(deltaY) > 10) {
                         isScrolling.current = true;
                     }
 
                     // If in half state and scrolling down (deltaY > 0), expand
-                    if (snapState === 'half' && deltaY > 10 && isScrolling.current) {
+                    // Require both scrolling intent AND significant movement
+                    if (snapState === 'half' && deltaY > 20 && isScrolling.current) {
                         setSnapState('expanded');
                     }
 
                     // If in expanded state, at top, and pulling down, collapse
-                    if (snapState === 'expanded' && currentScrollTop === 0 && deltaY < -30) {
+                    if (snapState === 'expanded' && currentScrollTop === 0 && deltaY < -40) {
                         setSnapState('half');
                     }
                 }}
                 onTouchEnd={() => {
                     isScrolling.current = false;
+                    // Keep isDraggingHandle flag until drag actually ends
                 }}
             >
                 {displayedShops.length === 0 ? (
