@@ -6,15 +6,22 @@
  */
 export const processImageToSquare = (file: File, size = 1080): Promise<Blob> => {
     return new Promise((resolve, reject) => {
+        console.log('[imageProcessor] Processing file:', file.name, 'size:', file.size, 'type:', file.type);
+
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+
         img.onload = () => {
+            console.log('[imageProcessor] Image loaded:', img.width, 'x', img.height);
+
             const canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
 
             if (!ctx) {
+                URL.revokeObjectURL(objectUrl);
                 reject(new Error("Canvas context not available"));
                 return;
             }
@@ -33,18 +40,24 @@ export const processImageToSquare = (file: File, size = 1080): Promise<Blob> => 
             // Draw image centered and scaled to cover square
             ctx.drawImage(img, x, y, w, h);
 
+            // iOS Fix: Use higher quality and explicit MIME type
             canvas.toBlob((blob) => {
-                if (blob) {
+                URL.revokeObjectURL(objectUrl); // Cleanup
+
+                if (blob && blob.size > 0) {
+                    console.log('[imageProcessor] ✅ Blob created successfully:', blob.size, 'bytes');
                     resolve(blob);
                 } else {
-                    reject(new Error("Canvas validation failed"));
+                    console.error('[imageProcessor] ❌ Canvas toBlob failed or empty blob');
+                    reject(new Error("Canvas toBlob failed"));
                 }
-                URL.revokeObjectURL(img.src); // Cleanup
-            }, 'image/jpeg', 0.9);
+            }, 'image/jpeg', 0.92);
         };
+
         img.onerror = (err) => {
-            URL.revokeObjectURL(img.src);
-            reject(err);
+            console.error('[imageProcessor] ❌ Image load error:', err);
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Failed to load image"));
         };
     });
 };
@@ -58,15 +71,22 @@ export const processImageToSquare = (file: File, size = 1080): Promise<Blob> => 
  */
 export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: number, scale: number, rotation?: number }, size = 1080): Promise<Blob> => {
     return new Promise((resolve, reject) => {
+        console.log('[imageProcessor] Processing with crop:', crop);
+
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+
         img.onload = () => {
+            console.log('[imageProcessor] Image loaded for crop:', img.width, 'x', img.height);
+
             const canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
 
             if (!ctx) {
+                URL.revokeObjectURL(objectUrl);
                 reject(new Error("Canvas context not available"));
                 return;
             }
@@ -107,18 +127,24 @@ export const processImageWithCrop = (file: File | Blob, crop: { x: number, y: nu
             // Restore context
             ctx.restore();
 
+            // iOS Fix: Use higher quality and explicit MIME type
             canvas.toBlob((blob) => {
-                if (blob) {
+                URL.revokeObjectURL(objectUrl);
+
+                if (blob && blob.size > 0) {
+                    console.log('[imageProcessor] ✅ Cropped blob created successfully:', blob.size, 'bytes');
                     resolve(blob);
                 } else {
-                    reject(new Error("Canvas validation failed"));
+                    console.error('[imageProcessor] ❌ Canvas toBlob failed or empty blob');
+                    reject(new Error("Canvas toBlob failed"));
                 }
-                URL.revokeObjectURL(img.src);
-            }, 'image/jpeg', 0.9);
+            }, 'image/jpeg', 0.92);
         };
+
         img.onerror = (err) => {
-            URL.revokeObjectURL(img.src);
-            reject(err);
+            console.error('[imageProcessor] ❌ Image load error:', err);
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Failed to load image"));
         };
     });
 };

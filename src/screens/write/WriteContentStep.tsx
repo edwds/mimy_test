@@ -158,10 +158,20 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
             (async () => {
                 try {
-                    console.log('[WriteContentStep] Starting upload for file:', file.name);
+                    console.log('[WriteContentStep] Starting upload for file:', file.name, 'size:', file.size, 'type:', file.type);
+
+                    // iOS Fix: Verify file is valid before upload
+                    if (!file.size || file.size === 0) {
+                        console.error('[WriteContentStep] ❌ File is empty, skipping upload');
+                        setMediaItems(prev => prev.map(m =>
+                            m.id === item.id ? { ...m, status: 'error' } : m
+                        ));
+                        return;
+                    }
 
                     const formData = new FormData();
-                    formData.append('file', file);
+                    // iOS Fix: Explicitly specify filename as third parameter
+                    formData.append('file', file, file.name);
 
                     // Get auth token for native platforms
                     const token = await getAccessToken();

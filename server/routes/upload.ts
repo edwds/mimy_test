@@ -7,29 +7,47 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/", upload.single("file"), async (req, res) => {
     try {
-        console.log("Upload request received");
+        console.log("[Upload] Request received");
+
         if (!req.file) {
-            console.error("No file in request");
+            console.error("[Upload] ❌ No file in request");
             return res.status(400).json({ error: "No file uploaded" });
         }
-        console.log("File details:", {
+
+        console.log("[Upload] File details:", {
             originalname: req.file.originalname,
             mimetype: req.file.mimetype,
-            size: req.file.size
+            size: req.file.size,
+            bufferLength: req.file.buffer?.length
         });
+
+        // Validate file
+        if (!req.file.buffer || req.file.buffer.length === 0) {
+            console.error("[Upload] ❌ Empty file buffer");
+            return res.status(400).json({ error: "Empty file" });
+        }
+
+        if (!req.file.mimetype.startsWith('image/')) {
+            console.error("[Upload] ❌ Invalid file type:", req.file.mimetype);
+            return res.status(400).json({ error: "Invalid file type" });
+        }
+
+        // iOS Fix: Normalize filename
+        const filename = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
 
         // Upload to Vercel Blob
-        const blob = await put(req.file.originalname, req.file.buffer, {
+        const blob = await put(filename, req.file.buffer, {
             access: "public",
             token: process.env.BLOB_READ_WRITE_TOKEN,
-            addRandomSuffix: true, // Prevent filename collisions
+            addRandomSuffix: true,
+            contentType: req.file.mimetype
         });
 
-        console.log("Upload success:", blob.url);
+        console.log("[Upload] ✅ Success:", blob.url);
         res.json({ url: blob.url });
     } catch (error: any) {
-        console.error("Upload error details:", error);
-        if (error.cause) console.error("Cause:", error.cause);
+        console.error("[Upload] ❌ Error:", error);
+        if (error.cause) console.error("[Upload] Cause:", error.cause);
         res.status(500).json({ error: "Upload failed", details: error.message });
     }
 });

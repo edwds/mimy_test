@@ -95,9 +95,14 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
     }, []);
 
     const handleConfirm = () => {
-        const finalFiles: File[] = items.map(item => {
+        const finalFiles: File[] = items.map((item, index) => {
             if (item.blob) {
-                return new File([item.blob], item.file.name, { type: item.blob.type });
+                // iOS Fix: Normalize filename and explicitly set MIME type
+                const normalizedName = `image_${Date.now()}_${index}.jpg`;
+                return new File([item.blob], normalizedName, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
             }
             return item.file;
         });
