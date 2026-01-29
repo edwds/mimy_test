@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, Plus, Check } from 'lucide-react';
+import { Heart, Send, MessageCircle, Bookmark, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter, PlusCircle, Check } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
@@ -941,7 +941,7 @@ export const ContentCard = ({
                                 {(content.poi?.my_review_stats || content.review_prop?.my_review_stats) ? (
                                     <Check size={22} />
                                 ) : (
-                                    <Plus size={22} />
+                                    <PlusCircle size={22} />
                                 )}
                             </motion.button>
 

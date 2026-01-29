@@ -26,28 +26,26 @@ export async function getShopMatchScores(shopIds: number[], viewerId: number): P
         if (!viewerScores) return scoresMap;
 
         // 2. Fetch Reviewers for these shops
-        // Optimized query: Only fetch necessary data
+        // Changed to use users_ranking as base (no content requirement)
+        const minRankings = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
         const matchRows = await db.execute(sql.raw(`
             WITH eligible AS (
-                SELECT user_id, count(*) as cnt 
-                FROM users_ranking 
-                GROUP BY user_id 
-                HAVING count(*) >= 100
+                SELECT user_id, count(*) as cnt
+                FROM users_ranking
+                GROUP BY user_id
+                HAVING count(*) >= ${minRankings}
             )
-            SELECT 
-                (c.review_prop->>'shop_id')::int as shop_id,
+            SELECT
+                ur.shop_id,
                 u.id as user_id,
                 u.taste_result,
                 ur.rank,
-                ur.satisfaction_tier, 
+                ur.satisfaction_tier,
                 e.cnt as total_cnt
-            FROM content c
-            JOIN eligible e ON c.user_id = e.user_id
-            JOIN users u ON c.user_id = u.id
-            JOIN users_ranking ur ON ur.user_id = u.id AND ur.shop_id = (c.review_prop->>'shop_id')::int
-            WHERE c.type = 'review'
-                AND c.is_deleted = false
-                AND (c.review_prop->>'shop_id')::int IN (${shopIds.join(',')})
+            FROM users_ranking ur
+            JOIN eligible e ON ur.user_id = e.user_id
+            JOIN users u ON ur.user_id = u.id
+            WHERE ur.shop_id IN (${shopIds.join(',')})
         `));
 
         const shopReviewersMap = new Map<number, any[]>();

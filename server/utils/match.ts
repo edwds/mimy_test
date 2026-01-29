@@ -25,7 +25,7 @@ export const calculateTasteMatch = (myScores: TasteScores, targetScores: TasteSc
 export interface ReviewerSignal {
     userId: number;
     rankPosition: number;
-    totalRankedCount: number; // Must be >= 100 for eligibility
+    totalRankedCount: number; // Must be >= MIN_RANKINGS_FOR_MATCH for eligibility
     tasteScores: TasteScores | null;
     satisfactionTier?: number; // 2=Good, 1=OK, 0=Bad. Optional for backward compatibility.
 }
@@ -41,9 +41,10 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
     const ALPHA = options?.alpha ?? 0.2; // Bayesian prior weight
     const MIN_REVIEWERS = options?.minReviewers ?? 3;
     const MU_0 = 0.0;   // Neutral prior mean
+    const MIN_RANKINGS = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
 
-    // 1. Filter eligible reviewers (N >= 100)
-    const eligibleReviewers = reviewers.filter(r => r.totalRankedCount >= 100);
+    // 1. Filter eligible reviewers (N >= MIN_RANKINGS)
+    const eligibleReviewers = reviewers.filter(r => r.totalRankedCount >= MIN_RANKINGS);
 
     // Check minimum threshold
     if (eligibleReviewers.length < MIN_REVIEWERS) {

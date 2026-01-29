@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, Plus, HelpCircle } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Bookmark, MapPin, ChevronDown, Check, Share, PlusCircle, HelpCircle } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ShopService } from '@/services/ShopService';
@@ -475,7 +475,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     </>
                                 ) : (
                                     <>
-                                        <Plus size={16} />
+                                        <PlusCircle size={16} />
                                         {t('shop.evaluate', 'Evaluate')}
                                     </>
                                 )}

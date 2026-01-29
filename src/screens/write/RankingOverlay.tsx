@@ -321,7 +321,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                     <SatisfactionRating
                                         satisfaction={rankingResult?.satisfaction || satisfaction!}
                                         percentile={rankingResult?.percentile}
-                                        showPercentile={true}
+                                        showPercentile={(rankingResult?.total || 0) >= 50}
                                         size="lg"
                                         showIcon={false}
                                     />
