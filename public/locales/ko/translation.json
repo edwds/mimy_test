@@ -267,7 +267,7 @@
         "empty": {
             "content": "게시물이 없습니다",
             "lists": "공개된 리스트가 없습니다",
-            "lists_requirement": "30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요",
+            "lists_requirement": "30개 이상의 기록을 완료하면\n나만의 맛집 랭킹 리스트가 만들어져요",
             "progress": "진행률",
             "remaining": "{{count}}개 더 기록하면 리스트가 생성됩니다",
             "refresh": "새로고침하여 리스트를 확인하세요",

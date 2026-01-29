@@ -264,7 +264,7 @@
         "empty": {
             "content": "No contents yet",
             "lists": "No public lists",
-            "lists_requirement": "Complete 30+ rankings to create your personalized restaurant ranking list",
+            "lists_requirement": "Complete 30+ rankings to create\nyour personalized restaurant ranking list",
             "progress": "Progress",
             "remaining": "{{count}} more to create your list",
             "refresh": "Refresh to see your list",

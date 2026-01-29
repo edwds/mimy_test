@@ -489,20 +489,22 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                                 className="text-muted/20"
                                             />
                                             {/* Progress circle */}
-                                            <circle
-                                                cx="50"
-                                                cy="50"
-                                                r="42"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="8"
-                                                strokeLinecap="round"
-                                                className="text-primary transition-all duration-500 ease-out"
-                                                style={{
-                                                    strokeDasharray: `${2 * Math.PI * 42}`,
-                                                    strokeDashoffset: `${2 * Math.PI * 42 * (1 - Math.min((user.stats?.ranking_count || 0) / 30, 1))}`
-                                                }}
-                                            />
+                                            {(user.stats?.ranking_count || 0) > 0 && (
+                                                <circle
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="42"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="8"
+                                                    strokeLinecap="round"
+                                                    className="text-primary transition-all duration-500 ease-out"
+                                                    style={{
+                                                        strokeDasharray: `${2 * Math.PI * 42}`,
+                                                        strokeDashoffset: `${2 * Math.PI * 42 * (1 - Math.min((user.stats?.ranking_count || 0) / 30, 1))}`
+                                                    }}
+                                                />
+                                            )}
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                                             <span className="text-xl font-bold text-foreground">
@@ -512,8 +514,8 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                         </div>
                                     </div>
 
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-3 max-w-sm">
-                                        {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면 나만의 맛집 랭킹 리스트가 만들어져요')}
+                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-3 max-w-sm whitespace-pre-line">
+                                        {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면\n나만의 맛집 랭킹 리스트가 만들어져요')}
                                     </p>
 
                                     <p className="text-xs text-center text-muted-foreground/70">
