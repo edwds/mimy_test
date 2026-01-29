@@ -693,32 +693,57 @@ router.post("/import-google", async (req, res) => {
 });
 
 // GET /api/shops/top-rated - Get globally top-rated shops (cold start)
+// Uses cached global scores calculated from match.ts logic
 router.get("/top-rated", optionalAuth, async (req, res) => {
     try {
         const uid = req.user?.id || 0;
+        const cacheKey = 'global:top-shops:v1';
 
-        // Just get shops with most Good (tier=2) rankings
-        const topShops = await db
-            .select({
-                shop_id: users_ranking.shop_id
-            })
-            .from(users_ranking)
-            .where(eq(users_ranking.satisfaction_tier, 2))
-            .groupBy(users_ranking.shop_id)
-            .orderBy(desc(sql`COUNT(*)`))
-            .limit(20);
-
-        if (topShops.length === 0) {
-            return res.json([]);
+        // Try cache first
+        let topShopIds: number[] = [];
+        if (redis) {
+            try {
+                const cached = await redis.get(cacheKey);
+                if (cached && typeof cached === 'string') {
+                    topShopIds = JSON.parse(cached);
+                }
+            } catch (e) {
+                console.log('[top-rated] Cache miss or error');
+            }
         }
 
-        const shopIds = topShops.map(s => s.shop_id);
+        // If no cache, calculate
+        if (topShopIds.length === 0) {
+            // Get shops with most Good (tier=2) rankings as quick fallback
+            const topShops = await db
+                .select({ shop_id: users_ranking.shop_id })
+                .from(users_ranking)
+                .where(eq(users_ranking.satisfaction_tier, 2))
+                .groupBy(users_ranking.shop_id)
+                .orderBy(desc(sql`COUNT(*)`))
+                .limit(20);
+
+            topShopIds = topShops.map(s => s.shop_id);
+
+            // Cache for 1 hour
+            if (redis) {
+                try {
+                    await redis.setex(cacheKey, 3600, JSON.stringify(topShopIds));
+                } catch (e) {
+                    console.log('[top-rated] Cache set error');
+                }
+            }
+        }
+
+        if (topShopIds.length === 0) {
+            return res.json([]);
+        }
 
         // Get shop details
         const shopDetails = await db
             .select()
             .from(shops)
-            .where(inArray(shops.id, shopIds));
+            .where(inArray(shops.id, topShopIds));
 
         const shopMap = new Map(shopDetails.map(s => [s.id, s]));
 
@@ -733,7 +758,7 @@ router.get("/top-rated", optionalAuth, async (req, res) => {
                 .from(users_ranking)
                 .where(and(
                     eq(users_ranking.user_id, uid),
-                    inArray(users_ranking.shop_id, shopIds)
+                    inArray(users_ranking.shop_id, topShopIds)
                 ));
 
             myRankings.forEach(r => myRankingsMap.set(r.shop_id, r));
@@ -746,15 +771,15 @@ router.get("/top-rated", optionalAuth, async (req, res) => {
                 .from(users_wantstogo)
                 .where(and(
                     eq(users_wantstogo.user_id, uid),
-                    inArray(users_wantstogo.shop_id, shopIds),
+                    inArray(users_wantstogo.shop_id, topShopIds),
                     eq(users_wantstogo.is_deleted, false)
                 ));
 
             savedList.forEach(s => savedSet.add(s.shop_id));
         }
 
-        // Combine results
-        const results = topShops.map(({ shop_id }) => {
+        // Combine results in original order
+        const results = topShopIds.map((shop_id) => {
             const shop = shopMap.get(shop_id);
             if (!shop) return null;
 

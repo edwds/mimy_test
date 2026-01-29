@@ -5,6 +5,7 @@ import { ShopService } from '@/services/ShopService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 interface Props {
     onSelect: (shop: any) => void;
@@ -320,7 +321,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                 )}
                                             </div>
                                             {/* ... Text ... */}
-                                            <div className="flex-1 min-w-0 py-1 pr-24">
+                                            <div className={cn("flex-1 min-w-0 py-1", shop.my_rank ? "pr-24" : "pr-0")}>
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-bold text-foreground text-lg truncate leading-tight">
                                                         {shop.name}
@@ -403,7 +404,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                 onClick={() => onSelect(shop)}
                                                 className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
                                             >
-                                                <div className="grid grid-cols-[64px_1fr_auto] gap-4 items-start">
+                                                <div className={cn("grid gap-4 items-start", shop.my_rank ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[64px_1fr]")}>
                                                     {/* Thumb */}
                                                     <div
                                                         className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
@@ -468,7 +469,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                 onClick={() => onSelect(shop)}
                                                 className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
                                             >
-                                                <div className="grid grid-cols-[64px_1fr_auto] gap-4 items-start">
+                                                <div className={cn("grid gap-4 items-start", shop.my_rank ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[64px_1fr]")}>
                                                     {/* Thumb */}
                                                     <div
                                                         className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"

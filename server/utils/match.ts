@@ -138,3 +138,66 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
     // Clamp just in case
     return Math.max(0, Math.min(100, preciseScore));
 };
+
+/**
+ * Calculate global shop score (no user-specific taste matching)
+ * Uses pure satisfaction signals from all eligible reviewers
+ */
+export const calculateGlobalShopScore = (reviewers: ReviewerSignal[], options?: MatchOptions): number | null => {
+    const ALPHA = options?.alpha ?? 0.2;
+    const MIN_REVIEWERS = options?.minReviewers ?? 3;
+    const MU_0 = 0.0;
+    const MIN_RANKINGS = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
+
+    // Filter eligible reviewers
+    const eligibleReviewers = reviewers.filter(r => r.totalRankedCount >= MIN_RANKINGS);
+
+    if (eligibleReviewers.length < MIN_REVIEWERS) {
+        return null;
+    }
+
+    let satisfactionSum = 0;
+
+    for (const r of eligibleReviewers) {
+        // Calculate percentile
+        let percentile = 0.5;
+        if (r.totalRankedCount > 1) {
+            percentile = 1.0 - ((r.rankPosition - 1) / (r.totalRankedCount - 1));
+        } else {
+            percentile = 1.0;
+        }
+
+        // Satisfaction signal
+        let satisfaction = 0;
+
+        if (r.satisfactionTier !== undefined) {
+            switch (r.satisfactionTier) {
+                case 2: // Good
+                    satisfaction = 0.3 + (0.7 * percentile);
+                    break;
+                case 1: // OK
+                    satisfaction = -0.2 + (0.4 * percentile);
+                    break;
+                case 0: // Bad
+                    satisfaction = -1.0 + (0.7 * percentile);
+                    break;
+                default:
+                    satisfaction = (2 * percentile) - 1;
+            }
+        } else {
+            satisfaction = (2 * percentile) - 1;
+        }
+
+        satisfactionSum += satisfaction;
+    }
+
+    // Bayesian average (all weights = 1 for global score)
+    const count = eligibleReviewers.length;
+    const scoreRaw = (ALPHA * MU_0 + satisfactionSum) / (ALPHA + count);
+
+    // Map to 0-100
+    const finalScore = 50 * (scoreRaw + 1);
+    const preciseScore = Math.round(finalScore * 100) / 100;
+
+    return Math.max(0, Math.min(100, preciseScore));
+};
