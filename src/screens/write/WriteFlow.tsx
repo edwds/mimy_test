@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 import { SearchShopStep } from './SearchShopStep';
@@ -13,7 +12,6 @@ import { Capacitor } from '@capacitor/core';
 import { getAccessToken } from '@/lib/tokenStorage';
 
 export const WriteFlow = () => {
-    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
