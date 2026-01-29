@@ -1,5 +1,6 @@
 import { getAuthHeader, isNativePlatform } from './tokenStorage';
 import { CapacitorHttp, HttpResponse } from '@capacitor/core';
+import { API_BASE_URL } from './api';
 
 // Track if we're currently refreshing to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
@@ -17,7 +18,6 @@ async function refreshAccessToken(): Promise<boolean> {
   refreshPromise = (async () => {
     try {
       console.log('[authFetch] Attempting to refresh access token...');
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
       const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',

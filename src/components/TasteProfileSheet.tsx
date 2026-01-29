@@ -53,11 +53,6 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                     const vsHistory = Array.isArray(vsData) ? vsData : [];
                     const hateHistoryData = Array.isArray(hateData) ? hateData : [];
 
-                    console.log('[TasteProfileSheet] VS Data:', vsHistory);
-                    console.log('[TasteProfileSheet] Hate Data:', hateHistoryData);
-                    console.log('[TasteProfileSheet] VS Count:', vsHistory.length);
-                    console.log('[TasteProfileSheet] Hate NOT_EAT Count:', hateHistoryData.filter((h: any) => h.selection === 'NOT_EAT').length);
-
                     setHistory(vsHistory);
                     setHateHistory(hateHistoryData);
 

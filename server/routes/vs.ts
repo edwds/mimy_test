@@ -91,7 +91,9 @@ router.post("/:id/vote", requireAuth, async (req, res) => {
 // Fetch props that the user HAS voted on
 router.get("/history", optionalAuth, async (req, res) => {
     try {
-        const userId = req.user?.id;
+        const queryUserId = req.query.user_id ? parseInt(req.query.user_id as string) : null;
+        const userId = queryUserId || req.user?.id;
+
         if (!userId) {
             return res.json([]);
         }
