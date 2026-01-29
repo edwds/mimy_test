@@ -130,19 +130,24 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             style={{ touchAction: 'none' }}
         >
             {/* Draggable Area Container */}
-            <div
-                className="flex-shrink-0 touch-none"
-                onPointerDown={(e) => {
-                    isDraggingHandle.current = true;
-                    dragControls.start(e);
-                }}
-            >
-                {/* Handle Bar */}
-                <div className="pt-3 pb-2 flex justify-center w-full cursor-grab active:cursor-grabbing">
+            <div className="flex-shrink-0">
+                {/* Handle Bar - Only this area is draggable */}
+                <div
+                    className="pt-3 pb-2 flex justify-center w-full cursor-grab active:cursor-grabbing touch-none"
+                    onPointerDown={(e) => {
+                        e.stopPropagation();
+                        isDraggingHandle.current = true;
+                        dragControls.start(e);
+                    }}
+                    onTouchStart={(e) => {
+                        e.stopPropagation();
+                        isDraggingHandle.current = true;
+                    }}
+                >
                     <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
                 </div>
 
-                {/* Header */}
+                {/* Header - Not draggable */}
                 <div className="flex flex-col mb-0 px-5 pb-4">
                     <h2 className="text-lg font-bold">
                         {selectedShopId

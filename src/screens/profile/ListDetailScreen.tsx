@@ -10,6 +10,7 @@ import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 import { Share as CapacitorShare } from '@capacitor/share';
+import { authFetch } from '@/lib/authFetch';
 
 interface ListItem {
     rank: number;
@@ -80,7 +81,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                 }
 
                 if (code) {
-                    // Shared View
+                    // Shared View (public, no auth required)
                     const res = await fetch(`${API_BASE_URL}/api/share/${code}`);
                     if (res.ok) {
                         const data = await res.json();
@@ -102,9 +103,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     }
                 } else if (userId) {
                     // 1. Fetch User Info (for header)
-                    // If the user navigated from profile, we might know this, but better to be safe for deep links.
-                    // We use viewerId to get follow status if needed, but here just basic info.
-                    const userRes = await fetch(`${API_BASE_URL}/api/users/${userId}`);
+                    const userRes = await authFetch(`${API_BASE_URL}/api/users/${userId}`);
                     if (userRes.ok) {
                         const userData = await userRes.json();
                         setAuthor(userData);
@@ -124,7 +123,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                             setTitle(`${listValue} ${t('write.ranking.ranking_suffix', 'Ranking')}`);
                         }
                     }
-                    const listRes = await fetch(`${API_BASE_URL}/api/users/${userId}/lists/detail?${query.toString()}`);
+                    const listRes = await authFetch(`${API_BASE_URL}/api/users/${userId}/lists/detail?${query.toString()}`);
                     if (listRes.ok) {
                         const listData = await listRes.json();
                         setItems(listData);
@@ -150,7 +149,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
         } else if (userId) {
             // Create a new share link
             try {
-                const res = await fetch(`${API_BASE_URL}/api/share/list`, {
+                const res = await authFetch(`${API_BASE_URL}/api/share/list`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
