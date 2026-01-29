@@ -392,12 +392,12 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             <div
                 ref={measureHeader}
                 className={cn(
-                    "absolute top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 px-4 pb-2 transition-transform duration-300 flex items-center gap-2",
+                    "fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-[100] px-4 pb-2 transition-transform duration-300 flex items-center gap-2 pointer-events-none",
                     isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
                 )}
                 style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
             >
-                <Button variant="ghost" size="icon" className="-ml-2" onClick={() => {
+                <Button variant="ghost" size="icon" className="-ml-2 pointer-events-auto" onClick={() => {
                     console.log('[UserProfileScreen] Back button clicked');
                     if (window.history.length > 1) {
                         navigate(-1);
@@ -408,18 +408,18 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     <ArrowLeft className="w-6 h-6" />
                 </Button>
                 {loadingUser ? (
-                    <div className="flex flex-col">
+                    <div className="flex flex-col pointer-events-none">
                         <Skeleton className="h-4 w-24" />
                     </div>
                 ) : (
-                    <h1 className="text-lg font-bold truncate">@{user?.account_id}</h1>
+                    <h1 className="text-lg font-bold truncate pointer-events-none">@{user?.account_id}</h1>
                 )}
                 <div className="ml-auto">
                     <Button
                         size="sm"
                         variant={isFollowing ? "outline" : "default"}
                         className={cn(
-                            "h-8 px-4 rounded-full text-xs font-semibold shadow-sm transition-all",
+                            "h-8 px-4 rounded-full text-xs font-semibold shadow-sm transition-all pointer-events-auto",
                             isFollowing
                                 ? "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                                 : "bg-gray-900 text-white hover:bg-gray-800"

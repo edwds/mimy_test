@@ -276,7 +276,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
             {/* Fixed Top Navigation */}
             <div
                 className={cn(
-                    "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 transition-all duration-300 border-b",
+                    "fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-4 py-3 transition-all duration-300 border-b pointer-events-none",
                     isScrolled ? "bg-background/95 backdrop-blur-md border-border/10 shadow-sm" : "bg-transparent border-transparent shadow-none"
                 )}
                 style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
@@ -286,7 +286,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 -ml-2 transition-colors",
+                            "rounded-full w-10 h-10 -ml-2 transition-colors pointer-events-auto",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
                                 : "text-white hover:text-white"
@@ -297,7 +297,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     </Button>
 
                     <div className={cn(
-                        "flex flex-col transition-all duration-300",
+                        "flex flex-col transition-all duration-300 pointer-events-none",
                         isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                     )}>
                         <span className="font-bold text-base truncate">{title}</span>
@@ -312,7 +312,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 transition-colors",
+                            "rounded-full w-10 h-10 transition-colors pointer-events-auto",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
                                 : "text-white hover:text-white"
@@ -322,7 +322,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                         <Share className="w-5 h-5" />
                     </Button>
                     {showCopied && (
-                        <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                        <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
                             {t('common.copied', 'Link Copied!')}
                         </div>
                     )}
