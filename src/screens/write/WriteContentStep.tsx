@@ -158,26 +158,25 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             try {
                 console.log('[WriteContentStep] Starting upload for file:', item.file.name);
 
-                // Get auth token
+                // Get auth token (for native platforms only)
                 const token = await getAccessToken();
-                if (!token) {
-                    console.error('[WriteContentStep] ❌ No token found for upload!');
-                    setMediaItems(prev => prev.map(m =>
-                        m.id === item.id ? { ...m, status: 'error' } : m
-                    ));
-                    continue;
-                }
+                console.log('[WriteContentStep] Token available:', !!token);
 
                 // Use fetch with FormData for proper file upload
                 const formData = new FormData();
                 formData.append('file', item.file);
 
-                console.log('[WriteContentStep] Uploading with auth token');
+                // Build headers - only add Authorization if token exists (native platform)
+                const headers: Record<string, string> = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                    console.log('[WriteContentStep] Added auth header for native platform');
+                }
+
+                console.log('[WriteContentStep] Uploading...');
                 const response = await fetch(`${API_BASE_URL}/api/upload`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers,
                     body: formData,
                     credentials: 'include' // Include cookies for web
                 });

@@ -1,11 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
 import { put } from "@vercel/blob";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.post("/", upload.single("file"), async (req, res) => {
+router.post("/", requireAuth, upload.single("file"), async (req, res) => {
     try {
         console.log("Upload request received");
         if (!req.file) {
