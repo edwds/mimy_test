@@ -2,7 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import { db } from "../db/index.js";
 import { users, shops, content, users_ranking } from "../db/schema.js";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
+import { redis } from "../redis.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -238,6 +239,191 @@ router.post("/match/simulate", async (req, res) => {
         console.error("Simulation error:", error);
         res.status(500).json({ error: error.message });
     }
+});
+
+/**
+ * POST /api/admin/shop-content
+ * 특정 샵의 유저 랭킹과 리뷰 만족도를 일괄 변경
+ * Body: { shopId: number, percentage: 0-100, rank: number, satisfaction?: string }
+ */
+router.post("/shop-content", async (req, res) => {
+  try {
+    const { shopId, percentage, rank, satisfaction = "good" } = req.body;
+
+    // 입력 검증
+    if (!shopId || typeof shopId !== "number") {
+      return res.status(400).json({ error: "shopId (number) is required" });
+    }
+    if (percentage === undefined || percentage < 0 || percentage > 100) {
+      return res.status(400).json({ error: "percentage must be between 0-100" });
+    }
+    if (!rank || rank < 1) {
+      return res.status(400).json({ error: "rank must be >= 1" });
+    }
+
+    console.log(`\n🔧 Admin: Updating shop ${shopId} rankings`);
+    console.log(`   Percentage: ${percentage}%`);
+    console.log(`   Target Rank: ${rank}`);
+    console.log(`   Satisfaction: ${satisfaction}`);
+
+    // 1. 해당 샵을 방문한 유저 찾기
+    const allRankings = await db
+      .select({
+        id: users_ranking.id,
+        user_id: users_ranking.user_id,
+        rank: users_ranking.rank,
+        satisfaction_tier: users_ranking.satisfaction_tier,
+        account_id: users.account_id,
+        nickname: users.nickname,
+      })
+      .from(users_ranking)
+      .innerJoin(users, eq(users_ranking.user_id, users.id))
+      .where(eq(users_ranking.shop_id, shopId));
+
+    if (allRankings.length === 0) {
+      return res.status(404).json({ error: "No users found for this shop" });
+    }
+
+    // 2. percentage에 따라 유저 선택
+    const targetCount = Math.ceil((allRankings.length * percentage) / 100);
+    const shuffled = [...allRankings].sort(() => Math.random() - 0.5);
+    const selectedUsers = shuffled.slice(0, targetCount);
+
+    console.log(`   Total users: ${allRankings.length}`);
+    console.log(`   Selected users: ${selectedUsers.length}`);
+
+    let updatedRankings = 0;
+    let updatedReviews = 0;
+
+    // 3. 선택된 유저들의 랭킹 변경
+    for (const ranking of selectedUsers) {
+      const userId = ranking.user_id;
+      const currentRank = ranking.rank;
+
+      await db.transaction(async (tx) => {
+        // 기존 랭킹 조정
+        if (currentRank > rank) {
+          // 목표 순위보다 낮은 경우: rank ~ currentRank-1 사이를 +1
+          await tx
+            .update(users_ranking)
+            .set({
+              rank: sql`${users_ranking.rank} + 1`,
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(users_ranking.user_id, userId),
+                sql`${users_ranking.rank} >= ${rank} AND ${users_ranking.rank} < ${currentRank}`
+              )
+            );
+        } else if (currentRank < rank) {
+          // 목표 순위보다 높은 경우: currentRank+1 ~ rank 사이를 -1
+          await tx
+            .update(users_ranking)
+            .set({
+              rank: sql`${users_ranking.rank} - 1`,
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(users_ranking.user_id, userId),
+                sql`${users_ranking.rank} > ${currentRank} AND ${users_ranking.rank} <= ${rank}`
+              )
+            );
+        }
+
+        // 해당 샵을 목표 순위로 변경
+        await tx
+          .update(users_ranking)
+          .set({
+            rank: rank,
+            satisfaction_tier: 2,
+            updated_at: new Date(),
+          })
+          .where(
+            and(
+              eq(users_ranking.user_id, userId),
+              eq(users_ranking.shop_id, shopId)
+            )
+          );
+      });
+
+      updatedRankings++;
+    }
+
+    // 4. 선택된 유저들의 리뷰 만족도 변경
+    const selectedUserIds = selectedUsers.map((u) => u.user_id);
+
+    if (selectedUserIds.length > 0) {
+      const reviews = await db
+        .select({
+          id: content.id,
+          review_prop: content.review_prop,
+        })
+        .from(content)
+        .where(
+          and(
+            eq(content.type, "review"),
+            sql`${content.review_prop}->>'shop_id' = ${shopId.toString()}`,
+            inArray(content.user_id, selectedUserIds)
+          )
+        );
+
+      for (const review of reviews) {
+        const reviewProp = review.review_prop as any;
+        const updatedReviewProp = {
+          ...reviewProp,
+          satisfaction: satisfaction,
+        };
+
+        await db
+          .update(content)
+          .set({
+            review_prop: updatedReviewProp,
+            updated_at: new Date(),
+          })
+          .where(eq(content.id, review.id));
+
+        updatedReviews++;
+      }
+    }
+
+    // 5. 캐시 삭제
+    let clearedCacheKeys = 0;
+    if (redis) {
+      // 샵 상세 캐시
+      await redis.del(`shop:${shopId}`);
+      clearedCacheKeys++;
+
+      // 리뷰 캐시
+      const reviewKeys = await redis.keys(`shop:${shopId}:reviews:*`);
+      if (reviewKeys.length > 0) {
+        await redis.del(...reviewKeys);
+        clearedCacheKeys += reviewKeys.length;
+      }
+    }
+
+    console.log(`✅ Updated ${updatedRankings} rankings`);
+    console.log(`✅ Updated ${updatedReviews} reviews`);
+    console.log(`✅ Cleared ${clearedCacheKeys} cache keys\n`);
+
+    res.json({
+      success: true,
+      shopId,
+      totalUsers: allRankings.length,
+      selectedUsers: selectedUsers.length,
+      percentage,
+      targetRank: rank,
+      satisfaction,
+      updatedRankings,
+      updatedReviews,
+      clearedCacheKeys,
+      selectedUserAccounts: selectedUsers.map(u => u.account_id),
+    });
+  } catch (error) {
+    console.error("Admin shop-content error:", error);
+    res.status(500).json({ error: "Failed to update shop content" });
+  }
 });
 
 async function recalculateRankings() {

@@ -49,7 +49,7 @@ router.post("/google", async (req, res) => {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 path: '/',
-                maxAge: 15 * 60 * 1000 // 15 minutes
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours (increased from 15 minutes)
             });
 
             res.cookie('refresh_token', refreshToken, {
@@ -255,7 +255,7 @@ router.post("/refresh", async (req, res) => {
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             path: '/',
-            maxAge: 15 * 60 * 1000 // 15 minutes
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours (increased from 15 minutes)
         });
 
         res.json({ success: true, message: "Token refreshed" });

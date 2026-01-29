@@ -142,6 +142,11 @@ mimy_test/
 - **users**: 사용자 정보, 미식 성향 (taste_result JSONB), 클러스터
 - **shops**: 맛집 정보 (Google Places 연동)
 - **users_ranking**: 사용자별 맛집 랭킹 (satisfaction_tier, rank)
+  - **중요**: `rank`는 satisfaction_tier와 무관하게 **전체 순위**를 나타냄
+  - **올바른 구조**: Good 1,2,3위 → OK 4,5,6위 → Bad 7,8,9위 (연속된 순위)
+  - **잘못된 구조**: Good 1,2,3위, OK 1,2,3위, Bad 1,2,3위 (tier별 독립 순위)
+  - `satisfaction_tier`: 2=Good, 1=OK, 0=Bad
+  - 랭킹 재계산: `npx tsx server/scripts/fix-all-user-rankings-optimized.ts`
 - **content**: 리뷰/포스트 (type: 'review' | 'post')
 - **likes**: 좋아요 (content, comment)
 - **comments**: 댓글 (parent_id로 대댓글 지원)
@@ -360,6 +365,17 @@ npx cap open android
 - `server/routes/content.ts` - 콘텐츠 API
 - `server/routes/shops.ts` - 맛집 API
 
+### 관리자 도구
+- **웹 인터페이스**: `/admin/shop-content` - 레스토랑 랭킹 일괄 변경
+- **API**: `POST /api/admin/shop-content` - 랭킹 조작 API
+  - Parameters: `shopId`, `percentage` (0-100%), `rank`, `satisfaction`
+  - 기능: 특정 % 유저의 랭킹을 특정 순위로 변경
+  - 자동 캐시 삭제 포함
+- **유틸리티 스크립트**:
+  - `server/scripts/fix-all-user-rankings-optimized.ts` - 전체 유저 랭킹 재계산
+  - `server/scripts/clear-shop-*-cache.ts` - 샵 캐시 삭제
+  - 상세 가이드: `/ADMIN_API_GUIDE.md`
+
 ---
 
 ## 디버깅 팁
@@ -384,6 +400,16 @@ npx cap open android
    - Billing 설정 확인
    - 일일 할당량 확인
 
+5. **유저 랭킹이 이상해요 (1위가 여러 개)**
+   - 문제: satisfaction tier별로 순위가 독립적으로 매겨짐
+   - 해결: `npx tsx server/scripts/fix-all-user-rankings-optimized.ts` 실행
+   - 이 스크립트는 Good→OK→Bad 순으로 연속된 순위로 재계산
+
+6. **캐시 문제**
+   - 샵 상세/리뷰: `shop:{shopId}`, `shop:{shopId}:reviews:*` 캐시 삭제
+   - Redis 캐시 TTL: 샵 상세 1시간, 리뷰 30분
+   - 수동 삭제: `server/scripts/clear-shop-*-cache.ts` 스크립트 사용
+
 ### 유용한 명령어
 
 ```bash
@@ -394,6 +420,15 @@ npm run dev     # 프론트엔드 로그
 # 데이터베이스
 npm run db:generate  # 스키마 변경 감지
 npm run db:migrate   # 마이그레이션 실행
+
+# 랭킹 관리
+npx tsx server/scripts/fix-all-user-rankings-optimized.ts  # 전체 유저 랭킹 재계산
+npx tsx server/scripts/clear-shop-158-cache.ts             # 특정 샵 캐시 삭제
+
+# 관리자 API (curl 예시)
+curl -X POST "http://localhost:3001/api/admin/shop-content" \
+  -H "Content-Type: application/json" \
+  -d '{"shopId": 158, "percentage": 50, "rank": 1, "satisfaction": "good"}'
 
 # 빌드 테스트
 npm run build        # 프로덕션 빌드

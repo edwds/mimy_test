@@ -98,6 +98,30 @@ export const AdminScreen = () => {
             </header>
 
             <main className="flex-1 overflow-y-auto p-6 space-y-6" data-scroll-container="true">
+                {/* Quick Links */}
+                <section className="space-y-3">
+                    <h2 className="text-[15px] font-bold text-gray-900 ml-1">
+                        Admin Tools
+                    </h2>
+                    <div className="grid grid-cols-1 gap-3">
+                        <button
+                            onClick={() => navigate('/admin/shop-content')}
+                            className="bg-white border-2 border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:border-primary hover:bg-primary/5 transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                    <Database size={20} className="text-orange-600" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="font-bold text-gray-900">Shop Content</h3>
+                                    <p className="text-xs text-gray-500">랭킹 & 리뷰 일괄 변경</p>
+                                </div>
+                            </div>
+                            <ChevronLeft size={20} className="text-gray-400 rotate-180" />
+                        </button>
+                    </div>
+                </section>
+
                 {/* Info Card */}
                 {!isUpdating && !result?.success && (
                     <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 flex gap-3">
