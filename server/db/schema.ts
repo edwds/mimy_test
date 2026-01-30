@@ -174,6 +174,8 @@ export const users_ranking = pgTable('users_ranking', {
     shop_id: integer('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
     rank: integer('rank').notNull(), // Lower is better
     satisfaction_tier: integer('satisfaction_tier').notNull().default(2),
+    latest_review_text: text('latest_review_text'), // Denormalized: latest review text
+    latest_review_images: jsonb('latest_review_images'), // Denormalized: latest review images array
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
 }, (table) => ({

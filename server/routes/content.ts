@@ -10,6 +10,40 @@ import { getShopReviewStats } from "../utils/enricher.js";
 
 const router = Router();
 
+// Helper: Update users_ranking latest review data
+async function updateRankingLatestReview(userId: number, shopId: number) {
+    try {
+        // Fetch latest review for this user+shop
+        const latestReview = await db.select({
+            text: content.text,
+            img: content.img
+        })
+            .from(content)
+            .where(and(
+                eq(content.user_id, userId),
+                eq(content.type, 'review'),
+                eq(content.is_deleted, false),
+                sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shopId}`
+            ))
+            .orderBy(desc(content.created_at))
+            .limit(1);
+
+        if (latestReview.length > 0) {
+            await db.update(users_ranking)
+                .set({
+                    latest_review_text: latestReview[0].text,
+                    latest_review_images: latestReview[0].img
+                })
+                .where(and(
+                    eq(users_ranking.user_id, userId),
+                    eq(users_ranking.shop_id, shopId)
+                ));
+        }
+    } catch (error) {
+        console.error('[updateRankingLatestReview] Error:', error);
+    }
+}
+
 // Helper: Pre-warm User Lists (Fire & Forget)
 async function prewarmUserLists(userId: number) {
     try {
@@ -645,6 +679,7 @@ router.post("/", requireAuth, async (req, res) => {
         // 2. Invalidate User Lists -> PRE-WARM
         console.log(`[Content Create] Invalidating & Pre-warming lists for ${user_id}`);
         await invalidatePattern(`lists:${user_id}*`);
+        await invalidatePattern(`share:list:*`); // Invalidate shared lists
         prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err));
 
         // 3. Invalidate Shop Reviews if it's a review
@@ -652,6 +687,11 @@ router.post("/", requireAuth, async (req, res) => {
             const sid = review_prop.shop_id;
             await invalidatePattern(`shop:${sid}:reviews:*`);
             // Also invalidate shop stats if cached?
+
+            // Update users_ranking latest review (Fire & Forget)
+            updateRankingLatestReview(user_id, sid).catch(err =>
+                console.error("[updateRankingLatestReview] Background Error:", err)
+            );
         }
 
         console.log(`[Content Create] Done`);
@@ -756,8 +796,28 @@ router.post("/ranking/apply", requireAuth, async (req, res) => {
                 .set({ rank: sql`${users_ranking.rank} + 1` })
                 .where(and(eq(users_ranking.user_id, user_id), gte(users_ranking.rank, new_global_rank)));
 
+            // Fetch latest review for this shop
+            const latestReview = await tx.select({
+                text: content.text,
+                img: content.img
+            })
+                .from(content)
+                .where(and(
+                    eq(content.user_id, user_id),
+                    eq(content.type, 'review'),
+                    eq(content.is_deleted, false),
+                    sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shop_id}`
+                ))
+                .orderBy(desc(content.created_at))
+                .limit(1);
+
             await tx.insert(users_ranking).values({
-                user_id, shop_id, satisfaction_tier: new_tier, rank: new_global_rank
+                user_id,
+                shop_id,
+                satisfaction_tier: new_tier,
+                rank: new_global_rank,
+                latest_review_text: latestReview[0]?.text || null,
+                latest_review_images: latestReview[0]?.img || null
             });
 
             const totalCountRes = await tx.select({ count: sql<number>`count(*)` })
@@ -779,6 +839,7 @@ router.post("/ranking/apply", requireAuth, async (req, res) => {
         // Invalidate User Lists -> PRE-WARM
         console.log(`[Ranking Apply] Invalidating & Pre-warming lists for ${user_id}`);
         await invalidatePattern(`lists:${user_id}*`);
+        await invalidatePattern(`share:list:*`); // Invalidate shared lists
         prewarmUserLists(user_id).catch(err => console.error("[Pre-warm] Background Error:", err));
 
         // Invalidate Shop Reviews (Ranks changed)
@@ -1336,11 +1397,17 @@ router.delete("/:id", requireAuth, async (req, res) => {
         // Invalidate Cache
         await invalidatePattern('feed:global:*');
         await invalidatePattern(`lists:${user_id}*`);
+        await invalidatePattern(`share:list:*`); // Invalidate shared lists
 
         // If it was a shop review, invalidate shop reviews
         const reviewProp = target[0].review_prop as any;
         if (reviewProp?.shop_id) {
             await invalidatePattern(`shop:${reviewProp.shop_id}:reviews:*`);
+
+            // Update users_ranking latest review (Fire & Forget)
+            updateRankingLatestReview(user_id, reviewProp.shop_id).catch(err =>
+                console.error("[updateRankingLatestReview] Background Error:", err)
+            );
         }
 
         console.log(`[Content Delete] Content ${contentId} soft deleted by user ${user_id}`);

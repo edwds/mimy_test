@@ -95,24 +95,8 @@ export const ListService = {
             shop: shops,
             satisfaction_tier: users_ranking.satisfaction_tier,
             updated_at: users_ranking.updated_at,
-            // Subquery to get the latest review text
-            review_text: sql<string>`(
-                select text from ${content}
-                where ${content.user_id} = ${users_ranking.user_id}
-                and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
-                and ${content.is_deleted} = false
-                order by ${content.created_at} desc
-                limit 1
-            )`,
-            // Subquery to get the latest review images (jsonb)
-            review_images: sql<string[]>`(
-                select img from ${content}
-                where ${content.user_id} = ${users_ranking.user_id}
-                and cast(${content.review_prop}->>'shop_id' as integer) = ${shops.id}
-                and ${content.is_deleted} = false
-                order by ${content.created_at} desc
-                limit 1
-            )`
+            review_text: users_ranking.latest_review_text,
+            review_images: users_ranking.latest_review_images
         })
             .from(users_ranking)
             .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
