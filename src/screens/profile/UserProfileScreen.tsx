@@ -386,7 +386,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     if (!user && !loadingUser) return <div>{t('profile.user_not_found')}</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden">
+        <div className="flex flex-col h-full bg-background relative overflow-hidden max-w-[448px] mx-auto">
 
             {/* Header */}
             <div

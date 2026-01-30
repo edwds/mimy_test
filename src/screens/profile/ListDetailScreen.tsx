@@ -272,7 +272,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const coverImage = getCoverImage();
 
     return (
-        <div className="flex flex-col h-full bg-background relative">
+        <div className="flex flex-col h-full bg-background fixed inset-0 z-[200] max-w-[448px] mx-auto">
             {/* Fixed Top Navigation */}
             <div
                 className={cn(
