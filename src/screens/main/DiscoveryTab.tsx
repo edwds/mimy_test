@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Locate, Heart, Search } from 'lucide-react'; // Icons
+import { Locate, Heart, Search, Check } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 // Let's keep the Search button overlay if possible, or just the map.
@@ -45,6 +45,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Filter State
     const [showSavedOnly, setShowSavedOnly] = useState(false);
+    const [showRankedOnly, setShowRankedOnly] = useState(false);
 
     // Search Overlay State
     const [isSearching, setIsSearching] = useState(false);
@@ -65,7 +66,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         try {
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50`;
 
-            if (showSavedOnly) {
+            if (showRankedOnly) {
+                if (!user) {
+                    setIsLoading(false);
+                    return;
+                }
+                url = `${API_BASE_URL}/api/ranking/all`;
+            } else if (showSavedOnly) {
                 if (!user) {
                     setIsLoading(false);
                     return;
@@ -89,7 +96,20 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
             if (res.ok) {
                 const data = await res.json();
-                setShops(data);
+                let shopsToSet = data;
+
+                // If ranked only, transform the ranking data to shop format
+                if (showRankedOnly) {
+                    shopsToSet = data.map((ranking: any) => ({
+                        ...ranking.shop,
+                        my_review_stats: {
+                            rank: ranking.rank,
+                            satisfaction_tier: ranking.satisfaction_tier
+                        }
+                    }));
+                }
+
+                setShops(shopsToSet);
 
                 // Reset selected shop to show bottom sheet with new results
                 setSelectedShopId(null);
@@ -99,9 +119,12 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     setHasSearched(true);
                 }
 
-                // If switching to saved and we have data, maybe center on the first one?
-                if (showSavedOnly && data.length > 0 && data[0].lat && data[0].lon) {
-                    setMapCenter([data[0].lat, data[0].lon]);
+                // If switching to saved/ranked and we have data, maybe center on the first one?
+                if ((showSavedOnly || showRankedOnly) && shopsToSet.length > 0) {
+                    const firstShop = shopsToSet[0];
+                    if (firstShop && firstShop.lat && firstShop.lon) {
+                        setMapCenter([firstShop.lat, firstShop.lon]);
+                    }
                 }
             }
         } catch (e) {
@@ -113,10 +136,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     };
 
     useEffect(() => {
-        // Reset when switching to saved mode
-        if (showSavedOnly) setShowSearchHere(false);
+        // Reset when switching to saved/ranked mode
+        if (showSavedOnly || showRankedOnly) setShowSearchHere(false);
         fetchShops();
-    }, [showSavedOnly]); // Refetch when mode changes
+    }, [showSavedOnly, showRankedOnly]); // Refetch when mode changes
 
     // Initial Fetch with Location
     useEffect(() => {
@@ -138,11 +161,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Fetch shops when mapCenter is set for the first time
     useEffect(() => {
-        if (mapCenter && !initialLoadDone && !showSavedOnly) {
+        if (mapCenter && !initialLoadDone && !showSavedOnly && !showRankedOnly) {
             fetchShops({ excludeRanked: true });
             setInitialLoadDone(true);
         }
-    }, [mapCenter, initialLoadDone, showSavedOnly]);
+    }, [mapCenter, initialLoadDone, showSavedOnly, showRankedOnly]);
 
 
     // Refresh Listener
@@ -244,8 +267,8 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         // Store current map bounds for "Search Here" functionality
         setMapBounds(newBounds);
 
-        // Only show button if we are NOT in saved mode AND not viewing a cluster explicitly
-        if (!showSavedOnly && !viewingCluster) {
+        // Only show button if we are NOT in saved/ranked mode AND not viewing a cluster explicitly
+        if (!showSavedOnly && !showRankedOnly && !viewingCluster) {
             setShowSearchHere(true);
         }
         // If viewing cluster, we might want to allow "Search Here" to break out of it?
@@ -451,7 +474,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     shops={shops}
                     selectedShopId={null}
                     onSave={handleSave}
-                    isInitialLoad={!hasSearched && !showSavedOnly}
+                    isInitialLoad={!hasSearched && !showSavedOnly && !showRankedOnly}
                 />
             )}
 
@@ -471,7 +494,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 </div>
 
                 {/* Search Here Button */}
-                {showSearchHere && !showSavedOnly && (
+                {showSearchHere && !showSavedOnly && !showRankedOnly && (
                     <button
                         onClick={() => fetchShops({ hideSearchButton: true, excludeRanked: false, useBounds: true })}
                         className="animate-in fade-in slide-in-from-top-2 bg-white text-primary font-bold px-4 py-2 rounded-full shadow-lg text-sm border border-primary/20 flex items-center gap-2 active:scale-95 transition-transform"
@@ -497,6 +520,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     onClick={() => {
                         if (!user) return alert(t('discovery.alerts.login_required'));
                         setShowSavedOnly(!showSavedOnly);
+                        setShowRankedOnly(false); // Turn off ranked filter
                         setSelectedShopId(null);
                         setMapCenter(undefined); // Reset center
                     }}
@@ -506,6 +530,22 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     )}
                 >
                     <Heart className={cn("w-6 h-6", showSavedOnly ? "fill-current text-white" : "")} />
+                </button>
+
+                <button
+                    onClick={() => {
+                        if (!user) return alert(t('discovery.alerts.login_required'));
+                        setShowRankedOnly(!showRankedOnly);
+                        setShowSavedOnly(false); // Turn off saved filter
+                        setSelectedShopId(null);
+                        setMapCenter(undefined); // Reset center
+                    }}
+                    className={cn(
+                        "p-3 rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
+                        showRankedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
+                    )}
+                >
+                    <Check className={cn("w-6 h-6", showRankedOnly ? "text-white" : "")} />
                 </button>
             </div>
             {/* Search Overlay */}
