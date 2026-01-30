@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
+import { Browser } from '@capacitor/browser';
 import { ChevronRight, ChevronLeft, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
@@ -59,6 +60,19 @@ export const SettingsScreen = () => {
 
     const handleMockAction = (featureName: string) => {
         alert(`${featureName}: ${t('profile.menu.coming_soon')}`);
+    };
+
+    const handleOpenSuggestions = async () => {
+        const url = 'https://wad-hq.slack.com/archives/C0A9THPF0SG';
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await Browser.open({ url });
+            } else {
+                window.open(url, '_blank');
+            }
+        } catch (error) {
+            console.error('Failed to open suggestions link:', error);
+        }
     };
 
     const openIdSheet = () => {
@@ -173,7 +187,7 @@ export const SettingsScreen = () => {
                     />
                     <MenuItem
                         label={t('profile.settings.suggestions')}
-                        onClick={() => handleMockAction(t('profile.settings.suggestions'))}
+                        onClick={handleOpenSuggestions}
                     />
 
                     <div className="h-px bg-border/50 my-2" />
