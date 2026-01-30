@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
 import { authFetch } from '@/lib/authFetch';
 import { useRanking } from '@/context/RankingContext';
+import { useUser } from '@/context/UserContext';
 
 interface Props {
     isActive: boolean;
@@ -26,6 +27,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const { registerCallback, unregisterCallback } = useRanking();
+    const { user } = useUser();
     const [shops, setShops] = useState<any[]>([]);
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
@@ -64,7 +66,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50`;
 
             if (showSavedOnly) {
-                url = `${API_BASE_URL}/api/users/me/saved_shops`;
+                if (!user) {
+                    setIsLoading(false);
+                    return;
+                }
+                url = `${API_BASE_URL}/api/users/${user.id}/saved_shops`;
             } else if (useBounds && mapBounds) {
                 // Use current map viewport bounds (for "Search Here" button)
                 url += `&minLat=${mapBounds.minLat}&maxLat=${mapBounds.maxLat}&minLon=${mapBounds.minLon}&maxLon=${mapBounds.maxLon}&excludeRanked=${excludeRanked}`;
@@ -489,8 +495,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
                 <button
                     onClick={() => {
-                        const userId = localStorage.getItem('mimy_user_id');
-                        if (!userId) return alert(t('discovery.alerts.login_required'));
+                        if (!user) return alert(t('discovery.alerts.login_required'));
                         setShowSavedOnly(!showSavedOnly);
                         setSelectedShopId(null);
                         setMapCenter(undefined); // Reset center
