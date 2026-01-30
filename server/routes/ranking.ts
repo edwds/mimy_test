@@ -25,9 +25,15 @@ router.get("/all", requireAuth, async (req, res) => {
             shop: {
                 id: shops.id,
                 name: shops.name,
+                description: shops.description,
                 category: shops.food_kind,
                 thumbnail_img: shops.thumbnail_img,
-                address_region: shops.address_region
+                address_region: shops.address_region,
+                address_full: shops.address_full,
+                kind: shops.kind,
+                food_kind: shops.food_kind,
+                lat: shops.lat,
+                lon: shops.lon
             }
         })
             .from(users_ranking)
