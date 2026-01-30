@@ -8,6 +8,10 @@ interface Shop {
     lat?: number;
     lon?: number;
     is_saved?: boolean;
+    my_review_stats?: {
+        rank?: number;
+        satisfaction_tier?: number;
+    } | null;
 }
 
 interface Props {
@@ -24,8 +28,21 @@ interface Props {
 
 // Function to create custom marker HTML
 const createMarkerElement = (shop: Shop, isSelected: boolean) => {
+    const hasRanking = shop.my_review_stats && shop.my_review_stats.rank !== undefined;
     const isSaved = shop.is_saved;
-    const color = isSaved ? '#DC2626' : '#FF6B00';
+
+    // Priority: Ranking > Saved > Default
+    let color = '#FF6B00'; // Default orange
+    let iconType: 'check' | 'heart' | 'dot' = 'dot';
+
+    if (hasRanking) {
+        color = '#10B981'; // Green for ranked
+        iconType = 'check';
+    } else if (isSaved) {
+        color = '#DC2626'; // Red for saved
+        iconType = 'heart';
+    }
+
     const bgColor = isSelected ? color : '#FFFFFF';
     const borderColor = isSelected ? '#FFFFFF' : color;
     const size = isSelected ? 32 : 24;
@@ -61,9 +78,18 @@ const createMarkerElement = (shop: Shop, isSelected: boolean) => {
     pin.style.justifyContent = 'center';
     pin.style.transition = 'all 0.2s ease-out';
 
-    const innerHtml = isSaved
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`
-        : `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+    let innerHtml: string;
+
+    if (iconType === 'check') {
+        // Check icon for ranked shops
+        innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${isSelected ? '#FFF' : color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    } else if (iconType === 'heart') {
+        // Heart icon for saved shops
+        innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+    } else {
+        // Dot for default shops
+        innerHtml = `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+    }
 
     pin.innerHTML = innerHtml;
     container.appendChild(pin);
@@ -191,7 +217,8 @@ export const MapContainer = ({
                 properties: {
                     id: shop.id,
                     is_saved: shop.is_saved ? 1 : 0,
-                    // Pass name for initial feature properties if needed, 
+                    has_ranking: shop.my_review_stats?.rank ? 1 : 0,
+                    // Pass name for initial feature properties if needed,
                     // though we use 'shop' object from props in render loop by ID lookup.
                     // Actually feature.properties is handy.
                     name: shop.name
