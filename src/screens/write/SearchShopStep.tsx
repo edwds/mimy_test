@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, Utensils, MapPin, Star, Check } from 'lucide-react';
+import { Search, ChevronLeft, Utensils, MapPin, Star, Check, X } from 'lucide-react';
 import { ShopService } from '@/services/ShopService';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
+import { useRecentSearches } from '@/hooks/useRecentSearches';
 
 interface Props {
     onSelect: (shop: any) => void;
@@ -33,10 +36,13 @@ const getOrdinalRank = (rank: number) => {
 export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const { t } = useTranslation();
     const { registerCallback, unregisterCallback } = useRanking();
+    const { recentSearches, addSearch, removeSearch } = useRecentSearches();
+
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
-    const [topRatedShops, setTopRatedShops] = useState<any[]>([]);
+    const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<'saved' | 'recommended'>('saved');
     const [loading, setLoading] = useState(false);
     const [googleResults, setGoogleResults] = useState<any[]>([]);
 
@@ -48,55 +54,67 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const [selectedGoogleShop, setSelectedGoogleShop] = useState<any>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-    const fetchSaved = async () => {
-        try {
-            const user = await UserService.getCurrentUser();
-            if (user?.id) {
-                const saved = await UserService.getSavedShops(user.id);
-                setSavedShops(saved || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch saved shops:', error);
-            // Silently fail - user might not be logged in
-        }
-    };
-
-    const fetchTopRated = async () => {
-        try {
-            const topRated = await ShopService.getTopRated(20);
-            setTopRatedShops(topRated || []);
-        } catch (error) {
-            console.error('Failed to fetch top-rated shops:', error);
-        }
-    };
-
+    // Get user location and fetch recommended shops
     useEffect(() => {
-        fetchSaved();
-        fetchTopRated();
+        const fetchLocationAndRecommendations = async () => {
+            setLoading(true);
+            try {
+                // Get user location
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+
+                            // Fetch recommended shops using discovery API
+                            const url = `${API_BASE_URL}/api/shops/discovery?lat=${lat}&lon=${lon}&excludeRanked=true&limit=50`;
+                            const res = await authFetch(url);
+                            if (res.ok) {
+                                const data = await res.json();
+                                setRecommendedShops(data);
+                            }
+                        },
+                        (error) => {
+                            console.error('Location error:', error);
+                        }
+                    );
+                }
+
+                // Fetch saved shops
+                const user = await UserService.getCurrentUser();
+                if (user?.id) {
+                    const saved = await UserService.getSavedShops(user.id);
+                    setSavedShops(saved || []);
+                    // Set initial tab based on whether user has saved shops
+                    if (saved && saved.length > 0) {
+                        setActiveTab('saved');
+                    } else {
+                        setActiveTab('recommended');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLocationAndRecommendations();
     }, []);
 
     // Register ranking update callback
     useEffect(() => {
         const handleRankingUpdate = (data: { shopId: number; my_review_stats: any }) => {
             console.log('[SearchShopStep] Ranking updated:', data);
-            // Update savedShops
-            setSavedShops(prev => prev.map(shop =>
+            // Update all shop lists
+            const updateShop = (shop: any) =>
                 shop.id === data.shopId
                     ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
-                    : shop
-            ));
-            // Update results
-            setResults(prev => prev.map(shop =>
-                shop.id === data.shopId
-                    ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
-                    : shop
-            ));
-            // Update topRatedShops
-            setTopRatedShops(prev => prev.map(shop =>
-                shop.id === data.shopId
-                    ? { ...shop, my_review_stats: data.my_review_stats, my_rank: data.my_review_stats?.rank }
-                    : shop
-            ));
+                    : shop;
+
+            setSavedShops(prev => prev.map(updateShop));
+            setResults(prev => prev.map(updateShop));
+            setRecommendedShops(prev => prev.map(updateShop));
         };
 
         registerCallback('SearchShopStep', handleRankingUpdate);
@@ -163,6 +181,11 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     };
 
     const handleItemClick = async (item: any) => {
+        // Save to recent searches if user typed a query
+        if (query.trim()) {
+            addSearch(query);
+        }
+
         if (isGoogleMode) {
             setSelectedGoogleShop(item);
             setIsConfirmModalOpen(true);
@@ -392,134 +415,107 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                         </div>
                     )
                 ) : (
-                    // Default View: Saved Shops or Top Rated
-                    <div className="space-y-6">
-                        {savedShops.length > 0 && (
-                            <div>
-                                <h3 className="text-sm font-bold text-muted-foreground mb-3 px-1">{t('write.search.saved_title')}</h3>
+                    // Default View: Recent Searches + Tabs (Saved / Recommended)
+                    <div className="space-y-4">
+                        {/* Recent Searches */}
+                        {recentSearches.length > 0 && (
+                            <div className="px-1">
+                                <h3 className="text-xs font-bold text-muted-foreground mb-2">최근 검색어</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {recentSearches.slice(0, 5).map((term, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setQuery(term)}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-full text-sm text-foreground transition-colors"
+                                        >
+                                            <span>{term}</span>
+                                            <X
+                                                size={14}
+                                                className="text-muted-foreground hover:text-foreground"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeSearch(term);
+                                                }}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tabs */}
+                        {(savedShops.length > 0 || recommendedShops.length > 0) && (
+                            <div className="border-b border-border">
+                                <div className="flex px-1">
+                                    {savedShops.length > 0 && (
+                                        <button
+                                            onClick={() => setActiveTab('saved')}
+                                            className={cn(
+                                                "flex-1 py-3 text-sm font-bold transition-colors relative",
+                                                activeTab === 'saved' ? "text-foreground" : "text-muted-foreground"
+                                            )}
+                                        >
+                                            가고 싶어요
+                                            {activeTab === 'saved' && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+                                            )}
+                                        </button>
+                                    )}
+                                    {recommendedShops.length > 0 && (
+                                        <button
+                                            onClick={() => setActiveTab('recommended')}
+                                            className={cn(
+                                                "flex-1 py-3 text-sm font-bold transition-colors relative",
+                                                activeTab === 'recommended' ? "text-foreground" : "text-muted-foreground"
+                                            )}
+                                        >
+                                            추천 장소
+                                            {activeTab === 'recommended' && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab Content */}
+                        <div className="space-y-3">
+                            {activeTab === 'saved' && filteredSavedShops.length > 0 && (
                                 <ul className="space-y-3">
                                     {filteredSavedShops.map((shop) => (
-                                        <li key={shop.id}>
-                                            <button
-                                                onClick={() => onSelect(shop)}
-                                                className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
-                                            >
-                                                <div className={cn("grid gap-4 items-start", shop.my_rank ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[64px_1fr]")}>
-                                                    {/* Thumb */}
-                                                    <div
-                                                        className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
-                                                        style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
-                                                    >
-                                                        {!shop.thumbnail_img && (
-                                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/50">
-                                                                <Utensils className="w-6 h-6" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Text */}
-                                                    <div className="min-w-0 py-1">
-                                                        <div className="flex items-center gap-2 mb-1 min-w-0">
-                                                            <span className="font-bold text-foreground text-lg truncate leading-tight">
-                                                                {shop.name}
-                                                            </span>
-                                                            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                                {shop.food_kind || '음식점'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                                            <span className="truncate">{shop.address_region || shop.address_full}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Badge */}
-                                                    {shop.my_rank && (
-                                                        <div className="self-center">
-                                                            <div className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-white px-2.5 py-1.5 rounded-full border border-gray-200 shadow-xs whitespace-nowrap">
-                                                                <Check size={12} strokeWidth={3} className="text-gray-500" />
-                                                                <span>{getOrdinalRank(shop.my_rank)}</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </button>
-                                        </li>
+                                        <ShopItem key={shop.id} shop={shop} onSelect={onSelect} />
                                     ))}
                                 </ul>
-                            </div>
-                        )}
+                            )}
 
-                        {filteredSavedShops.length === 0 && savedShops.length > 0 && showUnvisitedOnly && (
-                            <div className="py-20 text-center text-gray-400 text-sm opacity-60">
-                                <div>저장한 곳 중 안 가본 곳이 없어요!</div>
-                            </div>
-                        )}
-
-                        {/* Show Top Rated if no saved shops */}
-                        {savedShops.length === 0 && topRatedShops.length > 0 && (
-                            <div>
-                                <div className="mb-4 px-1">
-                                    <h3 className="text-sm font-bold text-muted-foreground mb-1">모두가 좋아하는 맛집</h3>
-                                    <p className="text-xs text-muted-foreground/70">많은 사람들에게 Good 평가를 받은 레스토랑입니다</p>
+                            {activeTab === 'saved' && filteredSavedShops.length === 0 && savedShops.length > 0 && (
+                                <div className="py-20 text-center text-gray-400 text-sm opacity-60">
+                                    <div>저장한 곳 중 안 가본 곳이 없어요!</div>
                                 </div>
+                            )}
+
+                            {activeTab === 'recommended' && recommendedShops.length > 0 && (
                                 <ul className="space-y-3">
-                                    {topRatedShops.map((shop) => (
-                                        <li key={shop.id}>
-                                            <button
-                                                onClick={() => onSelect(shop)}
-                                                className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
-                                            >
-                                                <div className={cn("grid gap-4 items-start", shop.my_rank ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[64px_1fr]")}>
-                                                    {/* Thumb */}
-                                                    <div
-                                                        className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
-                                                        style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
-                                                    >
-                                                        {!shop.thumbnail_img && (
-                                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/50">
-                                                                <Utensils className="w-6 h-6" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Text */}
-                                                    <div className="min-w-0 py-1">
-                                                        <div className="flex items-center gap-2 mb-1 min-w-0">
-                                                            <span className="font-bold text-foreground text-lg truncate leading-tight">
-                                                                {shop.name}
-                                                            </span>
-                                                            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                                {shop.food_kind || '음식점'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                                            <span className="truncate">{shop.address_region || shop.address_full}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Badge */}
-                                                    {shop.my_rank && (
-                                                        <div className="self-center">
-                                                            <div className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-white px-2.5 py-1.5 rounded-full border border-gray-200 shadow-xs whitespace-nowrap">
-                                                                <Check size={12} strokeWidth={3} className="text-gray-500" />
-                                                                <span>{getOrdinalRank(shop.my_rank)}</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </button>
-                                        </li>
+                                    {recommendedShops.slice(0, 20).map((shop) => (
+                                        <ShopItem key={shop.id} shop={shop} onSelect={onSelect} />
                                     ))}
                                 </ul>
-                            </div>
-                        )}
+                            )}
 
-                        {savedShops.length === 0 && topRatedShops.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                                <Utensils className="w-12 h-12 text-gray-300 mb-4" />
-                                <p className="text-sm font-medium">{t('write.search.empty_saved')}</p>
-                            </div>
-                        )}
+                            {activeTab === 'recommended' && recommendedShops.length === 0 && loading && (
+                                <div className="flex flex-col items-center justify-center py-20">
+                                    <div className="text-sm text-muted-foreground">주변 맛집을 찾는 중...</div>
+                                </div>
+                            )}
+
+                            {savedShops.length === 0 && recommendedShops.length === 0 && !loading && (
+                                <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                                    <Utensils className="w-12 h-12 text-gray-300 mb-4" />
+                                    <p className="text-sm font-medium">주변 맛집을 불러오는 중입니다</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -601,5 +597,56 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                 </div>
             )}
         </div>
+    );
+};
+
+// Shop Item Component
+const ShopItem: React.FC<{ shop: any; onSelect: (shop: any) => void }> = ({ shop, onSelect }) => {
+    return (
+        <li>
+            <button
+                onClick={() => onSelect(shop)}
+                className="group w-full text-left p-3 rounded-2xl bg-card hover:bg-muted/50 transition-all"
+            >
+                <div className={cn("grid gap-4 items-start", shop.my_rank ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[64px_1fr]")}>
+                    {/* Thumb */}
+                    <div
+                        className="w-16 h-16 bg-muted rounded-xl flex-shrink-0 bg-cover bg-center overflow-hidden"
+                        style={{ backgroundImage: shop.thumbnail_img ? `url(${shop.thumbnail_img})` : undefined }}
+                    >
+                        {!shop.thumbnail_img && (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/50">
+                                <Utensils className="w-6 h-6" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Text */}
+                    <div className="min-w-0 py-1">
+                        <div className="flex items-center gap-2 mb-1 min-w-0">
+                            <span className="font-bold text-foreground text-lg truncate leading-tight">
+                                {shop.name}
+                            </span>
+                            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                                {shop.food_kind || '음식점'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <span className="truncate">{shop.address_region || shop.address_full}</span>
+                        </div>
+                    </div>
+
+                    {/* Badge */}
+                    {shop.my_rank && (
+                        <div className="self-center">
+                            <div className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-white px-2.5 py-1.5 rounded-full border border-gray-200 shadow-xs whitespace-nowrap">
+                                <Check size={12} strokeWidth={3} className="text-gray-500" />
+                                <span>{getOrdinalRank(shop.my_rank)}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </button>
+        </li>
     );
 };
