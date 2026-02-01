@@ -440,6 +440,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                                     profile_image: user.profile_image,
                                                 }}
                                                 content={content}
+                                                showActions={true}
                                             />
                                         </div>
                                     ))}

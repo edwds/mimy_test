@@ -34,11 +34,16 @@ export const OtpStep = () => {
     };
 
     const handleNext = () => {
-        // Fixed OTP code for development: 260130
-        const FIXED_OTP = "260130";
+        // OTP code based on KST (UTC+9) date in yymmdd format
+        const now = new Date();
+        const kstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+        const year = kstDate.getUTCFullYear().toString().slice(-2);
+        const month = (kstDate.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = kstDate.getUTCDate().toString().padStart(2, '0');
+        const EXPECTED_OTP = `${year}${month}${day}`;
 
-        if (code !== FIXED_OTP) {
-            alert(t('register.otp.invalid', { defaultValue: 'Invalid verification code. Please try 260130' }));
+        if (code !== EXPECTED_OTP) {
+            alert(t('register.otp.invalid', { defaultValue: 'Invalid verification code. Please try again.' }));
             return;
         }
 
