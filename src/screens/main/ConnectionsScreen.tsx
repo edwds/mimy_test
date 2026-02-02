@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { authFetch } from '@/lib/authFetch';
 
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 
@@ -13,6 +14,8 @@ export const ConnectionsScreen = () => {
     const [searchParams] = useSearchParams();
     const initialTab = searchParams.get('tab') === 'following' ? 'following' : 'followers';
     const userId = localStorage.getItem("mimy_user_id"); // Ideally passed via route, but for Profile it's current user
+
+    console.log('[ConnectionsScreen] Initialized with userId:', userId, 'tab:', initialTab);
 
     const [activeTab, setActiveTab] = useState<'followers' | 'following'>(initialTab);
     const [users, setUsers] = useState<any[]>([]);
@@ -30,13 +33,17 @@ export const ConnectionsScreen = () => {
                     ? `${API_BASE_URL}/api/users/${userId}/followers`
                     : `${API_BASE_URL}/api/users/${userId}/following`;
 
-                const res = await fetch(endpoint);
+                console.log('[ConnectionsScreen] Fetching:', endpoint);
+                const res = await authFetch(endpoint);
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('[ConnectionsScreen] Data received:', data);
                     setUsers(data);
+                } else {
+                    console.error('[ConnectionsScreen] Failed to fetch:', res.status);
                 }
             } catch (error) {
-                console.error(error);
+                console.error('[ConnectionsScreen] Error:', error);
             } finally {
                 setLoading(false);
             }
