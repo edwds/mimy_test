@@ -111,12 +111,6 @@ export const WriteFlow = () => {
                 return;
             }
 
-            // If we're explicitly on SEARCH_SHOP step (e.g., from EVALUATE_ANOTHER), don't auto-transition
-            if (stepRef.current === 'SEARCH_SHOP') {
-                console.log('[WriteFlow] Currently on SEARCH_SHOP, ignoring callback to prevent auto-transition');
-                return;
-            }
-
             callbackProcessedRef.current = true;
 
             // Use setTimeout to ensure state updates happen after RankingContext cleanup

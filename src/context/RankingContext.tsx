@@ -95,9 +95,13 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         // Store shop before clearing it
         const currentShop = selectedShop;
 
-        // Notify ALL subscribers that ranking was updated with optimistic data
-        // EXCEPT when action is EVALUATE_ANOTHER (to prevent race condition with navigation)
-        if (action !== 'EVALUATE_ANOTHER' && currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
+        // Notify subscribers based on action:
+        // - WRITE_REVIEW: Always notify (WriteFlow needs to transition)
+        // - QUIT: Always notify (for UI updates)
+        // - EVALUATE_ANOTHER: Don't notify (prevents race condition with navigation)
+        const shouldNotify = action !== 'EVALUATE_ANOTHER';
+
+        if (shouldNotify && currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
             const updateData: RankingUpdateData = {
                 shopId: currentShop.id,
                 my_review_stats: {
@@ -107,7 +111,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
                     total_reviews: data.total_reviews || 0
                 }
             };
-            console.log(`[RankingContext] ✅ Notifying ${updateCallbacks.size} subscribers:`, updateData);
+            console.log(`[RankingContext] ✅ Notifying ${updateCallbacks.size} subscribers for action ${action}:`, updateData);
 
             // Notify all subscribers
             updateCallbacks.forEach((callback, id) => {
@@ -117,6 +121,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         } else {
             console.log('[RankingContext] ❌ Not notifying:', {
                 action,
+                shouldNotify,
                 hasShopId: !!currentShop?.id,
                 hasData: !!data,
                 hasSatisfaction: data?.satisfaction !== undefined,
@@ -148,7 +153,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
             console.log('[RankingContext] Navigating to search for another place');
             navigate('/write', { replace: true, state: { step: 'SEARCH_SHOP' } });
         } else {
-            // Stay where we are, just closed overlay
+            // QUIT: Stay where we are, just closed overlay
         }
     };
 
