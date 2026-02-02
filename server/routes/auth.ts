@@ -26,15 +26,12 @@ router.post("/google", async (req, res) => {
         const { email, name, picture } = googleUser;
 
         // Restrict to @catchtable.co.kr email domain
-        // TEMPORARILY DISABLED FOR TESTING
-        /*
         if (!email.endsWith('@catchtable.co.kr')) {
             return res.status(403).json({
                 error: "Email domain not allowed",
                 message: "Only @catchtable.co.kr email addresses are allowed"
             });
         }
-        */
 
         // Check if user exists
         const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -97,8 +94,6 @@ router.post("/register", async (req, res) => {
         const { email, account_id, nickname, bio, link, profile_image, phone, birthdate, gender, taste_cluster } = req.body;
 
         // Restrict to @catchtable.co.kr email domain
-        // TEMPORARILY DISABLED FOR TESTING
-        /*
         if (!email.endsWith('@catchtable.co.kr')) {
             console.log('[Register] ❌ Email domain not allowed:', email);
             return res.status(403).json({
@@ -106,8 +101,7 @@ router.post("/register", async (req, res) => {
                 message: "Only @catchtable.co.kr email addresses are allowed"
             });
         }
-        */
-        console.log('[Register] ✅ Email domain check passed (restriction disabled for testing)');
+        console.log('[Register] ✅ Email domain check passed');
 
         // Ensure email/account_id uniqueness again (DB constraints will also catch this)
         const check = await db.select().from(users).where(eq(users.email, email)).limit(1);
