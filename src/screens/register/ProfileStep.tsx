@@ -182,7 +182,22 @@ export const ProfileStep = () => {
                 }
 
                 if (response.ok) {
-                    const data = await response.json();
+                    console.log('[Register] Response OK, parsing JSON...');
+                    const responseText = await response.text();
+                    console.log('[Register] Response text:', responseText);
+
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                        console.log('[Register] Parsed data:', data);
+                    } catch (parseError) {
+                        console.error('[Register] JSON parse error:', parseError);
+                        console.error('[Register] Response text that failed to parse:', responseText);
+                        alert(`서버 응답 파싱 실패: ${responseText}`);
+                        setChecking(false);
+                        return;
+                    }
+
                     const { tokens } = data;
 
                     // Save tokens for native apps
