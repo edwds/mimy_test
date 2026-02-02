@@ -26,12 +26,15 @@ router.post("/google", async (req, res) => {
         const { email, name, picture } = googleUser;
 
         // Restrict to @catchtable.co.kr email domain
+        // TEMPORARILY DISABLED FOR TESTING
+        /*
         if (!email.endsWith('@catchtable.co.kr')) {
             return res.status(403).json({
                 error: "Email domain not allowed",
                 message: "Only @catchtable.co.kr email addresses are allowed"
             });
         }
+        */
 
         // Check if user exists
         const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -89,22 +92,32 @@ router.post("/google", async (req, res) => {
 // Finalize Registration
 router.post("/register", async (req, res) => {
     try {
+        console.log('[Register] Request received');
+        console.log('[Register] Body:', JSON.stringify(req.body, null, 2));
         const { email, account_id, nickname, bio, link, profile_image, phone, birthdate, gender, taste_cluster } = req.body;
 
         // Restrict to @catchtable.co.kr email domain
+        // TEMPORARILY DISABLED FOR TESTING
+        /*
         if (!email.endsWith('@catchtable.co.kr')) {
+            console.log('[Register] ❌ Email domain not allowed:', email);
             return res.status(403).json({
                 error: "Email domain not allowed",
                 message: "Only @catchtable.co.kr email addresses are allowed"
             });
         }
+        */
+        console.log('[Register] ✅ Email domain check passed (restriction disabled for testing)');
 
         // Ensure email/account_id uniqueness again (DB constraints will also catch this)
         const check = await db.select().from(users).where(eq(users.email, email)).limit(1);
         if (check.length > 0) {
+            console.log('[Register] ❌ User already exists:', email);
             return res.status(409).json({ error: "User already exists" });
         }
+        console.log('[Register] ✅ User uniqueness check passed');
 
+        console.log('[Register] Creating new user...');
         const newUser = await db.insert(users).values({
             email,
             account_id,
@@ -123,12 +136,15 @@ router.post("/register", async (req, res) => {
         }).returning();
 
         const user = newUser[0];
+        console.log('[Register] ✅ User created successfully, ID:', user.id);
 
         // Generate JWT tokens
         const accessToken = generateAccessToken(user.id, user.email);
         const refreshToken = generateRefreshToken(user.id);
+        console.log('[Register] ✅ JWT tokens generated');
 
         // Set HttpOnly cookies
+        console.log('[Register] Setting cookies...');
         res.cookie('access_token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -145,17 +161,19 @@ router.post("/register", async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
-        console.log('[Auth] Cookies set for new user:', user.id);
-        console.log('[Auth] Cookie settings - secure:', process.env.NODE_ENV === 'production', 'sameSite:', process.env.NODE_ENV === 'production' ? 'none' : 'lax');
+        console.log('[Register] ✅ Cookies set for new user:', user.id);
+        console.log('[Register] Cookie settings - secure:', process.env.NODE_ENV === 'production', 'sameSite:', process.env.NODE_ENV === 'production' ? 'none' : 'lax');
 
         // Also return tokens in response body for mobile apps
-        res.json({
+        const responseData = {
             ...user,
             tokens: {
                 accessToken,
                 refreshToken
             }
-        });
+        };
+        console.log('[Register] ✅ Sending response with user data and tokens');
+        res.json(responseData);
     } catch (error: any) {
         console.error("Registration error:", error);
         if (error.code === '23505') {

@@ -201,7 +201,13 @@ export const ProfileStep = () => {
                     const { tokens } = data;
 
                     // Save tokens for native apps
-                    if (tokens && Capacitor.isNativePlatform()) {
+                    if (Capacitor.isNativePlatform()) {
+                        if (!tokens) {
+                            console.error('[Register] ❌ Native platform but no tokens in response!');
+                            alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
+                            return;
+                        }
+
                         console.log('[Register] Saving tokens for native platform...');
                         console.log('[Register] Access token length:', tokens.accessToken?.length);
                         console.log('[Register] Refresh token length:', tokens.refreshToken?.length);
@@ -223,13 +229,14 @@ export const ProfileStep = () => {
                             return;
                         }
                         console.log('[Register] ✅ Token verified successfully, length:', verifyToken.length);
-                    } else if (Capacitor.isNativePlatform() && !tokens) {
-                        console.error('[Register] ❌ Native platform but no tokens in response!');
-                        alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
-                        return;
+
+                        // Wait a bit for token storage to fully commit (especially on iOS)
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
 
+                    console.log('[Register] Calling refreshUser to update context...');
                     await refreshUser(); // Update context with new profile info
+                    console.log('[Register] refreshUser completed');
 
                     // Clear temp reg data
                     localStorage.removeItem("mimy_reg_birthyear");

@@ -154,9 +154,12 @@ export const LoginPage = () => {
                 <div className="text-center space-y-2">
                     <h1 className="text-2xl font-bold tracking-tight">{t('auth.login.title')}</h1>
                     <p className="text-muted-foreground">{t('auth.login.desc')}</p>
+                    {/* TEMPORARILY DISABLED FOR TESTING */}
+                    {/*
                     <p className="text-sm text-muted-foreground/70 pt-2">
                         @catchtable.co.kr {t('auth.login.emailOnly', { defaultValue: 'email addresses only' })}
                     </p>
+                    */}
                 </div>
             </header>
 
