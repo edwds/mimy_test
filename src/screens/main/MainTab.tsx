@@ -171,7 +171,7 @@ export const MainTab = () => {
             {/* Bottom Navigation */}
             <nav
                 className="border-t border-border bg-card/80 backdrop-blur-lg shrink-0"
-                style={{ paddingBottom: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-bottom) + 0.5rem)' : '0.5rem' }}
+                style={{ paddingBottom: Capacitor.isNativePlatform() ? 'env(safe-area-inset-bottom)' : '0.5rem' }}
             >
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
