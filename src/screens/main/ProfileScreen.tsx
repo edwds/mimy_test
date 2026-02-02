@@ -287,7 +287,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     if (!user) return <div className="flex-1 flex items-center justify-center">{t('profile.user_not_found')}</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background relative">
+        <div className="flex flex-col h-full bg-background relative overflow-hidden">
             {/* Smart Header (overlay) */}
             <MainHeader
                 ref={measureHeader}
@@ -308,7 +308,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             {/* Scroll container: push content by headerHeight (no hardcoding) */}
             <main
                 ref={containerRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden"
+                className="flex-1 overflow-y-auto"
                 data-scroll-container="true"
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }}
@@ -377,7 +377,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     </div>
 
                     {/* Taste card */}
-                    {user.cluster_name ? (
+                    {user.cluster_name && (
                         <div
                             className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
                             onClick={() => setIsTasteSheetOpen(true)}
@@ -385,23 +385,6 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             <div>
                                 <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
                                 <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            className="mt-2 mb-2 px-6 py-4 bg-muted/30 rounded-2xl flex items-center justify-between cursor-pointer border-2 border-dashed border-primary/30 hover:border-primary/50 transition-colors"
-                            onClick={() => navigate('/quiz/intro')}
-                        >
-                            <div className="flex-1">
-                                <div className="font-bold text-base text-foreground mb-1">
-                                    {t('profile.taste.discover', { defaultValue: '나의 입맛 찾기' })}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                    {t('profile.taste.discover_desc', { defaultValue: '3분 퀴즈로 취향을 분석해보세요' })}
-                                </div>
-                            </div>
-                            <div className="ml-4 text-primary font-bold">
-                                →
                             </div>
                         </div>
                     )}
@@ -502,9 +485,9 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                                 cy="50"
                                                 r="42"
                                                 fill="none"
-                                                stroke="currentColor"
+                                                stroke="hsl(var(--border))"
                                                 strokeWidth="8"
-                                                className="text-muted/70"
+                                                opacity="0.6"
                                             />
                                             {/* Progress circle */}
                                             {(user.stats?.ranking_count || 0) > 0 && (
@@ -572,7 +555,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     )}
 
                     {activeTab === 'saved' && (
-                        <div className="pb-20 px-5 pt-4">
+                        <div className="pb-4 px-5 pt-4">
                             {/* Always show button at the top right */}
                             <div className="mb-4 flex justify-end">
                                 <Button
