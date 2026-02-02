@@ -331,11 +331,21 @@ const DraggableItem = ({
             {/* Attached Caption Input */}
             <input
                 type="text"
-                maxLength={20}
+                maxLength={40}
                 placeholder="메뉴 이름을 적어주세요"
                 value={item.imgText || ''}
                 onChange={(e) => onTextChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => {
+                    // Scroll input into view when keyboard appears on mobile
+                    setTimeout(() => {
+                        e.target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center'
+                        });
+                    }, 300); // Delay to wait for keyboard animation
+                }}
                 className="w-full bg-transparent py-2 text-center text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
             />
         </Reorder.Item>

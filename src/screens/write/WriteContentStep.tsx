@@ -608,12 +608,16 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             </div>
             {/* Caption Edit Modal */}
             {captionEditId && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-24">
+                <div
+                    className="fixed inset-0 z-50 flex items-start justify-center p-4"
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}
+                >
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCaptionEditId(null)} />
                     <div className="relative bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold mb-4 text-center">어떤 사진인가요?</h3>
                         <Input
                             autoFocus
+                            maxLength={40}
                             placeholder="메뉴 이름이나 설명을 적어주세요"
                             value={captionEditText}
                             onChange={(e) => setCaptionEditText(e.target.value)}
