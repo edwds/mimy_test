@@ -30,7 +30,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const userId = propUserId || params.userId;
     const { user: currentUser } = useUser(); // Me
     const { registerCallback, unregisterCallback } = useRanking();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
 
@@ -39,8 +39,17 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     const [loadingUser, setLoadingUser] = useState(true);
 
     // Tab State
-    const initialTab = searchParams.get('tab') as ProfileTabType || "content";
+    const initialTab = (searchParams.get('tab') as ProfileTabType) || "content";
     const [activeTab, setActiveTab] = useState<ProfileTabType>(initialTab);
+
+    // Ensure tab param is always in URL
+    useEffect(() => {
+        if (!searchParams.get('tab')) {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set('tab', 'content');
+            setSearchParams(newParams, { replace: true });
+        }
+    }, []);
 
     // Matching State
     const [matchingScore, setMatchingScore] = useState<number | null>(null);
@@ -375,6 +384,12 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         if (containerRef.current) {
             scrollPositions.current[activeTab] = containerRef.current.scrollTop;
         }
+
+        // Update URL with new tab
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('tab', newTab);
+        setSearchParams(newParams, { replace: true });
+
         setActiveTab(newTab);
         requestAnimationFrame(() => {
             if (containerRef.current) {

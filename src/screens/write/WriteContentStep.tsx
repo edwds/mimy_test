@@ -75,7 +75,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
     const [keywords, setKeywords] = useState<string[]>([]);
     const [keywordInput, setKeywordInput] = useState('');
-    const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
+    const [visitDate, setVisitDate] = useState(() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    });
     const [isDateManuallySet, setIsDateManuallySet] = useState(false);
 
     // Link State
@@ -179,19 +185,34 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 const exifDate = output?.DateTimeOriginal || output?.CreateDate;
                 if (exifDate) {
                     const date = new Date(exifDate);
-                    const localDate = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-                    setVisitDate(localDate);
+                    if (!isNaN(date.getTime())) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const localDate = `${year}-${month}-${day}`;
+                        setVisitDate(localDate);
+                    }
                 } else {
                     // Fallback to lastModified if no EXIF date
                     const fileDate = new Date(fileToCheck.lastModified);
-                    const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
-                    setVisitDate(localDate);
+                    if (!isNaN(fileDate.getTime())) {
+                        const year = fileDate.getFullYear();
+                        const month = String(fileDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(fileDate.getDate()).padStart(2, '0');
+                        const localDate = `${year}-${month}-${day}`;
+                        setVisitDate(localDate);
+                    }
                 }
             }).catch(() => {
                 // Fallback on error
                 const fileDate = new Date(fileToCheck.lastModified);
-                const localDate = fileDate.getFullYear() + '-' + String(fileDate.getMonth() + 1).padStart(2, '0') + '-' + String(fileDate.getDate()).padStart(2, '0');
-                setVisitDate(localDate);
+                if (!isNaN(fileDate.getTime())) {
+                    const year = fileDate.getFullYear();
+                    const month = String(fileDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(fileDate.getDate()).padStart(2, '0');
+                    const localDate = `${year}-${month}-${day}`;
+                    setVisitDate(localDate);
+                }
             });
         }
 
