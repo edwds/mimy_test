@@ -239,6 +239,9 @@ export const ProfileStep = () => {
                     await refreshUser(true);
                     console.log('[Register] refreshUser completed');
 
+                    // Store nickname temporarily for QuizIntro
+                    localStorage.setItem("mimy_reg_nickname", nickname || handle);
+
                     // Clear temp reg data
                     localStorage.removeItem("mimy_reg_birthyear");
                     localStorage.removeItem("mimy_reg_phone");

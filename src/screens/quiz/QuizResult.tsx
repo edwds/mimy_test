@@ -1,11 +1,15 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
+import { useUser } from '@/context/UserContext';
+import { useState } from 'react';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useTranslation();
+    const { refreshUser } = useUser();
+    const [isLoading, setIsLoading] = useState(false);
 
     // Result from backend: { clusterId, clusterData: { cluster_name, cluster_tagline, ... }, scores }
     const { result } = location.state || {};
@@ -14,8 +18,11 @@ export const QuizResult = () => {
     const clusterName = result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
     const clusterTagline = result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
 
-    const handleStart = () => {
-        // User already updated on backend in QuizScreen
+    const handleStart = async () => {
+        setIsLoading(true);
+        // Refresh user profile to get updated taste info
+        await refreshUser();
+        setIsLoading(false);
         navigate('/main');
     };
 
@@ -50,8 +57,9 @@ export const QuizResult = () => {
                     size="lg"
                     className="w-full text-lg py-6 rounded-full shadow-lg shadow-primary/20"
                     onClick={handleStart}
+                    disabled={isLoading}
                 >
-                    {t('quiz.result.start_app')}
+                    {isLoading ? t('common.loading', { defaultValue: '로딩 중...' }) : t('quiz.result.start_app')}
                 </Button>
             </div>
         </div>

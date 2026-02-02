@@ -98,6 +98,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const refreshUser = useCallback(async (skipAuthFailedCheck = false) => {
+        // Reset authFailed if explicitly skipping the check
+        if (skipAuthFailedCheck) {
+            setAuthFailed(false);
+        }
         await fetchUserData(skipAuthFailedCheck);
     }, [fetchUserData]);
 

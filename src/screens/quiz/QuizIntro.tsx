@@ -8,10 +8,19 @@ import { useUser } from '@/context/UserContext';
 export const QuizIntro = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const { user } = useUser();
+    const { user, loading } = useUser();
 
     // Fallback to "User" or localstorage if context not ready (edge case)
-    const nickname = user?.nickname || localStorage.getItem("mimy_reg_nickname") || "User";
+    const nickname = user?.nickname || localStorage.getItem("mimy_reg_nickname") || t('common.user', { defaultValue: 'User' });
+
+    // Wait for user to load to prevent undefined errors
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 overflow-hidden">

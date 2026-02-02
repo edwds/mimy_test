@@ -5,9 +5,11 @@ import { API_BASE_URL } from '@/lib/api';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { QUESTIONS } from '@/data/quiz';
+import { useUser } from '@/context/UserContext';
 
 export const QuizScreen = () => {
     const navigate = useNavigate();
+    const { user } = useUser();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +33,16 @@ export const QuizScreen = () => {
     const finishQuiz = async (finalAnswers: Record<number, number>) => {
         setIsSubmitting(true);
         try {
-            const userId = localStorage.getItem("mimy_user_id");
+            const userId = user?.id || localStorage.getItem("mimy_user_id");
+            console.log('[QuizScreen] Submitting quiz with userId:', userId);
+
+            if (!userId) {
+                console.error('[QuizScreen] No userId found!');
+                alert('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+                navigate('/start');
+                return;
+            }
+
             const response = await fetch(`${API_BASE_URL}/api/quiz/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
