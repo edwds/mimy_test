@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { API_BASE_URL } from '@/lib/api';
+import { useEffect } from 'react';
 
 import { useUser } from '@/context/UserContext';
 import { saveTokens } from '@/lib/tokenStorage';
@@ -17,7 +18,15 @@ import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 export const LoginPage = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { login: contextLogin } = useUser();
+    const { login: contextLogin, user, loading } = useUser();
+
+    // If already logged in, redirect to main
+    useEffect(() => {
+        if (!loading && user) {
+            console.log('[Login] Already logged in, redirecting to main');
+            navigate('/main', { replace: true });
+        }
+    }, [loading, user, navigate]);
 
     const handleLogin = async () => {
         try {
@@ -66,27 +75,46 @@ export const LoginPage = () => {
                     hasTokens: !!data.tokens,
                     isNew: data.isNew,
                     userId: data.user?.id,
+                    userEmail: data.user?.email,
                     tokenKeys: data.tokens ? Object.keys(data.tokens) : []
                 });
 
                 const { user, isNew, tokens } = data;
+                console.log('[Login] isNew flag:', isNew);
 
                 if (isNew) {
                     // New User: Don't login yet, just go to register
-                    console.log('[Login] New user detected, redirecting to registration');
-                    localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
-                    navigate('/register/phone');
-                } else {
-                    // Save user ID to localStorage for x-user-id header (temporary fallback)
-                    if (user?.id) {
-                        console.log('[Login] Saving user ID to localStorage:', user.id);
-                        localStorage.setItem('mimy_user_id', user.id.toString());
-                    }
-                    console.log('[Login] Existing user, platform:', Capacitor.isNativePlatform() ? 'Native' : 'Web');
-                    console.log('[Login] Tokens available:', !!tokens);
+                    console.log('[Login] ✅ New user detected, redirecting to registration');
+                    console.log('[Login] User info:', user);
 
-                    // Existing User: Save tokens for native apps
-                    if (tokens && Capacitor.isNativePlatform()) {
+                    if (!user || !user.email) {
+                        console.error('[Login] ❌ Invalid user data from server');
+                        alert('서버로부터 사용자 정보를 받지 못했습니다. 다시 시도해주세요.');
+                        return;
+                    }
+
+                    localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
+                    console.log('[Login] Google info saved to localStorage, navigating to /register/phone');
+                    navigate('/register/phone');
+                    return; // Important: stop execution here
+                }
+
+                // Existing user
+                console.log('[Login] ✅ Existing user, platform:', Capacitor.isNativePlatform() ? 'Native' : 'Web');
+                console.log('[Login] Tokens available:', !!tokens);
+
+                // Save user ID to localStorage for x-user-id header (temporary fallback)
+                if (user?.id) {
+                    console.log('[Login] Saving user ID to localStorage:', user.id);
+                    localStorage.setItem('mimy_user_id', user.id.toString());
+                } else {
+                    console.error('[Login] ❌ No user ID in response');
+                    alert('서버 응답에 사용자 ID가 없습니다. 다시 시도해주세요.');
+                    return;
+                }
+
+                // Existing User: Save tokens for native apps
+                if (tokens && Capacitor.isNativePlatform()) {
                         console.log('[Login] Attempting to save tokens for native platform...');
                         console.log('[Login] Token types:', typeof tokens.accessToken, typeof tokens.refreshToken);
                         console.log('[Login] Access token length:', tokens.accessToken?.length);
@@ -109,26 +137,25 @@ export const LoginPage = () => {
                             return;
                         }
                         console.log('[Login] ✅ Token verified successfully, length:', verifyToken.length);
-                    } else if (Capacitor.isNativePlatform() && !tokens) {
-                        console.error('[Login] ❌ Native platform but no tokens in response!');
-                        alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
-                        return;
-                    } else {
-                        // Web: Wait for browser to process Set-Cookie headers
-                        console.log('[Login] Web platform, waiting for cookies to be set...');
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
-
-                    // Login (JWT cookies already set by server for web)
-                    console.log('[Login] Calling contextLogin with userId:', user.id);
-                    await contextLogin(user.id.toString());
-                    console.log('[Login] contextLogin completed');
-
-                    // Give a moment for UserContext to update
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    console.log('[Login] Navigating to /main');
-                    navigate('/main');
+                } else if (Capacitor.isNativePlatform() && !tokens) {
+                    console.error('[Login] ❌ Native platform but no tokens in response!');
+                    alert('서버로부터 인증 정보를 받지 못했습니다. 다시 시도해주세요.');
+                    return;
+                } else {
+                    // Web: Wait for browser to process Set-Cookie headers
+                    console.log('[Login] Web platform, waiting for cookies to be set...');
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
+
+                // Login (JWT cookies already set by server for web)
+                console.log('[Login] Calling contextLogin with userId:', user.id);
+                await contextLogin(user.id.toString());
+                console.log('[Login] contextLogin completed');
+
+                // Give a moment for UserContext to update
+                await new Promise(resolve => setTimeout(resolve, 100));
+                console.log('[Login] Navigating to /main');
+                navigate('/main');
             } else if (response.status === 403) {
                 const errorData = await response.json();
                 console.error('[Login] 403 Error:', errorData);
