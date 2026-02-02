@@ -4,6 +4,7 @@ import { motion, PanInfo, useAnimation, useDragControls } from 'framer-motion';
 // import { X } from 'lucide-react'; // Removed unused
 import { useTranslation } from 'react-i18next';
 import { prefetchReviewSnippet, snippetCache } from '@/components/discovery/SelectedShopCard';
+import { Capacitor } from '@capacitor/core';
 
 // Wrapper to handle individual review fetching
 const ShopCardWithReview = ({ shop, onSave, displayContext }: { shop: any, onSave?: (id: number) => void, displayContext?: 'default' | 'discovery' | 'saved_list' }) => {
@@ -46,8 +47,8 @@ interface Props {
 }
 
 export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad = false }: Props) => {
-    // Only 2 states: half (default), expanded (max)
-    const [snapState, setSnapState] = useState<'half' | 'expanded'>('half');
+    // 3 states: minimized, half (default), expanded (max)
+    const [snapState, setSnapState] = useState<'minimized' | 'half' | 'expanded'>('half');
     const controls = useAnimation();
     const dragControls = useDragControls();
     const sheetRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,16 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     const touchStartY = useRef(0);
     const initialScrollTop = useRef(0);
     const isDraggingHandle = useRef(false);
+
+    // Calculate positions
+    // Sheet has h-full (100vh) and bottom-0, so y transform moves it up/down
+    // y=0: fully visible, y=screenHeight: completely hidden below screen
+    const searchBarArea = Capacitor.isNativePlatform() ? 120 : 90;
+    const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+
+    const expandedPosition = searchBarArea; // Show max, just below search bar
+    const halfPosition = screenHeight * 0.5; // Show 50% of screen
+    const minimizedPosition = screenHeight - 200; // Only show ~200px (header + bit of content)
 
     // If a shop is selected, show only that shop.
     const displayedShops = selectedShopId
@@ -85,26 +96,47 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     // Handle Snap State Changes
     useEffect(() => {
         const variants = {
-            half: { y: "50%" }, // Default: 50% of screen
-            expanded: { y: "20%" } // Max: 80% of screen
+            minimized: { y: minimizedPosition }, // Only header visible
+            half: { y: halfPosition }, // Default: 50% of screen
+            expanded: { y: expandedPosition } // Max: just below search bar
         };
         controls.start(variants[snapState]);
-    }, [snapState, controls]);
+    }, [snapState, controls, minimizedPosition, halfPosition, expandedPosition]);
 
     const handleDragEnd = (_: any, info: PanInfo) => {
         const velocity = info.velocity.y;
+        const offset = info.offset.y;
 
-        // Simple logic: down motion = collapse to half, up motion = expand
-        if (velocity > 100) {
-            // Dragging down
-            setSnapState('half');
-        } else if (velocity < -100) {
-            // Dragging up
-            setSnapState('expanded');
-        } else {
-            // No strong velocity, maintain current state
-            // Could add position-based logic here if needed
+        // Determine next state based on velocity and position
+        let nextState = snapState;
+
+        // Strong velocity takes priority
+        if (velocity > 400) {
+            // Fast drag down - go to next lower state
+            if (snapState === 'expanded') nextState = 'half';
+            else if (snapState === 'half') nextState = 'minimized';
+            // If already minimized, stay minimized (don't close)
+        } else if (velocity < -400) {
+            // Fast drag up - go to next higher state
+            if (snapState === 'minimized') nextState = 'half';
+            else if (snapState === 'half') nextState = 'expanded';
+            // If already expanded, stay expanded
+        } else if (Math.abs(offset) > 80) {
+            // Significant drag distance - go to next state
+            if (offset > 0) {
+                // Dragged down
+                if (snapState === 'expanded') nextState = 'half';
+                else if (snapState === 'half') nextState = 'minimized';
+            } else {
+                // Dragged up
+                if (snapState === 'minimized') nextState = 'half';
+                else if (snapState === 'half') nextState = 'expanded';
+            }
         }
+        // If offset is small, stay in current state
+
+        // Always snap to one of the three states
+        setSnapState(nextState);
 
         // Reset flag after a delay to ensure all touch events are processed
         setTimeout(() => {
@@ -115,7 +147,7 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
     return (
         <motion.div
             ref={sheetRef}
-            initial={{ y: "50%" }}
+            initial={{ y: halfPosition }}
             animate={controls}
             transition={{
                 type: "spring",
@@ -126,44 +158,44 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
             drag="y"
             dragControls={dragControls}
             dragListener={false}
-            dragMomentum={false} // Disable momentum for tighter control
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.02} // Minimal resistance for smooth feel
+            dragMomentum={false}
+            dragConstraints={{
+                top: 0, // Can't drag above expanded position
+                bottom: minimizedPosition // Can't drag below minimized position
+            }}
+            dragElastic={{
+                top: 0.1,
+                bottom: 0.2
+            }}
             onDragEnd={handleDragEnd}
             className={`absolute bottom-0 left-0 right-0 h-full bg-background shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 flex flex-col will-change-transform rounded-t-3xl`}
-            style={{ touchAction: 'none' }}
         >
             {/* Draggable Area Container */}
             <div className="flex-shrink-0 relative" style={{ pointerEvents: 'none' }}>
                 {/* Handle Bar - Absolute positioned to prevent touch event conflicts */}
                 <div
                     className="pt-3 pb-2 flex justify-center w-full cursor-grab active:cursor-grabbing"
-                    style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
+                    style={{
+                        pointerEvents: 'auto',
+                        position: 'relative',
+                        zIndex: 100,
+                        touchAction: 'none'
+                    }}
                     onPointerDown={(e) => {
-                        e.preventDefault();
                         e.stopPropagation();
                         isDraggingHandle.current = true;
                         dragControls.start(e);
-                    }}
-                    onTouchStart={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        isDraggingHandle.current = true;
-                    }}
-                    onTouchMove={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }}
-                    onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
                     }}
                 >
                     <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
                 </div>
 
                 {/* Header - Not draggable */}
-                <div className="flex flex-col mb-0 px-5 pb-4" style={{ pointerEvents: 'auto' }}>
+                <div
+                    className="flex flex-col mb-0 px-5 pb-4"
+                    style={{ pointerEvents: 'auto' }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
                     <h2 className="text-lg font-bold">
                         {selectedShopId
                             ? t('discovery.bottom_sheet.selected_shop')
@@ -185,10 +217,17 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                 className="flex-1 px-4 pb-24 overflow-y-auto"
                 style={{
                     pointerEvents: 'auto',
-                    WebkitOverflowScrolling: 'touch'
+                    WebkitOverflowScrolling: 'touch',
+                    touchAction: 'pan-y'
+                }}
+                onPointerDown={(e) => {
+                    // Prevent drag from starting in content area
+                    e.stopPropagation();
                 }}
                 onTouchStart={(e) => {
                     if (!contentRef.current || isDraggingHandle.current) return;
+                    // Prevent drag from starting in content area
+                    e.stopPropagation();
                     touchStartY.current = e.touches[0].clientY;
                     initialScrollTop.current = contentRef.current.scrollTop;
                     isScrolling.current = false;
@@ -210,15 +249,21 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                         isScrolling.current = true;
                     }
 
-                    // If in half state and scrolling down (deltaY > 0), expand
-                    // Require both scrolling intent AND significant movement
-                    if (snapState === 'half' && deltaY > 20 && isScrolling.current) {
+                    // If in minimized/half state and scrolling up, expand to next state
+                    if (snapState === 'minimized' && deltaY > 30 && isScrolling.current) {
+                        setSnapState('half');
+                    } else if (snapState === 'half' && deltaY > 30 && isScrolling.current) {
                         setSnapState('expanded');
                     }
 
-                    // If in expanded state, at top, and pulling down, collapse
-                    if (snapState === 'expanded' && currentScrollTop === 0 && deltaY < -40) {
+                    // If in expanded state, at top, and pulling down, collapse to half
+                    if (snapState === 'expanded' && currentScrollTop === 0 && deltaY < -50) {
                         setSnapState('half');
+                    }
+
+                    // If in half state, at top, and pulling down, collapse to minimized
+                    if (snapState === 'half' && currentScrollTop === 0 && deltaY < -50) {
+                        setSnapState('minimized');
                     }
                 }}
                 onTouchEnd={() => {
