@@ -200,6 +200,12 @@ export const ProfileStep = () => {
 
                     const { tokens } = data;
 
+                    // Save user ID to localStorage (for both web and native)
+                    if (data.id) {
+                        console.log('[Register] Saving user ID to localStorage:', data.id);
+                        localStorage.setItem('mimy_user_id', data.id.toString());
+                    }
+
                     // Save tokens for native apps
                     if (Capacitor.isNativePlatform()) {
                         if (!tokens) {
@@ -232,6 +238,12 @@ export const ProfileStep = () => {
 
                         // Wait a bit for token storage to fully commit (especially on iOS)
                         await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    // For web platform, wait for cookies to be fully set
+                    if (!Capacitor.isNativePlatform()) {
+                        console.log('[Register] Web platform - waiting for cookies to be set...');
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
 
                     console.log('[Register] Calling refreshUser to update context...');

@@ -123,6 +123,14 @@ export async function authFetch(url: string, options: RequestInit = {}, retryCou
 
   // For web, use regular fetch with credentials
   console.log('[authFetch] Using web fetch');
+
+  // TEMPORARY: Add x-user-id header for debugging
+  const userId = localStorage.getItem('mimy_user_id');
+  if (userId) {
+    console.log('[authFetch] Adding x-user-id header:', userId);
+    headers['x-user-id'] = userId;
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,

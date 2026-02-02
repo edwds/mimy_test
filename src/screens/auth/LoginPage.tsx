@@ -77,6 +77,11 @@ export const LoginPage = () => {
                     localStorage.setItem("mimy_reg_google_info", JSON.stringify(user));
                     navigate('/register/phone');
                 } else {
+                    // Save user ID to localStorage for x-user-id header (temporary fallback)
+                    if (user?.id) {
+                        console.log('[Login] Saving user ID to localStorage:', user.id);
+                        localStorage.setItem('mimy_user_id', user.id.toString());
+                    }
                     console.log('[Login] Existing user, platform:', Capacitor.isNativePlatform() ? 'Native' : 'Web');
                     console.log('[Login] Tokens available:', !!tokens);
 
