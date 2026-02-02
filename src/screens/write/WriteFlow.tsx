@@ -38,6 +38,12 @@ export const WriteFlow = () => {
         return 'SEARCH_SHOP';
     });
 
+    // Track current step in ref for callback closure
+    const stepRef = useRef(step);
+    useEffect(() => {
+        stepRef.current = step;
+    }, [step]);
+
     // Get real user ID from context
     const currentUserId = user?.id || 0;
     console.log('[WriteFlow] Current user ID:', currentUserId);
@@ -46,12 +52,18 @@ export const WriteFlow = () => {
     useEffect(() => {
         if (location.state && (location.state as any).step) {
             const state = location.state as any;
+            console.log('[WriteFlow] Location state changed:', state);
+
             if (state.step === 'WRITE_CONTENT') {
                 if (state.shop) setSelectedShop(state.shop);
                 if (state.satisfaction) setSatisfaction(state.satisfaction);
                 setStep('WRITE_CONTENT');
             } else if (state.step === 'SEARCH_SHOP') {
+                // Explicitly going back to search (e.g., from EVALUATE_ANOTHER)
+                console.log('[WriteFlow] Resetting to SEARCH_SHOP');
                 setStep('SEARCH_SHOP');
+                // Reset callback processed flag to allow new ranking flow
+                callbackProcessedRef.current = false;
             }
         }
     }, [location.state]);
@@ -86,7 +98,7 @@ export const WriteFlow = () => {
 
         const handleRankingComplete = (data: any) => {
             console.log('[WriteFlow] Ranking complete callback received:', data);
-            console.log('[WriteFlow] isMounted:', isMountedRef.current, 'callbackProcessed:', callbackProcessedRef.current);
+            console.log('[WriteFlow] isMounted:', isMountedRef.current, 'callbackProcessed:', callbackProcessedRef.current, 'currentStep:', stepRef.current);
 
             // Prevent duplicate processing
             if (callbackProcessedRef.current) {
@@ -96,6 +108,12 @@ export const WriteFlow = () => {
 
             if (!isMountedRef.current) {
                 console.log('[WriteFlow] Component not mounted, skipping callback');
+                return;
+            }
+
+            // If we're explicitly on SEARCH_SHOP step (e.g., from EVALUATE_ANOTHER), don't auto-transition
+            if (stepRef.current === 'SEARCH_SHOP') {
+                console.log('[WriteFlow] Currently on SEARCH_SHOP, ignoring callback to prevent auto-transition');
                 return;
             }
 

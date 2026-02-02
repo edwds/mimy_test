@@ -96,7 +96,8 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         const currentShop = selectedShop;
 
         // Notify ALL subscribers that ranking was updated with optimistic data
-        if (currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
+        // EXCEPT when action is EVALUATE_ANOTHER (to prevent race condition with navigation)
+        if (action !== 'EVALUATE_ANOTHER' && currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
             const updateData: RankingUpdateData = {
                 shopId: currentShop.id,
                 my_review_stats: {
@@ -115,6 +116,7 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
             });
         } else {
             console.log('[RankingContext] ❌ Not notifying:', {
+                action,
                 hasShopId: !!currentShop?.id,
                 hasData: !!data,
                 hasSatisfaction: data?.satisfaction !== undefined,
@@ -142,8 +144,9 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
                 console.log('[RankingContext] Already on /write, letting callback handle transition');
             }
         } else if (action === 'EVALUATE_ANOTHER') {
-            // Go to search
-            navigate('/write', { replace: true });
+            // Go to search - don't notify callbacks to avoid race condition
+            console.log('[RankingContext] Navigating to search for another place');
+            navigate('/write', { replace: true, state: { step: 'SEARCH_SHOP' } });
         } else {
             // Stay where we are, just closed overlay
         }
