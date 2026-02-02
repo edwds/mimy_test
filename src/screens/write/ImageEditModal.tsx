@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Check, RotateCcw, Trash2, Crop } from 'lucide-react';
+import { X, Loader2, Check, RotateCcw, Trash2, Crop, GripVertical, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
@@ -31,6 +31,9 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const containerRef = useRef<HTMLUListElement>(null);
     const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    // Reorder Modal State
+    const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
     const moveItem = (index: number, direction: number) => {
         const newIndex = index + direction;
@@ -165,7 +168,16 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                         <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-white/10">
                             <X className="w-6 h-6" />
                         </button>
-                        <div className="font-bold text-lg">사진 편집 ({items.length})</div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsReorderModalOpen(true)}
+                                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                                title="순서 변경"
+                            >
+                                <ArrowUpDown className="w-5 h-5" />
+                            </button>
+                            <div className="font-bold text-lg">사진 편집 ({items.length})</div>
+                        </div>
                         <Button
                             onClick={handleConfirm}
                             disabled={isProcessing || items.length === 0}
@@ -229,6 +241,18 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                     onCancel={() => setEditingItem(null)}
                     onSave={handleSaveCrop}
                     onDelete={() => handleDeleteItem(editingItem.id)}
+                />
+            )}
+
+            {/* Reorder Modal */}
+            {isReorderModalOpen && (
+                <ReorderModal
+                    items={items}
+                    onClose={() => setIsReorderModalOpen(false)}
+                    onSave={(newItems) => {
+                        setItems(newItems);
+                        setIsReorderModalOpen(false);
+                    }}
                 />
             )}
         </div>
@@ -359,6 +383,97 @@ const DraggableItem = ({
 };
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+// --- Reorder Modal Component ---
+const ReorderModal = ({ items, onClose, onSave }: {
+    items: ProcessingItem[],
+    onClose: () => void,
+    onSave: (items: ProcessingItem[]) => void
+}) => {
+    const [localItems, setLocalItems] = useState<ProcessingItem[]>(items);
+
+    return (
+        <div className="absolute inset-0 z-50 bg-black flex flex-col animate-in fade-in duration-200">
+            {/* Header */}
+            <div
+                className="flex items-center justify-between px-4 pb-4 bg-black/50 text-white z-10"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+            >
+                <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-white/10">
+                    <X className="w-6 h-6" />
+                </button>
+                <div className="font-bold text-lg">사진 순서 변경</div>
+                <Button
+                    onClick={() => onSave(localItems)}
+                    className="bg-primary text-white hover:bg-primary/90 h-9 px-4 rounded-full font-bold"
+                >
+                    완료
+                </Button>
+            </div>
+
+            {/* List View */}
+            <div className="flex-1 overflow-y-auto bg-[#111] p-4">
+                <Reorder.Group
+                    axis="y"
+                    values={localItems}
+                    onReorder={setLocalItems}
+                    className="space-y-3"
+                >
+                    {localItems.map((item, index) => (
+                        <ReorderListItem
+                            key={item.id}
+                            item={item}
+                            index={index}
+                        />
+                    ))}
+                </Reorder.Group>
+            </div>
+        </div>
+    );
+};
+
+const ReorderListItem = ({ item, index }: { item: ProcessingItem, index: number }) => {
+    const controls = useDragControls();
+
+    return (
+        <Reorder.Item
+            value={item}
+            dragListener={false}
+            dragControls={controls}
+            className="bg-white/5 rounded-xl overflow-hidden flex items-center gap-3 p-3 touch-none"
+        >
+            {/* Drag Handle */}
+            <div
+                onPointerDown={(e) => controls.start(e)}
+                className="cursor-grab active:cursor-grabbing p-2 -ml-1 text-white/50 hover:text-white transition-colors touch-none"
+            >
+                <GripVertical className="w-5 h-5" />
+            </div>
+
+            {/* Thumbnail */}
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">
+                <img
+                    src={item.previewUrl}
+                    alt={`preview ${index + 1}`}
+                    className="w-full h-full object-cover"
+                />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <div className="text-white font-bold text-sm">사진 {index + 1}</div>
+                {item.imgText && (
+                    <div className="text-white/50 text-xs truncate mt-1">{item.imgText}</div>
+                )}
+            </div>
+
+            {/* Index Badge */}
+            <div className="bg-white/10 rounded-full w-8 h-8 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {index + 1}
+            </div>
+        </Reorder.Item>
+    );
+};
 
 const CropEditor = ({ item, onCancel, onSave, onDelete }: { item: ProcessingItem, onCancel: () => void, onSave: (id: string, blob: Blob) => void, onDelete: () => void }) => {
     const [scale, setScale] = useState(1);

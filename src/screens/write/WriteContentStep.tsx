@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon, ArrowUpDown, GripVertical } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { useUser } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
 import { getAccessToken, saveTokens } from '@/lib/tokenStorage';
+import { Reorder, useDragControls } from 'framer-motion';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -95,6 +96,9 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Caption Edit State
     const [captionEditId, setCaptionEditId] = useState<string | null>(null);
     const [captionEditText, setCaptionEditText] = useState('');
+
+    // Reorder Modal State
+    const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
     // Keyboard Height Tracking for iOS
     useEffect(() => {
@@ -500,7 +504,18 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 {t('write.content.photo_label')}
                                 {mode === 'review' && <span className="text-red-500 text-sm">*</span>}
                             </Label>
-                            <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
+                            <div className="flex items-center gap-3">
+                                {mediaItems.length > 1 && (
+                                    <button
+                                        onClick={() => setIsReorderModalOpen(true)}
+                                        className="text-xs text-primary font-bold flex items-center gap-1 hover:bg-primary/5 px-2 py-1 rounded-md transition-colors"
+                                    >
+                                        <ArrowUpDown className="w-3 h-3" />
+                                        순서 변경
+                                    </button>
+                                )}
+                                <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
+                            </div>
                         </div>
 
                         <div className="flex overflow-x-auto no-scrollbar gap-3 pb-2 -mx-6 px-6">
@@ -776,6 +791,117 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     </div>
                 </div>
             )}
+
+            {/* Reorder Modal */}
+            {isReorderModalOpen && (
+                <MediaReorderModal
+                    items={mediaItems}
+                    onClose={() => setIsReorderModalOpen(false)}
+                    onSave={(newItems) => {
+                        setMediaItems(newItems);
+                        setIsReorderModalOpen(false);
+                    }}
+                />
+            )}
         </div>
+    );
+};
+
+// --- Media Reorder Modal Component ---
+const MediaReorderModal = ({ items, onClose, onSave }: {
+    items: MediaItem[],
+    onClose: () => void,
+    onSave: (items: MediaItem[]) => void
+}) => {
+    const [localItems, setLocalItems] = useState<MediaItem[]>(items);
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+            <div className="bg-background w-full max-w-md h-full max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden m-4">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-4 border-b bg-background/95 backdrop-blur-sm">
+                    <button onClick={onClose} className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                    <div className="font-bold text-base">사진 순서 변경</div>
+                    <Button
+                        onClick={() => onSave(localItems)}
+                        className="bg-primary text-white hover:bg-primary/90 h-9 px-4 rounded-full font-bold text-sm"
+                    >
+                        완료
+                    </Button>
+                </div>
+
+                {/* List View */}
+                <div className="flex-1 overflow-y-auto p-4">
+                    <Reorder.Group
+                        axis="y"
+                        values={localItems}
+                        onReorder={setLocalItems}
+                        className="space-y-3"
+                    >
+                        {localItems.map((item, index) => (
+                            <MediaReorderListItem
+                                key={item.id}
+                                item={item}
+                                index={index}
+                            />
+                        ))}
+                    </Reorder.Group>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MediaReorderListItem = ({ item, index }: { item: MediaItem, index: number }) => {
+    const controls = useDragControls();
+
+    return (
+        <Reorder.Item
+            value={item}
+            dragListener={false}
+            dragControls={controls}
+            className="bg-muted/30 rounded-xl overflow-hidden flex items-center gap-3 p-3 touch-none border border-border/50"
+        >
+            {/* Drag Handle */}
+            <div
+                onPointerDown={(e) => controls.start(e)}
+                className="cursor-grab active:cursor-grabbing p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors touch-none"
+            >
+                <GripVertical className="w-5 h-5" />
+            </div>
+
+            {/* Thumbnail */}
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border/50">
+                {item.status === 'complete' && item.url ? (
+                    <img
+                        src={item.url}
+                        alt={`preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
+                    </div>
+                )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm text-foreground">사진 {index + 1}</div>
+                {item.caption && (
+                    <div className="text-muted-foreground text-xs truncate mt-1">{item.caption}</div>
+                )}
+            </div>
+
+            {/* Index Badge */}
+            <div className="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {index + 1}
+            </div>
+        </Reorder.Item>
     );
 };
