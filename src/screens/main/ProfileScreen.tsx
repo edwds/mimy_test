@@ -287,7 +287,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     if (!user) return <div className="flex-1 flex items-center justify-center">{t('profile.user_not_found')}</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden">
+        <div className="flex flex-col h-full bg-background relative">
             {/* Smart Header (overlay) */}
             <MainHeader
                 ref={measureHeader}
@@ -308,7 +308,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             {/* Scroll container: push content by headerHeight (no hardcoding) */}
             <main
                 ref={containerRef}
-                className="flex-1 overflow-y-auto"
+                className="flex-1 overflow-y-auto overflow-x-hidden"
                 data-scroll-container="true"
                 onScroll={handleScroll}
                 style={{ paddingTop: headerHeight }}

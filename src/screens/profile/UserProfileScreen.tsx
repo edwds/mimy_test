@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Grid, List, Loader2, ArrowLeft, Users } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Grid, List, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { User } from '@/context/UserContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
+import { ProfileHeader } from '@/components/ProfileHeader';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -386,40 +387,32 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     if (!user && !loadingUser) return <div>{t('profile.user_not_found')}</div>;
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden max-w-[448px] mx-auto">
+        <div className="flex flex-col h-full bg-background relative max-w-[448px] mx-auto">
 
             {/* Header */}
-            <div
+            <ProfileHeader
                 ref={measureHeader}
-                className={cn(
-                    "fixed top-0 left-1/2 w-full max-w-[448px] bg-background/95 backdrop-blur-sm z-[100] px-4 pb-2 transition-transform duration-300 flex items-center gap-2 pointer-events-none",
-                    isHeaderVisible ? '-translate-x-1/2 translate-y-0' : '-translate-x-1/2 -translate-y-full'
-                )}
-                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
-            >
-                <Button variant="ghost" size="icon" className="-ml-2 pointer-events-auto" onClick={() => {
+                title={
+                    loadingUser ? (
+                        <Skeleton className="h-4 w-24" />
+                    ) : (
+                        `@${user?.account_id}`
+                    )
+                }
+                onBack={() => {
                     console.log('[UserProfileScreen] Back button clicked');
                     if (window.history.length > 1) {
                         navigate(-1);
                     } else {
                         navigate('/main/profile', { replace: true });
                     }
-                }}>
-                    <ArrowLeft className="w-6 h-6" />
-                </Button>
-                {loadingUser ? (
-                    <div className="flex flex-col pointer-events-none">
-                        <Skeleton className="h-4 w-24" />
-                    </div>
-                ) : (
-                    <h1 className="text-lg font-bold truncate pointer-events-none">@{user?.account_id}</h1>
-                )}
-                <div className="ml-auto">
+                }}
+                rightAction={
                     <Button
                         size="sm"
                         variant={isFollowing ? "outline" : "default"}
                         className={cn(
-                            "h-8 px-4 rounded-full text-xs font-semibold shadow-sm transition-all pointer-events-auto",
+                            "h-8 px-4 rounded-full text-xs font-semibold shadow-sm transition-all",
                             isFollowing
                                 ? "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                                 : "bg-gray-900 text-white hover:bg-gray-800"
@@ -429,8 +422,9 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     >
                         {isFollowing ? t('profile.following') : t('profile.follow')}
                     </Button>
-                </div>
-            </div>
+                }
+                isVisible={isHeaderVisible}
+            />
 
             <main
                 ref={containerRef}

@@ -272,24 +272,28 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
     const coverImage = getCoverImage();
 
     return (
-        <div className="flex flex-col h-full bg-background fixed inset-0 z-[200] max-w-[448px] mx-auto">
-            {/* Fixed Top Navigation */}
+        <div className="flex flex-col h-full bg-background relative max-w-[448px] mx-auto">
+            {/* Top Navigation */}
             <div
                 className={cn(
-                    "fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[448px] z-[100] flex items-center justify-between px-4 py-3 transition-all duration-300 border-b pointer-events-none",
+                    "absolute top-0 left-0 right-0 z-[100] flex items-center justify-between px-4 py-3 transition-all duration-300 border-b",
                     isScrolled ? "bg-background/95 backdrop-blur-md border-border/10 shadow-sm" : "bg-transparent border-transparent shadow-none"
                 )}
-                style={{ paddingTop: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 0.5rem)' : undefined }}
+                style={{
+                    paddingTop: Capacitor.isNativePlatform()
+                        ? 'calc(env(safe-area-inset-top) + 0.5rem)'
+                        : '1rem'
+                }}
             >
-                <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex items-center gap-3 overflow-hidden pointer-events-auto">
                     <Button
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 -ml-2 transition-colors pointer-events-auto",
+                            "rounded-full w-10 h-10 -ml-2 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white"
+                                : "text-white hover:text-white hover:bg-white/10"
                         )}
                         onClick={handleBack}
                     >
@@ -297,7 +301,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     </Button>
 
                     <div className={cn(
-                        "flex flex-col transition-all duration-300 pointer-events-none",
+                        "flex flex-col transition-all duration-300",
                         isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                     )}>
                         <span className="font-bold text-base truncate">{title}</span>
@@ -307,22 +311,22 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                     </div>
                 </div>
 
-                <div className="relative">
+                <div className="relative pointer-events-auto">
                     <Button
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            "rounded-full w-10 h-10 transition-colors pointer-events-auto",
+                            "rounded-full w-10 h-10 transition-colors",
                             isScrolled
                                 ? "text-foreground hover:text-foreground hover:bg-muted"
-                                : "text-white hover:text-white"
+                                : "text-white hover:text-white hover:bg-white/10"
                         )}
                         onClick={handleShare}
                     >
                         <Share className="w-5 h-5" />
                     </Button>
                     {showCopied && (
-                        <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
+                        <div className="absolute top-12 right-0 bg-black/80 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
                             {t('common.copied', 'Link Copied!')}
                         </div>
                     )}

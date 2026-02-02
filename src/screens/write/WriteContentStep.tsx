@@ -292,10 +292,11 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Check if any uploads are in progress
     const isUploading = mediaItems.some(m => m.status === 'uploading');
 
-    // Check validation
+    // Check validation - photos are now required for reviews
+    const hasCompletedImages = mediaItems.some(m => m.status === 'complete');
     const isValid = mode === 'review'
-        ? (text.trim() || mediaItems.some(m => m.status === 'complete'))
-        : text.trim();
+        ? (hasCompletedImages && text.trim())  // Both photo and text required for review
+        : text.trim();  // Only text required for post
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
@@ -393,6 +394,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             <Label className="text-base font-semibold flex items-center gap-2">
                                 <ImageIcon className="w-4 h-4" />
                                 {t('write.content.photo_label')}
+                                {mode === 'review' && <span className="text-red-500 text-sm">*</span>}
                             </Label>
                             <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
                         </div>
@@ -530,6 +532,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
                     {/* Common: Main Text */}
                     <div className="space-y-2">
+                        {mode === 'review' && (
+                            <Label className="text-base font-semibold flex items-center gap-2">
+                                {t('write.content.text_label', 'Review')}
+                                <span className="text-red-500 text-sm">*</span>
+                            </Label>
+                        )}
                         <Textarea
                             className="min-h-[150px] text-lg bg-transparent border-none p-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 resize-none leading-relaxed"
                             placeholder={mode === 'review'
