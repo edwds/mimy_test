@@ -28,7 +28,7 @@ export interface User {
 interface UserContextType {
     user: User | null;
     loading: boolean;
-    refreshUser: () => Promise<void>;
+    refreshUser: (skipAuthFailedCheck?: boolean) => Promise<void>;
     login: (userId: string) => Promise<void>;
     logout: () => Promise<void>;
     optimisticLikes: Record<number, boolean>;
@@ -97,8 +97,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const refreshUser = useCallback(async () => {
-        await fetchUserData();
+    const refreshUser = useCallback(async (skipAuthFailedCheck = false) => {
+        await fetchUserData(skipAuthFailedCheck);
     }, [fetchUserData]);
 
     const login = async (_userId: string) => {

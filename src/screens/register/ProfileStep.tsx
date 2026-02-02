@@ -235,7 +235,8 @@ export const ProfileStep = () => {
                     }
 
                     console.log('[Register] Calling refreshUser to update context...');
-                    await refreshUser(); // Update context with new profile info
+                    // Skip authFailed check since we just registered successfully
+                    await refreshUser(true);
                     console.log('[Register] refreshUser completed');
 
                     // Clear temp reg data
