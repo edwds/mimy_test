@@ -11,7 +11,6 @@ import { HomeTab } from './HomeTab';
 import { LeaderboardTab } from './LeaderboardTab';
 import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
-import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { SwipeableOverlay } from '@/components/SwipeableOverlay';
 
 const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
@@ -103,7 +102,6 @@ export const MainTab = () => {
                     let viewUserId = searchParams.get('viewUser');
                     const viewListUserId = searchParams.get('viewListUser');
                     const viewShopId = searchParams.get('viewShop');
-                    const viewConnectionsId = searchParams.get('viewConnections');
 
                     // Fallback: If viewing a list but viewUser is missing, assume the list owner is the context.
                     // This keeps the profile screen mounted in the background, preventing flicker on back.
@@ -133,11 +131,6 @@ export const MainTab = () => {
                             {viewShopId && (
                                 <SwipeableOverlay key="shop">
                                     <ShopDetailScreen shopIdProp={viewShopId} />
-                                </SwipeableOverlay>
-                            )}
-                            {viewConnectionsId && (
-                                <SwipeableOverlay key="connections">
-                                    <ConnectionsScreen userId={viewConnectionsId} />
                                 </SwipeableOverlay>
                             )}
                         </>

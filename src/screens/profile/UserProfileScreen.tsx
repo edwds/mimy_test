@@ -475,12 +475,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                         </div>
                                         <div
                                             className="flex items-baseline gap-1 cursor-pointer active:opacity-70 transition-opacity"
-                                            onClick={() => {
-                                                const current = new URLSearchParams(searchParams);
-                                                current.set('viewConnections', String(user?.id));
-                                                current.set('connectionsTab', 'followers');
-                                                navigate({ search: current.toString() });
-                                            }}
+                                            onClick={() => navigate(`/profile/connections?userId=${user?.id}&tab=followers`)}
                                         >
                                             <span className="font-bold">{user?.stats?.follower_count || 0}</span>
                                             <span className="text-sm text-muted-foreground">{t('profile.stats.followers')}</span>

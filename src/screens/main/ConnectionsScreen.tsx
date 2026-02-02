@@ -1,29 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { User as UserIcon } from 'lucide-react';
+import { ArrowLeft, User as UserIcon } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/authFetch';
-import { ProfileHeader } from '@/components/ProfileHeader';
-import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
+import { useUser } from '@/context/UserContext';
 
-interface ConnectionsScreenProps {
-    userId?: string;
-}
-
-export const ConnectionsScreen = ({ userId: propUserId }: ConnectionsScreenProps) => {
+export const ConnectionsScreen = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const initialTab = searchParams.get('connectionsTab') === 'following' ? 'following' : 'followers';
-    const userId = propUserId || searchParams.get('viewConnections');
+    const { user: currentUser } = useUser();
+
+    const initialTab = searchParams.get('tab') === 'following' ? 'following' : 'followers';
+    const userId = searchParams.get('userId') || currentUser?.id?.toString();
 
     console.log('[ConnectionsScreen] Initialized with userId:', userId, 'tab:', initialTab);
 
     const [activeTab, setActiveTab] = useState<'followers' | 'following'>(initialTab);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-
-    // Overlay Logic
-    const viewUserId = searchParams.get('viewUser');
 
     useEffect(() => {
         if (!userId) return;
@@ -53,25 +50,20 @@ export const ConnectionsScreen = ({ userId: propUserId }: ConnectionsScreenProps
     }, [userId, activeTab]);
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300 relative max-w-[448px] mx-auto">
-            {/* Overlay */}
-            {viewUserId && (
-                <div className="absolute inset-0 z-50 bg-background animate-in slide-in-from-right duration-200">
-                    <UserProfileScreen userId={viewUserId} />
-                </div>
-            )}
-
+        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300 relative">
             {/* Header */}
-            <ProfileHeader
-                title="Connections"
-                onBack={() => {
-                    const current = new URLSearchParams(searchParams);
-                    current.delete('viewConnections');
-                    current.delete('connectionsTab');
-                    navigate({ search: current.toString() });
-                }}
-                isVisible={true}
-            />
+            <div
+                className={cn(
+                    "flex items-center px-4 pb-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10",
+                    !Capacitor.isNativePlatform() && "pt-6"
+                )}
+                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
+            >
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="-ml-2 mr-2">
+                    <ArrowLeft className="w-6 h-6" />
+                </Button>
+                <h1 className="text-lg font-bold">Connections</h1>
+            </div>
 
             {/* Tabs */}
             <div className="flex border-b border-border">
@@ -102,11 +94,8 @@ export const ConnectionsScreen = ({ userId: propUserId }: ConnectionsScreenProps
                                 key={u.id}
                                 className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
                                 onClick={() => {
-                                    // Use search params for overlay
-                                    const current = new URLSearchParams(window.location.search);
-                                    current.set('viewUser', String(u.id));
-                                    // Keep existing params (like tab)
-                                    navigate(`${window.location.pathname}?${current.toString()}`);
+                                    // Navigate to user profile in main with overlay
+                                    navigate(`/main?viewUser=${u.id}`);
                                 }}
                             >
                                 <div className="w-10 h-10 rounded-full bg-muted overflow-hidden border border-border">
