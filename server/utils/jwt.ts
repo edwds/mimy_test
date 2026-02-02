@@ -21,7 +21,7 @@ export interface RefreshTokenPayload {
 }
 
 /**
- * Generate JWT access token (15 minute expiry)
+ * Generate JWT access token (24 hour expiry)
  * @param userId - User ID
  * @param email - User email
  * @returns Signed JWT token
@@ -34,7 +34,7 @@ export function generateAccessToken(userId: number, email: string): string {
   };
 
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '15m',
+    expiresIn: '24h',
     issuer: 'mimy-api',
     audience: 'mimy-client'
   });
