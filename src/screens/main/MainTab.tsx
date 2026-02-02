@@ -11,6 +11,7 @@ import { HomeTab } from './HomeTab';
 import { LeaderboardTab } from './LeaderboardTab';
 import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
+import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { SwipeableOverlay } from '@/components/SwipeableOverlay';
 
 const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
@@ -102,17 +103,18 @@ export const MainTab = () => {
                     let viewUserId = searchParams.get('viewUser');
                     const viewListUserId = searchParams.get('viewListUser');
                     const viewShopId = searchParams.get('viewShop');
+                    const viewConnectionsId = searchParams.get('viewConnections');
 
                     // Fallback: If viewing a list but viewUser is missing, assume the list owner is the context.
                     // This keeps the profile screen mounted in the background, preventing flicker on back.
-                    // EXCEPTION: If we are already on the Profile Tab (e.g. My Profile), allow the list to overlay strictly on top 
+                    // EXCEPTION: If we are already on the Profile Tab (e.g. My Profile), allow the list to overlay strictly on top
                     // without forcing the UserProfileScreen overlay (which would be redundant or cause redirect loops).
                     if (!viewUserId && viewListUserId && !location.pathname.includes('/profile')) {
                         viewUserId = viewListUserId;
                     }
 
-                    // Render stack based on what is present. 
-                    // Note: If multiple are present, we might want to show the last one, 
+                    // Render stack based on what is present.
+                    // Note: If multiple are present, we might want to show the last one,
                     // or standard LIFO if we tracked history, but here we just check sequentially.
                     // For now, let's allow them to stack if needed, or just prioritize ONE.
                     // The user interaction usually sets one.
@@ -131,6 +133,11 @@ export const MainTab = () => {
                             {viewShopId && (
                                 <SwipeableOverlay key="shop">
                                     <ShopDetailScreen shopIdProp={viewShopId} />
+                                </SwipeableOverlay>
+                            )}
+                            {viewConnectionsId && (
+                                <SwipeableOverlay key="connections">
+                                    <ConnectionsScreen userId={viewConnectionsId} />
                                 </SwipeableOverlay>
                             )}
                         </>

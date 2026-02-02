@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
+import { User as UserIcon } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/authFetch';
-
+import { ProfileHeader } from '@/components/ProfileHeader';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 
-export const ConnectionsScreen = () => {
+interface ConnectionsScreenProps {
+    userId?: string;
+}
+
+export const ConnectionsScreen = ({ userId: propUserId }: ConnectionsScreenProps) => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const initialTab = searchParams.get('tab') === 'following' ? 'following' : 'followers';
-    const userId = localStorage.getItem("mimy_user_id"); // Ideally passed via route, but for Profile it's current user
+    const initialTab = searchParams.get('connectionsTab') === 'following' ? 'following' : 'followers';
+    const userId = propUserId || searchParams.get('viewConnections');
 
     console.log('[ConnectionsScreen] Initialized with userId:', userId, 'tab:', initialTab);
 
@@ -52,7 +53,7 @@ export const ConnectionsScreen = () => {
     }, [userId, activeTab]);
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300 relative">
+        <div className="flex flex-col h-full bg-background animate-in fade-in duration-300 relative max-w-[448px] mx-auto">
             {/* Overlay */}
             {viewUserId && (
                 <div className="absolute inset-0 z-50 bg-background animate-in slide-in-from-right duration-200">
@@ -61,18 +62,16 @@ export const ConnectionsScreen = () => {
             )}
 
             {/* Header */}
-            <div
-                className={cn(
-                    "flex items-center px-4 pb-2 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-10",
-                    !Capacitor.isNativePlatform() && "pt-6"
-                )}
-                style={Capacitor.isNativePlatform() ? { paddingTop: 'calc(env(safe-area-inset-top) + 12px)' } : undefined}
-            >
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="-ml-2 mr-2">
-                    <ArrowLeft className="w-6 h-6" />
-                </Button>
-                <h1 className="text-lg font-bold">{localStorage.getItem('mimy_nickname') || 'Profile'}</h1>
-            </div>
+            <ProfileHeader
+                title="Connections"
+                onBack={() => {
+                    const current = new URLSearchParams(searchParams);
+                    current.delete('viewConnections');
+                    current.delete('connectionsTab');
+                    navigate({ search: current.toString() });
+                }}
+                isVisible={true}
+            />
 
             {/* Tabs */}
             <div className="flex border-b border-border">

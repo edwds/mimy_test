@@ -332,7 +332,12 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                                 <div
                                     className="flex items-baseline gap-1 cursor-pointer active:opacity-70 transition-opacity"
-                                    onClick={() => navigate('/profile/connections?tab=followers')}
+                                    onClick={() => {
+                                        const query = new URLSearchParams(searchParams);
+                                        query.set('viewConnections', String(user.id));
+                                        query.set('connectionsTab', 'followers');
+                                        navigate({ search: query.toString() });
+                                    }}
                                 >
                                     <span className="font-bold">{user.stats?.follower_count || 0}</span>
                                     <span className="text-sm text-muted-foreground">{t('profile.stats.followers')}</span>
