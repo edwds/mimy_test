@@ -30,17 +30,25 @@ export const LoginPage = () => {
 
     const handleLogin = async () => {
         try {
+            // Clear previous user data before login
+            console.log('[Login] Clearing previous user data...');
+            localStorage.removeItem('mimy_user_id');
+            localStorage.removeItem('mimy_reg_google_info');
+            localStorage.removeItem('mimy_reg_phone');
+            localStorage.removeItem('mimy_reg_birthyear');
+            localStorage.removeItem('mimy_reg_nickname');
+
             if (Capacitor.isNativePlatform()) {
                 // Native Login
                 const user = await GoogleAuth.signIn();
                 // const idToken = user.authentication.idToken;
                 // Alternatively user.serverAuthCode if available and configured
-                // The backend expects `token` which is usually the access_token for web flow, 
-                // but checking backend logic might be needed. 
+                // The backend expects `token` which is usually the access_token for web flow,
+                // but checking backend logic might be needed.
                 // Assuming backend verifies via token.
 
-                // Note: The web flow sends { token: access_token }. 
-                // GoogleAuth plugin returns authentication object. 
+                // Note: The web flow sends { token: access_token }.
+                // GoogleAuth plugin returns authentication object.
                 // Let's assume we send ID token or Server Auth Code depending on verification strategy.
                 // For this project, if we use access_token verification on backend, we need the access_token.
                 // GoogleAuth plugin returns `authentication.accessToken`.
