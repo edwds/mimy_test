@@ -63,6 +63,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const { user } = useUser();
     const [text, setText] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 
 
@@ -363,7 +364,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto" data-scroll-container="true">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" data-scroll-container="true">
                 {/* Content Area */}
                 <div className="p-6 space-y-8">
 
@@ -517,13 +518,23 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                             setIsDateManuallySet(true);
                                         }}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
+                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
                                                 setTimeout(() => {
-                                                    e.target.scrollIntoView({
-                                                        behavior: 'smooth',
-                                                        block: 'center'
-                                                    });
-                                                }, 300);
+                                                    const container = scrollContainerRef.current;
+                                                    const input = e.target;
+                                                    if (container && input) {
+                                                        const containerRect = container.getBoundingClientRect();
+                                                        const inputRect = input.getBoundingClientRect();
+                                                        const keyboardHeight = 350;
+                                                        const availableHeight = window.innerHeight - keyboardHeight;
+                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
+
+                                                        container.scrollTo({
+                                                            top: Math.max(0, targetScrollTop),
+                                                            behavior: 'smooth'
+                                                        });
+                                                    }
+                                                }, 350);
                                             }
                                         }}
                                         className={cn(
@@ -576,15 +587,28 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 : t('write.content.placeholder_post')}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            onFocus={(e) => {
+                            onFocus={() => {
                                 // iOS: Scroll textarea into view when keyboard appears
-                                if (Capacitor.isNativePlatform()) {
+                                if (Capacitor.isNativePlatform() && textareaRef.current && scrollContainerRef.current) {
                                     setTimeout(() => {
-                                        e.target.scrollIntoView({
-                                            behavior: 'smooth',
-                                            block: 'center'
-                                        });
-                                    }, 300); // Wait for keyboard animation
+                                        const container = scrollContainerRef.current;
+                                        const textarea = textareaRef.current;
+                                        if (container && textarea) {
+                                            const containerRect = container.getBoundingClientRect();
+                                            const textareaRect = textarea.getBoundingClientRect();
+
+                                            // Calculate scroll position to center textarea with keyboard visible
+                                            // Assume keyboard takes ~350px on iOS
+                                            const keyboardHeight = 350;
+                                            const availableHeight = window.innerHeight - keyboardHeight;
+                                            const targetScrollTop = container.scrollTop + textareaRect.top - containerRect.top - (availableHeight / 2) + (textareaRect.height / 2);
+
+                                            container.scrollTo({
+                                                top: Math.max(0, targetScrollTop),
+                                                behavior: 'smooth'
+                                            });
+                                        }
+                                    }, 350); // Wait for keyboard animation
                                 }
                             }}
                         />
@@ -621,13 +645,23 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         value={linkUrl}
                                         onChange={e => setLinkUrl(e.target.value)}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
+                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
                                                 setTimeout(() => {
-                                                    e.target.scrollIntoView({
-                                                        behavior: 'smooth',
-                                                        block: 'center'
-                                                    });
-                                                }, 300);
+                                                    const container = scrollContainerRef.current;
+                                                    const input = e.target;
+                                                    if (container && input) {
+                                                        const containerRect = container.getBoundingClientRect();
+                                                        const inputRect = input.getBoundingClientRect();
+                                                        const keyboardHeight = 350;
+                                                        const availableHeight = window.innerHeight - keyboardHeight;
+                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
+
+                                                        container.scrollTo({
+                                                            top: Math.max(0, targetScrollTop),
+                                                            behavior: 'smooth'
+                                                        });
+                                                    }
+                                                }, 350);
                                             }
                                         }}
                                         autoFocus
@@ -638,13 +672,23 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         value={linkTitle}
                                         onChange={e => setLinkTitle(e.target.value)}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
+                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
                                                 setTimeout(() => {
-                                                    e.target.scrollIntoView({
-                                                        behavior: 'smooth',
-                                                        block: 'center'
-                                                    });
-                                                }, 300);
+                                                    const container = scrollContainerRef.current;
+                                                    const input = e.target;
+                                                    if (container && input) {
+                                                        const containerRect = container.getBoundingClientRect();
+                                                        const inputRect = input.getBoundingClientRect();
+                                                        const keyboardHeight = 350;
+                                                        const availableHeight = window.innerHeight - keyboardHeight;
+                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
+
+                                                        container.scrollTo({
+                                                            top: Math.max(0, targetScrollTop),
+                                                            behavior: 'smooth'
+                                                        });
+                                                    }
+                                                }, 350);
                                             }
                                         }}
                                     />

@@ -3,7 +3,7 @@ import { X, Loader2, Check, RotateCcw, Trash2, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
-
+import { Capacitor } from '@capacitor/core';
 import { Slider } from '@/components/ui/slider';
 
 interface ImageEditModalProps {
@@ -210,6 +210,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                             onMoveLeft={() => moveItem(index, -1)}
                                             onMoveRight={() => moveItem(index, 1)}
                                             onTextChange={(val) => setItems(prev => prev.map(i => i.id === item.id ? { ...i, imgText: val } : i))}
+                                            containerRef={containerRef}
                                             isFirst={index === 0}
                                             isLast={index === items.length - 1}
                                         />
@@ -248,7 +249,8 @@ const DraggableItem = ({
     onMoveRight,
     onTextChange,
     isFirst,
-    isLast
+    isLast,
+    containerRef
 }: {
     item: ProcessingItem,
     index: number,
@@ -261,16 +263,18 @@ const DraggableItem = ({
     onMoveRight: () => void,
     onTextChange: (val: string) => void,
     isFirst: boolean,
-    isLast: boolean
+    isLast: boolean,
+    containerRef?: React.RefObject<HTMLUListElement | null>
 }) => {
     const controls = useDragControls();
+    const inputRef = useRef<HTMLInputElement>(null);
 
     return (
         <Reorder.Item
             value={item}
             dragListener={false} // Disable auto drag to allow scroll
             dragControls={controls}
-            className={`relative flex-shrink-0 flex flex-col items-center gap-2`}
+            className={`draggable-item relative flex-shrink-0 flex flex-col items-center gap-2`}
             onClick={onSelect}
             style={{ touchAction: 'pan-x' }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
@@ -330,21 +334,34 @@ const DraggableItem = ({
 
             {/* Attached Caption Input */}
             <input
+                ref={inputRef}
                 type="text"
                 maxLength={40}
                 placeholder="메뉴 이름을 적어주세요"
                 value={item.imgText || ''}
                 onChange={(e) => onTextChange(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                onFocus={(e) => {
-                    // Scroll input into view when keyboard appears on mobile
-                    setTimeout(() => {
-                        e.target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center',
-                            inline: 'center'
-                        });
-                    }, 300); // Delay to wait for keyboard animation
+                onFocus={() => {
+                    // iOS: Scroll container to center this input when keyboard appears
+                    if (Capacitor.isNativePlatform() && containerRef?.current && inputRef.current) {
+                        setTimeout(() => {
+                            const container = containerRef.current;
+                            const input = inputRef.current;
+                            if (container && input) {
+                                const itemElement = input.closest('.draggable-item');
+                                if (itemElement) {
+                                    const containerRect = container.getBoundingClientRect();
+                                    const itemRect = itemElement.getBoundingClientRect();
+                                    const scrollLeft = container.scrollLeft + itemRect.left - containerRect.left - (containerRect.width / 2) + (itemRect.width / 2);
+
+                                    container.scrollTo({
+                                        left: scrollLeft,
+                                        behavior: 'smooth'
+                                    });
+                                }
+                            }
+                        }, 300); // Wait for keyboard animation
+                    }
                 }}
                 className="w-full bg-transparent py-2 text-center text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
             />
