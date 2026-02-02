@@ -240,39 +240,83 @@ router.get("/me", requireAuth, async (req, res) => {
 // Refresh access token using refresh token
 router.post("/refresh", async (req, res) => {
     try {
-        const refreshToken = req.cookies?.refresh_token;
+        console.log('[Auth] Token refresh requested');
+
+        // Try to get refresh token from cookie (web) or Authorization header (native)
+        let refreshToken = req.cookies?.refresh_token;
+        let isNativeRequest = false;
+
+        // If no cookie, check Authorization header (for native apps)
+        if (!refreshToken) {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                refreshToken = authHeader.substring(7);
+                isNativeRequest = true;
+                console.log('[Auth] Using refresh token from Authorization header (native)');
+            }
+        } else {
+            console.log('[Auth] Using refresh token from cookie (web)');
+        }
 
         if (!refreshToken) {
+            console.log('[Auth] ❌ No refresh token found');
             return res.status(401).json({ error: "Refresh token required" });
         }
 
         const payload = verifyRefreshToken(refreshToken);
         if (!payload) {
+            console.log('[Auth] ❌ Invalid refresh token');
             return res.status(401).json({ error: "Invalid refresh token" });
         }
+
+        console.log('[Auth] ✅ Refresh token verified, userId:', payload.userId);
 
         // Get user email for new access token
         const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
 
         if (!user) {
+            console.log('[Auth] ❌ User not found:', payload.userId);
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Generate new access token
+        // Generate new access token AND refresh token
         const accessToken = generateAccessToken(user.id, user.email);
+        const newRefreshToken = generateRefreshToken(user.id);
 
-        // Set new access token cookie
+        console.log('[Auth] ✅ New tokens generated');
+
+        // Set cookies (for web and as backup for native)
         res.cookie('access_token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             path: '/',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours (increased from 15 minutes)
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
 
-        res.json({ success: true, message: "Token refreshed" });
+        res.cookie('refresh_token', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        console.log('[Auth] ✅ Cookies set');
+
+        // For native apps, also return tokens in response body
+        res.json({
+            success: true,
+            message: "Token refreshed",
+            tokens: {
+                accessToken,
+                refreshToken: newRefreshToken
+            }
+        });
+
+        console.log('[Auth] ✅ Token refresh completed');
     } catch (error: any) {
-        console.error("Token refresh error:", error);
+        console.error("[Auth] ❌ Token refresh error:", error);
         res.status(500).json({ error: "Failed to refresh token" });
     }
 });

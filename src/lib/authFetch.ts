@@ -1,4 +1,4 @@
-import { getAuthHeader, isNativePlatform } from './tokenStorage';
+import { getAuthHeader, isNativePlatform, getRefreshToken, saveTokens } from './tokenStorage';
 import { CapacitorHttp, HttpResponse } from '@capacitor/core';
 import { API_BASE_URL } from './api';
 
@@ -8,9 +8,11 @@ let refreshPromise: Promise<boolean> | null = null;
 
 /**
  * Attempts to refresh the access token using the refresh token
+ * Works for both native and web platforms
  */
 async function refreshAccessToken(): Promise<boolean> {
   if (isRefreshing && refreshPromise) {
+    console.log('[authFetch] Token refresh already in progress, waiting...');
     return refreshPromise;
   }
 
@@ -19,20 +21,70 @@ async function refreshAccessToken(): Promise<boolean> {
     try {
       console.log('[authFetch] Attempting to refresh access token...');
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use CapacitorHttp for native, fetch for web
+      if (isNativePlatform()) {
+        console.log('[authFetch] Using CapacitorHttp for token refresh (native)');
 
-      if (response.ok) {
-        console.log('[authFetch] ✅ Token refreshed successfully');
-        return true;
+        // Get current refresh token
+        const refreshToken = await getRefreshToken();
+        if (!refreshToken) {
+          console.log('[authFetch] ❌ No refresh token found');
+          return false;
+        }
+
+        const response: HttpResponse = await CapacitorHttp.request({
+          url: `${API_BASE_URL}/api/auth/refresh`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`
+          }
+        });
+
+        console.log('[authFetch] Refresh response status:', response.status);
+        console.log('[authFetch] Refresh response data:', response.data);
+
+        if (response.status === 200 && response.data) {
+          const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+
+          if (data.tokens && data.tokens.accessToken && data.tokens.refreshToken) {
+            console.log('[authFetch] ✅ New tokens received, saving...');
+
+            // Save new tokens
+            const saved = await saveTokens(data.tokens.accessToken, data.tokens.refreshToken);
+
+            if (saved) {
+              console.log('[authFetch] ✅ Token refreshed and saved successfully (native)');
+              return true;
+            } else {
+              console.log('[authFetch] ❌ Failed to save new tokens');
+              return false;
+            }
+          } else {
+            console.log('[authFetch] ❌ Token refresh response missing tokens');
+            return false;
+          }
+        } else {
+          console.log('[authFetch] ❌ Token refresh failed (native), status:', response.status);
+          return false;
+        }
       } else {
-        console.log('[authFetch] ❌ Token refresh failed');
-        return false;
+        console.log('[authFetch] Using fetch for token refresh (web)');
+        const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          console.log('[authFetch] ✅ Token refreshed successfully (web)');
+          return true;
+        } else {
+          console.log('[authFetch] ❌ Token refresh failed (web), status:', response.status);
+          return false;
+        }
       }
     } catch (error) {
       console.error('[authFetch] Token refresh error:', error);
@@ -64,6 +116,7 @@ export async function authFetch(url: string, options: RequestInit = {}, retryCou
     console.log('[authFetch] Using CapacitorHttp for native platform');
     console.log('[authFetch] URL:', url);
     console.log('[authFetch] Method:', options.method || 'GET');
+    console.log('[authFetch] Retry count:', retryCount);
 
     const authHeader = await getAuthHeader();
     console.log('[authFetch] Auth header:', authHeader);
@@ -85,8 +138,30 @@ export async function authFetch(url: string, options: RequestInit = {}, retryCou
       });
 
       console.log('[authFetch] Native response status:', response.status);
+
+      // Handle 401 errors - attempt token refresh
+      if (response.status === 401 && retryCount === 0 && !url.includes('/auth/refresh') && !url.includes('/auth/login')) {
+        console.log('[authFetch] ❌ Received 401 on native platform, attempting token refresh...');
+
+        const refreshed = await refreshAccessToken();
+
+        if (refreshed) {
+          console.log('[authFetch] ✅ Token refreshed successfully, retrying original request...');
+          // Wait a bit to ensure token is saved
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Retry the original request
+          return authFetch(url, options, retryCount + 1);
+        } else {
+          console.log('[authFetch] ❌ Token refresh failed, redirecting to login');
+          // Redirect to login if refresh fails
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/start') && !window.location.pathname.includes('/login')) {
+            console.log('[authFetch] Redirecting to /start due to auth failure');
+            window.location.href = '/start';
+          }
+        }
+      }
+
       console.log('[authFetch] Native response data type:', typeof response.data);
-      console.log('[authFetch] Native response data:', response.data);
 
       // CapacitorHttp already parses JSON, so response.data is already an object
       // We need to convert it to a string for the Response constructor

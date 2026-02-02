@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
+import { Capacitor } from '@capacitor/core';
 
 interface Props {
     onSelect: (shop: any) => void;
@@ -246,7 +247,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 placeholder={t('write.search.placeholder')}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                autoFocus
+                                autoFocus={!Capacitor.isNativePlatform()}
                             />
                         </div>
                     </div>
@@ -545,9 +546,16 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                 placeholder="지역 입력"
                                 value={regionInput}
                                 onChange={(e) => setRegionInput(e.target.value)}
-                                autoFocus
+                                autoFocus={!Capacitor.isNativePlatform()}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleConfirmGoogleSearch();
+                                }}
+                                onFocus={(e) => {
+                                    if (Capacitor.isNativePlatform()) {
+                                        setTimeout(() => {
+                                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }, 300);
+                                    }
                                 }}
                             />
                         </div>

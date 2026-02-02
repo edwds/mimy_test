@@ -34,13 +34,21 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
     const [submitting, setSubmitting] = useState(false);
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch comments when sheet opens
+    // Fetch comments when sheet opens and auto-focus input
     useEffect(() => {
         if (isOpen && contentId) {
             fetchComments();
+
+            // Auto-focus input after sheet animation
+            setTimeout(() => {
+                if (inputRef.current && user) {
+                    inputRef.current.focus();
+                }
+            }, 400); // Wait for sheet animation to complete
         }
-    }, [isOpen, contentId]);
+    }, [isOpen, contentId, user]);
 
     // Handle Keyboard and Body Scroll
     useEffect(() => {
@@ -276,6 +284,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
                 >
                     <form onSubmit={handleSubmit} className="flex gap-2">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}

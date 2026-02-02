@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
       forceCodeForRefreshToken: true
     },
     Keyboard: {
-      resize: 'body',
+      resize: 'native',
       style: 'dark'
     }
   },

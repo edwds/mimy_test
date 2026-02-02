@@ -3,6 +3,7 @@ import { X, Search, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 
 
 interface User {
@@ -111,6 +112,13 @@ export const UserSelectModal: React.FC<Props> = ({ isOpen, onClose, onSelect, in
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9 bg-muted/30 border-none h-11 text-base rounded-xl"
+                            onFocus={(e) => {
+                                if (Capacitor.isNativePlatform()) {
+                                    setTimeout(() => {
+                                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 300);
+                                }
+                            }}
                         />
                     </div>
                 </div>

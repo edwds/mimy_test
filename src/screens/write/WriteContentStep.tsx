@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +12,8 @@ import { UserSelectModal } from './UserSelectModal';
 import exifr from 'exifr';
 import { useUser } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
-import { getAccessToken } from '@/lib/tokenStorage';
+import { Keyboard } from '@capacitor/keyboard';
+import { getAccessToken, saveTokens } from '@/lib/tokenStorage';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -64,6 +65,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const [text, setText] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
 
 
@@ -93,6 +95,33 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Caption Edit State
     const [captionEditId, setCaptionEditId] = useState<string | null>(null);
     const [captionEditText, setCaptionEditText] = useState('');
+
+    // Keyboard Height Tracking for iOS
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            let keyboardWillShowListener: any;
+            let keyboardWillHideListener: any;
+
+            const setupListeners = async () => {
+                keyboardWillShowListener = await Keyboard.addListener('keyboardWillShow', (info) => {
+                    console.log('[WriteContentStep] Keyboard will show:', info.keyboardHeight);
+                    setKeyboardHeight(info.keyboardHeight);
+                });
+
+                keyboardWillHideListener = await Keyboard.addListener('keyboardWillHide', () => {
+                    console.log('[WriteContentStep] Keyboard will hide');
+                    setKeyboardHeight(0);
+                });
+            };
+
+            setupListeners();
+
+            return () => {
+                keyboardWillShowListener?.remove();
+                keyboardWillHideListener?.remove();
+            };
+        }
+    }, []);
 
     const handleCaptionSave = () => {
         if (captionEditId) {
@@ -184,61 +213,110 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             token = await getAccessToken();
         }
 
-        // Start uploads
+        // Upload each file with retry logic
         newItems.forEach(item => {
             if (!item.file) return;
-            const formData = new FormData();
-            formData.append('file', item.file);
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE_URL}/api/upload`);
+            const uploadWithRetry = async (retryCount = 0) => {
+                const formData = new FormData();
+                formData.append('file', item.file!);
 
-            // Add auth header if token exists
-            if (token) {
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            }
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE_URL}/api/upload`);
 
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = (e.loaded / e.total) * 100;
-                    setMediaItems(prev => prev.map(m =>
-                        m.id === item.id ? { ...m, progress: percent } : m
-                    ));
+                // Add auth header if token exists
+                if (token) {
+                    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                 }
-            };
 
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    try {
-                        const data = JSON.parse(xhr.response);
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
                         setMediaItems(prev => prev.map(m =>
-                            m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                            m.id === item.id ? { ...m, progress: percent } : m
                         ));
-                    } catch (e) {
+                    }
+                };
+
+                xhr.onload = async () => {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.response);
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'complete', url: data.url, progress: 100 } : m
+                            ));
+                        } catch (e) {
+                            console.error('[Upload] Failed to parse response:', e);
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                        }
+                    } else if (xhr.status === 401 && retryCount === 0) {
+                        console.log('[Upload] ❌ 401 error, attempting token refresh and retry...');
+
+                        // Attempt to refresh token
+                        try {
+                            const { authFetch } = await import('@/lib/authFetch');
+                            const refreshResponse = await authFetch(`${API_BASE_URL}/api/auth/refresh`, {
+                                method: 'POST'
+                            });
+
+                            if (refreshResponse.ok) {
+                                console.log('[Upload] ✅ Token refreshed successfully');
+
+                                // For native, save the new tokens
+                                if (Capacitor.isNativePlatform()) {
+                                    try {
+                                        const refreshData = await refreshResponse.json();
+                                        if (refreshData.tokens && refreshData.tokens.accessToken && refreshData.tokens.refreshToken) {
+                                            console.log('[Upload] Saving new tokens...');
+                                            await saveTokens(refreshData.tokens.accessToken, refreshData.tokens.refreshToken);
+                                            console.log('[Upload] ✅ New tokens saved');
+
+                                            // Get new token for retry
+                                            token = await getAccessToken();
+                                        }
+                                    } catch (e) {
+                                        console.error('[Upload] Failed to save tokens:', e);
+                                    }
+                                }
+
+                                // Wait a bit and retry
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                uploadWithRetry(retryCount + 1);
+                            } else {
+                                console.log('[Upload] ❌ Token refresh failed, status:', refreshResponse.status);
+                                alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                                setMediaItems(prev => prev.map(m =>
+                                    m.id === item.id ? { ...m, status: 'error' } : m
+                                ));
+                            }
+                        } catch (error) {
+                            console.error('[Upload] Token refresh error:', error);
+                            alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                            setMediaItems(prev => prev.map(m =>
+                                m.id === item.id ? { ...m, status: 'error' } : m
+                            ));
+                        }
+                    } else {
+                        console.error('[Upload] Failed with status:', xhr.status);
                         setMediaItems(prev => prev.map(m =>
                             m.id === item.id ? { ...m, status: 'error' } : m
                         ));
                     }
-                } else if (xhr.status === 401) {
-                    // Auth error
-                    alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                };
+
+                xhr.onerror = () => {
+                    console.error('[Upload] Network error');
                     setMediaItems(prev => prev.map(m =>
                         m.id === item.id ? { ...m, status: 'error' } : m
                     ));
-                } else {
-                    setMediaItems(prev => prev.map(m =>
-                        m.id === item.id ? { ...m, status: 'error' } : m
-                    ));
-                }
+                };
+
+                xhr.send(formData);
             };
 
-            xhr.onerror = () => {
-                setMediaItems(prev => prev.map(m =>
-                    m.id === item.id ? { ...m, status: 'error' } : m
-                ));
-            };
-
-            xhr.send(formData);
+            uploadWithRetry();
         });
     };
 
@@ -364,7 +442,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 </Button>
             </div>
 
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto" data-scroll-container="true">
+            <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto"
+                data-scroll-container="true"
+                style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : '0px' }}
+            >
                 {/* Content Area */}
                 <div className="p-6 space-y-8">
 
@@ -518,23 +601,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                             setIsDateManuallySet(true);
                                         }}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
+                                            if (Capacitor.isNativePlatform()) {
                                                 setTimeout(() => {
-                                                    const container = scrollContainerRef.current;
-                                                    const input = e.target;
-                                                    if (container && input) {
-                                                        const containerRect = container.getBoundingClientRect();
-                                                        const inputRect = input.getBoundingClientRect();
-                                                        const keyboardHeight = 350;
-                                                        const availableHeight = window.innerHeight - keyboardHeight;
-                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
-
-                                                        container.scrollTo({
-                                                            top: Math.max(0, targetScrollTop),
-                                                            behavior: 'smooth'
-                                                        });
-                                                    }
-                                                }, 350);
+                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                }, 300);
                                             }
                                         }}
                                         className={cn(
@@ -587,28 +657,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 : t('write.content.placeholder_post')}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            onFocus={() => {
+                            onFocus={(e) => {
                                 // iOS: Scroll textarea into view when keyboard appears
-                                if (Capacitor.isNativePlatform() && textareaRef.current && scrollContainerRef.current) {
+                                if (Capacitor.isNativePlatform()) {
                                     setTimeout(() => {
-                                        const container = scrollContainerRef.current;
-                                        const textarea = textareaRef.current;
-                                        if (container && textarea) {
-                                            const containerRect = container.getBoundingClientRect();
-                                            const textareaRect = textarea.getBoundingClientRect();
-
-                                            // Calculate scroll position to center textarea with keyboard visible
-                                            // Assume keyboard takes ~350px on iOS
-                                            const keyboardHeight = 350;
-                                            const availableHeight = window.innerHeight - keyboardHeight;
-                                            const targetScrollTop = container.scrollTop + textareaRect.top - containerRect.top - (availableHeight / 2) + (textareaRect.height / 2);
-
-                                            container.scrollTo({
-                                                top: Math.max(0, targetScrollTop),
-                                                behavior: 'smooth'
-                                            });
-                                        }
-                                    }, 350); // Wait for keyboard animation
+                                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 300);
                                 }
                             }}
                         />
@@ -645,23 +699,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         value={linkUrl}
                                         onChange={e => setLinkUrl(e.target.value)}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
+                                            if (Capacitor.isNativePlatform()) {
                                                 setTimeout(() => {
-                                                    const container = scrollContainerRef.current;
-                                                    const input = e.target;
-                                                    if (container && input) {
-                                                        const containerRect = container.getBoundingClientRect();
-                                                        const inputRect = input.getBoundingClientRect();
-                                                        const keyboardHeight = 350;
-                                                        const availableHeight = window.innerHeight - keyboardHeight;
-                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
-
-                                                        container.scrollTo({
-                                                            top: Math.max(0, targetScrollTop),
-                                                            behavior: 'smooth'
-                                                        });
-                                                    }
-                                                }, 350);
+                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                }, 300);
                                             }
                                         }}
                                         autoFocus
@@ -672,23 +713,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         value={linkTitle}
                                         onChange={e => setLinkTitle(e.target.value)}
                                         onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform() && scrollContainerRef.current) {
+                                            if (Capacitor.isNativePlatform()) {
                                                 setTimeout(() => {
-                                                    const container = scrollContainerRef.current;
-                                                    const input = e.target;
-                                                    if (container && input) {
-                                                        const containerRect = container.getBoundingClientRect();
-                                                        const inputRect = input.getBoundingClientRect();
-                                                        const keyboardHeight = 350;
-                                                        const availableHeight = window.innerHeight - keyboardHeight;
-                                                        const targetScrollTop = container.scrollTop + inputRect.top - containerRect.top - (availableHeight / 2) + (inputRect.height / 2);
-
-                                                        container.scrollTo({
-                                                            top: Math.max(0, targetScrollTop),
-                                                            behavior: 'smooth'
-                                                        });
-                                                    }
-                                                }, 350);
+                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                }, 300);
                                             }
                                         }}
                                     />
