@@ -235,7 +235,12 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
                 </div>
 
                 {/* Input */}
-                <div className="p-4 border-t bg-white safe-area-pb z-20">
+                <div
+                    className="p-4 border-t bg-white safe-area-pb z-20"
+                    style={{
+                        paddingBottom: keyboardHeight > 0 ? '80px' : '16px'
+                    }}
+                >
                     <form onSubmit={handleSubmit} className="flex gap-2">
                         <input
                             type="text"
