@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
-import { Keyboard } from '@capacitor/keyboard';
 
 interface Comment {
     id: number;
@@ -32,7 +31,6 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
     const [loading, setLoading] = useState(false);
     const [inputText, setInputText] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,16 +39,18 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
         if (isOpen && contentId) {
             fetchComments();
 
-            // Auto-focus input after sheet animation
-            setTimeout(() => {
-                if (inputRef.current && user) {
-                    inputRef.current.focus();
-                }
-            }, 400); // Wait for sheet animation to complete
+            // Auto-focus input after sheet animation - only on native
+            if (Capacitor.isNativePlatform()) {
+                setTimeout(() => {
+                    if (inputRef.current && user) {
+                        inputRef.current.focus();
+                    }
+                }, 500); // Wait for sheet animation to complete
+            }
         }
     }, [isOpen, contentId, user]);
 
-    // Handle Keyboard and Body Scroll
+    // Handle Body Scroll Lock
     useEffect(() => {
         if (!isOpen) {
             document.body.style.overflow = '';
@@ -68,53 +68,10 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
 
-        // iOS Capacitor: Use Keyboard API
-        if (Capacitor.isNativePlatform()) {
-            let keyboardWillShowListener: any;
-            let keyboardWillHideListener: any;
-
-            const setupListeners = async () => {
-                keyboardWillShowListener = await Keyboard.addListener('keyboardWillShow', (info) => {
-                    console.log('[CommentSheet] Keyboard will show:', info.keyboardHeight);
-                    setKeyboardHeight(info.keyboardHeight);
-                });
-
-                keyboardWillHideListener = await Keyboard.addListener('keyboardWillHide', () => {
-                    console.log('[CommentSheet] Keyboard will hide');
-                    setKeyboardHeight(0);
-                });
-            };
-
-            setupListeners();
-
-            return () => {
-                document.body.style.overflow = originalOverflow;
-                document.body.style.position = originalPosition;
-                document.body.style.width = originalWidth;
-                keyboardWillShowListener?.remove();
-                keyboardWillHideListener?.remove();
-            };
-        }
-
-        // Web: Use Visual Viewport API
-        const handleVisualViewportChange = () => {
-            if (window.visualViewport) {
-                const vh = window.visualViewport.height;
-                const kh = window.innerHeight - vh;
-                setKeyboardHeight(Math.max(0, kh));
-            }
-        };
-
-        window.visualViewport?.addEventListener('resize', handleVisualViewportChange);
-        window.visualViewport?.addEventListener('scroll', handleVisualViewportChange);
-        handleVisualViewportChange();
-
         return () => {
             document.body.style.overflow = originalOverflow;
             document.body.style.position = originalPosition;
             document.body.style.width = originalWidth;
-            window.visualViewport?.removeEventListener('resize', handleVisualViewportChange);
-            window.visualViewport?.removeEventListener('scroll', handleVisualViewportChange);
         };
     }, [isOpen]);
 
@@ -204,14 +161,13 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
                 onClick={onClose}
             />
 
-            {/* Sheet */}
+            {/* Sheet - Fixed 90% height, top stays in place */}
             <div
+                className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 pointer-events-auto"
                 style={{
-                    transform: `translateY(-${keyboardHeight}px)`,
-                    maxHeight: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : '85%',
-                    height: keyboardHeight > 0 ? `calc(100vh - ${keyboardHeight}px - 20px)` : '75%'
+                    height: '90vh',
+                    maxHeight: '90vh'
                 }}
-                className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 pointer-events-auto transition-all duration-200 ease-out"
             >
                 {/* Header */}
                 <div className="p-4 border-b flex items-center justify-between bg-white/80 backdrop-blur-md rounded-t-3xl z-10 sticky top-0">
@@ -277,9 +233,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
                 <div
                     className="p-4 border-t bg-white z-20"
                     style={{
-                        paddingBottom: Capacitor.isNativePlatform()
-                            ? 'max(8px, env(safe-area-inset-bottom))'
-                            : (keyboardHeight > 0 ? '80px' : '16px')
+                        paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
                     }}
                 >
                     <form onSubmit={handleSubmit} className="flex gap-2">

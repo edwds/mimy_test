@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Reorder, useDragControls } from 'framer-motion';
 import { processImageToSquare, processImageWithCrop } from '@/lib/imageProcessor';
 import { Capacitor } from '@capacitor/core';
-import { Keyboard } from '@capacitor/keyboard';
 import { Slider } from '@/components/ui/slider';
 
 interface ImageEditModalProps {
@@ -32,7 +31,6 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const containerRef = useRef<HTMLUListElement>(null);
     const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     const moveItem = (index: number, direction: number) => {
         const newIndex = index + direction;
@@ -88,33 +86,6 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
             itemRefs.current.clear();
         }
     }, [isOpen, files]);
-
-    // Keyboard Height Tracking for iOS
-    useEffect(() => {
-        if (isOpen && Capacitor.isNativePlatform()) {
-            let keyboardWillShowListener: any;
-            let keyboardWillHideListener: any;
-
-            const setupListeners = async () => {
-                keyboardWillShowListener = await Keyboard.addListener('keyboardWillShow', (info) => {
-                    console.log('[ImageEditModal] Keyboard will show:', info.keyboardHeight);
-                    setKeyboardHeight(info.keyboardHeight);
-                });
-
-                keyboardWillHideListener = await Keyboard.addListener('keyboardWillHide', () => {
-                    console.log('[ImageEditModal] Keyboard will hide');
-                    setKeyboardHeight(0);
-                });
-            };
-
-            setupListeners();
-
-            return () => {
-                keyboardWillShowListener?.remove();
-                keyboardWillHideListener?.remove();
-            };
-        }
-    }, [isOpen]);
 
     // Cleanup
     useEffect(() => {
@@ -211,10 +182,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                 <p>사진 불러오는 중...</p>
                             </div>
                         ) : (
-                            <div
-                                className="w-full flex flex-col items-center h-full justify-center pb-20"
-                                style={{ paddingBottom: keyboardHeight ? `${keyboardHeight + 20}px` : '80px' }}
-                            >
+                            <div className="w-full flex flex-col items-center h-full justify-center pb-20">
                                 <div className="text-white/50 text-base text-center">
                                     사진을 크롭하거나 순서를 변경할 수 있어요
                                 </div>
@@ -379,9 +347,9 @@ const DraggableItem = ({
                         setTimeout(() => {
                             const itemElement = e.target.closest('.draggable-item') as HTMLElement;
                             if (itemElement && containerRef?.current) {
-                                itemElement.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+                                itemElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                             }
-                        }, 300);
+                        }, 100);
                     }
                 }}
                 className="w-full bg-transparent py-2 text-center text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
