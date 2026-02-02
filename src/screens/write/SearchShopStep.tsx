@@ -361,7 +361,14 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                                     ) : null}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                                    <span className="truncate">{shop.address_region || shop.address_full || shop.formatted_address}</span>
+                                                    <span className={cn(
+                                                        isGoogleMode ? "line-clamp-2" : "truncate"
+                                                    )}>
+                                                        {isGoogleMode
+                                                            ? (shop.formatted_address || shop.vicinity || shop.address_full)
+                                                            : (shop.address_region || shop.address_full || shop.formatted_address)
+                                                        }
+                                                    </span>
                                                 </div>
                                             </div>
 
