@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,8 @@ import { ImageEditModal } from './ImageEditModal';
 import { UserSelectModal } from './UserSelectModal';
 import exifr from 'exifr';
 import { useUser } from '@/context/UserContext';
+import { Capacitor } from '@capacitor/core';
+import { getAccessToken } from '@/lib/tokenStorage';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -60,6 +62,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const { t } = useTranslation();
     const { user } = useUser();
     const [text, setText] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 
 
@@ -174,6 +177,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
         setMediaItems(prev => [...prev, ...newItems]);
 
+        // Get auth token for upload
+        let token: string | null = null;
+        if (Capacitor.isNativePlatform()) {
+            token = await getAccessToken();
+        }
+
         // Start uploads
         newItems.forEach(item => {
             if (!item.file) return;
@@ -182,6 +191,11 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${API_BASE_URL}/api/upload`);
+
+            // Add auth header if token exists
+            if (token) {
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            }
 
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
@@ -204,6 +218,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             m.id === item.id ? { ...m, status: 'error' } : m
                         ));
                     }
+                } else if (xhr.status === 401) {
+                    // Auth error
+                    alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                    setMediaItems(prev => prev.map(m =>
+                        m.id === item.id ? { ...m, status: 'error' } : m
+                    ));
                 } else {
                     setMediaItems(prev => prev.map(m =>
                         m.id === item.id ? { ...m, status: 'error' } : m
@@ -496,6 +516,16 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                             setVisitDate(e.target.value);
                                             setIsDateManuallySet(true);
                                         }}
+                                        onFocus={(e) => {
+                                            if (Capacitor.isNativePlatform()) {
+                                                setTimeout(() => {
+                                                    e.target.scrollIntoView({
+                                                        behavior: 'smooth',
+                                                        block: 'center'
+                                                    });
+                                                }, 300);
+                                            }
+                                        }}
                                         className={cn(
                                             "w-full bg-muted/30 h-10 pl-9 pr-3 rounded-xl text-sm font-medium focus:bg-background border border-transparent focus:border-primary transition-colors outline-none cursor-pointer",
                                             !isDateManuallySet && "text-muted-foreground"
@@ -539,12 +569,24 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             </Label>
                         )}
                         <Textarea
+                            ref={textareaRef}
                             className="min-h-[150px] text-lg bg-transparent border-none p-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 resize-none leading-relaxed"
                             placeholder={mode === 'review'
                                 ? t('write.content.placeholder_review')
                                 : t('write.content.placeholder_post')}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
+                            onFocus={(e) => {
+                                // iOS: Scroll textarea into view when keyboard appears
+                                if (Capacitor.isNativePlatform()) {
+                                    setTimeout(() => {
+                                        e.target.scrollIntoView({
+                                            behavior: 'smooth',
+                                            block: 'center'
+                                        });
+                                    }, 300); // Wait for keyboard animation
+                                }
+                            }}
                         />
                     </div>
 
@@ -578,6 +620,16 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         placeholder="URL (e.g. https://mimy.kr)"
                                         value={linkUrl}
                                         onChange={e => setLinkUrl(e.target.value)}
+                                        onFocus={(e) => {
+                                            if (Capacitor.isNativePlatform()) {
+                                                setTimeout(() => {
+                                                    e.target.scrollIntoView({
+                                                        behavior: 'smooth',
+                                                        block: 'center'
+                                                    });
+                                                }, 300);
+                                            }
+                                        }}
                                         autoFocus
                                     />
                                     <input
@@ -585,6 +637,16 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         placeholder="Link Title (Optional)"
                                         value={linkTitle}
                                         onChange={e => setLinkTitle(e.target.value)}
+                                        onFocus={(e) => {
+                                            if (Capacitor.isNativePlatform()) {
+                                                setTimeout(() => {
+                                                    e.target.scrollIntoView({
+                                                        behavior: 'smooth',
+                                                        block: 'center'
+                                                    });
+                                                }, 300);
+                                            }
+                                        }}
                                     />
                                     <div className="flex justify-end pt-1">
                                         <Button size="sm" onClick={handleAddLink} disabled={!linkUrl.trim()}>Add</Button>

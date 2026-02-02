@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Send, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
@@ -187,7 +188,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end justify-center pointer-events-none">
             {/* Backdrop */}
             <div
@@ -295,6 +296,7 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
                     </form>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

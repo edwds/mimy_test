@@ -8,8 +8,6 @@ import { WriteContentStep } from './WriteContentStep';
 import { ContentService } from '@/services/ContentService';
 import { ShopService } from '@/services/ShopService';
 import { useRanking } from '@/context/RankingContext';
-import { Capacitor } from '@capacitor/core';
-import { getAccessToken } from '@/lib/tokenStorage';
 import { useUser } from '@/context/UserContext';
 
 export const WriteFlow = () => {
@@ -156,20 +154,6 @@ export const WriteFlow = () => {
                 alert("Login required");
                 navigate('/login');
                 return;
-            }
-
-            // Verify authentication token for native platforms
-            if (Capacitor.isNativePlatform()) {
-                console.log('[WriteFlow] Native platform detected, verifying token...');
-                const token = await getAccessToken();
-                if (!token) {
-                    console.error('[WriteFlow] ❌ No access token found!');
-                    alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
-                    navigate('/login');
-                    setIsSubmitting(false);
-                    return;
-                }
-                console.log('[WriteFlow] ✅ Token verified, proceeding with submission');
             }
 
             // Prepare payload (user_id is NOT needed - backend gets it from JWT)

@@ -16,14 +16,14 @@ const config: CapacitorConfig = {
       forceCodeForRefreshToken: true
     },
     Keyboard: {
-      resize: 'native',
-      resizeOnFullScreen: true
+      resize: 'body',
+      style: 'dark'
     }
   },
   ios: {
-    allowsBackForwardNavigationGestures: true,
     contentInset: 'never',
-    scrollEnabled: false
+    scrollEnabled: false,
+    backgroundColor: '#ffffff'
   }
 };
 
