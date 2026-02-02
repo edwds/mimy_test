@@ -95,7 +95,8 @@ export async function authFetch(url: string, options: RequestInit = {}, retryCou
       if (response.data === null || response.data === undefined) {
         bodyText = 'null';
       } else if (typeof response.data === 'string') {
-        bodyText = response.data;
+        // Handle empty strings - convert to null JSON
+        bodyText = response.data.trim() === '' ? 'null' : response.data;
       } else if (typeof response.data === 'object') {
         bodyText = JSON.stringify(response.data);
       } else {

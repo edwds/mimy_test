@@ -223,7 +223,14 @@ export const ProfileStep = () => {
 
                     navigate('/quiz/intro');
                 } else {
-                    const errorData = await response.json();
+                    let errorData: any = null;
+                    try {
+                        const text = await response.text();
+                        errorData = text ? JSON.parse(text) : { error: 'Unknown error' };
+                    } catch (parseError) {
+                        console.error('[Register] Failed to parse error response:', parseError);
+                        errorData = { error: 'Failed to parse server response' };
+                    }
                     console.error('[Register] Server error:', response.status, errorData);
                     alert(errorData.error || "Failed to save profile");
                     setChecking(false);
