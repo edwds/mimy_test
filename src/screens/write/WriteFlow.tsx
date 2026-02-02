@@ -249,15 +249,16 @@ export const WriteFlow = () => {
                     onNext={handleSubmitContent}
                     isSubmitting={isSubmitting}
                     onBack={() => {
-                        // Back from writing content -> Show overlay again or just go back to search?
-                        // If they were writing content, going back implies cancelling or re-ranking.
-                        // Open ranking for current shop again?
-                        if (selectedShop) {
-                            setStep('SEARCH_SHOP');
-                            openRanking(selectedShop);
-                        } else {
-                            setStep('SEARCH_SHOP');
+                        // Ask user if they want to cancel writing
+                        const shouldCancel = window.confirm(
+                            '글쓰기를 취소하시겠습니까?\n랭킹은 이미 저장되었습니다.'
+                        );
+
+                        if (shouldCancel) {
+                            // Cancel writing and go back to main with ranking saved
+                            navigate('/main');
                         }
+                        // If user clicks "Cancel" on the confirm dialog, stay on current step
                     }}
                 />
             )}
