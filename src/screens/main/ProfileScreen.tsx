@@ -504,7 +504,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                                 fill="none"
                                                 stroke="currentColor"
                                                 strokeWidth="8"
-                                                className="text-muted/20"
+                                                className="text-muted/50"
                                             />
                                             {/* Progress circle */}
                                             {(user.stats?.ranking_count || 0) > 0 && (
