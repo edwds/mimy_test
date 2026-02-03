@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ThumbsUp, X, Minus } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 
-import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { QUESTIONS } from '@/data/quiz';
 import { useUser } from '@/context/UserContext';
 
@@ -21,13 +21,19 @@ export const QuizScreen = () => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-25, 25]);
-    const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+
+    // Color overlays based on swipe direction
+    const redOverlay = useTransform(x, [-200, 0], [1, 0]);
+    const greenOverlay = useTransform(x, [0, 200], [0, 1]);
+    const grayOverlay = useTransform(y, [-200, 0], [1, 0]);
 
     const handleClose = () => {
         navigate(-1);
     };
 
     const handleSwipe = (direction: 'left' | 'right' | 'up') => {
+        if (exitDirection) return; // Prevent multiple swipes
+
         // Map swipe direction to answer value
         // left = -1 (싫어요), up = 0 (별생각없어요), right = +1 (좋아요)
         const val = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
@@ -35,17 +41,18 @@ export const QuizScreen = () => {
         setExitDirection(direction);
         setAnswers(prev => ({ ...prev, [currentQuestion.id]: val }));
 
-        // Next Question
+        // Next Question - wait for card to fully exit
         setTimeout(() => {
             setExitDirection(null);
+            x.set(0);
+            y.set(0);
+
             if (currentIndex < QUESTIONS.length - 1) {
                 setCurrentIndex(prev => prev + 1);
-                x.set(0);
-                y.set(0);
             } else {
                 finishQuiz({ ...answers, [currentQuestion.id]: val });
             }
-        }, 300);
+        }, 500);
     };
 
     const handleDragEnd = (_: any, info: PanInfo) => {
@@ -136,126 +143,140 @@ export const QuizScreen = () => {
                 </div>
             </div>
 
-            {/* Swipe Instructions */}
-            <div className="px-6 py-4 flex justify-between items-center text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <X className="w-5 h-5 text-red-500" />
-                    <span>싫어요</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Minus className="w-5 h-5 text-gray-400" />
-                    <span>별로</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <ThumbsUp className="w-5 h-5 text-green-500" />
-                    <span>좋아요</span>
-                </div>
-            </div>
-
             {/* Stacked Cards Container */}
-            <main className="flex-1 flex flex-col items-center justify-center px-6 py-6 relative">
-                {/* Card Stack - wider cards */}
-                <div className="relative w-full max-w-md aspect-[3/4]">
-                    {/* Background stacked cards (next 2 cards) */}
+            <main className="flex-1 flex flex-col items-center justify-start px-6 pt-12 relative">
+                {/* Card Stack - cards stacked vertically with scale */}
+                <div className="relative w-full max-w-md" style={{ height: 'calc(75vw * 4/3)', maxHeight: '600px' }}>
+                    {/* All cards rendered with smooth transitions */}
                     {currentIndex + 2 < QUESTIONS.length && (
-                        <div className="absolute inset-0 bg-card border border-border rounded-3xl shadow-lg"
-                            style={{
-                                transform: 'translateY(16px) scale(0.92)',
-                                opacity: 0.4,
+                        <motion.div
+                            key={`card-${currentIndex + 2}`}
+                            className="absolute bg-card border-2 border-border rounded-3xl shadow-lg overflow-hidden"
+                            animate={{
+                                scale: 0.88,
+                                y: -24,
                                 zIndex: 1
                             }}
-                        />
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                left: 0,
+                                top: 0,
+                                transformOrigin: 'top center'
+                            }}
+                        >
+                            <div className="p-10 flex items-center h-full">
+                                <div className="text-3xl font-bold leading-tight text-left w-full">
+                                    {QUESTIONS[currentIndex + 2]?.text}
+                                </div>
+                            </div>
+                        </motion.div>
                     )}
                     {currentIndex + 1 < QUESTIONS.length && (
-                        <div className="absolute inset-0 bg-card border border-border rounded-3xl shadow-xl"
-                            style={{
-                                transform: 'translateY(8px) scale(0.96)',
-                                opacity: 0.7,
+                        <motion.div
+                            key={`card-${currentIndex + 1}`}
+                            className="absolute bg-card border-2 border-border rounded-3xl shadow-xl overflow-hidden"
+                            animate={{
+                                scale: 0.94,
+                                y: -12,
                                 zIndex: 2
                             }}
-                        />
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                left: 0,
+                                top: 0,
+                                transformOrigin: 'top center'
+                            }}
+                        >
+                            <div className="p-10 flex items-center h-full">
+                                <div className="text-3xl font-bold leading-tight text-left w-full">
+                                    {QUESTIONS[currentIndex + 1]?.text}
+                                </div>
+                            </div>
+                        </motion.div>
                     )}
 
                     {/* Active Card */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentIndex}
-                            style={{
-                                x: exitDirection ? (exitDirection === 'left' ? -300 : exitDirection === 'right' ? 300 : 0) : x,
-                                y: exitDirection === 'up' ? -300 : y,
-                                rotate,
-                                opacity: exitDirection ? 0 : opacity,
-                                zIndex: 3
-                            }}
-                            drag={!exitDirection}
-                            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                            dragElastic={1}
-                            onDragEnd={handleDragEnd}
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="absolute inset-0 bg-card border-2 border-border rounded-3xl shadow-2xl p-10 cursor-grab active:cursor-grabbing flex items-center"
-                        >
-                            <h2 className="text-3xl font-bold leading-tight text-left w-full">
+                    <motion.div
+                        key={`card-${currentIndex}`}
+                        className="absolute bg-card border-2 border-border rounded-3xl shadow-2xl overflow-hidden"
+                        animate={{
+                            scale: exitDirection ? 1 : 1,
+                            y: exitDirection ? 0 : 0,
+                            x: exitDirection === 'left' ? -500 : exitDirection === 'right' ? 500 : 0,
+                            rotate: exitDirection === 'left' ? -30 : exitDirection === 'right' ? 30 : 0,
+                            opacity: exitDirection ? 0 : 1,
+                            zIndex: 3
+                        }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        drag={!exitDirection}
+                        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                        dragElastic={1}
+                        onDragEnd={handleDragEnd}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            left: 0,
+                            top: 0,
+                            transformOrigin: 'top center'
+                        }}
+                    >
+                        <div className="p-10 cursor-grab active:cursor-grabbing flex items-center h-full">
+                            <motion.h2
+                                style={{
+                                    x,
+                                    y,
+                                    rotate
+                                }}
+                                className="text-3xl font-bold leading-tight text-left w-full relative z-10"
+                            >
                                 {currentQuestion.text}
-                            </h2>
+                            </motion.h2>
 
-                            {/* Visual feedback indicators */}
+                            {/* Color overlays for swipe feedback */}
                             <motion.div
-                                className="absolute top-6 right-6 bg-green-500 text-white rounded-full p-3 shadow-lg"
-                                style={{
-                                    opacity: useTransform(x, [0, 100], [0, 1])
-                                }}
-                            >
-                                <ThumbsUp className="w-6 h-6" />
-                            </motion.div>
-
+                                className="absolute inset-0 bg-green-500/70 pointer-events-none rounded-3xl"
+                                style={{ opacity: greenOverlay }}
+                            />
                             <motion.div
-                                className="absolute top-6 left-6 bg-red-500 text-white rounded-full p-3 shadow-lg"
-                                style={{
-                                    opacity: useTransform(x, [-100, 0], [1, 0])
-                                }}
-                            >
-                                <X className="w-6 h-6" />
-                            </motion.div>
-
+                                className="absolute inset-0 bg-red-500/70 pointer-events-none rounded-3xl"
+                                style={{ opacity: redOverlay }}
+                            />
                             <motion.div
-                                className="absolute top-6 left-1/2 -translate-x-1/2 bg-gray-400 text-white rounded-full p-3 shadow-lg"
-                                style={{
-                                    opacity: useTransform(y, [-100, 0], [1, 0])
-                                }}
-                            >
-                                <Minus className="w-6 h-6" />
-                            </motion.div>
-                        </motion.div>
-                    </AnimatePresence>
+                                className="absolute inset-0 bg-gray-400/70 pointer-events-none rounded-3xl"
+                                style={{ opacity: grayOverlay }}
+                            />
+                        </div>
+                    </motion.div>
                 </div>
 
-                {/* Button Controls */}
+                {/* Button Controls with Emoji */}
                 <div className="flex items-center justify-center gap-6 mt-8">
                     <button
                         onClick={() => handleSwipe('left')}
                         disabled={!!exitDirection}
-                        className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
+                        className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
                     >
-                        <X className="w-8 h-8" />
+                        😣
                     </button>
 
                     <button
                         onClick={() => handleSwipe('up')}
                         disabled={!!exitDirection}
-                        className="bg-gray-400 hover:bg-gray-500 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
+                        className="bg-gray-400 hover:bg-gray-500 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
                     >
-                        <Minus className="w-8 h-8" />
+                        😐
                     </button>
 
                     <button
                         onClick={() => handleSwipe('right')}
                         disabled={!!exitDirection}
-                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
+                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
                     >
-                        <ThumbsUp className="w-8 h-8" />
+                        😊
                     </button>
                 </div>
 

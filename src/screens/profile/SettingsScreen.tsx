@@ -54,7 +54,7 @@ export const SettingsScreen = () => {
 
     const handleRetakeQuiz = () => {
         if (window.confirm(t('profile.menu.quiz_confirm'))) {
-            navigate('/quiz/intro');
+            navigate('/quiz/test');
         }
     };
 
