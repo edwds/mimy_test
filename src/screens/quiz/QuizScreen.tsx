@@ -149,63 +149,93 @@ export const QuizScreen = () => {
             </div>
 
             {/* Question Card */}
-            <main className="flex-1 flex items-center justify-center p-6 relative">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentIndex}
-                        style={{
-                            x: exitDirection ? (exitDirection === 'left' ? -300 : exitDirection === 'right' ? 300 : 0) : x,
-                            y: exitDirection === 'up' ? -300 : y,
-                            rotate,
-                            opacity: exitDirection ? 0 : opacity,
-                        }}
-                        drag={!exitDirection}
-                        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                        dragElastic={1}
-                        onDragEnd={handleDragEnd}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute w-full max-w-md bg-card border-2 border-border rounded-3xl shadow-2xl p-8 cursor-grab active:cursor-grabbing"
+            <main className="flex-1 flex flex-col items-center justify-center px-8 py-6 relative">
+                {/* Card Container with 1:2 aspect ratio */}
+                <div className="relative w-full max-w-[280px] aspect-[1/2]">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentIndex}
+                            style={{
+                                x: exitDirection ? (exitDirection === 'left' ? -300 : exitDirection === 'right' ? 300 : 0) : x,
+                                y: exitDirection === 'up' ? -300 : y,
+                                rotate,
+                                opacity: exitDirection ? 0 : opacity,
+                            }}
+                            drag={!exitDirection}
+                            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                            dragElastic={1}
+                            onDragEnd={handleDragEnd}
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="absolute inset-0 bg-card border-2 border-border rounded-3xl shadow-2xl p-8 cursor-grab active:cursor-grabbing flex items-center justify-center"
+                        >
+                            <h2 className="text-xl font-bold leading-tight text-center px-2">
+                                {currentQuestion.text}
+                            </h2>
+
+                            {/* Visual feedback indicators */}
+                            <motion.div
+                                className="absolute top-6 right-6 bg-green-500 text-white rounded-full p-3 shadow-lg"
+                                style={{
+                                    opacity: useTransform(x, [0, 100], [0, 1])
+                                }}
+                            >
+                                <ThumbsUp className="w-6 h-6" />
+                            </motion.div>
+
+                            <motion.div
+                                className="absolute top-6 left-6 bg-red-500 text-white rounded-full p-3 shadow-lg"
+                                style={{
+                                    opacity: useTransform(x, [-100, 0], [1, 0])
+                                }}
+                            >
+                                <X className="w-6 h-6" />
+                            </motion.div>
+
+                            <motion.div
+                                className="absolute top-6 left-1/2 -translate-x-1/2 bg-gray-400 text-white rounded-full p-3 shadow-lg"
+                                style={{
+                                    opacity: useTransform(y, [-100, 0], [1, 0])
+                                }}
+                            >
+                                <Minus className="w-6 h-6" />
+                            </motion.div>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {/* Button Controls */}
+                <div className="flex items-center justify-center gap-6 mt-8">
+                    <button
+                        onClick={() => handleSwipe('left')}
+                        disabled={!!exitDirection}
+                        className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
                     >
-                        <h2 className="text-2xl font-bold leading-tight text-center">
-                            {currentQuestion.text}
-                        </h2>
+                        <X className="w-8 h-8" />
+                    </button>
 
-                        {/* Visual feedback indicators */}
-                        <motion.div
-                            className="absolute top-8 right-8 bg-green-500 text-white rounded-full p-4 shadow-lg"
-                            style={{
-                                opacity: useTransform(x, [0, 100], [0, 1])
-                            }}
-                        >
-                            <ThumbsUp className="w-8 h-8" />
-                        </motion.div>
+                    <button
+                        onClick={() => handleSwipe('up')}
+                        disabled={!!exitDirection}
+                        className="bg-gray-400 hover:bg-gray-500 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
+                    >
+                        <Minus className="w-8 h-8" />
+                    </button>
 
-                        <motion.div
-                            className="absolute top-8 left-8 bg-red-500 text-white rounded-full p-4 shadow-lg"
-                            style={{
-                                opacity: useTransform(x, [-100, 0], [1, 0])
-                            }}
-                        >
-                            <X className="w-8 h-8" />
-                        </motion.div>
-
-                        <motion.div
-                            className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-gray-400 text-white rounded-full p-4 shadow-lg"
-                            style={{
-                                opacity: useTransform(y, [-100, 0], [1, 0])
-                            }}
-                        >
-                            <Minus className="w-8 h-8" />
-                        </motion.div>
-                    </motion.div>
-                </AnimatePresence>
+                    <button
+                        onClick={() => handleSwipe('right')}
+                        disabled={!!exitDirection}
+                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95"
+                    >
+                        <ThumbsUp className="w-8 h-8" />
+                    </button>
+                </div>
 
                 {/* Helper text */}
-                <div className="absolute bottom-4 left-0 right-0 text-center text-sm text-muted-foreground px-6">
-                    카드를 좌우 또는 위로 밀어보세요
+                <div className="mt-6 text-center text-sm text-muted-foreground">
+                    카드를 밀거나 버튼을 눌러주세요
                 </div>
             </main>
         </div>
