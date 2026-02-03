@@ -31,7 +31,7 @@ export const ProfileHeader = React.forwardRef<HTMLDivElement, ProfileHeaderProps
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="-ml-2"
+                    className="-ml-2 min-w-[44px] min-h-[44px]"
                     onClick={onBack}
                 >
                     <ArrowLeft className="w-6 h-6" />

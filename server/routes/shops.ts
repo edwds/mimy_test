@@ -343,26 +343,37 @@ router.get("/search", optionalAuth, async (req, res) => {
         const shopIds = results.map(s => s.id);
         const matchScoresMap = await getShopMatchScores(shopIds, uid);
 
-        // Fetch My Rank
-        const myRanksMap = new Map<number, number>();
+        // Fetch My Rank and Review Stats
+        const myRanksMap = new Map<number, { rank: number, satisfaction: number }>();
         if (uid > 0) {
             const myRanks = await db.select({
                 shop_id: users_ranking.shop_id,
-                rank: users_ranking.rank
+                rank: users_ranking.rank,
+                satisfaction_tier: users_ranking.satisfaction_tier
             }).from(users_ranking)
                 .where(and(
                     eq(users_ranking.user_id, uid),
                     inArray(users_ranking.shop_id, shopIds)
                 ));
 
-            myRanks.forEach(r => myRanksMap.set(r.shop_id, r.rank));
+            myRanks.forEach(r => myRanksMap.set(r.shop_id, {
+                rank: r.rank,
+                satisfaction: r.satisfaction_tier
+            }));
         }
 
-        const enriched = results.map(shop => ({
-            ...shop,
-            shop_user_match_score: matchScoresMap.get(shop.id) || null,
-            my_rank: myRanksMap.get(shop.id) || null
-        }));
+        const enriched = results.map(shop => {
+            const rankData = myRanksMap.get(shop.id);
+            return {
+                ...shop,
+                shop_user_match_score: matchScoresMap.get(shop.id) || null,
+                my_rank: rankData?.rank || null,
+                my_review_stats: rankData ? {
+                    rank: rankData.rank,
+                    satisfaction: rankData.satisfaction
+                } : null
+            };
+        });
 
         res.json(enriched);
     } catch (error) {
