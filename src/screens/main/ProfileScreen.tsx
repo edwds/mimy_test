@@ -15,6 +15,8 @@ import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { ListCard } from '@/components/ListCard';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
+import { ShopInfoCard } from '@/components/ShopInfoCard';
+import { RankingBadge } from '@/components/RankingBadge';
 
 type ProfileTabType = 'content' | 'list' | 'saved';
 
@@ -52,6 +54,8 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     const [lists, setLists] = useState<any[]>([]);
     const [loadingLists, setLoadingLists] = useState(false);
+    const [currentRankings, setCurrentRankings] = useState<any[]>([]);
+    const [loadingRankings, setLoadingRankings] = useState(false);
 
     const [savedShops, setSavedShops] = useState<any[]>([]);
     const [loadingSaved, setLoadingSaved] = useState(false);
@@ -131,6 +135,29 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
         fetchLists();
     }, [user?.id, activeTab, refreshTrigger]);
+
+    // Fetch current rankings when list tab is active and ranking_count < 30
+    useEffect(() => {
+        const fetchCurrentRankings = async () => {
+            if (!user?.id || activeTab !== 'list') return;
+            if ((user.stats?.ranking_count || 0) >= 30) return;
+
+            setLoadingRankings(true);
+            try {
+                const response = await authFetch(`${API_BASE_URL}/api/ranking/all`);
+                if (response.ok) {
+                    const rankings = await response.json();
+                    setCurrentRankings(rankings);
+                }
+            } catch (e) {
+                console.error('Failed to load current rankings', e);
+            } finally {
+                setLoadingRankings(false);
+            }
+        };
+
+        fetchCurrentRankings();
+    }, [user?.id, activeTab, refreshTrigger, user?.stats?.ranking_count]);
 
     // Fetch saved shops
     const fetchSaved = async () => {
@@ -525,6 +552,29 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
                                         }
                                     </p>
+
+                                    {/* Divider */}
+                                    {(user.stats?.ranking_count || 0) > 0 && currentRankings.length > 0 && (
+                                        <div className="w-full mt-8 mb-6">
+                                            <div className="border-t border-border/50" />
+                                        </div>
+                                    )}
+
+                                    {/* Current Rankings */}
+                                    {loadingRankings ? (
+                                        <div className="flex justify-center py-8">
+                                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : currentRankings.length > 0 ? (
+                                        <div className="w-full -mx-6 px-6">
+                                            {currentRankings.map((item: any) => (
+                                                <RankingListItem
+                                                    key={`${item.shop.id}-${item.rank}`}
+                                                    item={item}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : null}
                                 </div>
                             ) : (
                                 lists.map((list) => (
@@ -614,3 +664,93 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick:
         {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />}
     </button>
 );
+
+// Ranking List Item Component for displaying current rankings
+const RankingListItem = ({ item }: { item: any }) => {
+    const { shop, rank, satisfaction_tier, latest_review_text, latest_review_images, my_review_stats } = item;
+    const navigate = useNavigate();
+    const { t } = useTranslation();
+
+    // Derive satisfaction string
+    const tierMap: Record<number, string> = { 0: 'bad', 1: 'ok', 2: 'good' };
+    const satisfaction = tierMap[satisfaction_tier] || '';
+
+    // Get display image from review images
+    let displayImage = shop.thumbnail_img;
+    if (latest_review_images) {
+        if (Array.isArray(latest_review_images) && latest_review_images.length > 0) {
+            displayImage = latest_review_images[0];
+        } else if (typeof latest_review_images === 'string') {
+            try {
+                const parsed = JSON.parse(latest_review_images);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    displayImage = parsed[0];
+                }
+            } catch (e) {
+                if (latest_review_images.startsWith('http')) {
+                    displayImage = latest_review_images;
+                }
+            }
+        }
+    }
+
+    // Update shop object with display image
+    const shopWithImage = { ...shop, thumbnail_img: displayImage };
+
+    return (
+        <div className="flex flex-col py-4 border-b border-border/40 gap-3">
+            {/* Shop Info Card */}
+            <ShopInfoCard
+                shop={shopWithImage}
+                initialIsBookmarked={false}
+                my_review_stats={my_review_stats}
+                showActions={true}
+                onClick={() => {
+                    const current = new URLSearchParams(window.location.search);
+                    current.set('viewShop', String(shop.id));
+                    navigate({ search: current.toString() });
+                }}
+                className="p-0 bg-transparent rounded-none active:bg-gray-50/50"
+            />
+
+            {/* Rank & Satisfaction Badge */}
+            {(rank || satisfaction) && (
+                <div className="flex items-center gap-2 pl-1">
+                    {satisfaction && (
+                        <span className={cn(
+                            "font-bold px-2 py-0.5 rounded border text-[11px] whitespace-nowrap",
+                            satisfaction === 'good'
+                                ? "text-orange-600 border-orange-100 bg-orange-50/50"
+                                : "text-gray-500 border-gray-100 bg-gray-50/50"
+                        )}>
+                            {t(`write.basic.${satisfaction}`)}
+                        </span>
+                    )}
+                    {rank && rank > 0 && (
+                        <RankingBadge
+                            rank={rank}
+                            percentile={my_review_stats?.percentile}
+                            size="sm"
+                            variant="badge"
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* Review Text or Shop Description */}
+            {latest_review_text ? (
+                <div className="relative">
+                    <p className="pl-1 text-xs text-foreground/80 leading-relaxed line-clamp-2">
+                        {latest_review_text}
+                    </p>
+                </div>
+            ) : shop.description ? (
+                <div className="relative">
+                    <p className="pl-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        {shop.description}
+                    </p>
+                </div>
+            ) : null}
+        </div>
+    );
+};
