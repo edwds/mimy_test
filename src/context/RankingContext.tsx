@@ -56,6 +56,25 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [pendingShop]);
 
+    const skipToWrite = useCallback(() => {
+        setShowConfirmDialog(false);
+        if (pendingShop) {
+            // Navigate directly to write with existing ranking data
+            const satisfaction = pendingShop.my_review_stats?.satisfaction !== undefined
+                ? (pendingShop.my_review_stats.satisfaction === 2 ? 'good' : pendingShop.my_review_stats.satisfaction === 1 ? 'ok' : 'bad')
+                : 'good';
+
+            navigate('/write', {
+                state: {
+                    step: 'WRITE_CONTENT',
+                    shop: pendingShop,
+                    satisfaction
+                }
+            });
+            setPendingShop(null);
+        }
+    }, [pendingShop, navigate]);
+
     const cancelEdit = useCallback(() => {
         setShowConfirmDialog(false);
         setPendingShop(null);
@@ -178,27 +197,33 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
                 />
             )}
 
-            {/* Confirmation Dialog */}
+            {/* Confirmation Dialog - 3 Options */}
             {showConfirmDialog && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={cancelEdit} />
-                    <div className="relative bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl animate-in zoom-in-95 duration-200">
-                        <h3 className="font-bold text-lg mb-2 text-center">{t('common.already_recorded')}</h3>
-                        <p className="text-sm text-gray-600 mb-6 text-center">
-                            {t('common.edit_record')}
+                    <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+                        <h3 className="font-bold text-xl mb-2 text-center">{t('common.already_recorded')}</h3>
+                        <p className="text-sm text-gray-600 mb-6 text-center leading-relaxed">
+                            {t('write.ranking.already_ranked_desc', '이미 이 맛집을 평가했어요.\n어떻게 하시겠어요?')}
                         </p>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-3">
                             <button
-                                onClick={cancelEdit}
-                                className="flex-1 h-11 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                onClick={skipToWrite}
+                                className="h-12 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors"
                             >
-                                {t('common.no')}
+                                {t('write.ranking.write_with_existing', '바로 글쓰기')}
                             </button>
                             <button
                                 onClick={confirmEdit}
-                                className="flex-1 h-11 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors"
+                                className="h-12 rounded-xl text-sm font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                             >
-                                {t('common.yes_edit')}
+                                {t('write.ranking.re_rank', '랭킹 다시 매기기')}
+                            </button>
+                            <button
+                                onClick={cancelEdit}
+                                className="h-10 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                {t('common.cancel', '취소')}
                             </button>
                         </div>
                     </div>

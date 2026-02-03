@@ -139,7 +139,10 @@
             "confirm": "확인",
             "write_review": "리뷰 작성하기",
             "evaluate_another": "다른 곳 평가하기",
-            "quit": "나중에 작성하기"
+            "quit": "나중에 작성하기",
+            "already_ranked_desc": "이미 이 맛집을 평가했어요.\n어떻게 하시겠어요?",
+            "write_with_existing": "바로 글쓰기",
+            "re_rank": "랭킹 다시 매기기"
         }
     },
     "register": {

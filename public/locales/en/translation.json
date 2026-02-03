@@ -137,7 +137,10 @@
             "confirm": "Confirm",
             "write_review": "Write a Review",
             "evaluate_another": "Evaluate Another",
-            "quit": "Start Later"
+            "quit": "Start Later",
+            "already_ranked_desc": "You've already ranked this place.\nWhat would you like to do?",
+            "write_with_existing": "Write Review",
+            "re_rank": "Re-rank"
         }
     },
     "register": {
