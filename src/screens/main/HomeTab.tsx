@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainHeader } from '@/components/MainHeader';
 import { FilterChip } from '@/components/FilterChip';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
@@ -23,6 +24,7 @@ const CHIPS = ["popular", "follow", "near", "like"];
 
 export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = true }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { registerCallback, unregisterCallback } = useRanking();
     const [_, setPage] = useState(1);
     const [items, setItems] = useState<any[]>([]);
