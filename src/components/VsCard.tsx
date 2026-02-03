@@ -135,18 +135,18 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote, o
 
                     {/* Action Buttons (Cancel / Next) */}
                     {selected && (
-                        <div className="mt-4 flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="mt-4 flex justify-center gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <button
                                 onClick={handleCancel}
-                                className="flex-1 text-sm font-medium text-muted-foreground hover:text-foreground bg-white/50 px-4 py-2.5 rounded-full hover:bg-white/80 transition-colors"
+                                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors underline underline-offset-2"
                             >
                                 {t('common.cancel', '취소')}
                             </button>
                             <button
                                 onClick={handleNext}
-                                className="flex-1 text-sm font-bold text-white bg-primary hover:bg-primary/90 px-4 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all"
+                                className="text-sm font-bold text-primary hover:text-primary/80 transition-colors"
                             >
-                                {t('vs_card.do_more', '다른 것도 할래요')}
+                                {t('vs_card.do_more', '다른 것도 할래요')} →
                             </button>
                         </div>
                     )}
