@@ -8,6 +8,17 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 // const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
+// Email whitelist for allowed non-@catchtable.co.kr emails
+const EMAIL_WHITELIST = [
+    'iamkayyyy@gmail.com',
+    'ivoryboxedlee@gmail.com'
+];
+
+// Helper function to check if email is allowed
+function isEmailAllowed(email: string): boolean {
+    return email.endsWith('@catchtable.co.kr') || EMAIL_WHITELIST.includes(email.toLowerCase());
+}
+
 // Real Google Login
 router.post("/google", async (req, res) => {
     try {
@@ -25,11 +36,11 @@ router.post("/google", async (req, res) => {
         const googleUser = await userInfoResponse.json();
         const { email, name, picture } = googleUser;
 
-        // Restrict to @catchtable.co.kr email domain
-        if (!email.endsWith('@catchtable.co.kr')) {
+        // Check if email is allowed (whitelist or @catchtable.co.kr domain)
+        if (!isEmailAllowed(email)) {
             return res.status(403).json({
-                error: "Email domain not allowed",
-                message: "Only @catchtable.co.kr email addresses are allowed"
+                error: "Email not allowed",
+                message: "Your email is not authorized to access this service"
             });
         }
 
@@ -93,15 +104,15 @@ router.post("/register", async (req, res) => {
         console.log('[Register] Body:', JSON.stringify(req.body, null, 2));
         const { email, account_id, nickname, bio, link, profile_image, phone, birthdate, gender, taste_cluster } = req.body;
 
-        // Restrict to @catchtable.co.kr email domain
-        if (!email.endsWith('@catchtable.co.kr')) {
-            console.log('[Register] ❌ Email domain not allowed:', email);
+        // Check if email is allowed (whitelist or @catchtable.co.kr domain)
+        if (!isEmailAllowed(email)) {
+            console.log('[Register] ❌ Email not allowed:', email);
             return res.status(403).json({
-                error: "Email domain not allowed",
-                message: "Only @catchtable.co.kr email addresses are allowed"
+                error: "Email not allowed",
+                message: "Your email is not authorized to access this service"
             });
         }
-        console.log('[Register] ✅ Email domain check passed');
+        console.log('[Register] ✅ Email check passed');
 
         // Ensure email/account_id uniqueness again (DB constraints will also catch this)
         const check = await db.select().from(users).where(eq(users.email, email)).limit(1);

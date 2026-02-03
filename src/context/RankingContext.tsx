@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 interface RankingUpdateData {
     shopId: number;
+    action: 'WRITE_REVIEW' | 'QUIT';  // Action type to help subscribers decide
     my_review_stats: {
         satisfaction: number;
         rank: number;
@@ -115,14 +116,15 @@ export const RankingProvider = ({ children }: { children: ReactNode }) => {
         const currentShop = selectedShop;
 
         // Notify subscribers based on action:
-        // - WRITE_REVIEW: Always notify (WriteFlow needs to transition)
-        // - QUIT: Always notify (for UI updates)
+        // - WRITE_REVIEW: Always notify (WriteFlow needs to transition to WRITE_CONTENT)
+        // - QUIT: Always notify (for UI updates in other screens, WriteFlow should handle specially)
         // - EVALUATE_ANOTHER: Don't notify (prevents race condition with navigation)
         const shouldNotify = action !== 'EVALUATE_ANOTHER';
 
         if (shouldNotify && currentShop?.id && data && data.satisfaction !== undefined && updateCallbacks.size > 0) {
             const updateData: RankingUpdateData = {
                 shopId: currentShop.id,
+                action: action as 'WRITE_REVIEW' | 'QUIT',  // Pass action to subscribers
                 my_review_stats: {
                     satisfaction: data.satisfaction === 'good' ? 2 : data.satisfaction === 'ok' ? 1 : 0,
                     rank: data.rank || 0,

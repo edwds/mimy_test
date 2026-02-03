@@ -98,7 +98,14 @@ export const WriteFlow = () => {
 
         const handleRankingComplete = (data: any) => {
             console.log('[WriteFlow] Ranking complete callback received:', data);
-            console.log('[WriteFlow] isMounted:', isMountedRef.current, 'callbackProcessed:', callbackProcessedRef.current, 'currentStep:', stepRef.current);
+            console.log('[WriteFlow] isMounted:', isMountedRef.current, 'callbackProcessed:', callbackProcessedRef.current, 'currentStep:', stepRef.current, 'action:', data.action);
+
+            // If action is QUIT, don't transition to WRITE_CONTENT
+            // User wants to save ranking and quit, not write a review
+            if (data.action === 'QUIT') {
+                console.log('[WriteFlow] Action is QUIT, not transitioning to WRITE_CONTENT');
+                return;
+            }
 
             // Prevent duplicate processing
             if (callbackProcessedRef.current) {
