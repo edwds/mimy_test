@@ -41,9 +41,9 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
         }
     }, [isOpen]);
 
-    // Data Fetching
+    // Data Fetching - refetch when sheet is opened
     useEffect(() => {
-        if (userId) {
+        if (userId && isOpen) {
             setLoading(true);
             Promise.all([
                 fetch(`${API_BASE_URL}/api/vs/history?user_id=${userId}`).then(res => res.json()),
@@ -66,7 +66,7 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 .catch(err => console.error(err))
                 .finally(() => setLoading(false));
         }
-    }, [userId]);
+    }, [userId, isOpen]);
 
     // Use same gradient as ProfileScreen taste card
     const bgGradient = "bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)]";
