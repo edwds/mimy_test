@@ -234,24 +234,13 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
         }
     };
 
-    const [showUnvisitedOnly, setShowUnvisitedOnly] = useState(false);
-
     // Filter Items
-    const filteredItems = isGoogleMode
-        ? googleResults
-        : results.filter(shop => {
-            if (showUnvisitedOnly && shop.my_rank) return false;
-            return true;
-        });
-
+    const filteredItems = isGoogleMode ? googleResults : results;
     const displayItems = filteredItems;
     const showList = displayItems.length > 0;
 
-    // Filter Saved Shops
-    const filteredSavedShops = savedShops.filter(shop => {
-        if (showUnvisitedOnly && shop.my_rank) return false;
-        return true;
-    });
+    // Saved Shops (no filter needed)
+    const filteredSavedShops = savedShops;
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-background)]">
@@ -276,22 +265,6 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                             />
                         </div>
                     </div>
-
-                    {/* Filter Bar */}
-                    {(results.length > 0 || savedShops.length > 0) && (
-                        <div className="px-4 flex justify-start mt-2">
-                            <button
-                                onClick={() => setShowUnvisitedOnly(!showUnvisitedOnly)}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 border ${showUnvisitedOnly
-                                    ? 'bg-gray-900 text-white border-gray-900'
-                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {showUnvisitedOnly && <Check size={12} strokeWidth={3} />}
-                                안 가본 곳만 보기
-                            </button>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -334,15 +307,9 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     </div>
                 ) : query.length > 1 ? (
                     // ... Search Results Display (Already updated previously) ...
-                    showList || (showUnvisitedOnly && results.length > 0) ? (
+                    showList ? (
                         <div className="space-y-4">
                             {/* ... Content ... */}
-                            {showList === false && showUnvisitedOnly && (
-                                <div className="py-12 text-center text-gray-400 text-sm">
-                                    <div>모두 방문한 곳이네요! 👏</div>
-                                    <div className="mt-1">안 가본 곳이 없어요.</div>
-                                </div>
-                            )}
 
                             {isGoogleMode && (
                                 <div className="px-1 py-1">
@@ -454,14 +421,14 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                         {recentSearches.length > 0 && (
                             <div className="px-1">
                                 <h3 className="text-xs font-bold text-muted-foreground mb-2">최근 검색어</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {recentSearches.slice(0, 5).map((term, idx) => (
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                    {recentSearches.slice(0, 10).map((term, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setQuery(term)}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-full text-sm text-foreground transition-colors"
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted rounded-full text-sm text-foreground transition-colors flex-shrink-0"
                                         >
-                                            <span>{term}</span>
+                                            <span className="whitespace-nowrap">{term}</span>
                                             <X
                                                 size={14}
                                                 className="text-muted-foreground hover:text-foreground"
@@ -547,12 +514,6 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                                         <ShopItem key={shop.id} shop={shop} onSelect={onSelect} />
                                     ))}
                                 </ul>
-                            )}
-
-                            {activeTab === 'saved' && filteredSavedShops.length === 0 && savedShops.length > 0 && (
-                                <div className="py-20 text-center text-gray-400 text-sm opacity-60">
-                                    <div>저장한 곳 중 안 가본 곳이 없어요!</div>
-                                </div>
                             )}
 
                             {activeTab === 'recommended' && recommendedShops.length > 0 && (
