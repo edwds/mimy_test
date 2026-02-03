@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,36 +14,13 @@ interface Props {
 export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose, onNext }) => {
     const { t } = useTranslation();
     const [selected, setSelected] = useState<'EAT' | 'NOT_EAT' | null>(null);
-    const [countdown, setCountdown] = useState<number>(0);
-
-    // Countdown effect
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (selected) {
-            setCountdown(3);
-            timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            setCountdown(0);
-        }
-        return () => clearInterval(timer);
-    }, [selected]);
 
     const handleSelect = (selection: 'EAT' | 'NOT_EAT') => {
-        if (selected === selection) return; // Same selection, do nothing
-
         setSelected(selection);
         if (onVote) onVote(id, selection);
     };
 
-    const handleRetry = (e: React.MouseEvent) => {
+    const handleCancel = (e: React.MouseEvent) => {
         e.stopPropagation();
         setSelected(null);
     };
@@ -156,25 +133,21 @@ export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose
                         </button>
                     </div>
 
-                    {/* Action Button (Retry or Next) */}
+                    {/* Action Buttons (Cancel / Next) */}
                     {selected && (
-                        <div className="mt-4 flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            {countdown > 0 ? (
-                                <button
-                                    onClick={handleRetry}
-                                    className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full hover:bg-white/80 transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" /><path d="M3 3v9h9" /></svg>
-                                    {t('hate_card.retry', { count: countdown })}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleNext}
-                                    className="text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-sm hover:shadow-md transition-all"
-                                >
-                                    {t('hate_card.next_question')}
-                                </button>
-                            )}
+                        <div className="mt-4 flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <button
+                                onClick={handleCancel}
+                                className="flex-1 text-sm font-medium text-muted-foreground hover:text-foreground bg-white/50 px-4 py-2.5 rounded-full hover:bg-white/80 transition-colors"
+                            >
+                                {t('common.cancel', '취소')}
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                className="flex-1 text-sm font-bold text-white bg-primary hover:bg-primary/90 px-4 py-2.5 rounded-full shadow-sm hover:shadow-md transition-all"
+                            >
+                                {t('hate_card.do_more', '다른 것도 할래요')}
+                            </button>
                         </div>
                     )}
                 </div>
