@@ -120,28 +120,20 @@ export const QuizScreen = () => {
 
     return (
         <div className="flex flex-col h-full bg-background pt-safe-offset-6 pb-safe-offset-6">
-            {/* Header / Progress */}
-            <div className="px-6 pb-2">
-                <div className="flex items-center justify-center mb-4 relative">
-                    <span className="font-bold text-muted-foreground">
+            {/* Header with counter and close button */}
+            <div className="px-6 pb-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-muted-foreground">
                         {currentIndex + 1} / {QUESTIONS.length}
                     </span>
                     {hasExistingProfile && (
                         <button
                             onClick={handleClose}
-                            className="absolute right-0 p-2 rounded-full hover:bg-muted transition-colors"
+                            className="p-2 rounded-full hover:bg-muted transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     )}
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                        className="h-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.3 }}
-                    />
                 </div>
             </div>
 
@@ -161,10 +153,31 @@ export const QuizScreen = () => {
                 </div>
             </div>
 
-            {/* Question Card */}
-            <main className="flex-1 flex flex-col items-center justify-center px-8 py-6 relative">
-                {/* Card Container with 1:2 aspect ratio */}
-                <div className="relative w-full max-w-[280px] aspect-[1/2]">
+            {/* Stacked Cards Container */}
+            <main className="flex-1 flex flex-col items-center justify-center px-6 py-6 relative">
+                {/* Card Stack - wider cards */}
+                <div className="relative w-full max-w-md aspect-[3/4]">
+                    {/* Background stacked cards (next 2 cards) */}
+                    {currentIndex + 2 < QUESTIONS.length && (
+                        <div className="absolute inset-0 bg-card border border-border rounded-3xl shadow-lg"
+                            style={{
+                                transform: 'translateY(16px) scale(0.92)',
+                                opacity: 0.4,
+                                zIndex: 1
+                            }}
+                        />
+                    )}
+                    {currentIndex + 1 < QUESTIONS.length && (
+                        <div className="absolute inset-0 bg-card border border-border rounded-3xl shadow-xl"
+                            style={{
+                                transform: 'translateY(8px) scale(0.96)',
+                                opacity: 0.7,
+                                zIndex: 2
+                            }}
+                        />
+                    )}
+
+                    {/* Active Card */}
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={currentIndex}
@@ -173,6 +186,7 @@ export const QuizScreen = () => {
                                 y: exitDirection === 'up' ? -300 : y,
                                 rotate,
                                 opacity: exitDirection ? 0 : opacity,
+                                zIndex: 3
                             }}
                             drag={!exitDirection}
                             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -182,9 +196,9 @@ export const QuizScreen = () => {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.8, opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="absolute inset-0 bg-card border-2 border-border rounded-3xl shadow-2xl p-8 cursor-grab active:cursor-grabbing flex items-center justify-center"
+                            className="absolute inset-0 bg-card border-2 border-border rounded-3xl shadow-2xl p-10 cursor-grab active:cursor-grabbing flex items-center"
                         >
-                            <h2 className="text-3xl font-bold leading-tight text-center px-2">
+                            <h2 className="text-3xl font-bold leading-tight text-left w-full">
                                 {currentQuestion.text}
                             </h2>
 
