@@ -16,7 +16,6 @@ export const QuizScreen = () => {
     const [exitDirection, setExitDirection] = useState<'left' | 'right' | 'up' | null>(null);
 
     const currentQuestion = QUESTIONS[currentIndex];
-    const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
     const hasExistingProfile = !!user?.taste_result;
 
     const x = useMotionValue(0);
