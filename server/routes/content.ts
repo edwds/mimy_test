@@ -7,6 +7,7 @@ import { ListService } from "../services/ListService.js";
 import { LeaderboardService } from "../services/LeaderboardService.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { getShopReviewStats } from "../utils/enricher.js";
+import { createNotification } from "./notifications.js";
 
 const router = Router();
 
@@ -1192,6 +1193,21 @@ router.post("/:id/like", requireAuth, async (req, res) => {
                 target_id: contentId,
                 user_id
             });
+
+            // 좋아요 알림 생성 - 콘텐츠 작성자에게 알림
+            const contentData = await db.select({ user_id: content.user_id })
+                .from(content)
+                .where(eq(content.id, contentId))
+                .limit(1);
+
+            if (contentData.length > 0) {
+                await createNotification({
+                    user_id: contentData[0].user_id,
+                    type: 'like',
+                    actor_id: user_id,
+                    content_id: contentId,
+                });
+            }
         }
 
         // Return updated stats
@@ -1280,6 +1296,22 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
             parent_id: parent_id || null,
             mention_user_id: mention_user_id || null
         }).returning();
+
+        // 댓글 알림 생성 - 콘텐츠 작성자에게 알림
+        const contentData = await db.select({ user_id: content.user_id })
+            .from(content)
+            .where(eq(content.id, contentId))
+            .limit(1);
+
+        if (contentData.length > 0) {
+            await createNotification({
+                user_id: contentData[0].user_id,
+                type: 'comment',
+                actor_id: user_id,
+                content_id: contentId,
+                comment_id: result[0].id,
+            });
+        }
 
         // Fetch user info for immediate display
         const user = await db.select({

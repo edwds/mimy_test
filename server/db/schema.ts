@@ -341,3 +341,20 @@ export const leaderboard = pgTable('leaderboard', {
 }, (table) => ({
     type_idx: index('idx_leaderboard_type').on(table.type, table.key),
 }));
+
+// --- Notifications Domain ---
+export const notifications = pgTable('notifications', {
+    id: serial('id').primaryKey(),
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // 수신자
+    type: varchar('type', { length: 20 }).notNull(), // 'follow', 'like', 'comment', 'milestone'
+    actor_id: integer('actor_id').references(() => users.id, { onDelete: 'cascade' }), // 행동 주체
+    content_id: integer('content_id').references(() => content.id, { onDelete: 'cascade' }), // 관련 콘텐츠
+    comment_id: integer('comment_id').references(() => comments.id, { onDelete: 'cascade' }), // 관련 댓글
+    metadata: jsonb('metadata'), // 추가 정보 (shop_name, milestone_type 등)
+    is_read: boolean('is_read').default(false),
+    created_at: timestamp('created_at').defaultNow(),
+}, (table) => ({
+    user_id_idx: index('idx_notifications_user').on(table.user_id),
+    created_at_idx: index('idx_notifications_created').on(table.created_at),
+    user_created_idx: index('idx_notifications_user_created').on(table.user_id, table.created_at),
+}));

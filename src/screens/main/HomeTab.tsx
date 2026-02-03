@@ -37,6 +37,9 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const observer = useRef<IntersectionObserver | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
+    // Notification Badge State
+    const [hasNewNotification, setHasNewNotification] = useState(false);
+
     // Smart Header & Scroll Preservation
     const containerRef = useRef<HTMLDivElement>(null);
     const { isVisible: isHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
@@ -273,6 +276,32 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
         }
     }, [rankingRefreshTrigger]);
 
+    // Check for new notifications
+    useEffect(() => {
+        if (!currentUser?.id) return;
+
+        const checkNotifications = async () => {
+            try {
+                const res = await authFetch(`${API_BASE_URL}/api/notifications/latest?user_id=${currentUser.id}`);
+                const data = await res.json();
+
+                if (data.latest_notification) {
+                    const lastCheck = localStorage.getItem('lastNotificationCheck');
+                    if (!lastCheck || new Date(data.latest_notification) > new Date(lastCheck)) {
+                        setHasNewNotification(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check notifications:', error);
+            }
+        };
+
+        checkNotifications();
+        // Poll every 30 seconds
+        const interval = setInterval(checkNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [currentUser?.id]);
+
     // Fetch Interstitial candidates (VS & Hate)
     useEffect(() => {
         if (currentUser?.id) {
@@ -371,9 +400,17 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                 isVisible={isHeaderVisible}
                 rightAction={
                     <div className="flex gap-4">
-                        <button className="p-2 rounded-full hover:bg-muted transition-colors relative">
+                        <button
+                            onClick={() => {
+                                navigate('/notifications');
+                                setHasNewNotification(false);
+                            }}
+                            className="p-2 rounded-full hover:bg-muted transition-colors relative"
+                        >
                             <Bell className="text-foreground" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
+                            {hasNewNotification && (
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
+                            )}
                         </button>
                     </div>
                 }

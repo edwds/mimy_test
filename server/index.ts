@@ -14,6 +14,7 @@ import vsRoutes from "./routes/vs.js";
 import hateRoutes from "./routes/hate.js";
 import adminRoutes from "./routes/admin.js";
 import shareRoutes from "./routes/share.js";
+import notificationRoutes from "./routes/notifications.js";
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.use("/api/vs", vsRoutes);
 app.use("/api/hate", hateRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/share", shareRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 import rankingRoutes from "./routes/ranking.js";
 app.use("/api/ranking", rankingRoutes);

@@ -5,6 +5,7 @@ import { eq, and, desc, sql, ilike, isNotNull, inArray } from "drizzle-orm";
 import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache } from "../redis.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
+import { createNotification } from "./notifications.js";
 
 const router = Router();
 
@@ -391,6 +392,14 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
                 follower_id: followerId,
                 following_id: targetId
             });
+
+            // 팔로우 알림 생성
+            await createNotification({
+                user_id: targetId,
+                type: 'follow',
+                actor_id: followerId,
+            });
+
             return res.json({ following: true });
         }
 

@@ -139,6 +139,24 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                     percentile,
                     satisfaction: serverSatisfaction
                 });
+
+                // 30개 랭킹 달성시 마일스톤 알림 생성
+                if (response.total_count === 30) {
+                    try {
+                        await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/notifications`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                type: 'milestone',
+                                metadata: { milestone_type: 'ranking_30' }
+                            }),
+                            credentials: 'include'
+                        });
+                    } catch (error) {
+                        console.error('Failed to create milestone notification:', error);
+                    }
+                }
             } else {
                 // Fallback to calculation only if server doesn't return data
                 const safeBase = currentBaseRank !== undefined ? currentBaseRank : baseRank;
