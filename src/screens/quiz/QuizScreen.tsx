@@ -17,11 +17,16 @@ export const QuizScreen = () => {
 
     const currentQuestion = QUESTIONS[currentIndex];
     const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
+    const hasExistingProfile = !!user?.taste_result;
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-25, 25]);
     const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+
+    const handleClose = () => {
+        navigate(-1);
+    };
 
     const handleSwipe = (direction: 'left' | 'right' | 'up') => {
         // Map swipe direction to answer value
@@ -117,10 +122,18 @@ export const QuizScreen = () => {
         <div className="flex flex-col h-full bg-background pt-safe-offset-6 pb-safe-offset-6">
             {/* Header / Progress */}
             <div className="px-6 pb-2">
-                <div className="flex items-center justify-center mb-4">
+                <div className="flex items-center justify-center mb-4 relative">
                     <span className="font-bold text-muted-foreground">
                         {currentIndex + 1} / {QUESTIONS.length}
                     </span>
+                    {hasExistingProfile && (
+                        <button
+                            onClick={handleClose}
+                            className="absolute right-0 p-2 rounded-full hover:bg-muted transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <motion.div

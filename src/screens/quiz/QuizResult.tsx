@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -26,42 +27,85 @@ export const QuizResult = () => {
         navigate('/main');
     };
 
+    // Same gradient as TasteProfileSheet
+    const bgGradient = "bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)]";
+
     return (
-        <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 items-center justify-center animate-in zoom-in duration-500">
-            <div className="text-center space-y-6">
-                <p className="text-xl text-muted-foreground font-medium">{t('quiz.result.title')}</p>
+        <div className="flex flex-col h-full bg-background items-center justify-center px-8 py-safe-offset-12">
+            {/* Card Container with 1:2 aspect ratio - similar to TasteProfileSheet */}
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className={`relative w-full max-w-[320px] aspect-[1/2] ${bgGradient} rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col`}
+            >
+                {/* Content Container */}
+                <div className="flex-1 flex flex-col p-8 justify-center items-center text-center">
+                    {/* Success Icon */}
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                        className="mb-6"
+                    >
+                        <div className="w-24 h-24 bg-white/80 rounded-full flex items-center justify-center shadow-lg backdrop-blur-md">
+                            <span className="text-5xl">🍽️</span>
+                        </div>
+                    </motion.div>
 
-                <h1 className="text-4xl font-black text-primary mb-4 tracking-tighter">
-                    {clusterName}
-                </h1>
+                    {/* Title */}
+                    <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-sm text-gray-600 mb-3 font-medium"
+                    >
+                        {t('quiz.result.title', { defaultValue: '당신의 입맛은' })}
+                    </motion.p>
 
-                <div className="w-64 h-64 bg-muted rounded-full mx-auto flex items-center justify-center mb-6 shadow-xl border-4 border-surface">
-                    {/* Placeholder for Character Image - Could map clusterId to images */}
-                    <span className="text-6xl">🍽️</span>
+                    {/* Cluster Name */}
+                    <motion.h1
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-2xl font-bold text-gray-900 mb-6"
+                    >
+                        {clusterName}
+                    </motion.h1>
+
+                    {/* Divider */}
+                    <div className="w-full h-px bg-gray-300/50 my-4" />
+
+                    {/* Tagline */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="flex-1 flex items-center"
+                    >
+                        <p className="text-base font-medium text-gray-700 leading-[1.6] px-2">
+                            {clusterTagline}
+                        </p>
+                    </motion.div>
                 </div>
+            </motion.div>
 
-                <div className="bg-surface p-6 rounded-2xl shadow-sm border border-border/50">
-                    <p className="text-foreground text-lg font-medium leading-relaxed">
-                        "{clusterTagline}"
-                    </p>
-                </div>
-
-                {/* Debug Info (Optional - remove in prod) */}
-                {/* <div className='text-xs text-left text-muted-foreground/50'>
-                    {JSON.stringify(result?.scores, null, 2)}
-                </div> */}
-            </div>
-
-            <div className="mt-auto pt-10 w-full max-w-sm">
+            {/* Start Button - Outside the card */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="w-full max-w-[320px] mt-8"
+            >
                 <Button
                     size="lg"
                     className="w-full text-lg py-6 rounded-full shadow-lg shadow-primary/20"
                     onClick={handleStart}
                     disabled={isLoading}
                 >
-                    {isLoading ? t('common.loading', { defaultValue: '로딩 중...' }) : t('quiz.result.start_app')}
+                    {isLoading ? t('common.loading', { defaultValue: '로딩 중...' }) : t('quiz.result.start_app', { defaultValue: '시작하기' })}
                 </Button>
-            </div>
+            </motion.div>
         </div>
     );
 };
