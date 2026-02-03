@@ -502,63 +502,59 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : lists.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8 px-6">
-                                    {/* Circular Progress */}
-                                    <div className="relative w-24 h-24 mb-4">
-                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                            {/* Background circle */}
-                                            <circle
-                                                cx="50"
-                                                cy="50"
-                                                r="42"
-                                                fill="none"
-                                                stroke="hsl(var(--border))"
-                                                strokeWidth="8"
-                                                opacity="0.6"
-                                            />
-                                            {/* Progress circle */}
-                                            {(user.stats?.ranking_count || 0) > 0 && (
+                                <>
+                                    {/* Progress Card */}
+                                    <div className="bg-background rounded-2xl border border-border/50 p-6 mb-4 flex flex-col items-center">
+                                        {/* Circular Progress */}
+                                        <div className="relative w-24 h-24 mb-4">
+                                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                                {/* Background circle */}
                                                 <circle
                                                     cx="50"
                                                     cy="50"
                                                     r="42"
                                                     fill="none"
-                                                    stroke="currentColor"
+                                                    stroke="hsl(var(--border))"
                                                     strokeWidth="8"
-                                                    strokeLinecap="round"
-                                                    className="text-primary transition-all duration-500 ease-out"
-                                                    style={{
-                                                        strokeDasharray: `${2 * Math.PI * 42}`,
-                                                        strokeDashoffset: `${2 * Math.PI * 42 * (1 - Math.min((user.stats?.ranking_count || 0) / 30, 1))}`
-                                                    }}
+                                                    opacity="0.6"
                                                 />
-                                            )}
-                                        </svg>
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-xl font-bold text-foreground">
-                                                {user.stats?.ranking_count || 0}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">/ 30</span>
+                                                {/* Progress circle */}
+                                                {(user.stats?.ranking_count || 0) > 0 && (
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="42"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="8"
+                                                        strokeLinecap="round"
+                                                        className="text-primary transition-all duration-500 ease-out"
+                                                        style={{
+                                                            strokeDasharray: `${2 * Math.PI * 42}`,
+                                                            strokeDashoffset: `${2 * Math.PI * 42 * (1 - Math.min((user.stats?.ranking_count || 0) / 30, 1))}`
+                                                        }}
+                                                    />
+                                                )}
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-xl font-bold text-foreground">
+                                                    {user.stats?.ranking_count || 0}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">/ 30</span>
+                                            </div>
                                         </div>
+
+                                        <p className="text-sm text-center text-muted-foreground leading-relaxed mb-3 max-w-sm whitespace-pre-line">
+                                            {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면\n나만의 맛집 랭킹 리스트가 만들어져요')}
+                                        </p>
+
+                                        <p className="text-xs text-center text-muted-foreground/70">
+                                            {30 - (user.stats?.ranking_count || 0) > 0
+                                                ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
+                                                : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
+                                            }
+                                        </p>
                                     </div>
-
-                                    <p className="text-sm text-center text-muted-foreground leading-relaxed mb-3 max-w-sm whitespace-pre-line">
-                                        {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면\n나만의 맛집 랭킹 리스트가 만들어져요')}
-                                    </p>
-
-                                    <p className="text-xs text-center text-muted-foreground/70">
-                                        {30 - (user.stats?.ranking_count || 0) > 0
-                                            ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
-                                            : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
-                                        }
-                                    </p>
-
-                                    {/* Divider */}
-                                    {(user.stats?.ranking_count || 0) > 0 && currentRankings.length > 0 && (
-                                        <div className="w-full mt-8 mb-6">
-                                            <div className="border-t border-border/50" />
-                                        </div>
-                                    )}
 
                                     {/* Current Rankings */}
                                     {loadingRankings ? (
@@ -566,7 +562,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                                         </div>
                                     ) : currentRankings.length > 0 ? (
-                                        <div className="w-full -mx-6 px-6">
+                                        <div className="-mx-5">
                                             {currentRankings.map((item: any) => (
                                                 <RankingListItem
                                                     key={`${item.shop.id}-${item.rank}`}
@@ -575,7 +571,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             ))}
                                         </div>
                                     ) : null}
-                                </div>
+                                </>
                             ) : (
                                 lists.map((list) => (
                                     <ListCard
@@ -697,13 +693,21 @@ const RankingListItem = ({ item }: { item: any }) => {
     // Update shop object with display image
     const shopWithImage = { ...shop, thumbnail_img: displayImage };
 
+    // Construct my_review_stats if not provided (since these are ranked items)
+    const reviewStats = my_review_stats || {
+        rank,
+        satisfaction_tier,
+        latest_review_text,
+        latest_review_images
+    };
+
     return (
-        <div className="flex flex-col py-4 border-b border-border/40 gap-3">
+        <div className="flex flex-col py-4 px-5 border-b border-border/40 gap-3">
             {/* Shop Info Card */}
             <ShopInfoCard
                 shop={shopWithImage}
                 initialIsBookmarked={false}
-                my_review_stats={my_review_stats}
+                my_review_stats={reviewStats}
                 showActions={true}
                 onClick={() => {
                     const current = new URLSearchParams(window.location.search);
@@ -729,7 +733,7 @@ const RankingListItem = ({ item }: { item: any }) => {
                     {rank && rank > 0 && (
                         <RankingBadge
                             rank={rank}
-                            percentile={my_review_stats?.percentile}
+                            percentile={reviewStats?.percentile}
                             size="sm"
                             variant="badge"
                         />
