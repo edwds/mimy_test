@@ -43,7 +43,8 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const [results, setResults] = useState<any[]>([]);
     const [savedShops, setSavedShops] = useState<any[]>([]);
     const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'saved' | 'recommended'>('saved');
+    const [pendingReviewShops, setPendingReviewShops] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<'pending' | 'saved' | 'recommended'>('pending');
     const [loading, setLoading] = useState(false);
     const [googleResults, setGoogleResults] = useState<any[]>([]);
 
@@ -60,7 +61,35 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
         const fetchLocationAndRecommendations = async () => {
             setLoading(true);
             try {
-                // Get user location
+                const user = await UserService.getCurrentUser();
+                let pending: any[] = [];
+                let saved: any[] = [];
+
+                // Fetch pending review shops (ranked but no review yet)
+                if (user?.id) {
+                    const res = await authFetch(`${API_BASE_URL}/api/ranking/all`);
+                    if (res.ok) {
+                        const allRankings = await res.json();
+                        // Filter: has ranking but no review text
+                        pending = allRankings
+                            .filter((r: any) => !r.latest_review_text)
+                            .map((r: any) => ({
+                                ...r.shop,
+                                my_rank: r.rank,  // For ShopItem badge display
+                                my_review_stats: {
+                                    satisfaction: r.satisfaction_tier,
+                                    rank: r.rank
+                                }
+                            }));
+                        setPendingReviewShops(pending);
+                    }
+
+                    // Fetch saved shops
+                    saved = await UserService.getSavedShops(user.id) || [];
+                    setSavedShops(saved);
+                }
+
+                // Get user location for recommended shops
                 if ('geolocation' in navigator) {
                     navigator.geolocation.getCurrentPosition(
                         async (position) => {
@@ -81,17 +110,13 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     );
                 }
 
-                // Fetch saved shops
-                const user = await UserService.getCurrentUser();
-                if (user?.id) {
-                    const saved = await UserService.getSavedShops(user.id);
-                    setSavedShops(saved || []);
-                    // Set initial tab based on whether user has saved shops
-                    if (saved && saved.length > 0) {
-                        setActiveTab('saved');
-                    } else {
-                        setActiveTab('recommended');
-                    }
+                // Set initial tab: prioritize pending > saved > recommended
+                if (pending.length > 0) {
+                    setActiveTab('pending');
+                } else if (saved.length > 0) {
+                    setActiveTab('saved');
+                } else {
+                    setActiveTab('recommended');
                 }
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -452,9 +477,28 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                         )}
 
                         {/* Tabs */}
-                        {(savedShops.length > 0 || recommendedShops.length > 0) && (
+                        {(pendingReviewShops.length > 0 || savedShops.length > 0 || recommendedShops.length > 0) && (
                             <div className="border-b border-border">
                                 <div className="flex px-1">
+                                    {pendingReviewShops.length > 0 && (
+                                        <button
+                                            onClick={() => setActiveTab('pending')}
+                                            className={cn(
+                                                "flex-1 py-3 text-sm font-bold transition-colors relative",
+                                                activeTab === 'pending' ? "text-foreground" : "text-muted-foreground"
+                                            )}
+                                        >
+                                            <span className="flex items-center justify-center gap-1">
+                                                리뷰 대기
+                                                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-primary rounded-full">
+                                                    {pendingReviewShops.length}
+                                                </span>
+                                            </span>
+                                            {activeTab === 'pending' && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
+                                            )}
+                                        </button>
+                                    )}
                                     {savedShops.length > 0 && (
                                         <button
                                             onClick={() => setActiveTab('saved')}
@@ -489,6 +533,14 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
 
                         {/* Tab Content */}
                         <div className="space-y-3">
+                            {activeTab === 'pending' && pendingReviewShops.length > 0 && (
+                                <ul className="space-y-3">
+                                    {pendingReviewShops.map((shop) => (
+                                        <ShopItem key={shop.id} shop={shop} onSelect={onSelect} />
+                                    ))}
+                                </ul>
+                            )}
+
                             {activeTab === 'saved' && filteredSavedShops.length > 0 && (
                                 <ul className="space-y-3">
                                     {filteredSavedShops.map((shop) => (

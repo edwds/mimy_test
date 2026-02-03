@@ -21,6 +21,8 @@ router.get("/all", requireAuth, async (req, res) => {
             shop_id: users_ranking.shop_id,
             rank: users_ranking.rank,
             satisfaction_tier: users_ranking.satisfaction_tier,
+            latest_review_text: users_ranking.latest_review_text,
+            latest_review_images: users_ranking.latest_review_images,
             created_at: users_ranking.created_at,
             shop: {
                 id: shops.id,
