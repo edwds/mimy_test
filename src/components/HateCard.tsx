@@ -46,7 +46,7 @@ export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose
                 bg-gradient-to-br ${bgGradient}
             `}>
                 <div className="p-5">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between">
                         {/* Close Button */}
                         <button
                             onClick={(e) => {
