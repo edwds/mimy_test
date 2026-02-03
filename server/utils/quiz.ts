@@ -135,29 +135,32 @@ export class QuizManager {
             await this.checkAndSeed();
         }
 
-        // ... calculation strictly same as before ...
-        // 1. Calculate Averages
+        // Calculate sums (not averages) for each axis
+        // New system: answers are -1, 0, +1
+        // Each axis has 3 questions, so sum ranges from -3 to +3
         const sums: Record<string, number> = {};
-        const counts: Record<string, number> = {};
 
         for (let qId = 1; qId <= 21; qId++) {
             const axisIndex = Math.ceil(qId / 3) - 1;
             const axisName = AXIS_ORDER[axisIndex];
-            const rawVal = answers[qId] || 3;
-            const score = rawVal - 3;
-            sums[axisName] = (sums[axisName] || 0) + score;
-            counts[axisName] = (counts[axisName] || 0) + 1;
+            const val = answers[qId] || 0; // -1, 0, or +1
+            sums[axisName] = (sums[axisName] || 0) + val;
         }
 
         const scoreVector: number[] = [];
         const scoresMap: Record<string, number> = {};
 
+        // Map -3~+3 range to -2~+2 range for cluster matching
+        // -3 -> -2
+        // -2 -> -2
+        // -1 -> -1
+        // 0 -> 0
+        // +1 -> +1
+        // +2 -> +2
+        // +3 -> +2
         for (const axis of AXIS_ORDER) {
             const sum = sums[axis] || 0;
-            const count = counts[axis] || 3;
-            const avg = sum / count;
-            const rounded = Math.round(avg);
-            const clamped = Math.max(-2, Math.min(2, rounded));
+            const clamped = Math.max(-2, Math.min(2, sum));
             scoreVector.push(clamped);
             scoresMap[axis] = clamped;
         }

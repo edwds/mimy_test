@@ -30,4 +30,3 @@ export const QUESTIONS: Question[] = [
     { id: 21, axis: 'umami', text: "입에 착 붙는 조미료나 발효 음식의 맛을 선호한다." },
 ];
 
-export const LIKERT_MAP: Record<number, number> = { 1: -2, 2: -1, 3: 0, 4: 1, 5: 2 };
