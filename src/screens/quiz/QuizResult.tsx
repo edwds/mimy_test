@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 export const QuizResult = () => {
@@ -11,13 +11,31 @@ export const QuizResult = () => {
     const { t } = useTranslation();
     const { refreshUser } = useUser();
     const [isLoading, setIsLoading] = useState(false);
+    const [showContent, setShowContent] = useState(false);
 
     // Result from backend: { clusterId, clusterData: { cluster_name, cluster_tagline, ... }, scores }
     const { result } = location.state || {};
 
+    console.log('[QuizResult] location.state:', location.state);
+    console.log('[QuizResult] result:', result);
+
     // Fallback if accessed directly without state
     const clusterName = result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
     const clusterTagline = result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
+
+    useEffect(() => {
+        // Show content after a brief delay to ensure proper rendering
+        const timer = setTimeout(() => setShowContent(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // If no result data, redirect back
+    useEffect(() => {
+        if (!result && showContent) {
+            console.warn('[QuizResult] No result data found, redirecting...');
+            navigate('/main', { replace: true });
+        }
+    }, [result, showContent, navigate]);
 
     const handleStart = async () => {
         setIsLoading(true);
@@ -29,6 +47,14 @@ export const QuizResult = () => {
 
     // Same gradient as TasteProfileSheet
     const bgGradient = "bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)]";
+
+    if (!showContent) {
+        return (
+            <div className="flex items-center justify-center h-full bg-background">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background items-center justify-center px-8 py-safe-offset-12">

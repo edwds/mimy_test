@@ -184,7 +184,7 @@ export const QuizScreen = () => {
                             transition={{ duration: 0.3 }}
                             className="absolute inset-0 bg-card border-2 border-border rounded-3xl shadow-2xl p-8 cursor-grab active:cursor-grabbing flex items-center justify-center"
                         >
-                            <h2 className="text-xl font-bold leading-tight text-center px-2">
+                            <h2 className="text-3xl font-bold leading-tight text-center px-2">
                                 {currentQuestion.text}
                             </h2>
 
