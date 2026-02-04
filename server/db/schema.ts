@@ -342,6 +342,26 @@ export const leaderboard = pgTable('leaderboard', {
     type_idx: index('idx_leaderboard_type').on(table.type, table.key),
 }));
 
+// --- Banners Domain ---
+export const banners = pgTable('banners', {
+    id: serial('id').primaryKey(),
+    title: text('title').notNull(),
+    description: text('description'),
+    action_type: varchar('action_type', { length: 20 }).notNull(), // 'write', 'link', 'navigate'
+    action_value: text('action_value'), // URL for 'link', route for 'navigate'
+    background_gradient: text('background_gradient').default('linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'),
+    icon_type: varchar('icon_type', { length: 20 }), // 'pen', 'user', 'custom'
+    icon_url: text('icon_url'), // Custom icon image URL
+    is_active: boolean('is_active').default(true),
+    display_order: integer('display_order').default(0),
+    start_date: timestamp('start_date'),
+    end_date: timestamp('end_date'),
+    created_at: timestamp('created_at').defaultNow(),
+    updated_at: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+    active_order_idx: index('idx_banners_active_order').on(table.is_active, table.display_order),
+}));
+
 // --- Notifications Domain ---
 export const notifications = pgTable('notifications', {
     id: serial('id').primaryKey(),

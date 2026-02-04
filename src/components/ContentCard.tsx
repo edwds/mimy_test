@@ -90,28 +90,42 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
 
     return (
         <div className={cn('px-5 mb-4', className)}>
-            <div
-                ref={ref}
-                className={cn(
-                    'text-base text-gray-800 whitespace-pre-wrap break-words',
-                    !expanded && canExpand && 'overflow-hidden'
+            <div className="relative">
+                <div
+                    ref={ref}
+                    className={cn(
+                        'text-base text-gray-800 whitespace-pre-wrap break-words',
+                        !expanded && canExpand && 'overflow-hidden'
+                    )}
+                    style={{
+                        lineHeight: '1.6',
+                        ...((!expanded && canExpand) ? { maxHeight } : {})
+                    }}
+                >
+                    {paragraphs.map((paragraph, pIdx) => (
+                        <span key={pIdx} style={{ display: 'block' }}>
+                            {pIdx > 0 && (
+                                <span style={{ display: 'block', height: '0.8em' }} />
+                            )}
+                            {paragraph.map((line, lIdx) => (
+                                <span key={lIdx}>
+                                    {line}
+                                    {lIdx < paragraph.length - 1 && <br />}
+                                </span>
+                            ))}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Gradient Overlay when collapsed */}
+                {!expanded && canExpand && (
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-14 pointer-events-none"
+                        style={{
+                            background: 'linear-gradient(to bottom, transparent 0%, white 90%)'
+                        }}
+                    />
                 )}
-                style={{
-                    lineHeight: '1.6',
-                    ...((!expanded && canExpand) ? { maxHeight } : {})
-                }}
-            >
-                {paragraphs.map((paragraph, pIdx) => (
-                    <span key={pIdx} style={{ display: 'block' }}>
-                        {pIdx > 0 && <br />}
-                        {paragraph.map((line, lIdx) => (
-                            <span key={lIdx}>
-                                {line}
-                                {lIdx < paragraph.length - 1 && <br />}
-                            </span>
-                        ))}
-                    </span>
-                ))}
             </div>
 
             {canExpand && (
@@ -121,7 +135,7 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
                         e.stopPropagation();
                         setExpanded(v => !v);
                     }}
-                    className="mt-2 text-[13px] font-semibold text-gray-600 hover:text-gray-900"
+                    className="-mt-2 text-[13px] font-semibold text-gray-600 hover:text-gray-900"
                 >
                     {expanded ? '접기' : '더보기'}
                 </button>

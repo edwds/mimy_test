@@ -144,9 +144,16 @@ export const QuizScreen = () => {
             </div>
 
             {/* Stacked Cards Container */}
-            <main className="flex-1 flex flex-col items-center justify-start px-6 pt-12 relative">
+            <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative">
+
+                {/* Helper text */}
+                <div className="mb-12 text-center text-sm text-muted-foreground">
+                    위 문장에 동의하면 오른쪽으로<br></br>아니라면 왼쪽으로 밀어주세요
+                </div>
+
+
                 {/* Card Stack - cards stacked vertically with scale */}
-                <div className="relative w-full max-w-md" style={{ height: 'calc(75vw * 4/3)', maxHeight: '600px' }}>
+                <div className="relative w-full max-w-md" style={{ height: 'min(calc(200vw * 4/3), 500px)' }}>
                     {/* All cards rendered with smooth transitions */}
                     {currentIndex + 2 < QUESTIONS.length && (
                         <motion.div
@@ -253,37 +260,6 @@ export const QuizScreen = () => {
                     </motion.div>
                 </div>
 
-                {/* Button Controls with Emoji */}
-                <div className="flex items-center justify-center gap-6 mt-8">
-                    <button
-                        onClick={() => handleSwipe('left')}
-                        disabled={!!exitDirection}
-                        className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
-                    >
-                        😣
-                    </button>
-
-                    <button
-                        onClick={() => handleSwipe('up')}
-                        disabled={!!exitDirection}
-                        className="bg-gray-400 hover:bg-gray-500 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
-                    >
-                        😐
-                    </button>
-
-                    <button
-                        onClick={() => handleSwipe('right')}
-                        disabled={!!exitDirection}
-                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-full p-4 shadow-lg transition-all active:scale-95 text-4xl leading-none flex items-center justify-center w-16 h-16"
-                    >
-                        😊
-                    </button>
-                </div>
-
-                {/* Helper text */}
-                <div className="mt-6 text-center text-sm text-muted-foreground">
-                    카드를 밀거나 버튼을 눌러주세요
-                </div>
             </main>
         </div>
     );

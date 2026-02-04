@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { Database, Upload, AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Database, Upload, AlertTriangle, CheckCircle2, ChevronLeft, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminScreen = () => {
@@ -115,6 +115,21 @@ export const AdminScreen = () => {
                                 <div className="text-left">
                                     <h3 className="font-bold text-gray-900">Shop Content</h3>
                                     <p className="text-xs text-gray-500">랭킹 & 리뷰 일괄 변경</p>
+                                </div>
+                            </div>
+                            <ChevronLeft size={20} className="text-gray-400 rotate-180" />
+                        </button>
+                        <button
+                            onClick={() => navigate('/admin/banners')}
+                            className="bg-white border-2 border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:border-primary hover:bg-primary/5 transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <Flag size={20} className="text-purple-600" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="font-bold text-gray-900">Banner Management</h3>
+                                    <p className="text-xs text-gray-500">홈 피드 배너 관리</p>
                                 </div>
                             </div>
                             <ChevronLeft size={20} className="text-gray-400 rotate-180" />

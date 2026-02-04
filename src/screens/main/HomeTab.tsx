@@ -365,6 +365,44 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
 
     const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
+    const [banners, setBanners] = useState<any[]>([]);
+
+    // Fetch banners
+    useEffect(() => {
+        const fetchBanners = async () => {
+            try {
+                const res = await authFetch(`${API_BASE_URL}/api/banners`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setBanners(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch banners:', error);
+            }
+        };
+
+        fetchBanners();
+    }, []);
+
+    const handleBannerClick = (banner: any) => {
+        switch (banner.action_type) {
+            case 'write':
+                onWrite();
+                break;
+            case 'link':
+                if (banner.action_value) {
+                    window.open(banner.action_value, '_blank');
+                }
+                break;
+            case 'navigate':
+                if (banner.action_value) {
+                    navigate(banner.action_value);
+                }
+                break;
+            default:
+                break;
+        }
+    };
 
     const handleCloseBonus = (index: number) => {
         setHiddenBonusIndices(prev => {
@@ -439,49 +477,70 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         ))}
                     </div>
 
-                    {/* Upload Nudge Banner */}
-                    <div
-                        onClick={onWrite}
-                        className="mx-5 mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
-                        style={{
-                            background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
-                        }}
-                    >
-                        <div className="relative z-10 flex justify-between items-start">
-                            <div className="flex-1 pr-4">
-                                <h2 className="text-xl font-bold mb-2 text-foreground leading-tight">
-                                    <Trans
-                                        i18nKey="home.write_nudge.title"
-                                        values={{ name: currentUser?.nickname || '회원' }}
-                                        components={{ br: <br /> }}
-                                    />
-                                </h2>
-                                <p className="text-muted-foreground text-sm leading-relaxed">
-                                    {t('home.write_nudge.desc')}
-                                </p>
-                            </div>
+                    {/* Dynamic Banners */}
+                    {banners.map((banner) => {
+                        const titleWithName = banner.title.replace('{{name}}', currentUser?.nickname || '회원');
 
-                            {/* User Profile + Write Button Group */}
-                            <div className="flex relative mt-1">
-                                <div className="w-12 h-12 rounded-full border-2 border-background overflow-hidden bg-muted shadow-md z-10">
-                                    {currentUser?.profile_image ? (
-                                        <img
-                                            src={currentUser.profile_image}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                                            <UserIcon size={20} />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-                                    <PenLine size={14} />
+                        return (
+                            <div
+                                key={banner.id}
+                                onClick={() => handleBannerClick(banner)}
+                                className="mx-5 mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
+                                style={{
+                                    background: banner.background_gradient
+                                }}
+                            >
+                                <div className="relative z-10 flex justify-between items-start">
+                                    <div className="flex-1 pr-4">
+                                        <h2 className="text-xl font-bold mb-2 text-foreground leading-tight whitespace-pre-line">
+                                            {titleWithName}
+                                        </h2>
+                                        {banner.description && (
+                                            <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                                                {banner.description}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Icon */}
+                                    <div className="flex relative mt-1">
+                                        {banner.icon_type === 'user' && (
+                                            <>
+                                                <div className="w-12 h-12 rounded-full border-2 border-background overflow-hidden bg-muted shadow-md z-10">
+                                                    {currentUser?.profile_image ? (
+                                                        <img
+                                                            src={currentUser.profile_image}
+                                                            alt="Profile"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                                            <UserIcon size={20} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                                    <PenLine size={14} />
+                                                </div>
+                                            </>
+                                        )}
+                                        {banner.icon_type === 'pen' && (
+                                            <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                                <PenLine size={20} />
+                                            </div>
+                                        )}
+                                        {banner.icon_type === 'custom' && banner.icon_url && (
+                                            <img
+                                                src={banner.icon_url}
+                                                alt="Banner Icon"
+                                                className="w-12 h-12 rounded-full object-cover shadow-lg border-2 border-background group-hover:scale-110 transition-transform"
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        );
+                    })}
 
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
