@@ -36,7 +36,8 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
         setLineHeightPx(lh);
 
         const maxH = lh * maxLines;
-        const isOverflow = el.scrollHeight > Math.ceil(maxH + 1);
+        // Add small tolerance for rounding errors and paragraph spacing
+        const isOverflow = el.scrollHeight > Math.ceil(maxH + lh);
         setCanExpand(isOverflow);
     };
 
@@ -101,8 +102,8 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
                 }}
             >
                 {paragraphs.map((paragraph, pIdx) => (
-                    <span key={pIdx}>
-                        {pIdx > 0 && <span style={{ display: 'block', height: '1.2em' }} />}
+                    <span key={pIdx} style={{ display: 'block' }}>
+                        {pIdx > 0 && <br />}
                         {paragraph.map((line, lIdx) => (
                             <span key={lIdx}>
                                 {line}
