@@ -71,8 +71,7 @@ export const ContentDetailScreen = () => {
             const method = prevLiked ? 'DELETE' : 'POST';
             const res = await authFetch(`${API_BASE_URL}/api/content/${contentId}/like`, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: currentUser.id })
+                headers: { 'Content-Type': 'application/json' }
             });
             const data = await res.json();
             if (data.success && data.stats) {
@@ -94,7 +93,6 @@ export const ContentDetailScreen = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_id: currentUser.id,
                     text: commentText,
                 })
             });

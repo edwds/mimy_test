@@ -366,8 +366,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
     const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
     const [banners, setBanners] = useState<any[]>([]);
-    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-    const bannerScrollRef = useRef<HTMLDivElement>(null);
 
     // Fetch banners
     useEffect(() => {
@@ -385,22 +383,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
         fetchBanners();
     }, []);
-
-    // Auto-update current banner index on scroll
-    useEffect(() => {
-        const scrollContainer = bannerScrollRef.current;
-        if (!scrollContainer) return;
-
-        const handleScroll = () => {
-            const scrollLeft = scrollContainer.scrollLeft;
-            const itemWidth = scrollContainer.offsetWidth;
-            const index = Math.round(scrollLeft / itemWidth);
-            setCurrentBannerIndex(index);
-        };
-
-        scrollContainer.addEventListener('scroll', handleScroll);
-        return () => scrollContainer.removeEventListener('scroll', handleScroll);
-    }, [banners.length]);
 
     const handleBannerClick = (banner: any) => {
         switch (banner.action_type) {
@@ -497,24 +479,27 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
                     {/* Dynamic Banners - Carousel */}
                     {banners.length > 0 && (
-                        <div className="mb-6 relative">
+                        <div className="mb-6">
                             {/* Carousel Container */}
-                            <div
-                                ref={bannerScrollRef}
-                                className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 gap-4"
-                                style={{ scrollBehavior: 'smooth' }}
-                            >
-                                {banners.map((banner) => {
+                            <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                                {banners.map((banner, index) => {
                                     const titleWithName = banner.title.replace('{{name}}', currentUser?.nickname || '회원');
+                                    const isFirst = index === 0;
+                                    const isLast = index === banners.length - 1;
 
                                     return (
                                         <div
                                             key={banner.id}
-                                            className="flex-shrink-0 w-[calc(100%-40px)] snap-center"
+                                            className="flex-shrink-0 snap-center"
+                                            style={{
+                                                width: 'calc(100% - 30px)',
+                                                paddingLeft: isFirst ? '20px' : '5px',
+                                                paddingRight: isLast ? '20px' : '5px'
+                                            }}
                                         >
                                             <div
                                                 onClick={() => handleBannerClick(banner)}
-                                                className="p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group h-full"
+                                                className="p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
                                                 style={{
                                                     background: banner.background_gradient
                                                 }}
@@ -525,7 +510,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                                             {titleWithName}
                                                         </h2>
                                                         {banner.description && (
-                                                            <p className="text-muted-foreground text-sm whitespace-pre-line">
+                                                            <p className="text-muted-foreground text-sm whitespace-pre-line line-clamp-1">
                                                                 {banner.description}
                                                             </p>
                                                         )}
@@ -572,22 +557,6 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                     );
                                 })}
                             </div>
-
-                            {/* Pagination Dots */}
-                            {banners.length > 1 && (
-                                <div className="flex justify-center gap-1.5 mt-3">
-                                    {banners.map((_, index) => (
-                                        <div
-                                            key={index}
-                                            className={`h-1.5 rounded-full transition-all ${
-                                                index === currentBannerIndex
-                                                    ? 'w-6 bg-primary'
-                                                    : 'w-1.5 bg-gray-300'
-                                            }`}
-                                        />
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     )}
 

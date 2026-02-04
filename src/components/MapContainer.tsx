@@ -26,6 +26,7 @@ interface Props {
     bottomSheetOffset?: number;
     onMoveEnd?: (bounds: { minLat: number, maxLat: number, minLon: number, maxLon: number }) => void;
     onClusterClick?: (shops: Shop[]) => void;
+    onMapReady?: (map: maptilersdk.Map) => void;
 }
 
 // Function to create custom marker HTML
@@ -247,12 +248,15 @@ export const MapContainer = ({
     selectedShopId,
     bottomSheetOffset,
     onMoveEnd,
+    onMapReady,
     // onClusterClick // Not used anymore
 }: Props) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maptilersdk.Map | null>(null);
     const markers = useRef<Map<string, maptilersdk.Marker>>(new Map());
     const initialCenterApplied = useRef(false);
+    const lastCenterRef = useRef<[number, number] | undefined>(undefined);
+    const isUserDragging = useRef(false);
 
     // Initialize Map
     useEffect(() => {
@@ -288,6 +292,14 @@ export const MapContainer = ({
                 source: 'shops',
                 paint: { 'circle-opacity': 0, 'circle-radius': 0 } // Invisible query layer
             });
+
+            // Send map instance to parent
+            if (map.current && onMapReady) {
+                onMapReady(map.current);
+            }
+
+            // Note: We don't call onMoveEnd here for initial load
+            // Initial fetch will be triggered by parent component's useEffect
         });
 
         map.current.on('click', (e) => {
@@ -296,15 +308,60 @@ export const MapContainer = ({
             }
         });
 
+        // Track user dragging to detect manual pan (both mouse and touch)
+        map.current.on('dragstart', () => {
+            console.log('[MapContainer] User started dragging');
+            isUserDragging.current = true;
+        });
+
+        map.current.on('touchstart', () => {
+            console.log('[MapContainer] User touched (mobile)');
+            isUserDragging.current = true;
+        });
+
         map.current.on('moveend', () => {
             if (!map.current) return;
-            const bounds = map.current.getBounds();
-            onMoveEnd?.({
-                minLat: bounds.getSouth(),
-                maxLat: bounds.getNorth(),
-                minLon: bounds.getWest(),
-                maxLon: bounds.getEast()
-            });
+            console.log('[MapContainer] moveend fired, isUserDragging:', isUserDragging.current);
+
+            // Only call onMoveEnd if user was dragging (manual pan)
+            if (isUserDragging.current) {
+                // Calculate visible area bounds (excluding UI overlays)
+                const mapContainer = map.current.getContainer();
+                const mapHeight = mapContainer.clientHeight;
+
+                // UI overlay offsets (in pixels)
+                const topOffset = 80;    // Filter bar height + padding
+                const bottomOffset = 120; // Bottom sheet collapsed height
+
+                // Get full canvas bounds
+                const fullBounds = map.current.getBounds();
+                const ne = fullBounds.getNorthEast();
+                const sw = fullBounds.getSouthWest();
+
+                // Calculate lat per pixel
+                const latRange = ne.lat - sw.lat;
+                const latPerPx = latRange / mapHeight;
+
+                // Adjust bounds to exclude UI overlays (안전 영역)
+                const visibleMinLat = sw.lat + (bottomOffset * latPerPx);
+                const visibleMaxLat = ne.lat - (topOffset * latPerPx);
+                const visibleMinLon = sw.lng; // No side overlays
+                const visibleMaxLon = ne.lng;
+
+                console.log('[MapContainer] Calling onMoveEnd with VISIBLE area bounds:', {
+                    fullBounds: { minLat: sw.lat, maxLat: ne.lat, minLon: sw.lng, maxLon: ne.lng },
+                    visibleBounds: { minLat: visibleMinLat, maxLat: visibleMaxLat, minLon: visibleMinLon, maxLon: visibleMaxLon },
+                    adjustments: { topOffset, bottomOffset, latPerPx }
+                });
+
+                onMoveEnd?.({
+                    minLat: visibleMinLat,
+                    maxLat: visibleMaxLat,
+                    minLon: visibleMinLon,
+                    maxLon: visibleMaxLon
+                });
+                isUserDragging.current = false; // Reset flag
+            }
         });
 
         return () => {
@@ -517,7 +574,20 @@ export const MapContainer = ({
     useEffect(() => {
         if (!map.current || !center) return;
 
-        // First time: just apply and mark as done
+        // Check if center actually changed
+        const centerChanged = !lastCenterRef.current ||
+            lastCenterRef.current[0] !== center[0] ||
+            lastCenterRef.current[1] !== center[1];
+
+        if (!centerChanged) {
+            // Center didn't change, don't fly
+            return;
+        }
+
+        // Update last center
+        lastCenterRef.current = center;
+
+        // First time: just apply and mark as done (don't send bounds, let initial load handle it)
         if (!initialCenterApplied.current) {
             initialCenterApplied.current = true;
             map.current.flyTo({

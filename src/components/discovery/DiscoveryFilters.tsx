@@ -1,0 +1,89 @@
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface DiscoveryFiltersProps {
+    onSearchClick: () => void;
+    selectedFilters: string[];
+    onFilterChange: (filters: string[]) => void;
+}
+
+// Fixed food kind categories for discovery (actual DB values in Korean)
+const FIXED_FOOD_KINDS = [
+    { value: '한식', label: '한식' },
+    { value: '일식', label: '일식' },
+    { value: '중식', label: '중식' },
+    { value: '이탈리아음식', label: '이탈리안' },
+    { value: '퓨전음식', label: '퓨전' },
+    { value: '스테이크,립', label: '스테이크' }
+];
+
+export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
+    onSearchClick,
+    selectedFilters,
+    onFilterChange
+}) => {
+    const toggleFilter = (filter: string) => {
+        // If clicking the same filter, deselect it
+        if (selectedFilters.includes(filter)) {
+            onFilterChange([]);
+        } else {
+            // Replace with new filter (only one filter at a time)
+            onFilterChange([filter]);
+        }
+    };
+
+    return (
+        <div className="w-full flex items-center gap-2 relative">
+            {/* Filter Chips - Scrollable from left, fades near search button */}
+            <div
+                className="flex-1 relative overflow-hidden"
+                style={{
+                    maskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent 100%)'
+                }}
+            >
+                {/* Scrollable chips container */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pr-16">
+                    {/* High Match Filter */}
+                    <button
+                        onClick={() => toggleFilter('HIGH_MATCH')}
+                        className={cn(
+                            "flex-shrink-0 h-10 px-4 rounded-full text-sm font-medium border transition-all active:scale-95 flex items-center justify-center",
+                            selectedFilters.includes('HIGH_MATCH')
+                                ? "bg-primary text-white border-primary shadow-md"
+                                : "bg-background/95 backdrop-blur text-gray-700 border-border/50 shadow-sm"
+                        )}
+                    >
+                        ⭐ 높은 매칭
+                    </button>
+
+                    {/* Food Kind Filters - Fixed 6 categories with actual DB values */}
+                    {FIXED_FOOD_KINDS.map((foodKind) => (
+                        <button
+                            key={foodKind.value}
+                            onClick={() => toggleFilter(foodKind.value)}
+                            className={cn(
+                                "flex-shrink-0 h-10 px-4 rounded-full text-sm font-medium border transition-all active:scale-95 flex items-center justify-center",
+                                selectedFilters.includes(foodKind.value)
+                                    ? "bg-primary text-white border-primary shadow-md"
+                                    : "bg-background/95 backdrop-blur text-gray-700 border-border/50 shadow-sm"
+                            )}
+                        >
+                            {foodKind.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Search Button - Fixed on the right, vertically centered with chips */}
+            <div className="flex-shrink-0 absolute right-0 top-0 z-20 flex items-center h-10">
+                <button
+                    onClick={onSearchClick}
+                    className="h-10 w-10 flex items-center justify-center bg-white rounded-full shadow-lg border border-gray-100 active:scale-95 transition-transform"
+                >
+                    <Search className="w-5 h-5 text-gray-700" />
+                </button>
+            </div>
+        </div>
+    );
+};

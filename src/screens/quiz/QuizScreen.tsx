@@ -154,17 +154,27 @@ export const QuizScreen = () => {
     return (
         <div className="flex flex-col h-full bg-background pt-safe-offset-6 pb-safe-offset-6">
             {/* Header with counter and close button */}
-            <div className="px-6 pb-4">
+            <div className="px-6 pb-4 relative z-50">
                 <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-muted-foreground">
                         {currentIndex + 1} / {QUESTIONS.length}
                     </span>
                     {hasExistingProfile && (
                         <button
-                            onClick={handleClose}
-                            className="p-2 rounded-full hover:bg-muted transition-colors"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleClose();
+                            }}
+                            onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleClose();
+                            }}
+                            className="p-3 rounded-full hover:bg-muted transition-colors relative z-50 min-w-[48px] min-h-[48px] flex items-center justify-center"
+                            style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: 'auto' }}
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-6 h-6" />
                         </button>
                     )}
                 </div>

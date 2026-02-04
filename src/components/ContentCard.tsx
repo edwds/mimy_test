@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Send, MessageCircle, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
 import { CommentSheet } from './CommentSheet';
 import { ShopInfoCard } from './ShopInfoCard';
@@ -376,10 +377,9 @@ export const ContentCard = ({
 
         try {
             const method = prevLiked ? 'DELETE' : 'POST';
-            const res = await fetch(`${API_BASE_URL}/api/content/${content.id}/like`, {
+            const res = await authFetch(`${API_BASE_URL}/api/content/${content.id}/like`, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: currentUser.id })
+                headers: { 'Content-Type': 'application/json' }
             });
             const data = await res.json();
             if (data.success && data.stats) {
@@ -945,11 +945,15 @@ export const ContentCard = ({
                 </div>
 
                 <div className="flex items-center gap-1">
-                    <motion.button
+                    <button
                         type="button"
-                        whileTap={{ scale: 0.8 }}
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
                         onClick={handleLike}
-                        className="flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-full text-gray-600 active:text-red-500 active:bg-red-50 transition-colors"
+                        className="flex items-center gap-1.5 h-9 px-2 -ml-2 rounded-full text-gray-600 active:text-red-500 active:bg-red-50 transition-colors active:scale-95"
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
                     >
                         <motion.div
                             initial={false}
@@ -959,7 +963,7 @@ export const ContentCard = ({
                             <Heart size={20} className={cn(isLiked && 'fill-red-500 text-red-500')} />
                         </motion.div>
                         {likeCount > 0 && <span className="text-base font-medium">{likeCount}</span>}
-                    </motion.button>
+                    </button>
 
                     <button
                         type="button"

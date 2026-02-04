@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Send, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
 import { Capacitor } from '@capacitor/core';
 
@@ -105,11 +106,10 @@ export const CommentSheet = ({ isOpen, onClose, contentId, onCommentSuccess }: C
 
         setSubmitting(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/content/${contentId}/comments`, {
+            const res = await authFetch(`${API_BASE_URL}/api/content/${contentId}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_id: user.id,
                     text: inputText.trim()
                 })
             });

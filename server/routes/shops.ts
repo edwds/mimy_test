@@ -43,6 +43,11 @@ router.get("/discovery", optionalAuth, async (req, res) => {
         // Exclude ranked shops (default: true for initial load, false for map search)
         const excludeRanked = req.query.excludeRanked !== 'false';
 
+        // Filter parameters
+        const foodKindsParam = req.query.foodKinds as string | undefined;
+        const foodKindsFilter = foodKindsParam ? foodKindsParam.split(',').filter(k => k.trim()) : [];
+        const highMatchOnly = req.query.highMatchOnly === 'true'; // Top 50 shops by match score
+
         // Get user ID from JWT
         const uid = req.user?.id || 0;
 
@@ -59,13 +64,14 @@ router.get("/discovery", optionalAuth, async (req, res) => {
         const hasMaxLon = req.query.maxLon && !isNaN(parseFloat(req.query.maxLon as string));
 
         if (hasMinLat && hasMaxLat && hasMinLon && hasMaxLon) {
-            // Use provided bounds (map viewport search)
+            // Use provided bounds (from visible map viewport)
             rawMinLat = parseFloat(req.query.minLat as string);
             rawMaxLat = parseFloat(req.query.maxLat as string);
             rawMinLon = parseFloat(req.query.minLon as string);
             rawMaxLon = parseFloat(req.query.maxLon as string);
+            console.log('[Discovery API] Using bounds:', { rawMinLat, rawMaxLat, rawMinLon, rawMaxLon });
         } else {
-            // Use center point with 3km radius (initial load)
+            // Use center point with fixed radius (for initial load without filters)
             const centerLat = parseFloat(req.query.lat as string);
             const centerLon = parseFloat(req.query.lon as string);
 
@@ -73,19 +79,24 @@ router.get("/discovery", optionalAuth, async (req, res) => {
                 return res.status(400).json({ error: "Location (lat, lon) or bounds (minLat, maxLat, minLon, maxLon) required" });
             }
 
-            // Calculate 3km bounding box (approximately 0.027 degrees)
-            const latDelta = 0.027; // ~3km in latitude
-            const lonDelta = 0.027; // ~3km in longitude (varies by latitude, but close enough)
-            rawMinLat = centerLat - latDelta;
-            rawMaxLat = centerLat + latDelta;
-            rawMinLon = centerLon - lonDelta;
-            rawMaxLon = centerLon + lonDelta;
+            // Use 3km radius for initial personalized discovery
+            const radius = 0.027; // ~3km
+            rawMinLat = centerLat - radius;
+            rawMaxLat = centerLat + radius;
+            rawMinLon = centerLon - radius;
+            rawMaxLon = centerLon + radius;
+            console.log('[Discovery API] Using center with 3km radius:', { centerLat, centerLon, radius });
         }
 
         // Fetch shops within specified bounds
         // For initial load (excludeRanked=true): exclude shops user has already ranked
         // For map exploration (excludeRanked=false): include all shops for comprehensive discovery
         const excludeClause = excludeRanked ? sql`AND ur.id IS NULL` : sql``;
+
+        // Add food_kind filter if provided
+        const foodKindClause = foodKindsFilter.length > 0
+            ? sql`AND s.food_kind IN (${sql.join(foodKindsFilter.map(k => sql`${k}`), sql`, `)})`
+            : sql``;
 
         const shopsQuery = await db.execute(sql`
             SELECT
@@ -106,6 +117,7 @@ router.get("/discovery", optionalAuth, async (req, res) => {
                 AND s.lon >= ${rawMinLon}
                 AND s.lon <= ${rawMaxLon}
                 ${excludeClause}
+                ${foodKindClause}
             LIMIT 200
         `);
 
@@ -223,16 +235,29 @@ router.get("/discovery", optionalAuth, async (req, res) => {
             my_review_stats: reviewStatsMap.get(shop.id) || null
         }));
 
-        // 4. Sort by match score (highest first) and apply limit
+        // 4. Sort by match score (highest first)
         const sorted = enriched.sort((a, b) => {
             const scoreA = a.shop_user_match_score ?? -1;
             const scoreB = b.shop_user_match_score ?? -1;
             return scoreB - scoreA;
         });
 
-        const paginated = sorted.slice((page - 1) * limit, page * limit);
+        // 5. Apply highMatchOnly filter (top 50 by match score)
+        const filtered = highMatchOnly ? sorted.slice(0, 50) : sorted;
 
-        console.log(`[Discovery] Returning ${paginated.length} shops sorted by match score for user ${uid}`);
+        // 6. Apply pagination
+        const paginated = filtered.slice((page - 1) * limit, page * limit);
+
+        // Log first few shops to verify they're in bounds
+        if (paginated.length > 0) {
+            console.log(`[Discovery] Returning ${paginated.length} shops. First shop:`, {
+                name: paginated[0].name,
+                lat: paginated[0].lat,
+                lon: paginated[0].lon,
+                bounds: { rawMinLat, rawMaxLat, rawMinLon, rawMaxLon }
+            });
+        }
+
         res.json(paginated);
 
     } catch (error) {
