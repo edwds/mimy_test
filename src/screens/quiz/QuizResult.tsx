@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -39,6 +41,18 @@ export const QuizResult = () => {
 
     const handleStart = async () => {
         setIsLoading(true);
+
+        // Request photo library permission on iOS (non-blocking)
+        if (Capacitor.isNativePlatform()) {
+            try {
+                console.log('[QuizResult] Requesting photo library permission');
+                await requestPhotoLibraryPermission();
+            } catch (error) {
+                console.error('[QuizResult] Failed to request photo permission:', error);
+                // Don't block user from proceeding even if permission fails
+            }
+        }
+
         // Refresh user profile to get updated taste info
         await refreshUser();
         setIsLoading(false);

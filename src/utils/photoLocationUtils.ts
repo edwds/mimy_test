@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Media } from '@capacitor-community/media';
 import exifr from 'exifr';
+import { Dialog } from '@capacitor/dialog';
 
 export interface PhotoWithLocation {
     identifier: string;
@@ -33,6 +34,59 @@ function calculateDistance(
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
+}
+
+/**
+ * Request photo library permission
+ * Should be called early in the app lifecycle
+ */
+export async function requestPhotoLibraryPermission(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+        return false;
+    }
+
+    try {
+        console.log('[PhotoLocation] Requesting photo library permission');
+
+        // Show explanation before requesting permission
+        const { value } = await Dialog.confirm({
+            title: '사진 라이브러리 접근',
+            message: 'Mimy는 맛집 위치에서 촬영한 사진을 자동으로 찾아 리뷰 작성을 도와드립니다.\n\n권한 팝업에서 "모든 사진 허용"을 선택하시면 더 정확한 사진 추천을 받을 수 있습니다.',
+            okButtonTitle: '확인',
+            cancelButtonTitle: '건너뛰기',
+        });
+
+        if (!value) {
+            console.log('[PhotoLocation] User skipped permission request');
+            return false;
+        }
+
+        // Attempt to access albums - this will trigger permission prompt
+        const result = await Media.getAlbumsPath();
+        const hasPermission = result.path.length > 0;
+
+        console.log('[PhotoLocation] Permission granted:', hasPermission);
+        return hasPermission;
+    } catch (error: any) {
+        console.error('[PhotoLocation] Permission request failed:', error);
+        return false;
+    }
+}
+
+/**
+ * Check if photo library permission is already granted
+ */
+export async function checkPhotoLibraryPermission(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+        return false;
+    }
+
+    try {
+        const result = await Media.getAlbumsPath();
+        return result.path.length > 0;
+    } catch (error: any) {
+        return false;
+    }
 }
 
 /**
