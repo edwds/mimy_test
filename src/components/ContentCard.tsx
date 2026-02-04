@@ -101,14 +101,15 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
                 }}
             >
                 {paragraphs.map((paragraph, pIdx) => (
-                    <p key={pIdx} className={pIdx > 0 ? 'mt-3' : ''}>
+                    <span key={pIdx}>
+                        {pIdx > 0 && <span style={{ display: 'block', height: '1.2em' }} />}
                         {paragraph.map((line, lIdx) => (
                             <span key={lIdx}>
                                 {line}
                                 {lIdx < paragraph.length - 1 && <br />}
                             </span>
                         ))}
-                    </p>
+                    </span>
                 ))}
             </div>
 

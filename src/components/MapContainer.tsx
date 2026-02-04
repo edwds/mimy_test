@@ -513,19 +513,31 @@ export const MapContainer = ({
         };
     }, [selectedShopId, shops, shopPositions]);
 
-    // Handle Initial Centering (only once at startup)
-    // After initial setup, map position is controlled by user interaction and selectedShopId
+    // Handle Center Changes (including user location button)
     useEffect(() => {
-        if (!map.current || !center || initialCenterApplied.current) return;
+        if (!map.current || !center) return;
 
-        initialCenterApplied.current = true;
+        // First time: just apply and mark as done
+        if (!initialCenterApplied.current) {
+            initialCenterApplied.current = true;
+            map.current.flyTo({
+                center: [center[1], center[0]],
+                duration: 1000,
+                essential: true
+            });
+            return;
+        }
 
-        map.current.flyTo({
-            center: [center[1], center[0]],
-            duration: 1000,
-            essential: true
-        });
-    }, [center]);
+        // Subsequent times: only fly if not currently showing a selected shop
+        // (to avoid conflicts with selectedShopId auto-fly)
+        if (!selectedShopId) {
+            map.current.flyTo({
+                center: [center[1], center[0]],
+                duration: 800,
+                essential: true
+            });
+        }
+    }, [center, selectedShopId]);
 
     // Auto-fly to selected shop when selectedShopId changes
     useEffect(() => {

@@ -251,7 +251,12 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    setMapCenter([position.coords.latitude, position.coords.longitude]);
+                    const newCenter: [number, number] = [position.coords.latitude, position.coords.longitude];
+                    setMapCenter(newCenter);
+
+                    // Manually fly to location since MapContainer only centers once
+                    // We'll trigger a refresh by resetting shops
+                    fetchShops({ excludeRanked: true });
                 },
                 (error) => {
                     console.error(error);
