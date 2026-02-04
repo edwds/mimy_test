@@ -236,3 +236,48 @@ export async function photoUriToFile(uri: string, filename: string = 'photo.jpg'
         return null;
     }
 }
+
+/**
+ * Get full resolution image for a photo identifier
+ */
+export async function getFullResolutionPhoto(identifier: string): Promise<File | null> {
+    if (!Capacitor.isNativePlatform()) {
+        return null;
+    }
+
+    try {
+        console.log('[PhotoLocation] Loading full resolution for:', identifier);
+
+        // Load high quality image (1200px is enough, faster than full resolution)
+        const result = await Media.getMedias({
+            quantity: 500, // Need to scan to find our identifier
+            thumbnailWidth: 1200, // Good quality for upload
+            thumbnailHeight: 1200,
+            thumbnailQuality: 85, // Good balance between quality and size
+            sort: [{
+                key: 'creationDate',
+                ascending: false
+            }]
+        });
+
+        const photo = result.medias?.find(m => m.identifier === identifier);
+
+        if (!photo?.data) {
+            console.error('[PhotoLocation] Could not find full resolution photo');
+            return null;
+        }
+
+        const dataUri = photo.data.startsWith('data:') ? photo.data : `data:image/jpeg;base64,${photo.data}`;
+        const response = await fetch(dataUri);
+        const blob = await response.blob();
+
+        const filename = `photo_${Date.now()}.jpg`;
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+
+        console.log('[PhotoLocation] ✅ Loaded full resolution:', file.size, 'bytes', `(~${Math.round(file.size / 1024)}KB)`);
+        return file;
+    } catch (error) {
+        console.error('[PhotoLocation] Error loading full resolution:', error);
+        return null;
+    }
+}

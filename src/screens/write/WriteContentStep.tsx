@@ -15,7 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
 import { getAccessToken, saveTokens } from '@/lib/tokenStorage';
 import { Reorder, useDragControls } from 'framer-motion';
-import { getPhotosNearLocation, photoUriToFile, PhotoWithLocation } from '@/utils/photoLocationUtils';
+import { getPhotosNearLocation, getFullResolutionPhoto, PhotoWithLocation } from '@/utils/photoLocationUtils';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -238,12 +238,22 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     const handleAddSuggestedPhoto = async (photo: PhotoWithLocation) => {
         try {
             console.log('[WriteContentStep] Adding suggested photo');
+            console.log('[WriteContentStep] Loading full resolution for identifier:', photo.identifier);
 
-            const file = await photoUriToFile(photo.uri, `photo_${Date.now()}.jpg`);
+            // Show loading state
+            setIsLoadingSuggestions(true);
+
+            // Load full resolution image using identifier
+            const file = await getFullResolutionPhoto(photo.identifier);
+
             if (!file) {
-                console.error('[WriteContentStep] Failed to convert photo to file');
+                console.error('[WriteContentStep] Failed to load full resolution photo');
+                alert('사진을 불러오는데 실패했습니다.');
+                setIsLoadingSuggestions(false);
                 return;
             }
+
+            console.log('[WriteContentStep] ✅ Loaded full resolution:', file.size, 'bytes');
 
             // Remove from suggestions
             setSuggestedPhotos(prev => prev.filter(p => p.identifier !== photo.identifier));
@@ -251,6 +261,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             // Open ImageEditModal with this file
             setPendingFiles([file]);
             setIsEditModalOpen(true);
+            setIsLoadingSuggestions(false);
 
             // Auto-set visit date from photo if not manually set
             if (!isDateManuallySet && photo.dateTaken) {
@@ -266,6 +277,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             }
         } catch (error) {
             console.error('[WriteContentStep] Error adding suggested photo:', error);
+            setIsLoadingSuggestions(false);
+            alert('사진을 불러오는데 실패했습니다.');
         }
     };
 
