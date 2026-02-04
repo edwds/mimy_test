@@ -93,21 +93,39 @@ public class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
             group.enter()
 
             let options = PHImageRequestOptions()
-            options.deliveryMode = .fastFormat
+            options.deliveryMode = .highQualityFormat
             options.isSynchronous = false
             options.resizeMode = .fast
+            options.isNetworkAccessAllowed = true // Allow iCloud download
+            options.progressHandler = { progress, error, stop, info in
+                if error != nil {
+                    print("[PhotoLibrary] Download error:", error?.localizedDescription ?? "unknown")
+                }
+            }
 
             // Request small thumbnail
             PHImageManager.default().requestImage(
                 for: asset,
-                targetSize: CGSize(width: 200, height: 200),
+                targetSize: CGSize(width: 400, height: 400), // Larger size for better quality
                 contentMode: .aspectFill,
                 options: options
             ) { image, info in
                 defer { group.leave() }
 
+                // Check if we got a degraded image or need to wait for full quality
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+
+                if isInCloud {
+                    print("[PhotoLibrary] Photo is in iCloud, downloading...")
+                    // Don't return yet, wait for high quality version
+                    if isDegraded {
+                        group.enter() // Re-enter to wait for full quality
+                    }
+                }
+
                 guard let image = image,
-                      let imageData = image.jpegData(compressionQuality: 0.7),
+                      let imageData = image.jpegData(compressionQuality: 0.8),
                       let location = asset.location else {
                     return
                 }

@@ -237,18 +237,33 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Add suggested photo to media items
     const handleAddSuggestedPhoto = async (photo: PhotoWithLocation) => {
         try {
-            const file = await photoUriToFile(photo.uri);
+            console.log('[WriteContentStep] Adding suggested photo');
+
+            const file = await photoUriToFile(photo.uri, `photo_${Date.now()}.jpg`);
             if (!file) {
                 console.error('[WriteContentStep] Failed to convert photo to file');
                 return;
             }
 
             // Remove from suggestions
-            setSuggestedPhotos(prev => prev.filter(p => p.uri !== photo.uri));
+            setSuggestedPhotos(prev => prev.filter(p => p.identifier !== photo.identifier));
 
-            // Add to media items and upload
-            console.log('[WriteContentStep] Adding suggested photo');
-            uploadFiles([file]);
+            // Open ImageEditModal with this file
+            setPendingFiles([file]);
+            setIsEditModalOpen(true);
+
+            // Auto-set visit date from photo if not manually set
+            if (!isDateManuallySet && photo.dateTaken) {
+                const date = new Date(photo.dateTaken);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const localDate = `${year}-${month}-${day}`;
+                    setVisitDate(localDate);
+                    console.log('[WriteContentStep] Auto-set visit date from photo:', localDate);
+                }
+            }
         } catch (error) {
             console.error('[WriteContentStep] Error adding suggested photo:', error);
         }
@@ -730,20 +745,30 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                     <div className="w-28 h-28 relative rounded-xl overflow-hidden group border border-gray-100 bg-muted shadow-sm">
                                         {item.status === 'complete' && item.url ? (
                                             <>
-                                                <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                                                <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300" />
+                                                {/* Delete Button - Always visible */}
                                                 <button
                                                     onClick={() => setMediaItems(prev => prev.filter(m => m.id !== item.id))}
-                                                    className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                                                    className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-black backdrop-blur-sm rounded-full p-1.5 transition-colors z-10"
                                                 >
-                                                    <X className="w-3 h-3 text-white" />
+                                                    <X className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </>
                                         ) : (
-                                            <UploadingThumbnail
-                                                file={item.file}
-                                                progress={item.progress}
-                                                error={item.status === 'error'}
-                                            />
+                                            <>
+                                                <UploadingThumbnail
+                                                    file={item.file}
+                                                    progress={item.progress}
+                                                    error={item.status === 'error'}
+                                                />
+                                                {/* Delete button for uploading/error items */}
+                                                <button
+                                                    onClick={() => setMediaItems(prev => prev.filter(m => m.id !== item.id))}
+                                                    className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-black backdrop-blur-sm rounded-full p-1.5 transition-colors z-10"
+                                                >
+                                                    <X className="w-3.5 h-3.5 text-white" />
+                                                </button>
+                                            </>
                                         )}
                                     </div>
 

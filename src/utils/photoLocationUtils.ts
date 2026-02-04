@@ -139,41 +139,69 @@ export async function getPhotosNearLocation(
         // Get thumbnails for nearby photos (limited to maxPhotos)
         const identifiersToLoad = nearbyMetadata.slice(0, maxPhotos).map(p => p.identifier);
 
-        console.log('[PhotoLocation] Loading thumbnails for', identifiersToLoad.length, 'photos...');
+        console.log('[PhotoLocation] Loading small thumbnails for', identifiersToLoad.length, 'photos...');
 
-        // Load all recent photos and filter by identifier
-        // Note: Media plugin doesn't support loading by specific identifiers
-        const thumbnailResult = await Media.getMedias({
-            quantity: 200, // Load recent photos
-            thumbnailWidth: 200,
-            thumbnailHeight: 200,
-            thumbnailQuality: 70,
-            sort: [{
-                key: 'creationDate',
-                ascending: false
-            }]
-        });
+        // Load small thumbnails first (fast preview)
+        const photosWithLocation: PhotoWithLocation[] = [];
+        const batchSize = 500;
+        let found = 0;
 
-        // Filter to only the photos we want
-        const requestedPhotos = (thumbnailResult.medias || []).filter(media =>
-            identifiersToLoad.includes(media.identifier)
-        );
+        for (let offset = 0; offset < 2000 && found < identifiersToLoad.length; offset += batchSize) {
+            console.log(`[PhotoLocation] Loading batch: ${offset}-${offset + batchSize}...`);
 
-        console.log('[PhotoLocation] ✅ Loaded', requestedPhotos.length, 'thumbnails');
+            try {
+                const thumbnailResult = await Media.getMedias({
+                    quantity: batchSize,
+                    thumbnailWidth: 120, // Smaller thumbnail for faster loading
+                    thumbnailHeight: 120,
+                    thumbnailQuality: 60, // Lower quality for speed
+                    sort: [{
+                        key: 'creationDate',
+                        ascending: false
+                    }]
+                });
 
-        // Combine metadata with thumbnails
-        const photosWithLocation: PhotoWithLocation[] = requestedPhotos.map(media => {
-            const metadata = nearbyMetadata.find(m => m.identifier === media.identifier);
+                console.log('[PhotoLocation] ✅ Got', thumbnailResult.medias?.length || 0, 'thumbnails in this batch');
 
-            return {
-                identifier: media.identifier,
-                uri: media.data || '', // Use the data URI from Media plugin
-                latitude: media.location?.latitude || 0,
-                longitude: media.location?.longitude || 0,
-                distance: metadata?.distance || 0,
-                dateTaken: new Date(media.creationDate),
-            };
-        });
+                // Match by identifier
+                for (const metadata of nearbyMetadata.slice(0, maxPhotos)) {
+                    // Skip if already found
+                    if (photosWithLocation.find(p => p.identifier === metadata.identifier)) {
+                        continue;
+                    }
+
+                    const media = thumbnailResult.medias?.find(m => m.identifier === metadata.identifier);
+
+                    if (media?.data) {
+                        photosWithLocation.push({
+                            identifier: metadata.identifier,
+                            uri: media.data.startsWith('data:') ? media.data : `data:image/jpeg;base64,${media.data}`,
+                            latitude: metadata.latitude,
+                            longitude: metadata.longitude,
+                            distance: metadata.distance,
+                            dateTaken: new Date(metadata.creationDate * 1000),
+                        });
+                        found++;
+                        console.log('[PhotoLocation] ✅ Matched photo:', metadata.identifier, 'distance:', Math.round(metadata.distance), 'm');
+                    }
+                }
+
+                // Stop early if we found all photos
+                if (found >= identifiersToLoad.length) {
+                    console.log('[PhotoLocation] ✅ Found all requested photos!');
+                    break;
+                }
+            } catch (error) {
+                console.error('[PhotoLocation] Error loading batch:', error);
+                break;
+            }
+        }
+
+        if (found < identifiersToLoad.length) {
+            console.warn(`[PhotoLocation] ⚠️ Only found ${found}/${identifiersToLoad.length} photos`);
+        }
+
+        console.log('[PhotoLocation] ✅ Loaded', photosWithLocation.length, 'thumbnails with data');
 
         // Sort by distance
         photosWithLocation.sort((a, b) => a.distance - b.distance);

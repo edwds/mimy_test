@@ -3,13 +3,13 @@ import { Media } from '@capacitor-community/media';
 import { photoCacheService } from '@/services/PhotoCacheService';
 
 class BackgroundPhotoScanner {
-    private readonly BATCH_SIZE = 200;
-    private readonly MAX_PHOTOS = 2000;
+    private readonly BATCH_SIZE = 2000; // Scan 2000 photos to get ~1000 with GPS
+    private readonly MAX_PHOTOS = 3000; // Increase max cache limit
     private isScanning = false;
 
     /**
      * Initial scan after quiz completion or first app launch
-     * Scans first 200 photos with GPS data
+     * Scans first 2000 photos to get ~1000 with GPS data
      */
     async initialScan(): Promise<{
         success: boolean;
