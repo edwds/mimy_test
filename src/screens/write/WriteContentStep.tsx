@@ -783,7 +783,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}
                 >
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCaptionEditId(null)} />
-                    <div className="relative bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="relative bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl">
                         <h3 className="text-lg font-bold mb-4 text-center">어떤 사진인가요?</h3>
                         <Input
                             autoFocus
@@ -838,7 +838,7 @@ const MediaReorderModal = ({ items, onClose, onSave }: {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
             style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
             <div className="bg-background w-full max-w-md h-full max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden m-4">
