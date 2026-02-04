@@ -190,6 +190,8 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Initial Fetch with Location - fetch once when map is ready and center is set
     useEffect(() => {
         if (!isEnabled) return;
+        // Only set center if not already set (initial load only)
+        if (mapCenter) return;
 
         // Try to get location first and set map center
         if (navigator.geolocation) {
@@ -203,7 +205,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 }
             );
         }
-    }, [isEnabled, refreshTrigger]);
+    }, [isEnabled, mapCenter]); // Remove refreshTrigger dependency to prevent re-centering
 
     // Fetch shops once when map is ready (after mapInstanceRef is set) and center is available
     useEffect(() => {

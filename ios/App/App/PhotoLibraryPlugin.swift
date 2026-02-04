@@ -3,7 +3,14 @@ import Capacitor
 import Photos
 
 @objc(PhotoLibraryPlugin)
-public class PhotoLibraryPlugin: CAPPlugin {
+public class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "PhotoLibraryPlugin"
+    public let jsName = "PhotoLibrary"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "scanRecentPhotos", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getThumbnails", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getPhotoCount", returnType: CAPPluginReturnPromise)
+    ]
 
     // Scan recent photos and extract GPS metadata only (no image loading)
     @objc func scanRecentPhotos(_ call: CAPPluginCall) {
