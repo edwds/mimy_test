@@ -1,6 +1,7 @@
 import * as maptilersdk from '@maptiler/sdk';
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 import { useEffect, useRef, useMemo } from 'react';
+import { scoreToTasteRatingStep } from '@/lib/utils';
 
 interface Shop {
     id: number;
@@ -8,6 +9,7 @@ interface Shop {
     lat?: number;
     lon?: number;
     is_saved?: boolean;
+    shop_user_match_score?: number | null;
     my_review_stats?: {
         rank?: number;
         satisfaction_tier?: number;
@@ -30,22 +32,7 @@ interface Props {
 const createMarkerElement = (shop: Shop, isSelected: boolean) => {
     const hasRanking = shop.my_review_stats && shop.my_review_stats.rank !== undefined;
     const isSaved = shop.is_saved;
-
-    // Priority: Ranking > Saved > Default
-    let color = '#FF6B00'; // Default orange
-    let iconType: 'check' | 'heart' | 'dot' = 'dot';
-
-    if (hasRanking) {
-        color = '#10B981'; // Green for ranked
-        iconType = 'check';
-    } else if (isSaved) {
-        color = '#DC2626'; // Red for saved
-        iconType = 'heart';
-    }
-
-    const bgColor = isSelected ? color : '#FFFFFF';
-    const borderColor = isSelected ? '#FFFFFF' : color;
-    const size = isSelected ? 32 : 24;
+    const hasMatchScore = shop.shop_user_match_score != null && shop.shop_user_match_score >= 0;
 
     // Root Container: 0x0 size, centered at coordinate
     const container = document.createElement('div');
@@ -53,67 +40,200 @@ const createMarkerElement = (shop: Shop, isSelected: boolean) => {
     container.style.width = '0px';
     container.style.height = '0px';
     container.style.position = 'relative';
-    container.style.display = 'flex';
-    container.style.alignItems = 'center';
-    container.style.justifyContent = 'center';
+    container.style.display = 'block';
     container.style.cursor = 'pointer';
-    container.style.pointerEvents = 'auto'; // allow clicks
+    container.style.pointerEvents = 'auto';
     container.style.zIndex = isSelected ? '1000' : (isSaved ? '500' : '100');
 
-    // Pin: Absolutely centered
-    const pin = document.createElement('div');
-    pin.className = 'custom-marker-pin';
-    pin.style.position = 'absolute';
-    pin.style.width = `${size}px`;
-    pin.style.height = `${size}px`;
-    pin.style.left = '50%';
-    pin.style.top = '50%';
-    pin.style.transform = 'translate(-50%, -50%)';
-    pin.style.backgroundColor = bgColor;
-    pin.style.borderRadius = '50%';
-    pin.style.border = `2px solid ${borderColor}`;
-    pin.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-    pin.style.display = 'flex';
-    pin.style.alignItems = 'center';
-    pin.style.justifyContent = 'center';
-    pin.style.transition = 'all 0.2s ease-out';
+    if (isSelected) {
+        // Pin below the bubble (add first so it renders behind)
+        const pin = document.createElement('div');
+        pin.style.position = 'absolute';
+        pin.style.width = '16px';
+        pin.style.height = '16px';
+        pin.style.left = '50%';
+        pin.style.top = '2px';
+        pin.style.transform = 'translate(-50%, 0)';
+        pin.style.backgroundColor = '#FF6B00';
+        pin.style.borderRadius = '50%';
+        pin.style.border = '2px solid #FFFFFF';
+        pin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
 
-    let innerHtml: string;
+        container.appendChild(pin);
 
-    if (iconType === 'check') {
-        // Check icon for ranked shops
-        innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${isSelected ? '#FFF' : color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-    } else if (iconType === 'heart') {
-        // Heart icon for saved shops
-        innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${isSelected ? '#FFF' : color}" stroke="${isSelected ? '#FFF' : color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+        // Speech bubble for selected marker (add after pin)
+        const bubble = document.createElement('div');
+        bubble.className = 'speech-bubble';
+        bubble.style.position = 'absolute';
+        bubble.style.left = '50%';
+        bubble.style.top = '0';
+        bubble.style.transform = 'translate(-50%, -100%)';
+        bubble.style.backgroundColor = '#FF6B00';
+        bubble.style.color = '#FFFFFF';
+        bubble.style.padding = '8px 12px';
+        bubble.style.borderRadius = '12px';
+        bubble.style.fontSize = '13px';
+        bubble.style.fontWeight = '600';
+        bubble.style.whiteSpace = 'nowrap';
+        bubble.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        bubble.style.marginBottom = '8px';
+
+        // Content: name (ranking or score) - max 12 chars for name
+        let shopName = shop.name;
+        if (shopName.length > 12) {
+            shopName = shopName.substring(0, 12) + '...';
+        }
+
+        let scoreOrRanking = '';
+        if (hasRanking && shop.my_review_stats?.rank) {
+            // Show ranking for visited shops
+            scoreOrRanking = shop.my_review_stats.rank.toString();
+        } else if (hasMatchScore) {
+            // Show score for not-yet-visited shops (show full precision)
+            const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
+            scoreOrRanking = rating.toFixed(2);
+        }
+
+        // Create HTML with different opacity for score/ranking
+        if (scoreOrRanking) {
+            bubble.innerHTML = `<span style="opacity: 1;">${shopName}</span> <span style="opacity: 0.7;">${scoreOrRanking}</span>`;
+        } else {
+            bubble.textContent = shopName;
+        }
+
+        // Tail (triangle pointing down)
+        const tail = document.createElement('div');
+        tail.style.position = 'absolute';
+        tail.style.left = '50%';
+        tail.style.bottom = '-6px';
+        tail.style.transform = 'translateX(-50%)';
+        tail.style.width = '0';
+        tail.style.height = '0';
+        tail.style.borderLeft = '6px solid transparent';
+        tail.style.borderRight = '6px solid transparent';
+        tail.style.borderTop = '6px solid #FF6B00';
+        bubble.appendChild(tail);
+
+        container.appendChild(bubble);
+        // No label for selected marker
     } else {
-        // Dot for default shops
-        innerHtml = `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${isSelected ? '#FFFFFF' : color}; border-radius: 50%;"></div>`;
+        // Regular circular marker (not selected)
+        // Priority: Ranking > Saved > Default
+        let color = '#FF6B00'; // Default orange
+        let bgColor = '#FFFFFF'; // Default white background
+        let borderColor = color;
+
+        if (hasRanking) {
+            color = '#10B981'; // Green for ranked
+            borderColor = color;
+        } else if (isSaved) {
+            // Saved: filled orange circle
+            bgColor = '#FF6B00';
+            borderColor = '#FF6B00';
+            color = '#FFFFFF'; // White content
+        }
+
+        const size = 24;
+
+        const pin = document.createElement('div');
+        pin.className = 'custom-marker-pin';
+        pin.style.position = 'absolute';
+        pin.style.width = `${size}px`;
+        pin.style.height = `${size}px`;
+        pin.style.left = '50%';
+        pin.style.top = '0';
+        pin.style.transform = 'translate(-50%, -50%)';
+        pin.style.backgroundColor = bgColor;
+        pin.style.borderRadius = '50%';
+        pin.style.border = `2px solid ${borderColor}`;
+        pin.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        pin.style.display = 'flex';
+        pin.style.alignItems = 'center';
+        pin.style.justifyContent = 'center';
+        pin.style.transition = 'all 0.2s ease-out';
+
+        let innerHtml: string;
+
+        if (hasMatchScore) {
+            // Display score
+            const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
+            const scoreText = rating.toFixed(1);
+            const fontSize = size * 0.35;
+            innerHtml = `<div style="font-size: ${fontSize}px; font-weight: 700; color: ${color};">${scoreText}</div>`;
+        } else if (hasRanking) {
+            // Check icon for ranked shops
+            innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        } else {
+            // Dot for default shops
+            innerHtml = `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${color}; border-radius: 50%;"></div>`;
+        }
+
+        pin.innerHTML = innerHtml;
+        container.appendChild(pin);
+
+        // Label: only for non-selected markers
+        const label = document.createElement('div');
+
+        const maxCharsPerLine = 10;
+        const maxLines = 2;
+        const maxChars = maxCharsPerLine * maxLines;
+
+        let text = (shop.name ?? '').trim();
+        if (text.length > maxChars) text = text.slice(0, maxChars - 1) + '…';
+
+        const line1 = text.slice(0, maxCharsPerLine);
+        const line2 = text.slice(maxCharsPerLine, maxChars);
+
+        label.textContent = line2 ? `${line1}\n${line2}` : line1;
+
+        label.style.position = 'absolute';
+        label.style.left = '50%';
+        label.style.top = '10px';
+        label.style.transform = 'translateX(-50%)';
+
+        label.style.whiteSpace = 'pre';
+        label.style.wordBreak = 'keep-all';
+        label.style.overflowWrap = 'normal';
+
+        label.style.color = '#000';
+        label.style.fontSize = '12px';
+        label.style.fontWeight = '500';
+        label.style.backgroundColor = 'transparent';
+        label.style.border = 'none';
+        label.style.boxShadow = 'none';
+
+        label.style.whiteSpace = 'pre';
+        label.style.wordBreak = 'keep-all';
+        label.style.overflowWrap = 'normal';
+
+        // ❌ (label.style as any).webkitTextStroke = '...'; // 제거
+
+        // ✅ outside outline: text-shadow
+        label.style.textShadow = [
+            // 1px ring
+            '-1px -1px 0 #fff',
+            '0px -1px 0 #fff',
+            '1px -1px 0 #fff',
+            '-1px  0px 0 #fff',
+            '1px  0px 0 #fff',
+            '-1px  1px 0 #fff',
+            '0px  1px 0 #fff',
+            '1px  1px 0 #fff',
+
+            // 2px ring (더 두껍게)
+            '-2px -2px 0 #fff',
+            '0px -2px 0 #fff',
+            '2px -2px 0 #fff',
+            '-2px  0px 0 #fff',
+            '2px  0px 0 #fff',
+            '-2px  2px 0 #fff',
+            '0px  2px 0 #fff',
+            '2px  2px 0 #fff',
+        ].join(', ');    // ✅ 자동 줄바꿈 금지 + 우리가 넣은 \n만 줄바꿈
+
+
+        container.appendChild(label);
     }
-
-    pin.innerHTML = innerHtml;
-    container.appendChild(pin);
-
-    // Label: Positioned to the right of the pin
-    const label = document.createElement('div');
-    label.innerText = shop.name;
-    label.style.position = 'absolute';
-    label.style.left = `${size / 2 + 6}px`; // Offset by radius + margin
-    label.style.top = '50%';
-    label.style.transform = 'translateY(-50%)';
-    label.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-    label.style.padding = '2px 6px';
-    label.style.borderRadius = '4px';
-    label.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15)';
-    label.style.fontSize = '12px';
-    label.style.fontWeight = '600';
-    label.style.color = '#333';
-    label.style.whiteSpace = 'nowrap';
-    label.style.pointerEvents = 'auto'; // Make label clickable
-    label.style.cursor = 'pointer';
-    label.style.transition = 'opacity 0.2s';
-
-    container.appendChild(label);
 
     return container;
 };
@@ -266,8 +386,6 @@ export const MapContainer = ({
         const currentMap = map.current;
 
         const updateMarkers = () => {
-            const features = currentMap.queryRenderedFeatures({ layers: ['shops-point'] });
-
             // Track IDs we want to keep
             const newMarkerIds = new Set<string>();
 
@@ -305,29 +423,61 @@ export const MapContainer = ({
                     const marker = markers.current.get(id)!;
                     const isSelected = shopId === selectedShopId;
 
-                    const newEl = createMarkerElement(shop, isSelected);
+                    // Check if selection state changed - if so, recreate marker
                     const oldEl = marker.getElement();
+                    const wasSelected = oldEl.querySelector('.speech-bubble') !== null;
 
-                    if (oldEl.innerHTML !== newEl.innerHTML || oldEl.style.zIndex !== newEl.style.zIndex) {
-                        oldEl.innerHTML = newEl.innerHTML;
-                        oldEl.style.zIndex = newEl.style.zIndex;
-                    }
-                    // For selected marker, ensure position serves correct if we manually added it
-                    if (isSelected) {
-                        marker.setLngLat([finalLon, finalLat]);
+                    if (wasSelected !== isSelected) {
+                        // Selection state changed - need to fully recreate
+                        marker.remove();
+                        markers.current.delete(id);
+
+                        const newEl = createMarkerElement(shop, isSelected);
+                        newEl.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            onMarkerClick?.(shopId);
+                        });
+
+                        const newMarker = new maptilersdk.Marker({
+                            element: newEl,
+                            anchor: 'center'
+                        });
+
+                        newMarker.setLngLat([finalLon, finalLat]).addTo(currentMap);
+                        markers.current.set(id, newMarker);
+                    } else {
+                        // Just update z-index if needed
+                        oldEl.style.zIndex = isSelected ? '1000' : (shop.is_saved ? '500' : '100');
+
+                        // For selected marker, ensure position is correct
+                        if (isSelected) {
+                            marker.setLngLat([finalLon, finalLat]);
+                        }
                     }
                 }
             };
 
-            // 1. Render Visible Features
-            features.forEach((feature: any) => {
-                const shopId = feature.properties.id;
-                // Properties might be localized or partial, but ID is reliable.
-                // We need lat/lon. Feature geometry has it.
-                // Note: feature.geometry.coordinates is [lon, lat]
-                const [lon, lat] = feature.geometry.coordinates;
-                renderMarker(shopId, lat, lon);
-            });
+            // Try to get features from queryRenderedFeatures first (more efficient for large datasets)
+            const features = currentMap.queryRenderedFeatures({ layers: ['shops-point'] });
+
+            if (features.length > 0) {
+                // 1. Render Visible Features
+                features.forEach((feature: any) => {
+                    const shopId = feature.properties.id;
+                    // Properties might be localized or partial, but ID is reliable.
+                    // We need lat/lon. Feature geometry has it.
+                    // Note: feature.geometry.coordinates is [lon, lat]
+                    const [lon, lat] = feature.geometry.coordinates;
+                    renderMarker(shopId, lat, lon);
+                });
+            } else {
+                // Fallback: Render all shops directly (useful during initial load)
+                shops.forEach(shop => {
+                    if (shop.lat && shop.lon) {
+                        renderMarker(shop.id, shop.lat, shop.lon);
+                    }
+                });
+            }
 
             // 2. Explicitly Render Selected Shop (to prevent disappearing on pan/edge cases)
             if (selectedShopId) {
@@ -361,7 +511,7 @@ export const MapContainer = ({
             currentMap.off('moveend', updateMarkers);
             currentMap.off('sourcedata', updateMarkers);
         };
-    }, [selectedShopId, shops]);
+    }, [selectedShopId, shops, shopPositions]);
 
     // Handle Initial Centering (only once at startup)
     // After initial setup, map position is controlled by user interaction and selectedShopId

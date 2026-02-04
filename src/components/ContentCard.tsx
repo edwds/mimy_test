@@ -57,17 +57,59 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
         return `${lineHeightPx * maxLines}px`;
     }, [lineHeightPx, maxLines]);
 
+    // Split text into paragraphs (consecutive newlines separate paragraphs)
+    const paragraphs = useMemo(() => {
+        const lines = text.split('\n');
+        const result: string[][] = [];
+        let currentParagraph: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            if (line === '') {
+                // Empty line
+                if (currentParagraph.length > 0) {
+                    // End current paragraph
+                    result.push(currentParagraph);
+                    currentParagraph = [];
+                }
+            } else {
+                // Non-empty line
+                currentParagraph.push(line);
+            }
+        }
+
+        // Add remaining paragraph
+        if (currentParagraph.length > 0) {
+            result.push(currentParagraph);
+        }
+
+        return result;
+    }, [text]);
+
     return (
         <div className={cn('px-5 mb-4', className)}>
             <div
                 ref={ref}
                 className={cn(
-                    'text-base text-gray-800 whitespace-pre-wrap break-words leading-relaxed',
+                    'text-base text-gray-800 whitespace-pre-wrap break-words',
                     !expanded && canExpand && 'overflow-hidden'
                 )}
-                style={!expanded && canExpand ? { maxHeight } : undefined}
+                style={{
+                    lineHeight: '1.6',
+                    ...((!expanded && canExpand) ? { maxHeight } : {})
+                }}
             >
-                {text}
+                {paragraphs.map((paragraph, pIdx) => (
+                    <p key={pIdx} className={pIdx > 0 ? 'mt-3' : ''}>
+                        {paragraph.map((line, lIdx) => (
+                            <span key={lIdx}>
+                                {line}
+                                {lIdx < paragraph.length - 1 && <br />}
+                            </span>
+                        ))}
+                    </p>
+                ))}
             </div>
 
             {canExpand && (

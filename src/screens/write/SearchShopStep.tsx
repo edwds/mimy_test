@@ -10,14 +10,16 @@ import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
 import { Capacitor } from '@capacitor/core';
+import { motion } from 'framer-motion';
 
 interface Props {
     onSelect: (shop: any) => void;
     onBack: () => void;
+    isRankingOpen?: boolean;
 }
 
-import { UserService } from '@/services/UserService';
 import { useRanking } from '@/context/RankingContext';
+import { useUser } from '@/context/UserContext';
 
 const getOrdinalRank = (rank: number) => {
     // Simple ordinal logic
@@ -34,15 +36,16 @@ const getOrdinalRank = (rank: number) => {
     return `${rank}위`;
 };
 
-export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
+export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack, isRankingOpen }) => {
     const { t } = useTranslation();
     const { registerCallback, unregisterCallback } = useRanking();
     const { recentSearches, addSearch, removeSearch } = useRecentSearches();
+    const { user, savedShops: contextSavedShops, recommendedShops: contextRecommendedShops } = useUser();
 
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
-    const [savedShops, setSavedShops] = useState<any[]>([]);
-    const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+    const [savedShops, setSavedShops] = useState<any[]>(contextSavedShops);
+    const [recommendedShops, setRecommendedShops] = useState<any[]>(contextRecommendedShops);
     const [pendingReviewShops, setPendingReviewShops] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'pending' | 'saved' | 'recommended'>('pending');
     const [loading, setLoading] = useState(false);
@@ -56,14 +59,21 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const [selectedGoogleShop, setSelectedGoogleShop] = useState<any>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
+    // Sync with context data
+    useEffect(() => {
+        setSavedShops(contextSavedShops);
+    }, [contextSavedShops]);
+
+    useEffect(() => {
+        setRecommendedShops(contextRecommendedShops);
+    }, [contextRecommendedShops]);
+
     // Get user location and fetch recommended shops
     useEffect(() => {
         const fetchLocationAndRecommendations = async () => {
             setLoading(true);
             try {
-                const user = await UserService.getCurrentUser();
                 let pending: any[] = [];
-                let saved: any[] = [];
 
                 // Fetch pending review shops (ranked but no review yet)
                 if (user?.id) {
@@ -83,37 +93,12 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                             }));
                         setPendingReviewShops(pending);
                     }
-
-                    // Fetch saved shops
-                    saved = await UserService.getSavedShops(user.id) || [];
-                    setSavedShops(saved);
-                }
-
-                // Get user location for recommended shops
-                if ('geolocation' in navigator) {
-                    navigator.geolocation.getCurrentPosition(
-                        async (position) => {
-                            const lat = position.coords.latitude;
-                            const lon = position.coords.longitude;
-
-                            // Fetch recommended shops using discovery API
-                            const url = `${API_BASE_URL}/api/shops/discovery?lat=${lat}&lon=${lon}&excludeRanked=true&limit=50`;
-                            const res = await authFetch(url);
-                            if (res.ok) {
-                                const data = await res.json();
-                                setRecommendedShops(data);
-                            }
-                        },
-                        (error) => {
-                            console.error('Location error:', error);
-                        }
-                    );
                 }
 
                 // Set initial tab: prioritize pending > saved > recommended
                 if (pending.length > 0) {
                     setActiveTab('pending');
-                } else if (saved.length > 0) {
+                } else if (contextSavedShops.length > 0) {
                     setActiveTab('saved');
                 } else {
                     setActiveTab('recommended');
@@ -243,7 +228,28 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
     const filteredSavedShops = savedShops;
 
     return (
-        <div className="flex flex-col h-full bg-[var(--color-background)]">
+        <motion.div
+            className={cn(
+                "absolute inset-0 flex flex-col bg-[var(--color-background)]",
+                isRankingOpen && "scale-95 opacity-50 blur-[1px] pointer-events-none"
+            )}
+            initial={{ y: '100%', opacity: 0.8 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0.8 }}
+            transition={{
+                y: {
+                    type: 'spring',
+                    damping: 45,
+                    stiffness: 120,
+                    mass: 1.2
+                },
+                opacity: {
+                    duration: 0.5,
+                    ease: 'easeOut'
+                }
+            }}
+            style={{ willChange: 'transform, opacity' }}
+        >
             {/* Header */}
             {!isGoogleMode && (
                 <div className="flex flex-col sticky top-0 z-10 bg-background/80 backdrop-blur-md transition-colors pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
@@ -624,7 +630,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack }) => {
                     </div>
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 };
 

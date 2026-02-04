@@ -65,7 +65,7 @@ router.get("/discovery", optionalAuth, async (req, res) => {
             rawMinLon = parseFloat(req.query.minLon as string);
             rawMaxLon = parseFloat(req.query.maxLon as string);
         } else {
-            // Use center point with 10km radius (initial load)
+            // Use center point with 3km radius (initial load)
             const centerLat = parseFloat(req.query.lat as string);
             const centerLon = parseFloat(req.query.lon as string);
 
@@ -73,9 +73,9 @@ router.get("/discovery", optionalAuth, async (req, res) => {
                 return res.status(400).json({ error: "Location (lat, lon) or bounds (minLat, maxLat, minLon, maxLon) required" });
             }
 
-            // Calculate 10km bounding box (approximately 0.09 degrees)
-            const latDelta = 0.09; // ~10km in latitude
-            const lonDelta = 0.09; // ~10km in longitude (varies by latitude, but close enough)
+            // Calculate 3km bounding box (approximately 0.027 degrees)
+            const latDelta = 0.027; // ~3km in latitude
+            const lonDelta = 0.027; // ~3km in longitude (varies by latitude, but close enough)
             rawMinLat = centerLat - latDelta;
             rawMaxLat = centerLat + latDelta;
             rawMinLon = centerLon - lonDelta;

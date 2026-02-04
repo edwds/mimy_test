@@ -4,6 +4,7 @@ import { clearTokens } from '@/lib/tokenStorage';
 import { authFetch } from '@/lib/authFetch';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorCookies } from '@capacitor/core';
+import { API_BASE_URL } from '@/lib/api';
 
 export interface User {
     id: number;
@@ -34,6 +35,10 @@ interface UserContextType {
     optimisticLikes: Record<number, boolean>;
     toggleOptimisticLike: (contentId: number, isLiked: boolean) => void;
     coordinates: { lat: number; lon: number } | null;
+    savedShops: any[];
+    recommendedShops: any[];
+    refreshSavedShops: () => Promise<void>;
+    refreshRecommendedShops: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -43,6 +48,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
     const [authFailed, setAuthFailed] = useState<boolean>(false);
+    const [savedShops, setSavedShops] = useState<any[]>([]);
+    const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
 
     const fetchUserData = useCallback(async (skipAuthFailedCheck = false) => {
         console.log('[UserContext] fetchUserData called, authFailed:', authFailed, 'skipCheck:', skipAuthFailedCheck);
@@ -86,16 +93,58 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    setCoordinates({
+                    const newCoords = {
                         lat: pos.coords.latitude,
                         lon: pos.coords.longitude
-                    });
+                    };
+                    setCoordinates(newCoords);
+
+                    // Fetch recommended shops when we get location
+                    fetchRecommendedShops(newCoords.lat, newCoords.lon);
                 },
                 (err) => console.log('Geolocation init error:', err),
                 { timeout: 5000, enableHighAccuracy: false }
             );
         }
     }, []);
+
+    // Fetch saved shops when user logs in
+    useEffect(() => {
+        if (user?.id) {
+            refreshSavedShops();
+        } else {
+            setSavedShops([]);
+            setRecommendedShops([]);
+        }
+    }, [user?.id]);
+
+    const fetchRecommendedShops = async (lat: number, lon: number) => {
+        try {
+            const url = `${API_BASE_URL}/api/shops/discovery?lat=${lat}&lon=${lon}&excludeRanked=true&limit=50`;
+            const res = await authFetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                setRecommendedShops(data);
+            }
+        } catch (error) {
+            console.error('[UserContext] Failed to fetch recommended shops:', error);
+        }
+    };
+
+    const refreshSavedShops = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const saved = await UserService.getSavedShops(user.id);
+            setSavedShops(saved || []);
+        } catch (error) {
+            console.error('[UserContext] Failed to fetch saved shops:', error);
+        }
+    }, [user?.id]);
+
+    const refreshRecommendedShops = useCallback(async () => {
+        if (!coordinates) return;
+        await fetchRecommendedShops(coordinates.lat, coordinates.lon);
+    }, [coordinates]);
 
     const refreshUser = useCallback(async (skipAuthFailedCheck = false) => {
         // Reset authFailed if explicitly skipping the check
@@ -166,7 +215,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <UserContext.Provider value={{ user, loading, refreshUser, login, logout, optimisticLikes, toggleOptimisticLike, coordinates }}>
+        <UserContext.Provider value={{
+            user,
+            loading,
+            refreshUser,
+            login,
+            logout,
+            optimisticLikes,
+            toggleOptimisticLike,
+            coordinates,
+            savedShops,
+            recommendedShops,
+            refreshSavedShops,
+            refreshRecommendedShops
+        }}>
             {children}
         </UserContext.Provider>
     );

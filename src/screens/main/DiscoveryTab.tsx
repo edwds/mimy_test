@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Locate, Heart, Search, Check } from 'lucide-react'; // Icons
+import { Locate, Bookmark, Search, Check } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 // Let's keep the Search button overlay if possible, or just the map.
@@ -82,7 +82,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 // Use current map viewport bounds (for "Search Here" button)
                 url += `&minLat=${mapBounds.minLat}&maxLat=${mapBounds.maxLat}&minLon=${mapBounds.minLon}&maxLon=${mapBounds.maxLon}&excludeRanked=${excludeRanked}`;
             } else if (mapCenter) {
-                // Use center point for personalized discovery (10km radius, match score sorted)
+                // Use center point for personalized discovery (3km radius, match score sorted)
                 // excludeRanked=true: initial load (exclude already ranked shops)
                 // excludeRanked=false: map search (include all shops for comprehensive discovery)
                 url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}&excludeRanked=${excludeRanked}`;
@@ -419,6 +419,18 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
         if (nextShop) {
             setSelectedShopId(nextShop.id); // Triggers re-render with new key
+        } else {
+            // If shop is not in current list, skip to next/prev
+            console.warn(`Shop ${nextShopId} not found in shops list, skipping`);
+            // Try next shop in the same direction
+            const skipIndex = direction === 'next' ? nextIndex + 1 : nextIndex - 1;
+            if (skipIndex >= 0 && skipIndex < navList.length) {
+                const skipShopId = navList[skipIndex];
+                const skipShop = shops.find(s => s.id === skipShopId);
+                if (skipShop) {
+                    setSelectedShopId(skipShop.id);
+                }
+            }
         }
 
         // Update URL (Replace history for carousel navigation)
@@ -529,7 +541,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                         showSavedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
                     )}
                 >
-                    <Heart className={cn("w-6 h-6", showSavedOnly ? "fill-current text-white" : "")} />
+                    <Bookmark className={cn("w-6 h-6", showSavedOnly ? "fill-current text-white" : "")} />
                 </button>
 
                 <button

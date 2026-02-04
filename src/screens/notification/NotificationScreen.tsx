@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
-import { ChevronLeft, UserPlus, Heart, MessageCircle, PartyPopper } from 'lucide-react';
+import { UserPlus, Heart, MessageCircle, PartyPopper } from 'lucide-react';
 import { formatFullDateTime } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
+import { ProfileHeader } from '@/components/ProfileHeader';
 
 interface Notification {
     id: number;
@@ -122,20 +123,16 @@ export const NotificationScreen = () => {
     }
 
     return (
-        <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-background z-50 flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
-                <div className="flex items-center justify-between px-4 h-14">
-                    <button onClick={handleClose} className="p-2 -ml-2 rounded-full hover:bg-muted">
-                        <ChevronLeft size={24} />
-                    </button>
-                    <h1 className="text-lg font-semibold">알림</h1>
-                    <div className="w-10" />
-                </div>
-            </div>
+            <ProfileHeader
+                title="알림"
+                onBack={handleClose}
+                isVisible={true}
+            />
 
             {/* Notifications List */}
-            <div className="divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100" style={{ paddingTop: '60px' }}>
                 {notifications.length > 0 ? (
                     notifications.map((notif) => (
                         <div

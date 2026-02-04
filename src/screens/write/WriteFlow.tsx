@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { AnimatePresence } from 'framer-motion';
 
 import { SearchShopStep } from './SearchShopStep';
 import { useLocation } from 'react-router-dom';
@@ -234,37 +234,40 @@ export const WriteFlow = () => {
     }
 
     return (
-        <div className="relative h-full bg-background">
-            {(step === 'SEARCH_SHOP' || isRankingOpen) && (
-                <div className={cn("h-full transition-all duration-300", isRankingOpen ? "scale-95 opacity-50 blur-[1px] pointer-events-none" : "")}>
+        <div className="relative h-full bg-background overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+                {(step === 'SEARCH_SHOP' || isRankingOpen) && (
                     <SearchShopStep
+                        key="search-shop"
                         onSelect={handleShopSelect}
                         onBack={() => navigate('/main')}
+                        isRankingOpen={isRankingOpen}
                     />
-                </div>
-            )}
+                )}
 
-            {step === 'WRITE_CONTENT' && (
-                <WriteContentStep
-                    mode={type}
-                    shop={selectedShop}
-                    satisfaction={satisfaction}
-                    onNext={handleSubmitContent}
-                    isSubmitting={isSubmitting}
-                    onBack={() => {
-                        // Ask user if they want to cancel writing
-                        const shouldCancel = window.confirm(
-                            '글쓰기를 취소하시겠습니까?\n랭킹은 이미 저장되었습니다.'
-                        );
+                {step === 'WRITE_CONTENT' && (
+                    <WriteContentStep
+                        key="write-content"
+                        mode={type}
+                        shop={selectedShop}
+                        satisfaction={satisfaction}
+                        onNext={handleSubmitContent}
+                        isSubmitting={isSubmitting}
+                        onBack={() => {
+                            // Ask user if they want to cancel writing
+                            const shouldCancel = window.confirm(
+                                '글쓰기를 취소하시겠습니까?\n랭킹은 이미 저장되었습니다.'
+                            );
 
-                        if (shouldCancel) {
-                            // Cancel writing and go back to main with ranking saved
-                            navigate('/main');
-                        }
-                        // If user clicks "Cancel" on the confirm dialog, stay on current step
-                    }}
-                />
-            )}
+                            if (shouldCancel) {
+                                // Cancel writing and go back to main with ranking saved
+                                navigate('/main');
+                            }
+                            // If user clicks "Cancel" on the confirm dialog, stay on current step
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

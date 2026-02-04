@@ -28,7 +28,7 @@ interface ProfileScreenProps {
 export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user, loading, refreshUser } = useUser();
+    const { user, loading, refreshUser, savedShops: contextSavedShops, refreshSavedShops } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
@@ -57,7 +57,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const [currentRankings, setCurrentRankings] = useState<any[]>([]);
     const [loadingRankings, setLoadingRankings] = useState(false);
 
-    const [savedShops, setSavedShops] = useState<any[]>([]);
+    const [savedShops, setSavedShops] = useState<any[]>(contextSavedShops);
     const [loadingSaved, setLoadingSaved] = useState(false);
 
     // Scroll + Header
@@ -159,23 +159,18 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         fetchCurrentRankings();
     }, [user?.id, activeTab, refreshTrigger, user?.stats?.ranking_count]);
 
-    // Fetch saved shops
-    const fetchSaved = async () => {
-        if (!user?.id || activeTab !== 'saved') return;
-
-        setLoadingSaved(true);
-        try {
-            const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/saved_shops`);
-            if (response.ok) setSavedShops(await response.json());
-        } catch (e) {
-            console.error('Failed to load saved shops', e);
-        } finally {
-            setLoadingSaved(false);
-        }
-    };
-
+    // Sync with context savedShops
     useEffect(() => {
-        fetchSaved();
+        setSavedShops(contextSavedShops);
+    }, [contextSavedShops]);
+
+    // Fetch saved shops
+    useEffect(() => {
+        // Only fetch if activeTab is 'saved' and we don't have data yet
+        if (activeTab === 'saved' && contextSavedShops.length === 0 && !loadingSaved) {
+            setLoadingSaved(true);
+            refreshSavedShops().finally(() => setLoadingSaved(false));
+        }
     }, [user?.id, activeTab]);
 
     // Ranking Update Callback
@@ -255,6 +250,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     };
 
     const handleUnsave = async (shopId: number) => {
+        // Optimistic update
         setSavedShops((prev) => prev.filter((s) => s.id !== shopId));
 
         try {
@@ -264,9 +260,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 body: JSON.stringify({}),
             });
             if (!res.ok) throw new Error('Unsave failed');
+
+            // Refresh context data to keep it in sync
+            await refreshSavedShops();
         } catch (e) {
             console.error(e);
             alert(t('profile.unsave_fail'));
+            // Revert optimistic update on error
+            await refreshSavedShops();
         }
     };
 
