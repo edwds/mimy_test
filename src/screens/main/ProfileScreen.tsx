@@ -28,7 +28,7 @@ interface ProfileScreenProps {
 export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user, loading, refreshUser, savedShops: contextSavedShops, refreshSavedShops } = useUser();
+    const { user, loading, savedShops: contextSavedShops, refreshSavedShops } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
@@ -72,11 +72,11 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         }
     };
 
-    // Refresh listener
-    useEffect(() => {
-        if (!isEnabled) return;
-        if (refreshTrigger) refreshUser();
-    }, [refreshTrigger, isEnabled, refreshUser]);
+    // Refresh listener - Only refresh data, not user (user is already in context)
+    // useEffect(() => {
+    //     if (!isEnabled) return;
+    //     if (refreshTrigger) refreshUser();
+    // }, [refreshTrigger, isEnabled, refreshUser]);
 
     // Fetch content
     useEffect(() => {

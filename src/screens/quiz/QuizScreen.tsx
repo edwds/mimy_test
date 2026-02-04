@@ -115,11 +115,37 @@ export const QuizScreen = () => {
 
     if (isSubmitting) {
         return (
-            <div className="flex items-center justify-center h-full bg-background">
-                <div className="text-center space-y-4">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                    <p className="text-lg font-medium text-muted-foreground">Analyzing your taste profile...</p>
+            <div className="flex flex-col h-full bg-background pt-safe-offset-6 pb-safe-offset-6">
+                {/* Header */}
+                <div className="px-6 pb-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-muted-foreground">
+                            분석 중...
+                        </span>
+                    </div>
                 </div>
+
+                {/* Loading Card */}
+                <main className="flex-1 flex flex-col items-center justify-center px-6 relative">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="relative w-full max-w-md border border-border rounded-3xl shadow-2xl overflow-hidden"
+                        style={{
+                            height: 'min(calc(200vw * 4/3), 500px)',
+                            background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
+                        }}
+                    >
+                        <div className="p-10 flex flex-col items-center justify-center h-full space-y-6">
+                            <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                            <div className="text-center space-y-2">
+                                <p className="text-2xl font-bold">당신의 미식 성향을 분석하고 있어요</p>
+                                <p className="text-sm text-muted-foreground">잠시만 기다려주세요</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                </main>
             </div>
         );
     }
@@ -144,7 +170,7 @@ export const QuizScreen = () => {
             </div>
 
             {/* Stacked Cards Container */}
-            <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative">
+            <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative overflow-visible">
 
                 {/* Helper text */}
                 <div className="mb-12 text-center text-sm text-muted-foreground">
@@ -153,24 +179,40 @@ export const QuizScreen = () => {
 
 
                 {/* Card Stack - cards stacked vertically with scale */}
-                <div className="relative w-full max-w-md" style={{ height: 'min(calc(200vw * 4/3), 500px)' }}>
+                <div className="relative w-full max-w-md" style={{ height: 'min(calc(200vw * 4/3), 500px)', perspective: '1000px' }}>
                     {/* All cards rendered with smooth transitions */}
+                    {/* Card 3번째 (맨 뒤) */}
                     {currentIndex + 2 < QUESTIONS.length && (
                         <motion.div
-                            key={`card-${currentIndex + 2}`}
-                            className="absolute bg-card border-2 border-border rounded-3xl shadow-lg overflow-hidden"
+                            key={`card-${QUESTIONS[currentIndex + 2].id}`}
+                            className="absolute border border-border rounded-3xl shadow-lg overflow-hidden"
+                            initial={{
+                                scale: 0.82,
+                                y: -36,
+                                opacity: 0
+                            }}
                             animate={{
                                 scale: 0.88,
                                 y: -24,
+                                opacity: 1,
                                 zIndex: 1
                             }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            exit={{
+                                scale: 0.94,
+                                y: -12,
+                                opacity: 1
+                            }}
+                            transition={{
+                                duration: 0.3,
+                                ease: "easeOut"
+                            }}
                             style={{
                                 width: '100%',
                                 height: '100%',
                                 left: 0,
                                 top: 0,
-                                transformOrigin: 'top center'
+                                transformOrigin: 'top center',
+                                background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
                             }}
                         >
                             <div className="p-10 flex items-center h-full">
@@ -180,22 +222,39 @@ export const QuizScreen = () => {
                             </div>
                         </motion.div>
                     )}
+
+                    {/* Card 2번째 (중간) */}
                     {currentIndex + 1 < QUESTIONS.length && (
                         <motion.div
-                            key={`card-${currentIndex + 1}`}
-                            className="absolute bg-card border-2 border-border rounded-3xl shadow-xl overflow-hidden"
+                            key={`card-${QUESTIONS[currentIndex + 1].id}`}
+                            className="absolute border border-border rounded-3xl shadow-xl overflow-hidden"
+                            initial={{
+                                scale: 0.88,
+                                y: -24,
+                                opacity: 1
+                            }}
                             animate={{
                                 scale: 0.94,
                                 y: -12,
+                                opacity: 1,
                                 zIndex: 2
                             }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            exit={{
+                                scale: 1,
+                                y: 0,
+                                opacity: 1
+                            }}
+                            transition={{
+                                duration: 0.3,
+                                ease: "easeOut"
+                            }}
                             style={{
                                 width: '100%',
                                 height: '100%',
                                 left: 0,
                                 top: 0,
-                                transformOrigin: 'top center'
+                                transformOrigin: 'top center',
+                                background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)'
                             }}
                         >
                             <div className="p-10 flex items-center h-full">
@@ -206,59 +265,97 @@ export const QuizScreen = () => {
                         </motion.div>
                     )}
 
-                    {/* Active Card */}
+                    {/* Active Card (맨 앞) */}
                     <motion.div
-                        key={`card-${currentIndex}`}
-                        className="absolute bg-card border-2 border-border rounded-3xl shadow-2xl overflow-hidden"
-                        animate={{
-                            scale: exitDirection ? 1 : 1,
-                            y: exitDirection ? 0 : 0,
-                            x: exitDirection === 'left' ? -500 : exitDirection === 'right' ? 500 : 0,
-                            rotate: exitDirection === 'left' ? -30 : exitDirection === 'right' ? 30 : 0,
-                            opacity: exitDirection ? 0 : 1,
-                            zIndex: 3
-                        }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        drag={!exitDirection}
-                        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                        dragElastic={1}
-                        onDragEnd={handleDragEnd}
+                        key={`card-${QUESTIONS[currentIndex].id}`}
+                        className="absolute border border-border rounded-3xl shadow-2xl"
                         style={{
                             width: '100%',
                             height: '100%',
                             left: 0,
                             top: 0,
-                            transformOrigin: 'top center'
+                            transformOrigin: 'top center',
+                            x,
+                            y,
+                            rotate,
+                            background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
+                            overflow: 'hidden'
                         }}
+                        animate={{
+                            scale: 1,
+                            y: exitDirection === 'up' ? -500 : 0,
+                            x: exitDirection === 'left' ? -500 : exitDirection === 'right' ? 500 : 0,
+                            rotate: exitDirection === 'left' ? -30 : exitDirection === 'right' ? 30 : 0,
+                            opacity: exitDirection ? 0 : 1,
+                            zIndex: 3
+                        }}
+                        exit={{
+                            opacity: 0,
+                            scale: 1.05
+                        }}
+                        transition={{
+                            duration: 0.3,
+                            ease: "easeOut"
+                        }}
+                        drag={!exitDirection}
+                        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                        dragElastic={1}
+                        onDragEnd={handleDragEnd}
                     >
-                        <div className="p-10 cursor-grab active:cursor-grabbing flex items-center h-full">
-                            <motion.h2
-                                style={{
-                                    x,
-                                    y,
-                                    rotate
-                                }}
-                                className="text-3xl font-bold leading-tight text-left w-full relative z-10"
-                            >
-                                {currentQuestion.text}
-                            </motion.h2>
+                        {/* Color overlays for swipe feedback */}
+                        <motion.div
+                            className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
+                            style={{
+                                opacity: greenOverlay,
+                                background: 'linear-gradient(135deg, #E0F7F7 0%, #E8F8F5 100%)'
+                            }}
+                        >
+                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
+                                <span className="text-gray-800 text-sm font-semibold">
+                                    그런 편이다
+                                </span>
+                            </div>
+                        </motion.div>
+                        <motion.div
+                            className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
+                            style={{
+                                opacity: redOverlay,
+                                background: 'linear-gradient(135deg, #FFF0F5 0%, #FFE4F3 100%)'
+                            }}
+                        >
+                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
+                                <span className="text-gray-800 text-sm font-semibold">
+                                    아닌 편이다
+                                </span>
+                            </div>
+                        </motion.div>
+                        <motion.div
+                            className="absolute inset-0 bg-gray-400/70 pointer-events-none flex items-end justify-center pb-12"
+                            style={{ opacity: grayOverlay }}
+                        >
+                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
+                                <span className="text-gray-800 text-sm font-semibold">
+                                    고를 수 없음
+                                </span>
+                            </div>
+                        </motion.div>
 
-                            {/* Color overlays for swipe feedback */}
-                            <motion.div
-                                className="absolute inset-0 bg-green-500/70 pointer-events-none rounded-3xl"
-                                style={{ opacity: greenOverlay }}
-                            />
-                            <motion.div
-                                className="absolute inset-0 bg-red-500/70 pointer-events-none rounded-3xl"
-                                style={{ opacity: redOverlay }}
-                            />
-                            <motion.div
-                                className="absolute inset-0 bg-gray-400/70 pointer-events-none rounded-3xl"
-                                style={{ opacity: grayOverlay }}
-                            />
+                        <div className="p-10 cursor-grab active:cursor-grabbing flex items-center h-full relative">
+                            <h2 className="text-3xl font-bold leading-tight text-left w-full">
+                                {currentQuestion.text}
+                            </h2>
                         </div>
                     </motion.div>
                 </div>
+
+                {/* "고를 수 없음" 버튼 */}
+                <button
+                    onClick={() => handleSwipe('up')}
+                    disabled={!!exitDirection}
+                    className="mt-6 px-6 py-3 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-700 rounded-full shadow-sm border border-gray-200 transition-all active:scale-95 font-medium"
+                >
+                    고를 수 없음
+                </button>
 
             </main>
         </div>

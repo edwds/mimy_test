@@ -6,23 +6,22 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { resizeImage } from '@/lib/image';
 import { API_BASE_URL } from '@/lib/api';
+import { useUser } from '@/context/UserContext';
 
 import { useTranslation } from 'react-i18next';
 
 export const EditProfileScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
+    const { user, refreshUser } = useUser();
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    // Form State
-    const [nickname, setNickname] = useState("");
-    const [bio, setBio] = useState("");
-    const [link, setLink] = useState("");
-    const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-    const [userId, setUserId] = useState<string | null>(null);
-    const [handle, setHandle] = useState(""); // Needed for API put but not editable here
+    // Form State - Initialize from UserContext
+    const [nickname, setNickname] = useState(user?.nickname || "");
+    const [bio, setBio] = useState(user?.bio || "");
+    const [link, setLink] = useState(user?.link || "");
+    const [photoUrl, setPhotoUrl] = useState<string | null>(user?.profile_image || null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bioRef = useRef<HTMLTextAreaElement>(null);
@@ -35,34 +34,19 @@ export const EditProfileScreen = () => {
         }
     }, [bio]);
 
+    // Update form when user data loads
     useEffect(() => {
-        const fetchUser = async () => {
-            const storedId = localStorage.getItem("mimy_user_id");
-            if (!storedId) {
-                navigate('/login');
-                return;
-            }
-            setUserId(storedId);
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/users/${storedId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setNickname(data.nickname || "");
-                    setBio(data.bio || "");
-                    setLink(data.link || "");
-                    setPhotoUrl(data.profile_image);
-                    setHandle(data.account_id);
-                }
-            } catch (error) {
-                console.error("Failed to load user", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUser();
-    }, [navigate]);
+        if (user) {
+            console.log('[EditProfile] User from context:', user.id);
+            setNickname(user.nickname || "");
+            setBio(user.bio || "");
+            setLink(user.link || "");
+            setPhotoUrl(user.profile_image || null);
+        } else {
+            console.error("[EditProfile] No user in context, redirecting to login");
+            navigate('/login');
+        }
+    }, [user, navigate]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -94,15 +78,21 @@ export const EditProfileScreen = () => {
     };
 
     const handleSave = async () => {
-        if (!userId) return;
+        if (!user?.id) {
+            console.error('[EditProfile] No user found');
+            return;
+        }
+
+        console.log('[EditProfile] Starting save...', { userId: user.id, nickname, bio, link });
         setSaving(true);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+            console.log('[EditProfile] Sending PUT request to:', `${API_BASE_URL}/api/users/${user.id}`);
+            const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    account_id: handle, // Required by backend schema logic usually, or just to keep it safe
+                    account_id: user.account_id,
                     nickname: nickname,
                     bio: bio,
                     link: link,
@@ -110,23 +100,43 @@ export const EditProfileScreen = () => {
                 })
             });
 
+            console.log('[EditProfile] API response status:', response.status);
+
             if (response.ok) {
-                navigate(-1); // Go back to profile
+                const data = await response.json();
+                console.log('[EditProfile] ✅ Profile updated successfully:', data);
+
+                try {
+                    console.log('[EditProfile] Refreshing user context...');
+                    await refreshUser(true);
+                    console.log('[EditProfile] ✅ User context refreshed');
+                } catch (refreshError) {
+                    console.error('[EditProfile] ⚠️ Failed to refresh user context:', refreshError);
+                    // Continue anyway - the update was successful
+                }
+
+                console.log('[EditProfile] Navigating back...');
+                navigate(-1);
             } else {
-                alert(t('auth.edit.save_failed'));
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('[EditProfile] ❌ Save failed:', response.status, errorData);
+                alert(t('auth.edit.save_failed') + ': ' + (errorData.error || 'Unknown error'));
             }
         } catch (error) {
-            console.error("Save failed", error);
-            alert(t('auth.edit.save_failed'));
+            console.error("[EditProfile] ❌ Network error:", error);
+            alert(t('auth.edit.save_failed') + ': Network error');
         } finally {
             setSaving(false);
+            console.log('[EditProfile] Save process completed');
         }
     };
 
-    if (loading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    if (!user) {
+        return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    }
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
+        <div className="flex flex-col h-full bg-background">
             {/* Header */}
             <header
                 className="px-4 py-3 flex items-center justify-between border-b border-border bg-background sticky top-0 z-10"

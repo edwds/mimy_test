@@ -125,7 +125,7 @@ export const SettingsScreen = () => {
 
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
+        <div className="flex flex-col h-full bg-background">
             {/* Header */}
             <header
                 className="px-4 py-3 flex items-center gap-2 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10"

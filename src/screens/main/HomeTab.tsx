@@ -8,7 +8,7 @@ import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { HateCard } from '@/components/HateCard';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
 import { useRanking } from '@/context/RankingContext';
 import { authFetch } from '@/lib/authFetch';
@@ -366,6 +366,8 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
     const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
     const [banners, setBanners] = useState<any[]>([]);
+    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+    const bannerScrollRef = useRef<HTMLDivElement>(null);
 
     // Fetch banners
     useEffect(() => {
@@ -383,6 +385,22 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
         fetchBanners();
     }, []);
+
+    // Auto-update current banner index on scroll
+    useEffect(() => {
+        const scrollContainer = bannerScrollRef.current;
+        if (!scrollContainer) return;
+
+        const handleScroll = () => {
+            const scrollLeft = scrollContainer.scrollLeft;
+            const itemWidth = scrollContainer.offsetWidth;
+            const index = Math.round(scrollLeft / itemWidth);
+            setCurrentBannerIndex(index);
+        };
+
+        scrollContainer.addEventListener('scroll', handleScroll);
+        return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }, [banners.length]);
 
     const handleBannerClick = (banner: any) => {
         switch (banner.action_type) {
@@ -477,70 +495,101 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         ))}
                     </div>
 
-                    {/* Dynamic Banners */}
-                    {banners.map((banner) => {
-                        const titleWithName = banner.title.replace('{{name}}', currentUser?.nickname || '회원');
-
-                        return (
+                    {/* Dynamic Banners - Carousel */}
+                    {banners.length > 0 && (
+                        <div className="mb-6 relative">
+                            {/* Carousel Container */}
                             <div
-                                key={banner.id}
-                                onClick={() => handleBannerClick(banner)}
-                                className="mx-5 mb-6 p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group"
-                                style={{
-                                    background: banner.background_gradient
-                                }}
+                                ref={bannerScrollRef}
+                                className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 gap-4"
+                                style={{ scrollBehavior: 'smooth' }}
                             >
-                                <div className="relative z-10 flex justify-between items-start">
-                                    <div className="flex-1 pr-4">
-                                        <h2 className="text-xl font-bold mb-2 text-foreground leading-tight whitespace-pre-line">
-                                            {titleWithName}
-                                        </h2>
-                                        {banner.description && (
-                                            <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
-                                                {banner.description}
-                                            </p>
-                                        )}
-                                    </div>
+                                {banners.map((banner) => {
+                                    const titleWithName = banner.title.replace('{{name}}', currentUser?.nickname || '회원');
 
-                                    {/* Icon */}
-                                    <div className="flex relative mt-1">
-                                        {banner.icon_type === 'user' && (
-                                            <>
-                                                <div className="w-12 h-12 rounded-full border-2 border-background overflow-hidden bg-muted shadow-md z-10">
-                                                    {currentUser?.profile_image ? (
-                                                        <img
-                                                            src={currentUser.profile_image}
-                                                            alt="Profile"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                                                            <UserIcon size={20} />
-                                                        </div>
-                                                    )}
+                                    return (
+                                        <div
+                                            key={banner.id}
+                                            className="flex-shrink-0 w-[calc(100%-40px)] snap-center"
+                                        >
+                                            <div
+                                                onClick={() => handleBannerClick(banner)}
+                                                className="p-6 rounded-3xl shadow-sm relative overflow-hidden cursor-pointer group h-full"
+                                                style={{
+                                                    background: banner.background_gradient
+                                                }}
+                                            >
+                                                <div className="relative z-10 flex justify-between items-start">
+                                                    <div className="flex-1 pr-4">
+                                                        <h2 className="text-xl font-bold mb-2 text-foreground leading-tight whitespace-pre-line">
+                                                            {titleWithName}
+                                                        </h2>
+                                                        {banner.description && (
+                                                            <p className="text-muted-foreground text-sm whitespace-pre-line">
+                                                                {banner.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Icon */}
+                                                    <div className="flex relative mt-1">
+                                                        {banner.icon_type === 'user' && (
+                                                            <>
+                                                                <div className="w-12 h-12 rounded-full border-2 border-background overflow-hidden bg-muted shadow-md z-10">
+                                                                    {currentUser?.profile_image ? (
+                                                                        <img
+                                                                            src={currentUser.profile_image}
+                                                                            alt="Profile"
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                                                            <UserIcon size={20} />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                                                    <PenLine size={14} />
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                        {banner.icon_type === 'pen' && (
+                                                            <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                                                                <PenLine size={20} />
+                                                            </div>
+                                                        )}
+                                                        {banner.icon_type === 'custom' && banner.icon_url && (
+                                                            <img
+                                                                src={banner.icon_url}
+                                                                alt="Banner Icon"
+                                                                className="w-12 h-12 rounded-full object-cover shadow-lg border-2 border-background group-hover:scale-110 transition-transform"
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center absolute -bottom-1 -right-1 z-20 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-                                                    <PenLine size={14} />
-                                                </div>
-                                            </>
-                                        )}
-                                        {banner.icon_type === 'pen' && (
-                                            <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-                                                <PenLine size={20} />
                                             </div>
-                                        )}
-                                        {banner.icon_type === 'custom' && banner.icon_url && (
-                                            <img
-                                                src={banner.icon_url}
-                                                alt="Banner Icon"
-                                                className="w-12 h-12 rounded-full object-cover shadow-lg border-2 border-background group-hover:scale-110 transition-transform"
-                                            />
-                                        )}
-                                    </div>
-                                </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        );
-                    })}
+
+                            {/* Pagination Dots */}
+                            {banners.length > 1 && (
+                                <div className="flex justify-center gap-1.5 mt-3">
+                                    {banners.map((_, index) => (
+                                        <div
+                                            key={index}
+                                            className={`h-1.5 rounded-full transition-all ${
+                                                index === currentBannerIndex
+                                                    ? 'w-6 bg-primary'
+                                                    : 'w-1.5 bg-gray-300'
+                                            }`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
