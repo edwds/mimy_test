@@ -12,7 +12,15 @@ public class PhotoLibraryPlugin: CAPPlugin {
 
         // Request authorization
         PHPhotoLibrary.requestAuthorization { status in
-            guard status == .authorized || status == .limited else {
+            // Check authorization status with iOS 14+ compatibility
+            let isAuthorized: Bool
+            if #available(iOS 14, *) {
+                isAuthorized = status == .authorized || status == .limited
+            } else {
+                isAuthorized = status == .authorized
+            }
+
+            guard isAuthorized else {
                 call.reject("Photo library access denied")
                 return
             }
@@ -119,7 +127,15 @@ public class PhotoLibraryPlugin: CAPPlugin {
     // Get total photo count with location
     @objc func getPhotoCount(_ call: CAPPluginCall) {
         PHPhotoLibrary.requestAuthorization { status in
-            guard status == .authorized || status == .limited else {
+            // Check authorization status with iOS 14+ compatibility
+            let isAuthorized: Bool
+            if #available(iOS 14, *) {
+                isAuthorized = status == .authorized || status == .limited
+            } else {
+                isAuthorized = status == .authorized
+            }
+
+            guard isAuthorized else {
                 call.reject("Photo library access denied")
                 return
             }
