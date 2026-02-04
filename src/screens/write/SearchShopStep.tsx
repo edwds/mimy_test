@@ -10,7 +10,6 @@ import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
 import { Capacitor } from '@capacitor/core';
-import { motion } from 'framer-motion';
 
 interface Props {
     onSelect: (shop: any) => void;
@@ -228,27 +227,11 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack, isRankingOpe
     const filteredSavedShops = savedShops;
 
     return (
-        <motion.div
+        <div
             className={cn(
                 "absolute inset-0 flex flex-col bg-[var(--color-background)]",
                 isRankingOpen && "scale-95 opacity-50 blur-[1px] pointer-events-none"
             )}
-            initial={{ y: '100%', opacity: 0.8 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0.8 }}
-            transition={{
-                y: {
-                    type: 'spring',
-                    damping: 45,
-                    stiffness: 120,
-                    mass: 1.2
-                },
-                opacity: {
-                    duration: 0.5,
-                    ease: 'easeOut'
-                }
-            }}
-            style={{ willChange: 'transform, opacity' }}
         >
             {/* Header */}
             {!isGoogleMode && (
@@ -630,7 +613,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack, isRankingOpe
                     </div>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 };
 

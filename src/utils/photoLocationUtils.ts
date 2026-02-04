@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Media } from '@capacitor-community/media';
+import { Camera } from '@capacitor/camera';
 import exifr from 'exifr';
 import { Dialog } from '@capacitor/dialog';
 
@@ -61,12 +62,26 @@ export async function requestPhotoLibraryPermission(): Promise<boolean> {
             return false;
         }
 
-        // Attempt to access albums - this will trigger permission prompt
-        const result = await Media.getAlbumsPath();
-        const hasPermission = result.path.length > 0;
+        // Use Camera plugin to request photo library permission
+        // This triggers the iOS permission popup reliably
+        const permissionStatus = await Camera.checkPermissions();
+        console.log('[PhotoLocation] Current permission status:', permissionStatus);
 
-        console.log('[PhotoLocation] Permission granted:', hasPermission);
-        return hasPermission;
+        if (permissionStatus.photos === 'prompt' || permissionStatus.photos === 'prompt-with-rationale') {
+            console.log('[PhotoLocation] Requesting photos permission via Camera plugin');
+            const result = await Camera.requestPermissions({ permissions: ['photos'] });
+            console.log('[PhotoLocation] Permission request result:', result);
+
+            const granted = result.photos === 'granted' || result.photos === 'limited';
+            console.log('[PhotoLocation] Permission granted:', granted);
+            return granted;
+        } else if (permissionStatus.photos === 'granted' || permissionStatus.photos === 'limited') {
+            console.log('[PhotoLocation] Permission already granted');
+            return true;
+        } else {
+            console.log('[PhotoLocation] Permission denied');
+            return false;
+        }
     } catch (error: any) {
         console.error('[PhotoLocation] Permission request failed:', error);
         return false;
@@ -82,26 +97,33 @@ export async function checkPhotoLibraryPermission(): Promise<boolean> {
     }
 
     try {
-        const result = await Media.getAlbumsPath();
-        return result.path.length > 0;
+        const permissionStatus = await Camera.checkPermissions();
+        return permissionStatus.photos === 'granted' || permissionStatus.photos === 'limited';
     } catch (error: any) {
         return false;
     }
 }
 
 /**
- * Request photo library permission and get all media albums
+ * Request media permission for internal use
  */
 async function requestMediaPermission(): Promise<boolean> {
     try {
-        const result = await Media.getAlbumsPath();
-        return result.path.length > 0;
-    } catch (error: any) {
-        if (error.message?.includes('permission')) {
-            console.error('[PhotoLocation] Permission denied:', error);
-            return false;
+        const permissionStatus = await Camera.checkPermissions();
+
+        if (permissionStatus.photos === 'granted' || permissionStatus.photos === 'limited') {
+            return true;
         }
-        throw error;
+
+        if (permissionStatus.photos === 'prompt' || permissionStatus.photos === 'prompt-with-rationale') {
+            const result = await Camera.requestPermissions({ permissions: ['photos'] });
+            return result.photos === 'granted' || result.photos === 'limited';
+        }
+
+        return false;
+    } catch (error: any) {
+        console.error('[PhotoLocation] Permission request failed:', error);
+        return false;
     }
 }
 
