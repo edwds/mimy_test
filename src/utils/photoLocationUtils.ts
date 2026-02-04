@@ -1,8 +1,7 @@
 import { Capacitor } from '@capacitor/core';
-import { Media } from '@capacitor-community/media';
 import { Camera } from '@capacitor/camera';
-import exifr from 'exifr';
 import { Dialog } from '@capacitor/dialog';
+import PhotoLibrary from '@/plugins/PhotoLibrary';
 
 export interface PhotoWithLocation {
     identifier: string;
@@ -109,26 +108,41 @@ export async function checkPhotoLibraryPermission(): Promise<boolean> {
  */
 async function requestMediaPermission(): Promise<boolean> {
     try {
+        console.log('[PhotoLocation] 🔐 Checking permission status...');
         const permissionStatus = await Camera.checkPermissions();
+        console.log('[PhotoLocation] Current permission status:', permissionStatus.photos);
 
         if (permissionStatus.photos === 'granted' || permissionStatus.photos === 'limited') {
+            console.log('[PhotoLocation] ✅ Permission already granted:', permissionStatus.photos);
             return true;
         }
 
         if (permissionStatus.photos === 'prompt' || permissionStatus.photos === 'prompt-with-rationale') {
+            console.log('[PhotoLocation] 📱 Requesting permission from user...');
             const result = await Camera.requestPermissions({ permissions: ['photos'] });
-            return result.photos === 'granted' || result.photos === 'limited';
+            console.log('[PhotoLocation] Permission request result:', result.photos);
+
+            const granted = result.photos === 'granted' || result.photos === 'limited';
+            if (granted) {
+                console.log('[PhotoLocation] ✅ Permission granted');
+            } else {
+                console.log('[PhotoLocation] ❌ Permission denied by user');
+            }
+            return granted;
         }
 
+        console.log('[PhotoLocation] ❌ Permission denied (status:', permissionStatus.photos + ')');
         return false;
     } catch (error: any) {
-        console.error('[PhotoLocation] Permission request failed:', error);
+        console.error('[PhotoLocation] ❌ Permission request error:', error);
+        console.error('[PhotoLocation] Error message:', error?.message);
         return false;
     }
 }
 
 /**
  * Get photos near a specific location from user's photo library
+ * Automatically scans recent 1000 photos
  * @param latitude - Target latitude
  * @param longitude - Target longitude
  * @param radiusMeters - Search radius in meters (default: 100m)
@@ -141,95 +155,91 @@ export async function getPhotosNearLocation(
     maxPhotos: number = 10
 ): Promise<PhotoWithLocation[]> {
     if (!Capacitor.isNativePlatform()) {
-        console.log('[PhotoLocation] Not on native platform, skipping');
+        console.log('[PhotoLocation] ❌ Not on native platform, skipping');
         return [];
     }
 
     try {
-        console.log('[PhotoLocation] Starting search near:', { latitude, longitude, radiusMeters });
+        console.log('[PhotoLocation] ========================================');
+        console.log('[PhotoLocation] 🔍 Starting photo search');
+        console.log('[PhotoLocation] Target location:', { latitude, longitude, radiusMeters, maxPhotos });
 
-        // Request permission
+        // Check permission first
         const hasPermission = await requestMediaPermission();
         if (!hasPermission) {
-            console.log('[PhotoLocation] Photo library permission not granted');
+            console.log('[PhotoLocation] ❌ Photo library permission not granted');
+            console.log('[PhotoLocation] User needs to grant permission in Settings > Mimy > Photos');
+            return [];
+        }
+        console.log('[PhotoLocation] ✅ Permission granted');
+
+        // Use native plugin to get recent photos with location
+        console.log('[PhotoLocation] Fetching recent 1000 photos from native plugin...');
+        const result = await PhotoLibrary.getRecentPhotos({ quantity: 1000 });
+
+        console.log('[PhotoLocation] ✅ Found', result.photos.length, 'photos with GPS data');
+
+        if (result.photos.length === 0) {
+            console.log('[PhotoLocation] ⚠️ No photos with GPS data found');
             return [];
         }
 
-        // Get all albums
-        const albumsResult = await Media.getAlbumsPath();
-        console.log('[PhotoLocation] Found albums path:', albumsResult.path.length);
-
         const photosWithLocation: PhotoWithLocation[] = [];
-
-        // Get media from library
-        const mediaResult = await Media.getMedias({
-            quantity: 200, // Get up to 200 most recent photos
-            types: 'photos', // Only photos, not videos
-            sort: 'creationDate',
-        });
-
-        console.log('[PhotoLocation] Found', mediaResult.medias.length, 'photos in library');
+        let photosWithinRadius = 0;
 
         // Process each photo
-        for (const mediaItem of mediaResult.medias) {
-            try {
-                // Get media data with path
-                const mediaData = await Media.getMediaByIdentifier({
-                    identifier: mediaItem.identifier,
+        for (const photo of result.photos) {
+            const distance = calculateDistance(
+                latitude,
+                longitude,
+                photo.latitude,
+                photo.longitude
+            );
+
+            // Check if within radius
+            if (distance <= radiusMeters) {
+                photosWithinRadius++;
+                photosWithLocation.push({
+                    identifier: photo.identifier,
+                    uri: `data:image/jpeg;base64,${photo.base64}`,
+                    latitude: photo.latitude,
+                    longitude: photo.longitude,
+                    distance,
+                    dateTaken: new Date(photo.creationDate * 1000),
                 });
 
-                if (!mediaData?.path) continue;
+                console.log(`[PhotoLocation] ✅ Found photo within radius! Distance: ${Math.round(distance)}m`);
 
-                // Fetch the image file
-                const response = await fetch(mediaData.path);
-                const blob = await response.blob();
-
-                // Extract EXIF data
-                const exif = await exifr.parse(blob);
-
-                if (exif?.latitude && exif?.longitude) {
-                    const distance = calculateDistance(
-                        latitude,
-                        longitude,
-                        exif.latitude,
-                        exif.longitude
-                    );
-
-                    console.log('[PhotoLocation] Photo distance:', distance, 'meters');
-
-                    // Check if within radius
-                    if (distance <= radiusMeters) {
-                        photosWithLocation.push({
-                            identifier: mediaItem.identifier,
-                            uri: mediaData.path,
-                            latitude: exif.latitude,
-                            longitude: exif.longitude,
-                            distance,
-                            dateTaken: exif.DateTimeOriginal || exif.CreateDate || new Date(mediaItem.creationDate),
-                        });
-
-                        // Stop if we've found enough photos
-                        if (photosWithLocation.length >= maxPhotos * 2) {
-                            break;
-                        }
-                    }
+                // Stop if we've found enough photos
+                if (photosWithLocation.length >= maxPhotos * 2) {
+                    console.log('[PhotoLocation] Found enough photos, stopping search');
+                    break;
                 }
-            } catch (error) {
-                console.error('[PhotoLocation] Error processing photo:', error);
-                // Continue to next photo
             }
         }
+
+        console.log('[PhotoLocation] ========================================');
+        console.log('[PhotoLocation] 📊 Search Summary:');
+        console.log(`  - Total photos with GPS: ${result.photos.length}`);
+        console.log(`  - Photos within ${radiusMeters}m: ${photosWithinRadius}`);
+        console.log('[PhotoLocation] ========================================');
 
         // Sort by distance and take top N
         const sortedPhotos = photosWithLocation
             .sort((a, b) => a.distance - b.distance)
             .slice(0, maxPhotos);
 
-        console.log('[PhotoLocation] Found', sortedPhotos.length, 'photos within', radiusMeters, 'meters');
+        console.log('[PhotoLocation] ✅ Returning', sortedPhotos.length, 'photos (sorted by distance)');
+        if (sortedPhotos.length > 0) {
+            console.log('[PhotoLocation] Distances:', sortedPhotos.map(p => Math.round(p.distance) + 'm').join(', '));
+        }
 
         return sortedPhotos;
     } catch (error) {
-        console.error('[PhotoLocation] Error getting photos near location:', error);
+        console.error('[PhotoLocation] ❌ FATAL ERROR getting photos near location:', error);
+        console.error('[PhotoLocation] Error type:', typeof error);
+        console.error('[PhotoLocation] Error message:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('[PhotoLocation] Error stack:', error instanceof Error ? error.stack : undefined);
         return [];
     }
 }

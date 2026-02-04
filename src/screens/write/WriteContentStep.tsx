@@ -150,44 +150,87 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
     // Find suggested photos near shop location
     const handleFindSuggestedPhotos = async () => {
-        if (!shop?.lat || !shop?.lng) {
-            console.log('[WriteContentStep] No shop location available');
+        const shopLat = shop?.lat;
+        const shopLng = shop?.lng || (shop as any)?.lon; // lon is also used in some cases
+
+        if (!shopLat || !shopLng) {
+            console.log('[WriteContentStep] ❌ No shop location available');
+            console.log('[WriteContentStep] shop.lat:', shop?.lat);
+            console.log('[WriteContentStep] shop.lng:', shop?.lng);
+            console.log('[WriteContentStep] shop.lon:', (shop as any)?.lon);
             return;
         }
 
         if (!Capacitor.isNativePlatform()) {
-            console.log('[WriteContentStep] Not on native platform');
+            console.log('[WriteContentStep] ❌ Not on native platform');
             return;
         }
 
+        console.log('[WriteContentStep] 🔍 Starting photo search...');
         setIsLoadingSuggestions(true);
+
         try {
+            console.log('[WriteContentStep] Calling getPhotosNearLocation with:', {
+                lat: shopLat,
+                lng: shopLng,
+                radius: 100,
+                maxPhotos: 10
+            });
+
             const suggestions = await getPhotosNearLocation(
-                shop.lat,
-                shop.lng,
+                shopLat,
+                shopLng,
                 100, // 100m radius
                 10  // max 10 photos
             );
 
-            console.log('[WriteContentStep] Found', suggestions.length, 'suggested photos');
+            console.log('[WriteContentStep] ✅ Found', suggestions.length, 'suggested photos');
+            console.log('[WriteContentStep] Photos:', suggestions.map(p => ({
+                distance: p.distance,
+                lat: p.latitude,
+                lng: p.longitude
+            })));
+
             setSuggestedPhotos(suggestions);
 
             if (suggestions.length === 0) {
-                alert('이 위치 근처에서 찍은 사진을 찾지 못했습니다.');
+                console.log('[WriteContentStep] ⚠️ No photos found within 100m radius');
+                // Don't show alert during auto-load, only if user manually triggers
+                // alert('이 위치 근처에서 찍은 사진을 찾지 못했습니다.');
             }
         } catch (error) {
-            console.error('[WriteContentStep] Error finding suggested photos:', error);
-            alert('사진을 불러오는 중 오류가 발생했습니다.');
+            console.error('[WriteContentStep] ❌ Error finding suggested photos:', error);
+            console.error('[WriteContentStep] Error details:', {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            // alert('사진을 불러오는 중 오류가 발생했습니다.');
         } finally {
             setIsLoadingSuggestions(false);
+            console.log('[WriteContentStep] Photo search completed');
         }
     };
 
     // Auto-load suggested photos when component mounts (iOS only, review mode only)
     useEffect(() => {
-        if (mode === 'review' && Capacitor.isNativePlatform() && shop?.lat && shop?.lng) {
-            console.log('[WriteContentStep] Auto-loading suggested photos for shop:', shop.name);
+        const shopLat = shop?.lat;
+        const shopLng = shop?.lng || shop?.lon; // lon is also used in some cases
+
+        if (mode === 'review' && Capacitor.isNativePlatform() && shopLat && shopLng) {
+            console.log('[WriteContentStep] ========================================');
+            console.log('[WriteContentStep] Auto-loading suggested photos');
+            console.log('[WriteContentStep] Shop:', shop.name);
+            console.log('[WriteContentStep] Location:', { lat: shopLat, lng: shopLng });
+            console.log('[WriteContentStep] ========================================');
             handleFindSuggestedPhotos();
+        } else {
+            console.log('[WriteContentStep] Skipping photo suggestion:');
+            console.log('  - mode:', mode);
+            console.log('  - isNativePlatform:', Capacitor.isNativePlatform());
+            console.log('  - shop?.lat:', shop?.lat);
+            console.log('  - shop?.lng:', shop?.lng);
+            console.log('  - shop?.lon:', (shop as any)?.lon);
+            console.log('  - has location:', !!(shopLat && shopLng));
         }
     }, [shop?.id]); // Only run when shop changes
 
@@ -608,24 +651,29 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         </div>
 
                         {/* Suggested Photos Button (iOS only, review mode only) */}
-                        {mode === 'review' && Capacitor.isNativePlatform() && shop?.lat && shop?.lng && (
+                        {mode === 'review' && Capacitor.isNativePlatform() && shop?.lat && (shop?.lng || (shop as any)?.lon) && (
                             <>
                                 {/* Loading State */}
                                 {isLoadingSuggestions && (
                                     <div className="w-full mb-3 flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
                                         <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                                         <span className="text-sm font-bold text-primary">근처 사진 찾는 중...</span>
+                                        <span className="text-xs text-muted-foreground">(콘솔 로그 확인)</span>
                                     </div>
                                 )}
 
                                 {/* Retry Button (if no photos found and not loading) */}
                                 {!isLoadingSuggestions && suggestedPhotos.length === 0 && (
                                     <button
-                                        onClick={handleFindSuggestedPhotos}
+                                        onClick={() => {
+                                            console.log('[WriteContentStep] 🔄 User manually triggered photo search');
+                                            handleFindSuggestedPhotos();
+                                        }}
                                         className="w-full mb-3 flex items-center justify-center gap-2 p-3 bg-muted/30 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium text-sm hover:bg-muted/50 hover:border-primary/30 hover:text-foreground transition-colors"
                                     >
                                         <MapPin className="w-4 h-4" />
-                                        <span>이 위치 근처 사진 다시 찾기</span>
+                                        <span>이 위치 근처 사진 찾기</span>
+                                        <span className="text-xs">(콘솔 로그 확인)</span>
                                     </button>
                                 )}
                             </>
