@@ -110,6 +110,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Suggested Photos State
     const [suggestedPhotos, setSuggestedPhotos] = useState<PhotoWithLocation[]>([]);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+    const [loadingPhotoId, setLoadingPhotoId] = useState<string | null>(null);
 
     // Keyboard Height Tracking for iOS
     useEffect(() => {
@@ -216,7 +217,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         const shopLat = shop?.lat;
         const shopLng = shop?.lng || shop?.lon; // lon is also used in some cases
 
-        if (mode === 'review' && Capacitor.isNativePlatform() && shopLat && shopLng) {
+        // Only run once when component mounts and shop is available
+        if (mode === 'review' && Capacitor.isNativePlatform() && shopLat && shopLng && suggestedPhotos.length === 0 && !isLoadingSuggestions) {
             console.log('[WriteContentStep] ========================================');
             console.log('[WriteContentStep] Auto-loading suggested photos');
             console.log('[WriteContentStep] Shop:', shop.name);
@@ -231,6 +233,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             console.log('  - shop?.lng:', shop?.lng);
             console.log('  - shop?.lon:', (shop as any)?.lon);
             console.log('  - has location:', !!(shopLat && shopLng));
+            console.log('  - suggestedPhotos.length:', suggestedPhotos.length);
+            console.log('  - isLoadingSuggestions:', isLoadingSuggestions);
         }
     }, [shop?.id]); // Only run when shop changes
 
@@ -240,8 +244,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             console.log('[WriteContentStep] Adding suggested photo');
             console.log('[WriteContentStep] Loading full resolution for identifier:', photo.identifier);
 
-            // Show loading state
-            setIsLoadingSuggestions(true);
+            // Set loading state for this specific photo
+            setLoadingPhotoId(photo.identifier);
 
             // Load full resolution image using identifier
             const file = await getFullResolutionPhoto(photo.identifier);
@@ -249,7 +253,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             if (!file) {
                 console.error('[WriteContentStep] Failed to load full resolution photo');
                 alert('사진을 불러오는데 실패했습니다.');
-                setIsLoadingSuggestions(false);
+                setLoadingPhotoId(null);
                 return;
             }
 
@@ -257,11 +261,11 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
             // Remove from suggestions
             setSuggestedPhotos(prev => prev.filter(p => p.identifier !== photo.identifier));
+            setLoadingPhotoId(null);
 
             // Open ImageEditModal with this file
             setPendingFiles([file]);
             setIsEditModalOpen(true);
-            setIsLoadingSuggestions(false);
 
             // Auto-set visit date from photo if not manually set
             if (!isDateManuallySet && photo.dateTaken) {
@@ -277,7 +281,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             }
         } catch (error) {
             console.error('[WriteContentStep] Error adding suggested photo:', error);
-            setIsLoadingSuggestions(false);
+            setLoadingPhotoId(null);
             alert('사진을 불러오는데 실패했습니다.');
         }
     };
@@ -728,18 +732,26 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         <button
                                             key={photo.identifier}
                                             onClick={() => handleAddSuggestedPhoto(photo)}
-                                            className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden group border-2 border-white shadow-sm hover:border-primary hover:shadow-lg transition-all active:scale-95"
+                                            disabled={loadingPhotoId === photo.identifier}
+                                            className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden group border-2 border-white shadow-sm hover:border-primary hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
                                         >
                                             <img
                                                 src={photo.uri}
                                                 alt="suggested"
                                                 className="w-full h-full object-cover"
                                             />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
-                                                    <span className="text-primary text-xl leading-none font-bold">+</span>
+                                            {/* Loading Overlay */}
+                                            {loadingPhotoId === photo.identifier ? (
+                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                                                 </div>
-                                            </div>
+                                            ) : (
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
+                                                        <span className="text-primary text-xl leading-none font-bold">+</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {/* Distance Badge */}
                                             <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[10px] text-white font-bold">
                                                 {photo.distance < 1000
