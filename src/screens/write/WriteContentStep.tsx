@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon, ArrowUpDown, GripVertical } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon, ArrowUpDown, GripVertical, MapPin } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
 import { getAccessToken, saveTokens } from '@/lib/tokenStorage';
 import { Reorder, useDragControls } from 'framer-motion';
+import { getPhotosNearLocation, photoUriToFile, PhotoWithLocation } from '@/utils/photoLocationUtils';
 
 interface Props {
     onNext: (content: { text: string; images: string[]; imgText?: string[]; companions?: any[]; keywords?: string[]; visitDate?: string; links?: { title: string; url: string }[] }) => void;
@@ -106,6 +107,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Reorder Modal State
     const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
+    // Suggested Photos State
+    const [suggestedPhotos, setSuggestedPhotos] = useState<PhotoWithLocation[]>([]);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
     // Keyboard Height Tracking for iOS
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
@@ -140,6 +145,69 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
             ));
             setCaptionEditId(null);
             setCaptionEditText('');
+        }
+    };
+
+    // Find suggested photos near shop location
+    const handleFindSuggestedPhotos = async () => {
+        if (!shop?.lat || !shop?.lng) {
+            console.log('[WriteContentStep] No shop location available');
+            return;
+        }
+
+        if (!Capacitor.isNativePlatform()) {
+            console.log('[WriteContentStep] Not on native platform');
+            return;
+        }
+
+        setIsLoadingSuggestions(true);
+        try {
+            const suggestions = await getPhotosNearLocation(
+                shop.lat,
+                shop.lng,
+                100, // 100m radius
+                10  // max 10 photos
+            );
+
+            console.log('[WriteContentStep] Found', suggestions.length, 'suggested photos');
+            setSuggestedPhotos(suggestions);
+
+            if (suggestions.length === 0) {
+                alert('이 위치 근처에서 찍은 사진을 찾지 못했습니다.');
+            }
+        } catch (error) {
+            console.error('[WriteContentStep] Error finding suggested photos:', error);
+            alert('사진을 불러오는 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoadingSuggestions(false);
+        }
+    };
+
+    // Auto-load suggested photos when component mounts (iOS only, review mode only)
+    useEffect(() => {
+        if (mode === 'review' && Capacitor.isNativePlatform() && shop?.lat && shop?.lng) {
+            console.log('[WriteContentStep] Auto-loading suggested photos for shop:', shop.name);
+            handleFindSuggestedPhotos();
+        }
+    }, [shop?.id]); // Only run when shop changes
+
+    // Add suggested photo to media items
+    const handleAddSuggestedPhoto = async (photo: PhotoWithLocation) => {
+        try {
+            const file = await photoUriToFile(photo.uri);
+            if (!file) {
+                console.error('[WriteContentStep] Failed to convert photo to file');
+                return;
+            }
+
+            // Remove from suggestions
+            setSuggestedPhotos(prev => prev.filter(p => p.uri !== photo.uri));
+
+            // Add to media items and upload
+            console.log('[WriteContentStep] Adding suggested photo');
+            uploadFiles([file]);
+        } catch (error) {
+            console.error('[WriteContentStep] Error adding suggested photo:', error);
         }
     };
 
@@ -538,6 +606,75 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
                             </div>
                         </div>
+
+                        {/* Suggested Photos Button (iOS only, review mode only) */}
+                        {mode === 'review' && Capacitor.isNativePlatform() && shop?.lat && shop?.lng && (
+                            <>
+                                {/* Loading State */}
+                                {isLoadingSuggestions && (
+                                    <div className="w-full mb-3 flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                                        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                        <span className="text-sm font-bold text-primary">근처 사진 찾는 중...</span>
+                                    </div>
+                                )}
+
+                                {/* Retry Button (if no photos found and not loading) */}
+                                {!isLoadingSuggestions && suggestedPhotos.length === 0 && (
+                                    <button
+                                        onClick={handleFindSuggestedPhotos}
+                                        className="w-full mb-3 flex items-center justify-center gap-2 p-3 bg-muted/30 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium text-sm hover:bg-muted/50 hover:border-primary/30 hover:text-foreground transition-colors"
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        <span>이 위치 근처 사진 다시 찾기</span>
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {/* Suggested Photos Display */}
+                        {suggestedPhotos.length > 0 && (
+                            <div className="mb-3 p-3 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-primary" />
+                                        <span className="text-sm font-bold text-primary">근처에서 찍은 사진 ({suggestedPhotos.length}개)</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setSuggestedPhotos([])}
+                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        닫기
+                                    </button>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-3">탭해서 추가</p>
+                                <div className="flex overflow-x-auto no-scrollbar gap-2 pb-1">
+                                    {suggestedPhotos.map((photo) => (
+                                        <button
+                                            key={photo.identifier}
+                                            onClick={() => handleAddSuggestedPhoto(photo)}
+                                            className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden group border-2 border-white shadow-sm hover:border-primary hover:shadow-lg transition-all active:scale-95"
+                                        >
+                                            <img
+                                                src={photo.uri}
+                                                alt="suggested"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
+                                                    <span className="text-primary text-xl leading-none font-bold">+</span>
+                                                </div>
+                                            </div>
+                                            {/* Distance Badge */}
+                                            <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[10px] text-white font-bold">
+                                                {photo.distance < 1000
+                                                    ? `${Math.round(photo.distance)}m`
+                                                    : `${(photo.distance / 1000).toFixed(1)}km`}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex overflow-x-auto no-scrollbar gap-3 pb-2 -mx-6 px-6">
                             {mediaItems.map((item) => (

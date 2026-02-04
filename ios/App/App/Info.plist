@@ -47,6 +47,10 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to show nearby restaurant recommendations.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to suggest photos taken at this restaurant location.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to save photos to your library.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
