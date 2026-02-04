@@ -327,31 +327,35 @@ export const MapContainer = ({
             if (isUserDragging.current) {
                 // Calculate visible area bounds (excluding UI overlays)
                 const mapContainer = map.current.getContainer();
+                const mapWidth = mapContainer.clientWidth;
                 const mapHeight = mapContainer.clientHeight;
 
-                // UI overlay offsets (in pixels)
-                const topOffset = 80;    // Filter bar height + padding
-                const bottomOffset = 120; // Bottom sheet collapsed height
+                // UI overlay offsets (in pixels) - more aggressive to focus on center
+                const topOffset = 140;    // Filter bar + extra padding
+                const bottomOffset = 200; // Bottom sheet + extra padding
+                const sideOffset = 60;    // Side margins to exclude edge shops
 
                 // Get full canvas bounds
                 const fullBounds = map.current.getBounds();
                 const ne = fullBounds.getNorthEast();
                 const sw = fullBounds.getSouthWest();
 
-                // Calculate lat per pixel
+                // Calculate lat/lon per pixel
                 const latRange = ne.lat - sw.lat;
+                const lonRange = ne.lng - sw.lng;
                 const latPerPx = latRange / mapHeight;
+                const lonPerPx = lonRange / mapWidth;
 
-                // Adjust bounds to exclude UI overlays (안전 영역)
+                // Adjust bounds to focus on center area (안전 영역)
                 const visibleMinLat = sw.lat + (bottomOffset * latPerPx);
                 const visibleMaxLat = ne.lat - (topOffset * latPerPx);
-                const visibleMinLon = sw.lng; // No side overlays
-                const visibleMaxLon = ne.lng;
+                const visibleMinLon = sw.lng + (sideOffset * lonPerPx);
+                const visibleMaxLon = ne.lng - (sideOffset * lonPerPx);
 
-                console.log('[MapContainer] Calling onMoveEnd with VISIBLE area bounds:', {
+                console.log('[MapContainer] Calling onMoveEnd with CENTER-FOCUSED bounds:', {
                     fullBounds: { minLat: sw.lat, maxLat: ne.lat, minLon: sw.lng, maxLon: ne.lng },
                     visibleBounds: { minLat: visibleMinLat, maxLat: visibleMaxLat, minLon: visibleMinLon, maxLon: visibleMaxLon },
-                    adjustments: { topOffset, bottomOffset, latPerPx }
+                    adjustments: { topOffset, bottomOffset, sideOffset, latPerPx, lonPerPx }
                 });
 
                 onMoveEnd?.({
@@ -590,11 +594,8 @@ export const MapContainer = ({
         // First time: just apply and mark as done (don't send bounds, let initial load handle it)
         if (!initialCenterApplied.current) {
             initialCenterApplied.current = true;
-            map.current.flyTo({
-                center: [center[1], center[0]],
-                duration: 1000,
-                essential: true
-            });
+            // Use setCenter instead of flyTo for initial position (no animation)
+            map.current.setCenter([center[1], center[0]]);
             return;
         }
 

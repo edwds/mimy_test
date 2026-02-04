@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { Dialog } from '@capacitor/dialog';
-import PhotoLibrary from '@/plugins/PhotoLibrary';
+import { Media } from '@capacitor-community/media';
 import { photoCacheService } from '@/services/PhotoCacheService';
 import { backgroundPhotoScanner } from '@/services/BackgroundPhotoScanner';
 
@@ -141,23 +141,37 @@ export async function getPhotosNearLocation(
 
         console.log('[PhotoLocation] Loading thumbnails for', identifiersToLoad.length, 'photos...');
 
-        const thumbnailResult = await PhotoLibrary.getThumbnails({
-            identifiers: identifiersToLoad,
+        // Load all recent photos and filter by identifier
+        // Note: Media plugin doesn't support loading by specific identifiers
+        const thumbnailResult = await Media.getMedias({
+            quantity: 200, // Load recent photos
+            thumbnailWidth: 200,
+            thumbnailHeight: 200,
+            thumbnailQuality: 70,
+            sort: [{
+                key: 'creationDate',
+                ascending: false
+            }]
         });
 
-        console.log('[PhotoLocation] ✅ Loaded', thumbnailResult.photos.length, 'thumbnails');
+        // Filter to only the photos we want
+        const requestedPhotos = (thumbnailResult.medias || []).filter(media =>
+            identifiersToLoad.includes(media.identifier)
+        );
+
+        console.log('[PhotoLocation] ✅ Loaded', requestedPhotos.length, 'thumbnails');
 
         // Combine metadata with thumbnails
-        const photosWithLocation: PhotoWithLocation[] = thumbnailResult.photos.map(photo => {
-            const metadata = nearbyMetadata.find(m => m.identifier === photo.identifier);
+        const photosWithLocation: PhotoWithLocation[] = requestedPhotos.map(media => {
+            const metadata = nearbyMetadata.find(m => m.identifier === media.identifier);
 
             return {
-                identifier: photo.identifier,
-                uri: `data:image/jpeg;base64,${photo.base64}`,
-                latitude: photo.latitude,
-                longitude: photo.longitude,
+                identifier: media.identifier,
+                uri: media.data || '', // Use the data URI from Media plugin
+                latitude: media.location?.latitude || 0,
+                longitude: media.location?.longitude || 0,
                 distance: metadata?.distance || 0,
-                dateTaken: new Date(photo.creationDate * 1000),
+                dateTaken: new Date(media.creationDate),
             };
         });
 
