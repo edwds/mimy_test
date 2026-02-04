@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { Dialog } from '@capacitor/dialog';
 import PhotoLibrary from '@/plugins/PhotoLibrary';
+import { photoCacheService } from '@/services/PhotoCacheService';
+import { backgroundPhotoScanner } from '@/services/BackgroundPhotoScanner';
 
 export interface PhotoWithLocation {
     identifier: string;
@@ -10,30 +12,6 @@ export interface PhotoWithLocation {
     longitude: number;
     distance: number; // meters
     dateTaken?: Date;
-}
-
-/**
- * Calculate distance between two coordinates using Haversine formula
- * Returns distance in meters
- */
-function calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-): number {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
 }
 
 /**
@@ -62,7 +40,6 @@ export async function requestPhotoLibraryPermission(): Promise<boolean> {
         }
 
         // Use Camera plugin to request photo library permission
-        // This triggers the iOS permission popup reliably
         const permissionStatus = await Camera.checkPermissions();
         console.log('[PhotoLocation] Current permission status:', permissionStatus);
 
@@ -104,45 +81,7 @@ export async function checkPhotoLibraryPermission(): Promise<boolean> {
 }
 
 /**
- * Request media permission for internal use
- */
-async function requestMediaPermission(): Promise<boolean> {
-    try {
-        console.log('[PhotoLocation] 🔐 Checking permission status...');
-        const permissionStatus = await Camera.checkPermissions();
-        console.log('[PhotoLocation] Current permission status:', permissionStatus.photos);
-
-        if (permissionStatus.photos === 'granted' || permissionStatus.photos === 'limited') {
-            console.log('[PhotoLocation] ✅ Permission already granted:', permissionStatus.photos);
-            return true;
-        }
-
-        if (permissionStatus.photos === 'prompt' || permissionStatus.photos === 'prompt-with-rationale') {
-            console.log('[PhotoLocation] 📱 Requesting permission from user...');
-            const result = await Camera.requestPermissions({ permissions: ['photos'] });
-            console.log('[PhotoLocation] Permission request result:', result.photos);
-
-            const granted = result.photos === 'granted' || result.photos === 'limited';
-            if (granted) {
-                console.log('[PhotoLocation] ✅ Permission granted');
-            } else {
-                console.log('[PhotoLocation] ❌ Permission denied by user');
-            }
-            return granted;
-        }
-
-        console.log('[PhotoLocation] ❌ Permission denied (status:', permissionStatus.photos + ')');
-        return false;
-    } catch (error: any) {
-        console.error('[PhotoLocation] ❌ Permission request error:', error);
-        console.error('[PhotoLocation] Error message:', error?.message);
-        return false;
-    }
-}
-
-/**
- * Get photos near a specific location from user's photo library
- * Automatically scans recent 1000 photos
+ * Get photos near a specific location using cached metadata
  * @param latitude - Target latitude
  * @param longitude - Target longitude
  * @param radiusMeters - Search radius in meters (default: 100m)
@@ -161,80 +100,78 @@ export async function getPhotosNearLocation(
 
     try {
         console.log('[PhotoLocation] ========================================');
-        console.log('[PhotoLocation] 🔍 Starting photo search');
+        console.log('[PhotoLocation] 🔍 Starting photo search (cache-based)');
         console.log('[PhotoLocation] Target location:', { latitude, longitude, radiusMeters, maxPhotos });
 
-        // Check permission first
-        const hasPermission = await requestMediaPermission();
-        if (!hasPermission) {
-            console.log('[PhotoLocation] ❌ Photo library permission not granted');
-            console.log('[PhotoLocation] User needs to grant permission in Settings > Mimy > Photos');
-            return [];
-        }
-        console.log('[PhotoLocation] ✅ Permission granted');
+        // Check if initial scan has been done
+        const hasInitialScan = await backgroundPhotoScanner.hasInitialScan();
 
-        // Use native plugin to get recent photos with location
-        console.log('[PhotoLocation] Fetching recent 1000 photos from native plugin...');
-        const result = await PhotoLibrary.getRecentPhotos({ quantity: 1000 });
+        if (!hasInitialScan) {
+            console.log('[PhotoLocation] ⚠️ No initial scan found. Triggering initial scan...');
 
-        console.log('[PhotoLocation] ✅ Found', result.photos.length, 'photos with GPS data');
+            // Check permission
+            const hasPermission = await checkPhotoLibraryPermission();
+            if (!hasPermission) {
+                console.log('[PhotoLocation] ❌ No permission, cannot scan');
+                return [];
+            }
 
-        if (result.photos.length === 0) {
-            console.log('[PhotoLocation] ⚠️ No photos with GPS data found');
-            return [];
-        }
+            // Run initial scan (this will take a few seconds)
+            const scanResult = await backgroundPhotoScanner.initialScan();
+            console.log('[PhotoLocation] Initial scan result:', scanResult);
 
-        const photosWithLocation: PhotoWithLocation[] = [];
-        let photosWithinRadius = 0;
-
-        // Process each photo
-        for (const photo of result.photos) {
-            const distance = calculateDistance(
-                latitude,
-                longitude,
-                photo.latitude,
-                photo.longitude
-            );
-
-            // Check if within radius
-            if (distance <= radiusMeters) {
-                photosWithinRadius++;
-                photosWithLocation.push({
-                    identifier: photo.identifier,
-                    uri: `data:image/jpeg;base64,${photo.base64}`,
-                    latitude: photo.latitude,
-                    longitude: photo.longitude,
-                    distance,
-                    dateTaken: new Date(photo.creationDate * 1000),
-                });
-
-                console.log(`[PhotoLocation] ✅ Found photo within radius! Distance: ${Math.round(distance)}m`);
-
-                // Stop if we've found enough photos
-                if (photosWithLocation.length >= maxPhotos * 2) {
-                    console.log('[PhotoLocation] Found enough photos, stopping search');
-                    break;
-                }
+            if (!scanResult.success) {
+                console.log('[PhotoLocation] ❌ Initial scan failed');
+                return [];
             }
         }
 
-        console.log('[PhotoLocation] ========================================');
-        console.log('[PhotoLocation] 📊 Search Summary:');
-        console.log(`  - Total photos with GPS: ${result.photos.length}`);
-        console.log(`  - Photos within ${radiusMeters}m: ${photosWithinRadius}`);
-        console.log('[PhotoLocation] ========================================');
+        // Search in cache
+        console.log('[PhotoLocation] Searching in IndexedDB cache...');
+        const nearbyMetadata = await photoCacheService.findNearby(latitude, longitude, radiusMeters);
 
-        // Sort by distance and take top N
-        const sortedPhotos = photosWithLocation
-            .sort((a, b) => a.distance - b.distance)
-            .slice(0, maxPhotos);
+        console.log('[PhotoLocation] ✅ Found', nearbyMetadata.length, 'photos in cache within radius');
 
-        console.log('[PhotoLocation] ✅ Returning', sortedPhotos.length, 'photos (sorted by distance)');
-        if (sortedPhotos.length > 0) {
-            console.log('[PhotoLocation] Distances:', sortedPhotos.map(p => Math.round(p.distance) + 'm').join(', '));
+        if (nearbyMetadata.length === 0) {
+            return [];
         }
 
-        return sortedPhotos;
+        // Get thumbnails for nearby photos (limited to maxPhotos)
+        const identifiersToLoad = nearbyMetadata.slice(0, maxPhotos).map(p => p.identifier);
+
+        console.log('[PhotoLocation] Loading thumbnails for', identifiersToLoad.length, 'photos...');
+
+        const thumbnailResult = await PhotoLibrary.getThumbnails({
+            identifiers: identifiersToLoad,
+        });
+
+        console.log('[PhotoLocation] ✅ Loaded', thumbnailResult.photos.length, 'thumbnails');
+
+        // Combine metadata with thumbnails
+        const photosWithLocation: PhotoWithLocation[] = thumbnailResult.photos.map(photo => {
+            const metadata = nearbyMetadata.find(m => m.identifier === photo.identifier);
+
+            return {
+                identifier: photo.identifier,
+                uri: `data:image/jpeg;base64,${photo.base64}`,
+                latitude: photo.latitude,
+                longitude: photo.longitude,
+                distance: metadata?.distance || 0,
+                dateTaken: new Date(photo.creationDate * 1000),
+            };
+        });
+
+        // Sort by distance
+        photosWithLocation.sort((a, b) => a.distance - b.distance);
+
+        console.log('[PhotoLocation] ========================================');
+        console.log('[PhotoLocation] 📊 Search Summary:');
+        console.log(`  - Photos in cache within ${radiusMeters}m: ${nearbyMetadata.length}`);
+        console.log(`  - Thumbnails loaded: ${photosWithLocation.length}`);
+        console.log(`  - Distances: ${photosWithLocation.map(p => Math.round(p.distance) + 'm').join(', ')}`);
+        console.log('[PhotoLocation] ========================================');
+
+        return photosWithLocation;
     } catch (error) {
         console.error('[PhotoLocation] ❌ FATAL ERROR getting photos near location:', error);
         console.error('[PhotoLocation] Error type:', typeof error);
