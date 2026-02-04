@@ -28,7 +28,8 @@ export const QuizScreen = () => {
     const grayOverlay = useTransform(y, [-200, 0], [1, 0]);
 
     const handleClose = () => {
-        navigate(-1);
+        // 설정 화면으로 돌아가기
+        navigate('/main/profile/settings', { replace: true });
     };
 
     const handleSwipe = (direction: 'left' | 'right' | 'up') => {
