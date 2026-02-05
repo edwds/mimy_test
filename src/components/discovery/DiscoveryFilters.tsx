@@ -35,9 +35,15 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
     return (
         <div className="w-full flex items-center gap-2 relative">
             {/* Filter Chips - Scrollable, goes under search button */}
-            <div className="flex-1 relative overflow-hidden">
+            <div className="flex-1 relative overflow-visible">
                 {/* Scrollable chips container - extends behind search button */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pr-2">
+                <div
+                    className="flex gap-2 overflow-x-auto scrollbar-hide pl-0 pr-10"
+                    style={{
+                        maskImage: 'linear-gradient(to right, black 0%, black calc(100% - 20px), transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to right, black 0%, black calc(100% - 20px), transparent 100%)'
+                    }}
+                >
                     {/* High Match Filter */}
                     <button
                         onClick={() => toggleFilter('HIGH_MATCH')}

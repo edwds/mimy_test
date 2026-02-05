@@ -44,9 +44,10 @@ interface Props {
     selectedShopId?: number | null;
     onSave?: (id: number) => void;
     isInitialLoad?: boolean; // Flag to indicate if this is the initial discovery load
+    userName?: string; // User nickname for personalized message
 }
 
-export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad = false }: Props) => {
+export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad = false, userName }: Props) => {
     // 3 states: minimized, half (default), expanded (max)
     const [snapState, setSnapState] = useState<'minimized' | 'half' | 'expanded'>('half');
     const controls = useAnimation();
@@ -196,16 +197,22 @@ export const ShopBottomSheet = ({ shops, selectedShopId, onSave, isInitialLoad =
                     style={{ pointerEvents: 'auto' }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    <h2 className="text-lg font-bold">
-                        {selectedShopId
-                            ? t('discovery.bottom_sheet.selected_shop')
-                            : isInitialLoad
-                                ? t('discovery.bottom_sheet.initial_title')
-                                : t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
-                    </h2>
-                    {!selectedShopId && isInitialLoad && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {t('discovery.bottom_sheet.initial_subtitle')}
+                    {selectedShopId ? (
+                        <h2 className="text-lg font-bold">
+                            {t('discovery.bottom_sheet.selected_shop')}
+                        </h2>
+                    ) : isInitialLoad ? (
+                        <>
+                            <h2 className="text-lg font-bold">
+                                {t('discovery.bottom_sheet.initial_title', { name: userName || '님' })}
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {t('discovery.bottom_sheet.initial_subtitle')}
+                            </p>
+                        </>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            {t('discovery.bottom_sheet.nearby_shops', { count: shops.length })}
                         </p>
                     )}
                 </div>

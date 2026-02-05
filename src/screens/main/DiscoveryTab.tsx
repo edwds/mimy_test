@@ -739,6 +739,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     selectedShopId={null}
                     onSave={handleSave}
                     isInitialLoad={!hasSearched}
+                    userName={user?.nickname || undefined}
                 />
             )}
 
