@@ -787,20 +787,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                                 key={photo.identifier}
                                                 onClick={() => handleTogglePhotoSelection(photo.identifier)}
                                                 disabled={isAddingPhotos}
-                                                className={cn(
-                                                    "relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden transition-all active:scale-95 disabled:opacity-50",
-                                                    isSelected
-                                                        ? "ring-4 ring-primary ring-offset-2 shadow-lg"
-                                                        : "border-2 border-white shadow-sm hover:border-primary/50 hover:shadow-md"
-                                                )}
+                                                className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
                                             >
                                                 <img
                                                     src={photo.uri}
                                                     alt="suggested"
-                                                    className={cn(
-                                                        "w-full h-full object-cover transition-all",
-                                                        isSelected ? "scale-95" : ""
-                                                    )}
+                                                    className="w-full h-full object-cover"
                                                 />
 
                                                 {/* Selection Indicator */}
