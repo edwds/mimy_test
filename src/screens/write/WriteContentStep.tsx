@@ -110,7 +110,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
     // Suggested Photos State
     const [suggestedPhotos, setSuggestedPhotos] = useState<PhotoWithLocation[]>([]);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-    const [loadingPhotoId, setLoadingPhotoId] = useState<string | null>(null);
+    const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+    const [isAddingPhotos, setIsAddingPhotos] = useState(false);
 
     // Keyboard Height Tracking for iOS
     useEffect(() => {
@@ -238,51 +239,71 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         }
     }, [shop?.id]); // Only run when shop changes
 
-    // Add suggested photo to media items
-    const handleAddSuggestedPhoto = async (photo: PhotoWithLocation) => {
-        try {
-            console.log('[WriteContentStep] Adding suggested photo');
-            console.log('[WriteContentStep] Loading full resolution for identifier:', photo.identifier);
-
-            // Set loading state for this specific photo
-            setLoadingPhotoId(photo.identifier);
-
-            // Load full resolution image using identifier
-            const file = await getFullResolutionPhoto(photo.identifier);
-
-            if (!file) {
-                console.error('[WriteContentStep] Failed to load full resolution photo');
-                alert('사진을 불러오는데 실패했습니다.');
-                setLoadingPhotoId(null);
-                return;
+    // Toggle photo selection
+    const handleTogglePhotoSelection = (identifier: string) => {
+        setSelectedPhotoIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(identifier)) {
+                newSet.delete(identifier);
+            } else {
+                newSet.add(identifier);
             }
+            return newSet;
+        });
+    };
 
-            console.log('[WriteContentStep] ✅ Loaded full resolution:', file.size, 'bytes');
+    // Add selected photos
+    const handleAddSelectedPhotos = async () => {
+        if (selectedPhotoIds.size === 0) return;
 
-            // Remove from suggestions
-            setSuggestedPhotos(prev => prev.filter(p => p.identifier !== photo.identifier));
-            setLoadingPhotoId(null);
+        setIsAddingPhotos(true);
 
-            // Open ImageEditModal with this file
-            setPendingFiles([file]);
-            setIsEditModalOpen(true);
+        try {
+            const selectedPhotos = suggestedPhotos.filter(p => selectedPhotoIds.has(p.identifier));
+            const files: File[] = [];
 
-            // Auto-set visit date from photo if not manually set
-            if (!isDateManuallySet && photo.dateTaken) {
-                const date = new Date(photo.dateTaken);
-                if (!isNaN(date.getTime())) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const localDate = `${year}-${month}-${day}`;
-                    setVisitDate(localDate);
-                    console.log('[WriteContentStep] Auto-set visit date from photo:', localDate);
+            // Load all selected photos
+            for (const photo of selectedPhotos) {
+                console.log('[WriteContentStep] Loading full resolution for identifier:', photo.identifier);
+                const file = await getFullResolutionPhoto(photo.identifier);
+
+                if (file) {
+                    files.push(file);
+                    console.log('[WriteContentStep] ✅ Loaded:', file.size, 'bytes');
+
+                    // Auto-set visit date from first photo if not manually set
+                    if (!isDateManuallySet && photo.dateTaken && files.length === 1) {
+                        const date = new Date(photo.dateTaken);
+                        if (!isNaN(date.getTime())) {
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const localDate = `${year}-${month}-${day}`;
+                            setVisitDate(localDate);
+                            console.log('[WriteContentStep] Auto-set visit date from photo:', localDate);
+                        }
+                    }
+                } else {
+                    console.error('[WriteContentStep] Failed to load photo:', photo.identifier);
                 }
             }
+
+            if (files.length > 0) {
+                // Remove loaded photos from suggestions
+                setSuggestedPhotos(prev => prev.filter(p => !selectedPhotoIds.has(p.identifier)));
+                setSelectedPhotoIds(new Set());
+
+                // Open ImageEditModal with all files
+                setPendingFiles(files);
+                setIsEditModalOpen(true);
+            } else {
+                alert('사진을 불러오는데 실패했습니다.');
+            }
         } catch (error) {
-            console.error('[WriteContentStep] Error adding suggested photo:', error);
-            setLoadingPhotoId(null);
-            alert('사진을 불러오는데 실패했습니다.');
+            console.error('[WriteContentStep] Error adding photos:', error);
+            alert('사진을 추가하는 중 오류가 발생했습니다.');
+        } finally {
+            setIsAddingPhotos(false);
         }
     };
 
@@ -717,49 +738,94 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="w-4 h-4 text-primary" />
-                                        <span className="text-sm font-bold text-primary">근처에서 찍은 사진 ({suggestedPhotos.length}개)</span>
+                                        <span className="text-sm font-bold text-primary">
+                                            근처에서 찍은 사진 ({suggestedPhotos.length}개)
+                                        </span>
                                     </div>
                                     <button
-                                        onClick={() => setSuggestedPhotos([])}
+                                        onClick={() => {
+                                            setSuggestedPhotos([]);
+                                            setSelectedPhotoIds(new Set());
+                                        }}
                                         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         닫기
                                     </button>
                                 </div>
-                                <p className="text-xs text-muted-foreground mb-3">탭해서 추가</p>
-                                <div className="flex overflow-x-auto no-scrollbar gap-2 pb-1">
-                                    {suggestedPhotos.map((photo) => (
-                                        <button
-                                            key={photo.identifier}
-                                            onClick={() => handleAddSuggestedPhoto(photo)}
-                                            disabled={loadingPhotoId === photo.identifier}
-                                            className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden group border-2 border-white shadow-sm hover:border-primary hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+
+                                {/* Selection Info & Add Button */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        {selectedPhotoIds.size > 0
+                                            ? `${selectedPhotoIds.size}개 선택됨`
+                                            : '사진을 선택하세요'}
+                                    </p>
+                                    {selectedPhotoIds.size > 0 && (
+                                        <Button
+                                            onClick={handleAddSelectedPhotos}
+                                            disabled={isAddingPhotos}
+                                            size="sm"
+                                            className="h-7 px-3 text-xs"
                                         >
-                                            <img
-                                                src={photo.uri}
-                                                alt="suggested"
-                                                className="w-full h-full object-cover"
-                                            />
-                                            {/* Loading Overlay */}
-                                            {loadingPhotoId === photo.identifier ? (
-                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                                </div>
+                                            {isAddingPhotos ? (
+                                                <>
+                                                    <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin mr-1.5" />
+                                                    추가 중...
+                                                </>
                                             ) : (
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
-                                                        <span className="text-primary text-xl leading-none font-bold">+</span>
-                                                    </div>
-                                                </div>
+                                                `${selectedPhotoIds.size}개 추가`
                                             )}
-                                            {/* Distance Badge */}
-                                            <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[10px] text-white font-bold">
-                                                {photo.distance < 1000
-                                                    ? `${Math.round(photo.distance)}m`
-                                                    : `${(photo.distance / 1000).toFixed(1)}km`}
-                                            </div>
-                                        </button>
-                                    ))}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <div className="flex overflow-x-auto no-scrollbar gap-2 pb-1">
+                                    {suggestedPhotos.map((photo) => {
+                                        const isSelected = selectedPhotoIds.has(photo.identifier);
+                                        return (
+                                            <button
+                                                key={photo.identifier}
+                                                onClick={() => handleTogglePhotoSelection(photo.identifier)}
+                                                disabled={isAddingPhotos}
+                                                className={cn(
+                                                    "relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden transition-all active:scale-95 disabled:opacity-50",
+                                                    isSelected
+                                                        ? "ring-4 ring-primary ring-offset-2 shadow-lg"
+                                                        : "border-2 border-white shadow-sm hover:border-primary/50 hover:shadow-md"
+                                                )}
+                                            >
+                                                <img
+                                                    src={photo.uri}
+                                                    alt="suggested"
+                                                    className={cn(
+                                                        "w-full h-full object-cover transition-all",
+                                                        isSelected ? "scale-95" : ""
+                                                    )}
+                                                />
+
+                                                {/* Selection Indicator */}
+                                                <div className={cn(
+                                                    "absolute inset-0 flex items-center justify-center transition-all",
+                                                    isSelected ? "bg-primary/30" : "bg-black/0"
+                                                )}>
+                                                    {isSelected && (
+                                                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                                                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Distance Badge */}
+                                                <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5 text-[10px] text-white font-bold">
+                                                    {photo.distance < 1000
+                                                        ? `${Math.round(photo.distance)}m`
+                                                        : `${(photo.distance / 1000).toFixed(1)}km`}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
