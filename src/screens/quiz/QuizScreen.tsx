@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
@@ -7,16 +7,30 @@ import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { QUESTIONS } from '@/data/quiz';
 import { useUser } from '@/context/UserContext';
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+};
+
 export const QuizScreen = () => {
     const navigate = useNavigate();
     const { user } = useUser();
+
+    // 컴포넌트가 마운트될 때마다 질문 순서를 섞음
+    const shuffledQuestions = useMemo(() => shuffleArray(QUESTIONS), []);
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [exitDirection, setExitDirection] = useState<'left' | 'right' | 'up' | null>(null);
     const [showGuide, setShowGuide] = useState(true);
 
-    const currentQuestion = QUESTIONS[currentIndex];
+    const currentQuestion = shuffledQuestions[currentIndex];
     const hasExistingProfile = !!user?.taste_result;
 
     const x = useMotionValue(0);
@@ -54,7 +68,7 @@ export const QuizScreen = () => {
             x.set(0);
             y.set(0);
 
-            if (currentIndex < QUESTIONS.length - 1) {
+            if (currentIndex < shuffledQuestions.length - 1) {
                 setCurrentIndex(prev => prev + 1);
             } else {
                 finishQuiz({ ...answers, [currentQuestion.id]: val });
@@ -163,7 +177,7 @@ export const QuizScreen = () => {
             <div className="px-6 pb-4 relative z-50">
                 <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-muted-foreground">
-                        {currentIndex + 1} / {QUESTIONS.length}
+                        {currentIndex + 1} / {shuffledQuestions.length}
                     </span>
                     {hasExistingProfile && (
                         <button
@@ -189,9 +203,11 @@ export const QuizScreen = () => {
             {/* Stacked Cards Container */}
             <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative overflow-visible">
 
-                {/* Helper text */}
-                <div className="mb-12 text-center text-base font-medium text-foreground">
-                    위 문장에 동의하면 오른쪽으로<br></br>아니라면 왼쪽으로 밀어주세요
+                {/* Guide labels */}
+                <div className="mb-16 w-full max-w-md flex items-center justify-between px-6">
+                    <span className="text-sm font-medium" style={{ color: '#FFB5C5' }}>아닌 편이다</span>
+                    <span className="text-sm font-medium text-gray-400">고를 수 없음</span>
+                    <span className="text-sm font-medium" style={{ color: '#A8E6CF' }}>그런 편이다</span>
                 </div>
 
 
@@ -199,9 +215,9 @@ export const QuizScreen = () => {
                 <div className="relative w-full max-w-md" style={{ height: 'min(calc(200vw * 4/3), 500px)', perspective: '1000px' }}>
                     {/* All cards rendered with smooth transitions */}
                     {/* Card 3번째 (맨 뒤) */}
-                    {currentIndex + 2 < QUESTIONS.length && (
+                    {currentIndex + 2 < shuffledQuestions.length && (
                         <motion.div
-                            key={`card-${QUESTIONS[currentIndex + 2].id}`}
+                            key={`card-${shuffledQuestions[currentIndex + 2].id}`}
                             className="absolute border border-border rounded-3xl shadow-lg overflow-hidden"
                             initial={{
                                 scale: 0.82,
@@ -234,16 +250,16 @@ export const QuizScreen = () => {
                         >
                             <div className="p-10 flex items-center h-full">
                                 <div className="text-3xl font-bold leading-tight text-left w-full">
-                                    {QUESTIONS[currentIndex + 2]?.text}
+                                    {shuffledQuestions[currentIndex + 2]?.text}
                                 </div>
                             </div>
                         </motion.div>
                     )}
 
                     {/* Card 2번째 (중간) */}
-                    {currentIndex + 1 < QUESTIONS.length && (
+                    {currentIndex + 1 < shuffledQuestions.length && (
                         <motion.div
-                            key={`card-${QUESTIONS[currentIndex + 1].id}`}
+                            key={`card-${shuffledQuestions[currentIndex + 1].id}`}
                             className="absolute border border-border rounded-3xl shadow-xl overflow-hidden"
                             initial={{
                                 scale: 0.88,
@@ -276,7 +292,7 @@ export const QuizScreen = () => {
                         >
                             <div className="p-10 flex items-center h-full">
                                 <div className="text-3xl font-bold leading-tight text-left w-full">
-                                    {QUESTIONS[currentIndex + 1]?.text}
+                                    {shuffledQuestions[currentIndex + 1]?.text}
                                 </div>
                             </div>
                         </motion.div>
@@ -284,7 +300,7 @@ export const QuizScreen = () => {
 
                     {/* Active Card (맨 앞) */}
                     <motion.div
-                        key={`card-${QUESTIONS[currentIndex].id}`}
+                        key={`card-${shuffledQuestions[currentIndex].id}`}
                         className="absolute border border-border rounded-3xl shadow-2xl"
                         style={{
                             width: '100%',
@@ -301,17 +317,17 @@ export const QuizScreen = () => {
                         animate={
                             showGuide
                                 ? {
-                                      // Right → Left → Up sequence
-                                      x: [0, 120, 120, 0, 0, -120, -120, 0, 0, 0, 0, 0],
-                                      y: [0, 0, 0, 0, 0, 0, 0, 0, 0, -80, -80, 0],
-                                      rotate: [0, 15, 15, 0, 0, -15, -15, 0, 0, 0, 0, 0],
+                                      // Right → Left → Up sequence (부드럽게)
+                                      x: [0, 70, 70, 0, 0, -70, -70, 0, 0, 0, 0, 0],
+                                      y: [0, 0, 0, 0, 0, 0, 0, 0, 0, -50, -50, 0],
+                                      rotate: [0, 8, 8, 0, 0, -8, -8, 0, 0, 0, 0, 0],
                                       scale: 1,
                                       opacity: 1,
                                       zIndex: 3,
                                       transition: {
-                                          duration: 4,
+                                          duration: 5,
                                           repeat: Infinity,
-                                          repeatDelay: 0.5,
+                                          repeatDelay: 1,
                                           ease: "easeInOut",
                                           times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                       }
@@ -342,7 +358,7 @@ export const QuizScreen = () => {
                     >
                         {/* Color overlays for swipe feedback */}
                         <motion.div
-                            className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
+                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12"
                             style={{
                                 opacity: showGuide ? undefined : greenOverlay,
                                 background: 'linear-gradient(135deg, #E0F7F7 0%, #E8F8F5 100%)'
@@ -351,11 +367,11 @@ export const QuizScreen = () => {
                                 showGuide
                                     ? {
                                           // Show during right swipe (0-0.3)
-                                          opacity: [0, 0.8, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          opacity: [0, 0.6, 0.6, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                           transition: {
-                                              duration: 4,
+                                              duration: 5,
                                               repeat: Infinity,
-                                              repeatDelay: 0.5,
+                                              repeatDelay: 1,
                                               ease: "easeInOut",
                                               times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                           }
@@ -363,14 +379,12 @@ export const QuizScreen = () => {
                                     : {}
                             }
                         >
-                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-                                <span className="text-gray-800 text-sm font-semibold">
-                                    그런 편이다
-                                </span>
-                            </div>
+                            <span className="text-green-600 text-lg font-bold">
+                                그런 편이다
+                            </span>
                         </motion.div>
                         <motion.div
-                            className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
+                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12"
                             style={{
                                 opacity: showGuide ? undefined : redOverlay,
                                 background: 'linear-gradient(135deg, #FFF0F5 0%, #FFE4F3 100%)'
@@ -379,11 +393,11 @@ export const QuizScreen = () => {
                                 showGuide
                                     ? {
                                           // Show during left swipe (0.4-0.7)
-                                          opacity: [0, 0, 0, 0, 0, 0.8, 0.8, 0, 0, 0, 0, 0],
+                                          opacity: [0, 0, 0, 0, 0, 0.6, 0.6, 0, 0, 0, 0, 0],
                                           transition: {
-                                              duration: 4,
+                                              duration: 5,
                                               repeat: Infinity,
-                                              repeatDelay: 0.5,
+                                              repeatDelay: 1,
                                               ease: "easeInOut",
                                               times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                           }
@@ -391,24 +405,22 @@ export const QuizScreen = () => {
                                     : {}
                             }
                         >
-                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-                                <span className="text-gray-800 text-sm font-semibold">
-                                    아닌 편이다
-                                </span>
-                            </div>
+                            <span className="text-red-600 text-lg font-bold">
+                                아닌 편이다
+                            </span>
                         </motion.div>
                         <motion.div
-                            className="absolute inset-0 bg-gray-400/70 pointer-events-none flex items-end justify-center pb-12"
+                            className="absolute inset-0 bg-gray-400/70 pointer-events-none flex items-start justify-center pt-12"
                             style={{ opacity: showGuide ? undefined : grayOverlay }}
                             animate={
                                 showGuide
                                     ? {
                                           // Show during up swipe (0.8-0.95)
-                                          opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.7, 0.7, 0],
+                                          opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 0.6, 0],
                                           transition: {
-                                              duration: 4,
+                                              duration: 5,
                                               repeat: Infinity,
-                                              repeatDelay: 0.5,
+                                              repeatDelay: 1,
                                               ease: "easeInOut",
                                               times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                           }
@@ -416,11 +428,9 @@ export const QuizScreen = () => {
                                     : {}
                             }
                         >
-                            <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-                                <span className="text-gray-800 text-sm font-semibold">
-                                    고를 수 없음
-                                </span>
-                            </div>
+                            <span className="text-gray-600 text-lg font-bold">
+                                고를 수 없음
+                            </span>
                         </motion.div>
 
                         <div className="p-10 cursor-grab active:cursor-grabbing flex items-center h-full relative">
@@ -435,9 +445,9 @@ export const QuizScreen = () => {
                                     animate={{
                                         opacity: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
                                         transition: {
-                                            duration: 4,
+                                            duration: 5,
                                             repeat: Infinity,
-                                            repeatDelay: 0.5,
+                                            repeatDelay: 1,
                                             ease: "easeInOut",
                                             times: [0, 0.1, 0.15, 0.25, 0.3, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                         }
@@ -447,13 +457,14 @@ export const QuizScreen = () => {
                                     <motion.div
                                         className="relative w-20 h-20 rounded-full bg-white/90 backdrop-blur-sm shadow-lg flex items-center justify-center"
                                         animate={{
-                                            scale: [1, 1, 1.2, 1, 1, 1.2, 1, 1, 1.2, 1, 1, 1],
+                                            scale: [1, 1, 1.1, 1, 1, 1.1, 1, 1, 1.1, 1, 1, 1],
+                                            opacity: [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0],
                                             transition: {
-                                                duration: 4,
+                                                duration: 5,
                                                 repeat: Infinity,
-                                                repeatDelay: 0.5,
+                                                repeatDelay: 1,
                                                 ease: "easeInOut",
-                                                times: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.85, 0.9, 0.95, 1]
+                                                times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                             }
                                         }}
                                     >
@@ -469,9 +480,9 @@ export const QuizScreen = () => {
                                             animate={{
                                                 opacity: [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                 transition: {
-                                                    duration: 4,
+                                                    duration: 5,
                                                     repeat: Infinity,
-                                                    repeatDelay: 0.5,
+                                                    repeatDelay: 1,
                                                     times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                                 }
                                             }}
@@ -491,9 +502,9 @@ export const QuizScreen = () => {
                                             animate={{
                                                 opacity: [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
                                                 transition: {
-                                                    duration: 4,
+                                                    duration: 5,
                                                     repeat: Infinity,
-                                                    repeatDelay: 0.5,
+                                                    repeatDelay: 1,
                                                     times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                                 }
                                             }}
@@ -513,9 +524,9 @@ export const QuizScreen = () => {
                                             animate={{
                                                 opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
                                                 transition: {
-                                                    duration: 4,
+                                                    duration: 5,
                                                     repeat: Infinity,
-                                                    repeatDelay: 0.5,
+                                                    repeatDelay: 1,
                                                     times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
                                                 }
                                             }}
@@ -528,15 +539,6 @@ export const QuizScreen = () => {
                         </div>
                     </motion.div>
                 </div>
-
-                {/* "고를 수 없음" 버튼 */}
-                <button
-                    onClick={() => handleSwipe('up')}
-                    disabled={!!exitDirection}
-                    className="mt-6 px-5 py-2 bg-transparent hover:bg-gray-50 disabled:opacity-50 text-gray-400 text-sm rounded-full border border-gray-200 transition-all active:scale-95"
-                >
-                    고를 수 없음
-                </button>
 
             </main>
         </div>

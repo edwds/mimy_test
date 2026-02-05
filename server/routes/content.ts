@@ -1451,4 +1451,145 @@ router.delete("/:id", requireAuth, async (req, res) => {
     }
 });
 
+// GET /api/content/:id - Get single content item
+// This route must be defined AFTER all other /:id/* routes
+router.get("/:id", optionalAuth, async (req, res) => {
+    try {
+        const contentId = parseInt(req.params.id);
+        if (!contentId) {
+            return res.status(400).json({ error: "Invalid content ID" });
+        }
+
+        const currentUserId = req.user?.id || null;
+
+        // Fetch content with user info
+        const contentItem = await db.select({
+            id: content.id,
+            user_id: content.user_id,
+            type: content.type,
+            text: content.text,
+            img: content.img,
+            created_at: content.created_at,
+            review_prop: content.review_prop,
+            keyword: content.keyword,
+            img_text: content.img_text,
+            link_json: content.link_json,
+            user: {
+                id: users.id,
+                nickname: users.nickname,
+                account_id: users.account_id,
+                profile_image: users.profile_image,
+                cluster_name: clusters.name,
+                taste_result: users.taste_result,
+                ranking_count: sql<number>`(
+                    SELECT COUNT(*)
+                    FROM ${users_ranking}
+                    WHERE ${users_ranking.user_id} = ${users.id}
+                )`
+            }
+        })
+            .from(content)
+            .leftJoin(users, eq(content.user_id, users.id))
+            .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
+            .where(and(
+                eq(content.id, contentId),
+                eq(content.is_deleted, false)
+            ))
+            .limit(1);
+
+        if (contentItem.length === 0) {
+            return res.status(404).json({ error: "Content not found" });
+        }
+
+        const item = contentItem[0];
+
+        // Fetch shop info if it's a review
+        let poi = null;
+        let rankInfo = null;
+        let visitCount = null;
+        let companionsInfo = null;
+
+        if (item.type === 'review' && item.review_prop) {
+            const prop = item.review_prop as any;
+            if (prop.shop_id) {
+                const shopId = Number(prop.shop_id);
+                const shopList = await db.select().from(shops).where(eq(shops.id, shopId)).limit(1);
+                if (shopList.length > 0) {
+                    poi = { shop_id: shopId, ...shopList[0] };
+                }
+
+                // Fetch ranking info
+                const rankingData = await db.select({
+                    rank: users_ranking.rank,
+                    satisfaction_tier: users_ranking.satisfaction_tier
+                }).from(users_ranking)
+                    .where(and(
+                        eq(users_ranking.user_id, item.user_id),
+                        eq(users_ranking.shop_id, shopId)
+                    ))
+                    .limit(1);
+
+                if (rankingData.length > 0) {
+                    rankInfo = rankingData[0];
+                }
+
+                // Count visit number
+                const visitCountResult = await db.execute(sql`
+                    SELECT COUNT(*) as count
+                    FROM ${content}
+                    WHERE user_id = ${item.user_id}
+                        AND type = 'review'
+                        AND is_deleted = false
+                        AND CAST(review_prop->>'shop_id' AS INTEGER) = ${shopId}
+                        AND created_at <= ${item.created_at}
+                `);
+                if (visitCountResult.rows.length > 0) {
+                    visitCount = Number(visitCountResult.rows[0].count);
+                }
+            }
+
+            // Fetch companion info
+            if (prop.companions && Array.isArray(prop.companions) && prop.companions.length > 0) {
+                const companionIds = prop.companions.map((id: any) => Number(id));
+                const companions = await db.select({
+                    id: users.id,
+                    nickname: users.nickname,
+                    profile_image: users.profile_image
+                }).from(users).where(inArray(users.id, companionIds));
+                companionsInfo = companions;
+            }
+        }
+
+        // Fetch stats
+        const stats = await fetchContentStats(contentId, currentUserId || undefined);
+
+        // Enrich review_prop with additional data
+        let enrichedReviewProp = item.review_prop;
+        if (enrichedReviewProp && item.type === 'review') {
+            enrichedReviewProp = {
+                ...enrichedReviewProp,
+                ...(rankInfo && {
+                    rank: rankInfo.rank,
+                    satisfaction: rankInfo.satisfaction_tier === 2 ? 'good' : rankInfo.satisfaction_tier === 1 ? 'ok' : 'bad'
+                }),
+                ...(visitCount && { visit_count: visitCount }),
+                ...(companionsInfo && { companions_info: companionsInfo })
+            };
+        }
+
+        // Return enriched content
+        res.json({
+            ...item,
+            review_prop: enrichedReviewProp,
+            poi,
+            stats,
+            images: item.img || [],
+        });
+
+    } catch (error) {
+        console.error("Get content error:", error);
+        res.status(500).json({ error: "Failed to fetch content" });
+    }
+});
+
 export default router;

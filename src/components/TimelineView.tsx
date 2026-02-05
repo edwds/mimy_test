@@ -166,7 +166,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                                     onClick={() => handleDayClick(day.date, hasContent, firstContent)}
                                 >
                                     <div
-                                        className={`relative w-24 h-28 ${roundedClass} overflow-hidden flex flex-col items-center justify-center`}
+                                        className={`relative w-20 h-28 ${roundedClass} overflow-hidden flex flex-col items-center justify-center`}
                                         style={{
                                             backgroundImage: hasImage ? `url(${firstContent.images[0]})` : 'none',
                                             backgroundSize: 'cover',
@@ -219,7 +219,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                                     onClick={() => handleContentClick(content)}
                                 >
                                     <div
-                                        className="relative w-24 h-28 rounded-2xl overflow-hidden flex flex-col items-center justify-center"
+                                        className="relative w-20 h-28 rounded-2xl overflow-hidden flex flex-col items-center justify-center"
                                         style={{
                                             backgroundImage: hasImage ? `url(${content.images[0]})` : 'none',
                                             backgroundSize: 'cover',
