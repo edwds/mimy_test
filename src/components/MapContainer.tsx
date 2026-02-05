@@ -2,6 +2,29 @@ import * as maptilersdk from '@maptiler/sdk';
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 import { useEffect, useRef, useMemo } from 'react';
 import { scoreToTasteRatingStep } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+
+// Format ranking number with language-specific suffix
+const formatRanking = (rank: number, language: string): string => {
+    if (language === 'ko') {
+        // Korean: 1위, 2위, 3위...
+        return `${rank}위`;
+    } else {
+        // English: 1st, 2nd, 3rd, 4th...
+        const j = rank % 10;
+        const k = rank % 100;
+        if (j === 1 && k !== 11) {
+            return `${rank}st`;
+        }
+        if (j === 2 && k !== 12) {
+            return `${rank}nd`;
+        }
+        if (j === 3 && k !== 13) {
+            return `${rank}rd`;
+        }
+        return `${rank}th`;
+    }
+};
 
 interface Shop {
     id: number;
@@ -30,7 +53,7 @@ interface Props {
 }
 
 // Function to create custom marker HTML
-const createMarkerElement = (shop: Shop, isSelected: boolean) => {
+const createMarkerElement = (shop: Shop, isSelected: boolean, language: string = 'en') => {
     const hasRanking = shop.my_review_stats && shop.my_review_stats.rank !== undefined;
     const isSaved = shop.is_saved;
     const hasMatchScore = shop.shop_user_match_score != null && shop.shop_user_match_score >= 0;
@@ -87,8 +110,8 @@ const createMarkerElement = (shop: Shop, isSelected: boolean) => {
 
         let scoreOrRanking = '';
         if (hasRanking && shop.my_review_stats?.rank) {
-            // Show ranking for visited shops
-            scoreOrRanking = shop.my_review_stats.rank.toString();
+            // Show ranking for visited shops with language-specific format
+            scoreOrRanking = formatRanking(shop.my_review_stats.rank, language);
         } else if (hasMatchScore) {
             // Show score for not-yet-visited shops (show full precision)
             const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
@@ -251,12 +274,16 @@ export const MapContainer = ({
     onMapReady,
     // onClusterClick // Not used anymore
 }: Props) => {
+    const { i18n } = useTranslation();
+    const currentLanguage = i18n.language || 'en';
+
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maptilersdk.Map | null>(null);
     const markers = useRef<Map<string, maptilersdk.Marker>>(new Map());
     const initialCenterApplied = useRef(false);
     const lastCenterRef = useRef<[number, number] | undefined>(undefined);
     const isUserDragging = useRef(false);
+    const markerClickedRecently = useRef(false);
 
     // Initialize Map
     useEffect(() => {
@@ -303,8 +330,17 @@ export const MapContainer = ({
         });
 
         map.current.on('click', (e) => {
+            console.log('[MapContainer] 🗺️ Map clicked, defaultPrevented:', e.defaultPrevented);
+            // Ignore map clicks shortly after marker clicks to prevent immediate closing
+            if (markerClickedRecently.current) {
+                console.log('[MapContainer] ⏸️ Ignoring map click - marker was just clicked');
+                return;
+            }
             if (!e.defaultPrevented) {
+                console.log('[MapContainer] ✅ Calling onMapClick');
                 onMapClick?.();
+            } else {
+                console.log('[MapContainer] ⏸️ Map click prevented by defaultPrevented flag');
             }
         });
 
@@ -465,10 +501,18 @@ export const MapContainer = ({
                 if (!markers.current.has(id)) {
                     // Create New Marker
                     const isSelected = shopId === selectedShopId;
-                    const el = createMarkerElement(shop, isSelected);
+                    const el = createMarkerElement(shop, isSelected, currentLanguage);
 
                     el.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        e.preventDefault();
+
+                        // Set flag to prevent immediate map click from closing the card
+                        markerClickedRecently.current = true;
+                        setTimeout(() => {
+                            markerClickedRecently.current = false;
+                        }, 300);
+
                         onMarkerClick?.(shopId);
                     });
 
@@ -493,9 +537,17 @@ export const MapContainer = ({
                         marker.remove();
                         markers.current.delete(id);
 
-                        const newEl = createMarkerElement(shop, isSelected);
+                        const newEl = createMarkerElement(shop, isSelected, currentLanguage);
                         newEl.addEventListener('click', (e) => {
                             e.stopPropagation();
+                            e.preventDefault();
+
+                            // Set flag to prevent immediate map click from closing the card
+                            markerClickedRecently.current = true;
+                            setTimeout(() => {
+                                markerClickedRecently.current = false;
+                            }, 300);
+
                             onMarkerClick?.(shopId);
                         });
 

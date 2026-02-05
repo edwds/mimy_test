@@ -157,8 +157,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
 
         try {
-            // Both filters on: Show saved shops that also have rankings (AND condition)
+            // Both filters on: Show union (saved OR ranked)
             if (showRankedOnlyRef.current && showSavedOnlyRef.current) {
+                console.log('[DiscoveryTab] Fetching overlay: saved OR ranked (UNION)');
                 const rankedRes = await authFetch(`${API_BASE_URL}/api/ranking/all`);
                 const savedRes = await authFetch(`${API_BASE_URL}/api/users/${userRef.current.id}/saved_shops`);
 
@@ -166,28 +167,64 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     const rankedData = await rankedRes.json();
                     const savedData = await savedRes.json();
 
-                    // Create a set of saved shop IDs for quick lookup
-                    const savedShopIds = new Set(savedData.map((s: any) => s.id));
+                    console.log('[DiscoveryTab] Ranked shops:', rankedData.length, 'Saved shops:', savedData.length);
 
-                    // Filter ranked shops to only include saved ones
-                    const overlayData = rankedData
-                        .filter((ranking: any) => savedShopIds.has(ranking.shop.id))
-                        .map((ranking: any) => ({
-                            ...ranking.shop,
-                            is_saved: true,
-                            my_review_stats: {
-                                rank: ranking.rank,
-                                satisfaction_tier: ranking.satisfaction_tier
-                            }
-                        }));
+                    // Create a map to combine shops (union with proper merging)
+                    const shopMap = new Map<number, any>();
+
+                    // Add all saved shops first
+                    savedData.forEach((shop: any) => {
+                        shopMap.set(shop.id, {
+                            ...shop,
+                            is_saved: true
+                        });
+                    });
+
+                    // Add all ranked shops, merge if already exists
+                    rankedData.forEach((ranking: any) => {
+                        const existing = shopMap.get(ranking.shop.id);
+                        if (existing) {
+                            // Shop is both saved AND ranked - merge properties
+                            shopMap.set(ranking.shop.id, {
+                                ...existing,
+                                ...ranking.shop,
+                                is_saved: true,
+                                my_review_stats: {
+                                    rank: ranking.rank,
+                                    satisfaction_tier: ranking.satisfaction_tier
+                                }
+                            });
+                        } else {
+                            // Shop is only ranked
+                            shopMap.set(ranking.shop.id, {
+                                ...ranking.shop,
+                                my_review_stats: {
+                                    rank: ranking.rank,
+                                    satisfaction_tier: ranking.satisfaction_tier
+                                }
+                            });
+                        }
+                    });
+
+                    const overlayData = Array.from(shopMap.values());
+
+                    console.log('[DiscoveryTab] ✅ Union (saved OR ranked):', overlayData.length, 'shops');
 
                     setOverlayShops(overlayData);
+                } else {
+                    console.error('[DiscoveryTab] Failed to fetch overlay shops:', {
+                        rankedOk: rankedRes.ok,
+                        savedOk: savedRes.ok
+                    });
+                    // Clear overlay on failure to avoid showing stale data
+                    setOverlayShops([]);
                 }
                 return;
             }
 
             // Only ranked filter
             if (showRankedOnlyRef.current) {
+                console.log('[DiscoveryTab] Fetching overlay: ONLY ranked');
                 const res = await authFetch(`${API_BASE_URL}/api/ranking/all`);
                 if (res.ok) {
                     const data = await res.json();
@@ -198,17 +235,26 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                             satisfaction_tier: ranking.satisfaction_tier
                         }
                     }));
+                    console.log('[DiscoveryTab] Ranked shops loaded:', overlayData.length);
                     setOverlayShops(overlayData);
+                } else {
+                    console.error('[DiscoveryTab] Failed to fetch ranked shops');
+                    setOverlayShops([]);
                 }
                 return;
             }
 
             // Only saved filter
             if (showSavedOnlyRef.current) {
+                console.log('[DiscoveryTab] Fetching overlay: ONLY saved');
                 const res = await authFetch(`${API_BASE_URL}/api/users/${userRef.current.id}/saved_shops`);
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('[DiscoveryTab] Saved shops loaded:', data.length);
                     setOverlayShops(data);
+                } else {
+                    console.error('[DiscoveryTab] Failed to fetch saved shops');
+                    setOverlayShops([]);
                 }
                 return;
             }
@@ -233,7 +279,21 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             prevShowSavedOnlyRef.current = showSavedOnly;
             prevShowRankedOnlyRef.current = showRankedOnly;
 
-            // Fetch overlay data (doesn't affect bottom sheet)
+            if (!isInitialMount) {
+                if (showSavedOnly || showRankedOnly) {
+                    // Entering saved/ranked mode: clear shops to show only overlay shops
+                    console.log('[DiscoveryTab] Entering saved/ranked mode - clearing shops array');
+                    setShops([]);
+                } else {
+                    // Exiting saved/ranked mode: fetch regular shops again
+                    console.log('[DiscoveryTab] Exiting saved/ranked mode - fetching regular shops');
+                    if (mapCenter) {
+                        fetchShops({ excludeRanked: true });
+                    }
+                }
+            }
+
+            // Fetch overlay data
             fetchOverlayShops();
         }
     }, [showSavedOnly, showRankedOnly, fetchOverlayShops]);
@@ -394,8 +454,21 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             }
         });
 
-        return Array.from(shopMap.values());
-    }, [shops, overlayShops]);
+        const combined = Array.from(shopMap.values());
+        console.log('[DiscoveryTab] combinedShopsForMap updated:', {
+            shops: shops.length,
+            overlayShops: overlayShops.length,
+            combined: combined.length,
+            showSaved: showSavedOnly,
+            showRanked: showRankedOnly
+        });
+
+        if (combined.length === 0 && (showSavedOnly || showRankedOnly)) {
+            console.warn('[DiscoveryTab] ⚠️ No shops to display! Check if saved/ranked filters returned empty results.');
+        }
+
+        return combined;
+    }, [shops, overlayShops, showSavedOnly, showRankedOnly]);
 
     const handleCurrentLocation = () => {
         if (navigator.geolocation) {
@@ -467,14 +540,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     setMapCenter([s.lat, s.lon]);
                 }
             }
-        } else {
-            if (selectedShopId !== null) {
-                setSelectedShopId(null);
-            }
         }
+        // IMPORTANT: Do NOT reset selectedShopId to null here when URL is empty
+        // The URL sync is disabled (see handleSelectShop), so we shouldn't force-sync state to URL
     }, [searchParams, combinedShopsForMap, selectedShopId]);
 
     const handleSelectShop = (shopId: number | null) => {
+        console.log('[DiscoveryTab] 🎯 handleSelectShop called with shopId:', shopId);
         if (!shopId) {
             // Close logic is handled by handleCloseShop usually, but if called directly:
             handleCloseShop();
@@ -511,6 +583,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             navigationOrderRef.current = combinedShopsForMap.map(s => s.id);
         }
 
+        console.log('[DiscoveryTab] ✅ Setting selectedShopId to:', shopId);
         setSelectedShopId(shopId);
 
 
@@ -540,6 +613,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     };
 
     const handleCloseShop = () => {
+        console.log('[DiscoveryTab] ❌ handleCloseShop called');
         // Go back to remove the query param if it exists, simulating a "Close" via navigation
         // const currentSid = searchParams.get('selectedShop');
         // if (currentSid) {
@@ -558,11 +632,40 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const handleSwipeNavigation = (direction: 'next' | 'prev') => {
         if (!selectedShopId || combinedShopsForMap.length === 0) return;
 
-        // Use the stable navigation order
-        const navList = navigationOrderRef.current.length > 0 ? navigationOrderRef.current : combinedShopsForMap.map(s => s.id);
-        const currentIndex = navList.indexOf(selectedShopId);
+        // Always use current combinedShopsForMap to handle dynamic filter changes
+        // Sort by distance from current shop to ensure smooth navigation
+        const currentShop = combinedShopsForMap.find(s => s.id === selectedShopId);
+        if (!currentShop) {
+            console.warn('[DiscoveryTab] Current shop not found in combinedShopsForMap');
+            return;
+        }
 
-        if (currentIndex === -1) return;
+        // Use navigationOrderRef if it was set and still valid, otherwise create new one
+        let navList: number[];
+        if (navigationOrderRef.current.length > 0) {
+            // Filter navigationOrderRef to only include shops that exist in current combinedShopsForMap
+            const currentShopIds = new Set(combinedShopsForMap.map(s => s.id));
+            navList = navigationOrderRef.current.filter(id => currentShopIds.has(id));
+
+            // If filtered list is too small, rebuild from current shops
+            if (navList.length <= 1) {
+                navList = combinedShopsForMap.map(s => s.id);
+            }
+        } else {
+            navList = combinedShopsForMap.map(s => s.id);
+        }
+
+        const currentIndex = navList.indexOf(selectedShopId);
+        if (currentIndex === -1) {
+            console.warn('[DiscoveryTab] Current shop not in navigation list, staying on current shop');
+            return;
+        }
+
+        // If only one shop, stay on current
+        if (navList.length <= 1) {
+            console.log('[DiscoveryTab] Only one shop available, staying on current');
+            return;
+        }
 
         let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
 
@@ -576,25 +679,12 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         const nextShop = combinedShopsForMap.find(s => s.id === nextShopId);
 
         if (nextShop) {
-            setSelectedShopId(nextShop.id); // Triggers re-render with new key
+            console.log('[DiscoveryTab] Swiping to shop:', nextShopId);
+            setSelectedShopId(nextShop.id);
         } else {
-            // If shop is not in current list, skip to next/prev
-            console.warn(`Shop ${nextShopId} not found in shops list, skipping`);
-            // Try next shop in the same direction
-            const skipIndex = direction === 'next' ? nextIndex + 1 : nextIndex - 1;
-            if (skipIndex >= 0 && skipIndex < navList.length) {
-                const skipShopId = navList[skipIndex];
-                const skipShop = combinedShopsForMap.find(s => s.id === skipShopId);
-                if (skipShop) {
-                    setSelectedShopId(skipShop.id);
-                }
-            }
+            console.warn('[DiscoveryTab] Next shop not found, staying on current shop');
+            // Stay on current shop instead of crashing
         }
-
-        // Update URL (Replace history for carousel navigation)
-        // const newParams = new URLSearchParams(searchParams);
-        // newParams.set('selectedShop', nextShop.id.toString());
-        // navigate({ search: newParams.toString() }, { replace: true });
     };
 
     const handleClusterClick = (clusterShops: any[]) => {
