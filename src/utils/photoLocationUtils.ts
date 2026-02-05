@@ -248,34 +248,44 @@ export async function getFullResolutionPhoto(identifier: string): Promise<File |
     try {
         console.log('[PhotoLocation] Loading full resolution for:', identifier);
 
-        // Load high quality image (1200px is enough, faster than full resolution)
-        const result = await Media.getMedias({
-            quantity: 500, // Need to scan to find our identifier
-            thumbnailWidth: 1200, // Good quality for upload
-            thumbnailHeight: 1200,
-            thumbnailQuality: 85, // Good balance between quality and size
-            sort: [{
-                key: 'creationDate',
-                ascending: false
-            }]
-        });
+        // Load in smaller batches to find our photo
+        // Try first 100 recent photos (most likely)
+        for (let batchStart = 0; batchStart < 1000; batchStart += 100) {
+            console.log(`[PhotoLocation] Trying batch ${batchStart}-${batchStart + 100}...`);
 
-        const photo = result.medias?.find(m => m.identifier === identifier);
+            const result = await Media.getMedias({
+                quantity: 100,
+                thumbnailWidth: 1200,
+                thumbnailHeight: 1200,
+                thumbnailQuality: 85,
+                sort: [{
+                    key: 'creationDate',
+                    ascending: false
+                }]
+            });
 
-        if (!photo?.data) {
-            console.error('[PhotoLocation] Could not find full resolution photo');
-            return null;
+            const photo = result.medias?.find(m => m.identifier === identifier);
+
+            if (photo?.data) {
+                console.log('[PhotoLocation] ✅ Found photo in batch', batchStart);
+
+                const dataUri = photo.data.startsWith('data:') ? photo.data : `data:image/jpeg;base64,${photo.data}`;
+                const response = await fetch(dataUri);
+                const blob = await response.blob();
+
+                const filename = `photo_${Date.now()}.jpg`;
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+
+                console.log('[PhotoLocation] ✅ Loaded full resolution:', file.size, 'bytes', `(~${Math.round(file.size / 1024)}KB)`);
+                return file;
+            }
+
+            // If we didn't find it, continue to next batch
+            console.log('[PhotoLocation] Photo not found in this batch, trying next...');
         }
 
-        const dataUri = photo.data.startsWith('data:') ? photo.data : `data:image/jpeg;base64,${photo.data}`;
-        const response = await fetch(dataUri);
-        const blob = await response.blob();
-
-        const filename = `photo_${Date.now()}.jpg`;
-        const file = new File([blob], filename, { type: 'image/jpeg' });
-
-        console.log('[PhotoLocation] ✅ Loaded full resolution:', file.size, 'bytes', `(~${Math.round(file.size / 1024)}KB)`);
-        return file;
+        console.error('[PhotoLocation] Could not find photo after scanning 1000 photos');
+        return null;
     } catch (error) {
         console.error('[PhotoLocation] Error loading full resolution:', error);
         return null;
