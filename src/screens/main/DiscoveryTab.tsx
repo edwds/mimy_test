@@ -305,10 +305,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     const newCenter: [number, number] = [position.coords.latitude, position.coords.longitude];
                     setMapCenter(newCenter);
 
-                    // Wait for map to move, then fetch with center-based query
-                    setTimeout(() => {
-                        fetchShops({ excludeRanked: true });
-                    }, 1000);
+                    // Only fetch if not in saved/ranked mode
+                    if (!showSavedOnly && !showRankedOnly) {
+                        // Wait for map to move, then fetch with center-based query
+                        setTimeout(() => {
+                            fetchShops({ excludeRanked: true });
+                        }, 1000);
+                    }
                 },
                 (error) => {
                     console.error(error);
@@ -323,15 +326,18 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const handleMoveEnd = useCallback(() => {
         console.log('[DiscoveryTab] handleMoveEnd called (user panned map)');
 
-        // Clear filters when user pans the map (only if filters are active)
-        setSelectedFilters(currentFilters => {
-            if (currentFilters.length > 0) {
-                console.log('[DiscoveryTab] Clearing filters due to map pan');
-                return [];
-            }
-            return currentFilters;
-        });
-    }, []);
+        // Only clear filters when in normal mode (not in saved/ranked filter mode)
+        // and when filters are active
+        if (!showSavedOnly && !showRankedOnly) {
+            setSelectedFilters(currentFilters => {
+                if (currentFilters.length > 0) {
+                    console.log('[DiscoveryTab] Clearing filters due to map pan');
+                    return [];
+                }
+                return currentFilters;
+            });
+        }
+    }, [showSavedOnly, showRankedOnly]);
 
     const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
 
@@ -576,10 +582,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <button
                     onClick={() => {
                         if (!user) return alert(t('discovery.alerts.login_required'));
+                        const isTogglingOff = showSavedOnly;
                         setShowSavedOnly(!showSavedOnly);
                         setShowRankedOnly(false); // Turn off ranked filter
                         setSelectedShopId(null);
-                        setMapCenter(undefined); // Reset center
+                        // Only reset center when turning OFF the filter
+                        if (isTogglingOff) {
+                            setMapCenter(undefined);
+                        }
                     }}
                     className={cn(
                         "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
@@ -592,10 +602,14 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <button
                     onClick={() => {
                         if (!user) return alert(t('discovery.alerts.login_required'));
+                        const isTogglingOff = showRankedOnly;
                         setShowRankedOnly(!showRankedOnly);
                         setShowSavedOnly(false); // Turn off saved filter
                         setSelectedShopId(null);
-                        setMapCenter(undefined); // Reset center
+                        // Only reset center when turning OFF the filter
+                        if (isTogglingOff) {
+                            setMapCenter(undefined);
+                        }
                     }}
                     className={cn(
                         "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",

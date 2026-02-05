@@ -159,7 +159,7 @@ const createMarkerElement = (shop: Shop, isSelected: boolean) => {
             // Display score
             const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
             const scoreText = rating.toFixed(1);
-            const fontSize = size * 0.35;
+            const fontSize = size * 0.4;
             innerHtml = `<div style="font-size: ${fontSize}px; font-weight: 700; color: ${color};">${scoreText}</div>`;
         } else if (hasRanking) {
             // Check icon for ranked shops
@@ -602,6 +602,9 @@ export const MapContainer = ({
         // Subsequent times: only fly if not currently showing a selected shop
         // (to avoid conflicts with selectedShopId auto-fly)
         if (!selectedShopId) {
+            // Temporarily disable the user dragging flag to prevent moveend from triggering
+            isUserDragging.current = false;
+
             map.current.flyTo({
                 center: [center[1], center[0]],
                 duration: 800,
@@ -626,6 +629,9 @@ export const MapContainer = ({
             const unprojected = map.current.unproject(newPoint);
             targetCenter = [unprojected.lng, unprojected.lat];
         }
+
+        // Temporarily disable the user dragging flag to prevent moveend from triggering
+        isUserDragging.current = false;
 
         map.current.flyTo({
             center: targetCenter,
