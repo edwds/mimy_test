@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite",
+    "dev": "NODE_ENV=development vite",
     "build": "tsc -p tsconfig.app.json && vite build",
-    "server": "tsx watch server/index.ts",
+    "server": "NODE_ENV=development tsx watch server/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "check-dummy-users": "tsx server/scripts/checkDummyUsers.ts",

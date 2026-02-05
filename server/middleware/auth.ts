@@ -62,21 +62,6 @@ export const requireAuth = async (
       console.log('[requireAuth] ❌ No access_token cookie found');
     }
 
-    // Priority 3: Temporary dual-mode support for x-user-id header
-    // TODO: Remove this after 2 weeks (migration period)
-    const userIdHeader = req.headers['x-user-id'];
-    if (userIdHeader) {
-      const userId = parseInt(userIdHeader as string, 10);
-      if (!isNaN(userId)) {
-        console.warn(`[DEPRECATED] x-user-id header used by user ${userId}. Please migrate to JWT authentication.`);
-        req.user = {
-          id: userId,
-          email: '' // Email not available in legacy mode
-        };
-        return next();
-      }
-    }
-
     // No valid authentication found
     console.log('[requireAuth] ❌ No valid authentication found, returning 401');
     res.status(401).json({
@@ -125,20 +110,6 @@ export const optionalAuth = async (
         req.user = {
           id: payload.userId,
           email: payload.email
-        };
-        return next();
-      }
-    }
-
-    // Priority 3: Legacy x-user-id header (dual-mode support)
-    const userIdHeader = req.headers['x-user-id'];
-    if (userIdHeader) {
-      const userId = parseInt(userIdHeader as string, 10);
-      if (!isNaN(userId)) {
-        console.warn(`[DEPRECATED] x-user-id header used by user ${userId}. Please migrate to JWT authentication.`);
-        req.user = {
-          id: userId,
-          email: ''
         };
         return next();
       }

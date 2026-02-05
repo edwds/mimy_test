@@ -179,6 +179,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             // Continue with local cleanup even if API fails
         }
 
+        // Clear localStorage items (IMPORTANT: prevents re-login on reload)
+        console.log('[UserContext] Clearing localStorage...');
+        localStorage.removeItem('mimy_user_id');
+        localStorage.removeItem('mimy_reg_google_info');
+        localStorage.removeItem('mimy_reg_phone');
+        localStorage.removeItem('mimy_reg_birthyear');
+        localStorage.removeItem('mimy_reg_nickname');
+        console.log('[UserContext] ✅ localStorage cleared');
+
         // Clear tokens from native storage (Preferences)
         const tokensCleared = await clearTokens();
         if (!tokensCleared) {

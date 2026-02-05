@@ -35,6 +35,17 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
     // Reorder Modal State
     const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
+    // Tooltip State
+    const [showTooltip, setShowTooltip] = useState(true);
+
+    // Auto-hide tooltip after 4 seconds
+    useEffect(() => {
+        if (showTooltip && items.length > 0) {
+            const timer = setTimeout(() => setShowTooltip(false), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [showTooltip, items.length]);
+
     const moveItem = (index: number, direction: number) => {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= items.length) return;
@@ -168,16 +179,7 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                         <button onClick={onClose} className="p-2 -ml-2 rounded-full hover:bg-white/10">
                             <X className="w-6 h-6" />
                         </button>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setIsReorderModalOpen(true)}
-                                className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                                title="순서 변경"
-                            >
-                                <ArrowUpDown className="w-5 h-5" />
-                            </button>
-                            <div className="font-bold text-lg">사진 편집 ({items.length})</div>
-                        </div>
+                        <div className="font-bold text-lg">사진 편집</div>
                         <Button
                             onClick={handleConfirm}
                             disabled={isProcessing || items.length === 0}
@@ -195,10 +197,6 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                             </div>
                         ) : (
                             <div className="w-full flex flex-col items-center h-full justify-center pb-20">
-                                <div className="text-white/50 text-base text-center">
-                                    사진을 크롭하거나 순서를 변경할 수 있어요
-                                </div>
-
                                 <Reorder.Group
                                     ref={containerRef}
                                     axis="x"
@@ -225,9 +223,21 @@ export const ImageEditModal = ({ files, isOpen, onClose, onEditingComplete }: Im
                                             containerRef={containerRef}
                                             isFirst={index === 0}
                                             isLast={index === items.length - 1}
+                                            showTooltip={showTooltip && index === 0}
                                         />
                                     ))}
                                 </Reorder.Group>
+
+                                {/* Quick Access: Reorder Button */}
+                                {items.length > 1 && (
+                                    <button
+                                        onClick={() => setIsReorderModalOpen(true)}
+                                        className="mt-4 flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold transition-all active:scale-95 border border-white/20"
+                                    >
+                                        <ArrowUpDown className="w-5 h-5" />
+                                        순서 빠르게 변경하기
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -274,7 +284,8 @@ const DraggableItem = ({
     onTextChange,
     isFirst,
     isLast,
-    containerRef
+    containerRef,
+    showTooltip
 }: {
     item: ProcessingItem,
     index: number,
@@ -288,7 +299,8 @@ const DraggableItem = ({
     onTextChange: (val: string) => void,
     isFirst: boolean,
     isLast: boolean,
-    containerRef?: React.RefObject<HTMLUListElement | null>
+    containerRef?: React.RefObject<HTMLUListElement | null>,
+    showTooltip?: boolean
 }) => {
     const controls = useDragControls();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -357,27 +369,40 @@ const DraggableItem = ({
             </div>
 
             {/* Attached Caption Input */}
-            <input
-                ref={inputRef}
-                type="text"
-                maxLength={40}
-                placeholder="메뉴 이름을 적어주세요"
-                value={item.imgText || ''}
-                onChange={(e) => onTextChange(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onFocus={(e) => {
-                    // iOS: Scroll to this input when keyboard appears
-                    if (Capacitor.isNativePlatform()) {
-                        setTimeout(() => {
-                            const itemElement = e.target.closest('.draggable-item') as HTMLElement;
-                            if (itemElement && containerRef?.current) {
-                                itemElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                            }
-                        }, 100);
-                    }
-                }}
-                className="w-full bg-transparent py-2 text-center text-white/50 text-sm placeholder:text-white/20 focus:outline-none focus:border-primary transition-colors"
-            />
+            <div className="w-full relative">
+                <input
+                    ref={inputRef}
+                    type="text"
+                    maxLength={40}
+                    placeholder="메뉴 이름을 적어주세요"
+                    value={item.imgText || ''}
+                    onChange={(e) => onTextChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => {
+                        // iOS: Scroll to this input when keyboard appears
+                        if (Capacitor.isNativePlatform()) {
+                            setTimeout(() => {
+                                const itemElement = e.target.closest('.draggable-item') as HTMLElement;
+                                if (itemElement && containerRef?.current) {
+                                    itemElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                }
+                            }, 100);
+                        }
+                    }}
+                    className="w-full py-2 text-center text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50 rounded-md bg-transparent text-white placeholder:text-white/30"
+                />
+
+                {/* Tooltip - Only show on first item if showTooltip is true */}
+                {showTooltip && !item.imgText && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="relative bg-primary text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap font-medium">
+                            메뉴 이름을 적어주세요!
+                            {/* Speech bubble tail */}
+                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rotate-45" />
+                        </div>
+                    </div>
+                )}
+            </div>
         </Reorder.Item>
     );
 };

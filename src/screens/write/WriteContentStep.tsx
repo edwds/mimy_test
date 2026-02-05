@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, X, ChevronLeft, Users, UserPlus, Calendar, Link as LinkIcon, ArrowUpDown, GripVertical, MapPin } from 'lucide-react';
+import { Image as ImageIcon, X, ChevronLeft, Calendar, Link as LinkIcon, ArrowUpDown, GripVertical, MapPin } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -84,9 +84,34 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         return `${year}-${month}-${day}`;
     });
     const [isDateManuallySet, setIsDateManuallySet] = useState(false);
+    const dateInputRef = useRef<HTMLInputElement>(null);
+
+    // Calculate relative time text for visit date
+    const getRelativeTimeText = (dateString: string) => {
+        // Parse YYYY-MM-DD as local date (not UTC)
+        const [year, month, day] = dateString.split('-').map(Number);
+        const visitDate = new Date(year, month - 1, day); // month is 0-indexed
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        visitDate.setHours(0, 0, 0, 0);
+
+        const diffTime = today.getTime() - visitDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return t('write.content.visit_date_today', '오늘 방문');
+        if (diffDays === 1) return t('write.content.visit_date_yesterday', '어제 방문');
+        if (diffDays > 0 && diffDays < 7) return `${diffDays}일 전 방문`;
+        if (diffDays >= 7 && diffDays < 14) return t('write.content.visit_date_week_ago', '1주일 전 방문');
+        if (diffDays >= 14 && diffDays < 21) return '2주일 전 방문';
+        if (diffDays >= 21 && diffDays < 28) return '3주일 전 방문';
+        if (diffDays >= 28 && diffDays < 60) return t('write.content.visit_date_month_ago', '1개월 전 방문');
+
+        // For dates in the future or long past, show formatted date
+        return `${year}년 ${month}월 ${day}일 방문`;
+    };
 
     // Link State
-    const [showLinkInput, setShowLinkInput] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const [linkTitle, setLinkTitle] = useState('');
     const [links, setLinks] = useState<{ title: string; url: string }[]>([]);
@@ -511,13 +536,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
     const handleSubmit = () => {
         // Extract only completed URLs, in order
-        // Extract only completed URLs, in order
         const validMedia = mediaItems.filter(m => m.status === 'complete' && m.url);
         const validImages = validMedia.map(m => m.url!);
 
         // Handle pending link if user didn't click 'Add'
         let finalLinks = [...links];
-        if (showLinkInput && linkUrl.trim()) {
+        if (linkUrl.trim()) {
             let url = linkUrl.trim();
             if (!url.startsWith('http')) {
                 url = 'https://' + url;
@@ -531,9 +555,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
         onNext({
             text,
             images: validImages,
-            imgText: validMedia.map(m => m.caption || ""), // Pass empty string if no caption to maintain index alignment? Or just pass potentially smaller array? 
-            // Better to align with images:
-            // The constraint is parallel arrays.
+            imgText: validMedia.map(m => m.caption || ""),
             companions: selectedUsers.map(u => u.id),
             keywords,
             visitDate,
@@ -562,7 +584,6 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                 title: linkTitle.trim() || url,
                 url: url
             }]);
-            setShowLinkInput(false);
             setLinkUrl('');
             setLinkTitle('');
         }
@@ -683,10 +704,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
                     {/* Common: Images (Moved Here) */}
                     <div className="space-y-3 pt-1">
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-3">
                             <Label className="text-base font-semibold flex items-center gap-2">
-                                <ImageIcon className="w-4 h-4" />
+                                <ImageIcon className="w-5 h-5" />
                                 {t('write.content.photo_label')}
+                                {mediaItems.length > 0 && (
+                                    <span className="text-sm font-normal text-muted-foreground">{mediaItems.length}</span>
+                                )}
                                 {mode === 'review' && <span className="text-red-500 text-sm">*</span>}
                             </Label>
                             <div className="flex items-center gap-3">
@@ -699,7 +723,6 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         순서 변경
                                     </button>
                                 )}
-                                <span className="text-xs text-muted-foreground font-medium">{mediaItems.length}/30</span>
                             </div>
                         </div>
 
@@ -824,8 +847,8 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
                         <div className="flex overflow-x-auto no-scrollbar gap-3 pb-2 -mx-6 px-6">
                             {mediaItems.map((item) => (
-                                <div key={item.id} className="w-28 flex-shrink-0 flex flex-col gap-1.5">
-                                    <div className="w-28 h-28 relative rounded-xl overflow-hidden group border border-gray-100 bg-muted shadow-sm">
+                                <div key={item.id} className="w-36 flex-shrink-0 flex flex-col gap-2">
+                                    <div className="w-36 h-36 relative rounded-xl overflow-hidden group border border-gray-100 bg-muted shadow-sm">
                                         {item.status === 'complete' && item.url ? (
                                             <>
                                                 <img src={item.url} alt="preview" className="w-full h-full object-cover transition-transform duration-300" />
@@ -862,8 +885,10 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                             setCaptionEditText(item.caption || '');
                                         }}
                                         className={cn(
-                                            "text-xs text-center py-1 px-1 rounded-md truncate transition-colors",
-                                            item.caption ? "font-medium text-gray-700 hover:bg-gray-100" : "text-gray-400 hover:bg-gray-50 bg-gray-50/50"
+                                            "text-xs text-center py-1.5 px-2 rounded-lg truncate transition-all",
+                                            item.caption
+                                                ? "font-medium text-gray-800 hover:bg-gray-100 bg-gray-50"
+                                                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 bg-gray-50/50"
                                         )}
                                     >
                                         {item.caption || "설명 추가"}
@@ -872,8 +897,9 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             ))}
 
                             {mediaItems.length < 30 && (
-                                <label className="w-28 h-28 flex-shrink-0 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
-                                    <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                                <label className="w-36 h-36 flex-shrink-0 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:border-primary hover:text-primary hover:bg-primary/5 transition-all bg-muted/20 active:scale-95">
+                                    <ImageIcon className="w-8 h-8 mb-1.5 opacity-50" />
+                                    <span className="text-xs font-medium opacity-60">사진 추가</span>
                                     <input
                                         type="file"
                                         multiple
@@ -911,41 +937,36 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     )}
 
                     {/* Mode Specific: Review - Metadata (Date & Companions) */}
-                    {mode === 'review' && (
-                        <div className="flex gap-3">
-                            {/* Visit Date */}
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold text-muted-foreground mb-1.5 ml-1">
-                                    {t('write.content.visit_date', 'Visit Date')}
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                        <Calendar className="w-4 h-4" />
-                                    </div>
-                                    <input
-                                        type="date"
-                                        value={visitDate}
-                                        onChange={(e) => {
-                                            setVisitDate(e.target.value);
-                                            setIsDateManuallySet(true);
-                                        }}
-                                        onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
-                                                setTimeout(() => {
-                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                }, 300);
-                                            }
-                                        }}
-                                        className={cn(
-                                            "w-full bg-muted/30 h-10 pl-9 pr-3 rounded-xl text-sm font-medium focus:bg-background border border-transparent focus:border-primary transition-colors outline-none cursor-pointer",
-                                            !isDateManuallySet && "text-muted-foreground"
-                                        )}
-                                    />
-                                </div>
+                    {mode === 'review' && mediaItems.length > 0 && (
+                        <div className="space-y-3">
+                            {/* Visit Date - Only shown when photos are uploaded */}
+                            <div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        dateInputRef.current?.showPicker?.();
+                                    }}
+                                    className="w-full bg-muted/30 h-11 px-4 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors flex items-center justify-between cursor-pointer"
+                                >
+                                    <span className={cn(!isDateManuallySet && "text-muted-foreground")}>
+                                        {getRelativeTimeText(visitDate)}
+                                    </span>
+                                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                <input
+                                    ref={dateInputRef}
+                                    type="date"
+                                    value={visitDate}
+                                    onChange={(e) => {
+                                        setVisitDate(e.target.value);
+                                        setIsDateManuallySet(true);
+                                    }}
+                                    className="sr-only"
+                                />
                             </div>
 
-                            {/* Companions */}
-                            <div className="flex-1">
+                            {/* Companions - Commented out for now */}
+                            {/* <div>
                                 <label className="block text-xs font-bold text-muted-foreground mb-1.5 ml-1">
                                     {t('write.content.with_who', 'With who?')}
                                 </label>
@@ -966,7 +987,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                     </div>
                                     <UserPlus className="w-3 h-3 text-muted-foreground shrink-0" />
                                 </button>
-                            </div>
+                            </div> */}
                         </div>
                     )}
 
@@ -974,7 +995,7 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     <div className="space-y-2">
                         {mode === 'review' && (
                             <Label className="text-base font-semibold flex items-center gap-2">
-                                {t('write.content.text_label', 'Review')}
+                                {t('write.content.text_label', '본문')}
                                 <span className="text-red-500 text-sm">*</span>
                             </Label>
                         )}
@@ -1002,66 +1023,73 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                     {/* Link Section */}
                     <div className="space-y-2">
                         {links.length > 0 ? (
-                            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
-                                <LinkIcon className="w-4 h-4 text-gray-400" />
+                            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-blue-50/30 rounded-xl border border-blue-100">
+                                <LinkIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-bold truncate">{links[0].title}</div>
-                                    <div className="text-xs text-gray-400 truncate">{links[0].url}</div>
+                                    <div className="text-sm font-bold truncate text-gray-900">{links[0].title}</div>
+                                    <div className="text-xs text-blue-600 truncate">{links[0].url}</div>
                                 </div>
                                 <button
                                     onClick={() => setLinks([])}
-                                    className="p-1 hover:bg-gray-200 rounded-full"
+                                    className="p-1.5 hover:bg-blue-100 rounded-full transition-colors flex-shrink-0"
                                 >
-                                    <X className="w-4 h-4 text-gray-400" />
+                                    <X className="w-4 h-4 text-gray-500" />
                                 </button>
                             </div>
                         ) : (
-                            showLinkInput ? (
-                                <div className="p-3 bg-gray-50 rounded-lg border space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-1">
-                                        <span>Add Link</span>
-                                        <button onClick={() => setShowLinkInput(false)}><X className="w-3 h-3" /></button>
+                            <div>
+                                <Label className="text-sm font-medium text-muted-foreground mb-2 ml-1 flex items-center gap-1.5">
+                                    <LinkIcon className="w-3.5 h-3.5" />
+                                    링크 추가 (선택)
+                                </Label>
+                                <input
+                                    className="w-full bg-muted/30 border border-transparent rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground/50"
+                                    placeholder="URL을 붙여넣으세요 (예: https://blog.naver.com/...)"
+                                    value={linkUrl}
+                                    onChange={e => setLinkUrl(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && linkUrl.trim()) {
+                                            handleAddLink();
+                                        }
+                                    }}
+                                    onFocus={(e) => {
+                                        if (Capacitor.isNativePlatform()) {
+                                            setTimeout(() => {
+                                                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            }, 300);
+                                        }
+                                    }}
+                                />
+                                {linkUrl.trim() && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <input
+                                            className="flex-1 bg-muted/20 border border-transparent rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground/50"
+                                            placeholder="링크 제목 (선택사항, 비워두면 URL로 표시)"
+                                            value={linkTitle}
+                                            onChange={e => setLinkTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleAddLink();
+                                                }
+                                            }}
+                                            onFocus={(e) => {
+                                                if (Capacitor.isNativePlatform()) {
+                                                    setTimeout(() => {
+                                                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }, 300);
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            size="sm"
+                                            onClick={handleAddLink}
+                                            className="h-8 px-4 text-xs font-bold"
+                                        >
+                                            추가
+                                        </Button>
                                     </div>
-                                    <input
-                                        className="w-full bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary"
-                                        placeholder="URL (e.g. https://mimy.kr)"
-                                        value={linkUrl}
-                                        onChange={e => setLinkUrl(e.target.value)}
-                                        onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
-                                                setTimeout(() => {
-                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                }, 300);
-                                            }
-                                        }}
-                                        autoFocus
-                                    />
-                                    <input
-                                        className="w-full bg-white border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary"
-                                        placeholder="Link Title (Optional)"
-                                        value={linkTitle}
-                                        onChange={e => setLinkTitle(e.target.value)}
-                                        onFocus={(e) => {
-                                            if (Capacitor.isNativePlatform()) {
-                                                setTimeout(() => {
-                                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                }, 300);
-                                            }
-                                        }}
-                                    />
-                                    <div className="flex justify-end pt-1">
-                                        <Button size="sm" onClick={handleAddLink} disabled={!linkUrl.trim()}>Add</Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowLinkInput(true)}
-                                    className="flex items-center gap-2 text-sm font-bold text-primary px-1 py-2 hover:bg-primary/5 rounded-lg transition-colors"
-                                >
-                                    <LinkIcon className="w-4 h-4" />
-                                    Add Link
-                                </button>
-                            )
+                                )}
+                            </div>
                         )}
                     </div>
 

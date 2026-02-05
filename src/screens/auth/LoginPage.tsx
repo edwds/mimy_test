@@ -111,16 +111,6 @@ export const LoginPage = () => {
                 console.log('[Login] ✅ Existing user, platform:', Capacitor.isNativePlatform() ? 'Native' : 'Web');
                 console.log('[Login] Tokens available:', !!tokens);
 
-                // Save user ID to localStorage for x-user-id header (temporary fallback)
-                if (user?.id) {
-                    console.log('[Login] Saving user ID to localStorage:', user.id);
-                    localStorage.setItem('mimy_user_id', user.id.toString());
-                } else {
-                    console.error('[Login] ❌ No user ID in response');
-                    alert('서버 응답에 사용자 ID가 없습니다. 다시 시도해주세요.');
-                    return;
-                }
-
                 // Existing User: Save tokens for native apps
                 if (tokens && Capacitor.isNativePlatform()) {
                         console.log('[Login] Attempting to save tokens for native platform...');
