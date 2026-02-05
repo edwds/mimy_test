@@ -248,27 +248,37 @@ export async function getFullResolutionPhoto(identifier: string): Promise<File |
     try {
         console.log('[PhotoLocation] Loading full resolution for:', identifier);
 
-        // Use custom PhotoLibrary plugin to fetch by identifier directly
-        const PhotoLibrary = (await import('@/plugins/PhotoLibrary')).default;
+        // Use Media plugin's getMediaByIdentifier to get the file path
+        const result = await Media.getMediaByIdentifier({ identifier });
 
-        const result = await PhotoLibrary.getThumbnails({
-            identifiers: [identifier],
-            size: 1200, // Request 1200px size
-            quality: 0.85 // 85% quality
-        });
-
-        if (result.photos.length === 0) {
-            console.error('[PhotoLocation] Photo not found with identifier:', identifier);
+        if (!result?.path) {
+            console.error('[PhotoLocation] No path returned for identifier:', identifier);
             return null;
         }
 
-        const photo = result.photos[0];
-        console.log('[PhotoLocation] ✅ Found photo via custom plugin');
+        console.log('[PhotoLocation] ✅ Got file path:', result.path);
 
-        // Convert base64 to File
-        const base64 = photo.base64.startsWith('data:') ? photo.base64 : `data:image/jpeg;base64,${photo.base64}`;
-        const response = await fetch(base64);
-        const blob = await response.blob();
+        // Read the file using Filesystem API
+        const { Filesystem } = await import('@capacitor/filesystem');
+
+        // The path returned is an absolute path, so we need to read it as a data URL
+        const fileResult = await Filesystem.readFile({
+            path: result.path
+        });
+
+        console.log('[PhotoLocation] ✅ Read file from filesystem');
+
+        // Convert to blob and then to File
+        let blob: Blob;
+        if (typeof fileResult.data === 'string') {
+            // It's a base64 string
+            const base64 = fileResult.data.startsWith('data:') ? fileResult.data : `data:image/jpeg;base64,${fileResult.data}`;
+            const response = await fetch(base64);
+            blob = await response.blob();
+        } else {
+            // It's already a Blob
+            blob = fileResult.data;
+        }
 
         const filename = `photo_${Date.now()}.jpg`;
         const file = new File([blob], filename, { type: 'image/jpeg' });
