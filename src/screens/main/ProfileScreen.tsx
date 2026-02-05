@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark } from 'lucide-react';
+import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,12 +13,13 @@ import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
 import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { ListCard } from '@/components/ListCard';
+import { TimelineView } from '@/components/TimelineView';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
 import { RankingBadge } from '@/components/RankingBadge';
 
-type ProfileTabType = 'content' | 'list' | 'saved';
+type ProfileTabType = 'timeline' | 'content' | 'list' | 'saved';
 
 interface ProfileScreenProps {
     refreshTrigger?: number;
@@ -35,7 +36,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const [searchParams] = useSearchParams();
 
     // Tabs
-    const initialTab = (searchParams.get('tab') as ProfileTabType) || 'content';
+    const initialTab = (searchParams.get('tab') as ProfileTabType) || 'timeline';
     const [activeTab, setActiveTab] = useState<ProfileTabType>(initialTab);
 
     useEffect(() => {
@@ -87,7 +88,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     useEffect(() => {
         const fetchContent = async () => {
-            if (!user?.id || activeTab !== 'content') return;
+            if (!user?.id || (activeTab !== 'content' && activeTab !== 'timeline')) return;
             if (!hasMoreContent && contentPage > 1) return;
 
             if (contentPage === 1) setLoadingContent(true);
@@ -237,7 +238,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         if (containerRef.current) {
             const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
             if (scrollHeight - scrollTop <= clientHeight + 300) {
-                if (activeTab === 'content') {
+                if (activeTab === 'content' || activeTab === 'timeline') {
                     loadMoreContent();
                 }
             }
@@ -422,21 +423,27 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 <div className="bg-background border-b border-border/50 z-20">
                     <div className="flex w-full px-0">
                         <TabButton
+                            active={activeTab === 'timeline'}
+                            onClick={() => handleTabChange('timeline')}
+                            icon={<Calendar className="w-5 h-5" />}
+                            label={t('profile.tabs.timeline')}
+                        />
+                        <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}
-                            icon={<Grid className="w-4 h-4" />}
+                            icon={<Grid className="w-5 h-5" />}
                             label={t('profile.tabs.content')}
                         />
                         <TabButton
                             active={activeTab === 'list'}
                             onClick={() => handleTabChange('list')}
-                            icon={<List className="w-4 h-4" />}
+                            icon={<List className="w-5 h-5" />}
                             label={t('profile.tabs.list')}
                         />
                         <TabButton
                             active={activeTab === 'saved'}
                             onClick={() => handleTabChange('saved')}
-                            icon={<Bookmark className="w-4 h-4" />}
+                            icon={<Bookmark className="w-5 h-5" />}
                             label={t('profile.tabs.saved')}
                         />
                     </div>
@@ -444,6 +451,24 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                 {/* Content */}
                 <div className="min-h-[300px] bg-muted/5">
+                    {activeTab === 'timeline' && (
+                        <div className="pb-20 pt-4">
+                            {loadingContent ? (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : contents.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 px-6">
+                                    <p className="text-sm text-center text-muted-foreground">
+                                        {t('profile.empty.timeline', '타임라인에 표시할 콘텐츠가 없습니다')}
+                                    </p>
+                                </div>
+                            ) : (
+                                <TimelineView contents={contents} />
+                            )}
+                        </div>
+                    )}
+
                     {activeTab === 'content' && (
                         <div className="pb-20">
                             {loadingContent ? (
@@ -651,13 +676,15 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode | null; label: string }) => (
     <button
         onClick={onClick}
+        aria-label={label}
         className={cn(
-            'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+            'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center',
             active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
         )}
     >
-        {icon}
-        <span>{label}</span>
+        <div className="w-5 h-5">
+            {icon}
+        </div>
         {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />}
     </button>
 );
