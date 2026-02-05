@@ -22,6 +22,8 @@ export interface PhotoLibraryPlugin {
 
     getThumbnails(options: {
         identifiers: string[];
+        size?: number; // Target size in pixels (default: 400, max: 1200)
+        quality?: number; // JPEG quality 0-1 (default: 0.8)
     }): Promise<{
         photos: PhotoWithThumbnail[];
     }>;

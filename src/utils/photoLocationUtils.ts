@@ -248,44 +248,33 @@ export async function getFullResolutionPhoto(identifier: string): Promise<File |
     try {
         console.log('[PhotoLocation] Loading full resolution for:', identifier);
 
-        // Load in smaller batches to find our photo
-        // Try first 100 recent photos (most likely)
-        for (let batchStart = 0; batchStart < 1000; batchStart += 100) {
-            console.log(`[PhotoLocation] Trying batch ${batchStart}-${batchStart + 100}...`);
+        // Use custom PhotoLibrary plugin to fetch by identifier directly
+        const PhotoLibrary = (await import('@/plugins/PhotoLibrary')).default;
 
-            const result = await Media.getMedias({
-                quantity: 100,
-                thumbnailWidth: 1200,
-                thumbnailHeight: 1200,
-                thumbnailQuality: 85,
-                sort: [{
-                    key: 'creationDate',
-                    ascending: false
-                }]
-            });
+        const result = await PhotoLibrary.getThumbnails({
+            identifiers: [identifier],
+            size: 1200, // Request 1200px size
+            quality: 0.85 // 85% quality
+        });
 
-            const photo = result.medias?.find(m => m.identifier === identifier);
-
-            if (photo?.data) {
-                console.log('[PhotoLocation] ✅ Found photo in batch', batchStart);
-
-                const dataUri = photo.data.startsWith('data:') ? photo.data : `data:image/jpeg;base64,${photo.data}`;
-                const response = await fetch(dataUri);
-                const blob = await response.blob();
-
-                const filename = `photo_${Date.now()}.jpg`;
-                const file = new File([blob], filename, { type: 'image/jpeg' });
-
-                console.log('[PhotoLocation] ✅ Loaded full resolution:', file.size, 'bytes', `(~${Math.round(file.size / 1024)}KB)`);
-                return file;
-            }
-
-            // If we didn't find it, continue to next batch
-            console.log('[PhotoLocation] Photo not found in this batch, trying next...');
+        if (result.photos.length === 0) {
+            console.error('[PhotoLocation] Photo not found with identifier:', identifier);
+            return null;
         }
 
-        console.error('[PhotoLocation] Could not find photo after scanning 1000 photos');
-        return null;
+        const photo = result.photos[0];
+        console.log('[PhotoLocation] ✅ Found photo via custom plugin');
+
+        // Convert base64 to File
+        const base64 = photo.base64.startsWith('data:') ? photo.base64 : `data:image/jpeg;base64,${photo.base64}`;
+        const response = await fetch(base64);
+        const blob = await response.blob();
+
+        const filename = `photo_${Date.now()}.jpg`;
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+
+        console.log('[PhotoLocation] ✅ Loaded full resolution:', file.size, 'bytes', `(~${Math.round(file.size / 1024)}KB)`);
+        return file;
     } catch (error) {
         console.error('[PhotoLocation] Error loading full resolution:', error);
         return null;

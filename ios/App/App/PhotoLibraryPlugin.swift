@@ -83,6 +83,10 @@ public class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
+        // Get optional size parameter (default to 400 for thumbnails, can request up to 1200 for full res)
+        let targetSize = call.getInt("size") ?? 400
+        let quality = call.getDouble("quality") ?? 0.8
+
         // Fetch assets by identifiers
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
 
@@ -103,10 +107,10 @@ public class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
 
-            // Request small thumbnail
+            // Request image at specified size
             PHImageManager.default().requestImage(
                 for: asset,
-                targetSize: CGSize(width: 400, height: 400), // Larger size for better quality
+                targetSize: CGSize(width: targetSize, height: targetSize),
                 contentMode: .aspectFill,
                 options: options
             ) { image, info in
@@ -125,7 +129,7 @@ public class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
 
                 guard let image = image,
-                      let imageData = image.jpegData(compressionQuality: 0.8),
+                      let imageData = image.jpegData(compressionQuality: quality),
                       let location = asset.location else {
                     return
                 }
