@@ -170,7 +170,7 @@ export const MainTab = () => {
 
             {/* Bottom Navigation */}
             <nav
-                className="border-t border-border bg-card/80 backdrop-blur-lg shrink-0"
+                className="border-t shrink-0 border-border bg-card/80 backdrop-blur-lg"
                 style={{ paddingBottom: Capacitor.isNativePlatform() ? 'env(safe-area-inset-bottom)' : '0.5rem' }}
             >
                 <div className="flex justify-around items-center h-16">
@@ -217,7 +217,9 @@ const NavIcon = ({ icon, label, active = false, onClick }: { icon: React.ReactNo
         onClick={onClick}
         className={cn(
             "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-            active ? "text-primary scale-105" : "text-muted-foreground hover:text-foreground"
+            active
+                ? "text-primary scale-105"
+                : "text-muted-foreground hover:text-foreground"
         )}>
         {icon}
         <span className={cn("text-xs font-base transition-all", active ? "font-bold" : "")}>{label}</span>

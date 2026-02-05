@@ -74,6 +74,7 @@ function AppContent() {
     return (
         <BrowserRouter>
             <RankingProvider>
+                <DebugLocaleSwitcher />
                 <StatusBarGuard />
                 {showLoading ? (
                     <SplashScreen />
@@ -140,7 +141,6 @@ function App() {
     return (
         <GoogleOAuthProvider clientId={googleClientId || ""}>
             <UserProvider>
-                <DebugLocaleSwitcher />
                 <AppContent />
             </UserProvider>
         </GoogleOAuthProvider>

@@ -24,7 +24,7 @@ const DebugLocaleSwitcher = () => {
     const current = i18n.language;
     const isDebug = current === DEBUG_LANG;
 
-    // cimode에서 빠져나올 때 “최근 실사용 언어”로 복귀
+    // cimode에서 빠져나올 때 "최근 실사용 언어"로 복귀
     const lastRealLang: Lang = useMemo(() => {
         const saved = (typeof window !== 'undefined' && window.localStorage.getItem('i18nextLng')) || 'ko';
         return (saved === 'en' ? 'en' : 'ko');
@@ -87,6 +87,7 @@ const DebugLocaleSwitcher = () => {
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
                 userSelect: 'none',
+                gap: '4px',
             }}
         >
             <SegButton label="EN" active={current === 'en'} onClick={() => setLang('en')} />

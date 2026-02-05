@@ -14,6 +14,7 @@ export const QuizScreen = () => {
     const [answers, setAnswers] = useState<Record<number, number>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [exitDirection, setExitDirection] = useState<'left' | 'right' | 'up' | null>(null);
+    const [showGuide, setShowGuide] = useState(true);
 
     const currentQuestion = QUESTIONS[currentIndex];
     const hasExistingProfile = !!user?.taste_result;
@@ -34,6 +35,11 @@ export const QuizScreen = () => {
 
     const handleSwipe = (direction: 'left' | 'right' | 'up') => {
         if (exitDirection) return; // Prevent multiple swipes
+
+        // Dismiss guide on first swipe
+        if (showGuide) {
+            setShowGuide(false);
+        }
 
         // Map swipe direction to answer value
         // left = -1 (싫어요), up = 0 (별생각없어요), right = +1 (좋아요)
@@ -184,7 +190,7 @@ export const QuizScreen = () => {
             <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative overflow-visible">
 
                 {/* Helper text */}
-                <div className="mb-12 text-center text-sm text-muted-foreground">
+                <div className="mb-12 text-center text-base font-medium text-foreground">
                     위 문장에 동의하면 오른쪽으로<br></br>아니라면 왼쪽으로 밀어주세요
                 </div>
 
@@ -292,14 +298,33 @@ export const QuizScreen = () => {
                             background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
                             overflow: 'hidden'
                         }}
-                        animate={{
-                            scale: 1,
-                            y: exitDirection === 'up' ? -500 : 0,
-                            x: exitDirection === 'left' ? -500 : exitDirection === 'right' ? 500 : 0,
-                            rotate: exitDirection === 'left' ? -30 : exitDirection === 'right' ? 30 : 0,
-                            opacity: exitDirection ? 0 : 1,
-                            zIndex: 3
-                        }}
+                        animate={
+                            showGuide
+                                ? {
+                                      // Right → Left → Up sequence
+                                      x: [0, 120, 120, 0, 0, -120, -120, 0, 0, 0, 0, 0],
+                                      y: [0, 0, 0, 0, 0, 0, 0, 0, 0, -80, -80, 0],
+                                      rotate: [0, 15, 15, 0, 0, -15, -15, 0, 0, 0, 0, 0],
+                                      scale: 1,
+                                      opacity: 1,
+                                      zIndex: 3,
+                                      transition: {
+                                          duration: 4,
+                                          repeat: Infinity,
+                                          repeatDelay: 0.5,
+                                          ease: "easeInOut",
+                                          times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                      }
+                                  }
+                                : {
+                                      scale: 1,
+                                      y: exitDirection === 'up' ? -500 : 0,
+                                      x: exitDirection === 'left' ? -500 : exitDirection === 'right' ? 500 : 0,
+                                      rotate: exitDirection === 'left' ? -30 : exitDirection === 'right' ? 30 : 0,
+                                      opacity: exitDirection ? 0 : 1,
+                                      zIndex: 3
+                                  }
+                        }
                         exit={{
                             opacity: 0,
                             scale: 1.05
@@ -308,18 +333,35 @@ export const QuizScreen = () => {
                             duration: 0.3,
                             ease: "easeOut"
                         }}
-                        drag={!exitDirection}
+                        drag={!exitDirection && !showGuide}
                         dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                         dragElastic={1}
                         onDragEnd={handleDragEnd}
+                        onClick={() => showGuide && setShowGuide(false)}
+                        onTouchStart={() => showGuide && setShowGuide(false)}
                     >
                         {/* Color overlays for swipe feedback */}
                         <motion.div
                             className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
                             style={{
-                                opacity: greenOverlay,
+                                opacity: showGuide ? undefined : greenOverlay,
                                 background: 'linear-gradient(135deg, #E0F7F7 0%, #E8F8F5 100%)'
                             }}
+                            animate={
+                                showGuide
+                                    ? {
+                                          // Show during right swipe (0-0.3)
+                                          opacity: [0, 0.8, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          transition: {
+                                              duration: 4,
+                                              repeat: Infinity,
+                                              repeatDelay: 0.5,
+                                              ease: "easeInOut",
+                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                          }
+                                      }
+                                    : {}
+                            }
                         >
                             <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
                                 <span className="text-gray-800 text-sm font-semibold">
@@ -330,9 +372,24 @@ export const QuizScreen = () => {
                         <motion.div
                             className="absolute inset-0 pointer-events-none flex items-end justify-center pb-12"
                             style={{
-                                opacity: redOverlay,
+                                opacity: showGuide ? undefined : redOverlay,
                                 background: 'linear-gradient(135deg, #FFF0F5 0%, #FFE4F3 100%)'
                             }}
+                            animate={
+                                showGuide
+                                    ? {
+                                          // Show during left swipe (0.4-0.7)
+                                          opacity: [0, 0, 0, 0, 0, 0.8, 0.8, 0, 0, 0, 0, 0],
+                                          transition: {
+                                              duration: 4,
+                                              repeat: Infinity,
+                                              repeatDelay: 0.5,
+                                              ease: "easeInOut",
+                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                          }
+                                      }
+                                    : {}
+                            }
                         >
                             <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
                                 <span className="text-gray-800 text-sm font-semibold">
@@ -342,7 +399,22 @@ export const QuizScreen = () => {
                         </motion.div>
                         <motion.div
                             className="absolute inset-0 bg-gray-400/70 pointer-events-none flex items-end justify-center pb-12"
-                            style={{ opacity: grayOverlay }}
+                            style={{ opacity: showGuide ? undefined : grayOverlay }}
+                            animate={
+                                showGuide
+                                    ? {
+                                          // Show during up swipe (0.8-0.95)
+                                          opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.7, 0.7, 0],
+                                          transition: {
+                                              duration: 4,
+                                              repeat: Infinity,
+                                              repeatDelay: 0.5,
+                                              ease: "easeInOut",
+                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                          }
+                                      }
+                                    : {}
+                            }
                         >
                             <div className="px-6 py-2 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
                                 <span className="text-gray-800 text-sm font-semibold">
@@ -355,6 +427,104 @@ export const QuizScreen = () => {
                             <h2 className="text-3xl font-bold leading-tight text-left w-full">
                                 {currentQuestion.text}
                             </h2>
+
+                            {/* Swipe gesture indicator */}
+                            {showGuide && (
+                                <motion.div
+                                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                                    animate={{
+                                        opacity: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                                        transition: {
+                                            duration: 4,
+                                            repeat: Infinity,
+                                            repeatDelay: 0.5,
+                                            ease: "easeInOut",
+                                            times: [0, 0.1, 0.15, 0.25, 0.3, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                        }
+                                    }}
+                                >
+                                    {/* Swipe icon changes based on animation timing */}
+                                    <motion.div
+                                        className="relative w-20 h-20 rounded-full bg-white/90 backdrop-blur-sm shadow-lg flex items-center justify-center"
+                                        animate={{
+                                            scale: [1, 1, 1.2, 1, 1, 1.2, 1, 1, 1.2, 1, 1, 1],
+                                            transition: {
+                                                duration: 4,
+                                                repeat: Infinity,
+                                                repeatDelay: 0.5,
+                                                ease: "easeInOut",
+                                                times: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.85, 0.9, 0.95, 1]
+                                            }
+                                        }}
+                                    >
+                                        {/* Right arrow (0-0.3) */}
+                                        <motion.svg
+                                            className="w-10 h-10 text-green-500 absolute"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            viewBox="0 0 24 24"
+                                            animate={{
+                                                opacity: [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                transition: {
+                                                    duration: 4,
+                                                    repeat: Infinity,
+                                                    repeatDelay: 0.5,
+                                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                                }
+                                            }}
+                                        >
+                                            <path d="M5 12h14M12 5l7 7-7 7" />
+                                        </motion.svg>
+
+                                        {/* Left arrow (0.4-0.7) */}
+                                        <motion.svg
+                                            className="w-10 h-10 text-red-500 absolute"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            viewBox="0 0 24 24"
+                                            animate={{
+                                                opacity: [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+                                                transition: {
+                                                    duration: 4,
+                                                    repeat: Infinity,
+                                                    repeatDelay: 0.5,
+                                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                                }
+                                            }}
+                                        >
+                                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                                        </motion.svg>
+
+                                        {/* Up arrow (0.8-0.95) */}
+                                        <motion.svg
+                                            className="w-10 h-10 text-gray-600 absolute"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            viewBox="0 0 24 24"
+                                            animate={{
+                                                opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
+                                                transition: {
+                                                    duration: 4,
+                                                    repeat: Infinity,
+                                                    repeatDelay: 0.5,
+                                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                                }
+                                            }}
+                                        >
+                                            <path d="M12 19V5M5 12l7-7 7 7" />
+                                        </motion.svg>
+                                    </motion.div>
+                                </motion.div>
+                            )}
                         </div>
                     </motion.div>
                 </div>
@@ -363,7 +533,7 @@ export const QuizScreen = () => {
                 <button
                     onClick={() => handleSwipe('up')}
                     disabled={!!exitDirection}
-                    className="mt-6 px-6 py-3 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-700 rounded-full shadow-sm border border-gray-200 transition-all active:scale-95 font-medium"
+                    className="mt-6 px-5 py-2 bg-transparent hover:bg-gray-50 disabled:opacity-50 text-gray-400 text-sm rounded-full border border-gray-200 transition-all active:scale-95"
                 >
                     고를 수 없음
                 </button>

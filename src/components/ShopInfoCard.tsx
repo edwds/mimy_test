@@ -22,6 +22,7 @@ export interface ShopInfoCardProps {
     showActions?: boolean;
     onClick?: () => void;
     className?: string;
+    darkMode?: boolean;
 }
 
 export const ShopInfoCard = ({
@@ -31,7 +32,8 @@ export const ShopInfoCard = ({
     my_review_stats,
     showActions = true,
     onClick,
-    className
+    className,
+    darkMode = false
 }: ShopInfoCardProps) => {
     const navigate = useNavigate();
     const { openRanking } = useRanking();
@@ -82,7 +84,8 @@ export const ShopInfoCard = ({
     return (
         <div
             className={cn(
-                "p-3 bg-gray-50 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative cursor-pointer",
+                "p-3 rounded-xl flex items-center gap-3 active:bg-gray-100 transition-colors relative cursor-pointer",
+                darkMode ? "bg-gray-900/95 active:bg-gray-800" : "bg-gray-50",
                 className
             )}
             onClick={handleCardClick}
@@ -101,12 +104,18 @@ export const ShopInfoCard = ({
             {/* Info */}
             <div className="flex-1 min-w-0 flex flex-col gap-1">
                 {/* Shop Name */}
-                <h3 className="font-bold text-[15px] text-gray-900 leading-tight truncate">
+                <h3 className={cn(
+                    "font-bold text-[15px] leading-tight truncate",
+                    darkMode ? "text-white" : "text-gray-900"
+                )}>
                     {shop.name}
                 </h3>
 
                 {/* Bottom: Address & Distance */}
-                <div className="flex items-center text-[13px] text-gray-500 gap-1">
+                <div className={cn(
+                    "flex items-center text-[13px] gap-1",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                )}>
                     {shop.address && <span className="truncate">{shop.address}</span>}
                     {!shop.address && shop.address_region && (
                         <span className="truncate">{shop.address_region}</span>
@@ -129,7 +138,9 @@ export const ShopInfoCard = ({
                         onClick={handleEvaluate}
                         className={cn(
                             'transition-colors p-1',
-                            my_review_stats ? "text-primary" : "text-gray-400 hover:text-gray-600"
+                            my_review_stats
+                                ? (darkMode ? "text-orange-500" : "text-primary")
+                                : (darkMode ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600")
                         )}
                         aria-label="Evaluate"
                     >
@@ -146,7 +157,9 @@ export const ShopInfoCard = ({
                         onClick={handleBookmark}
                         className={cn(
                             'transition-colors p-1',
-                            isBookmarked ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'
+                            isBookmarked
+                                ? 'text-orange-600'
+                                : (darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600')
                         )}
                         aria-label="Bookmark shop"
                     >
