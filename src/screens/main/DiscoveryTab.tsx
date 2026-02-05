@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Locate, Bookmark, Check } from 'lucide-react'; // Icons
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -29,7 +29,13 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const [searchParams] = useSearchParams();
     const { registerCallback, unregisterCallback } = useRanking();
     const { user } = useUser();
+
+    // Search Results (for bottom sheet)
     const [shops, setShops] = useState<any[]>([]);
+
+    // Overlay data (for saved/check buttons on map)
+    const [overlayShops, setOverlayShops] = useState<any[]>([]);
+
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
     const prevShopsRef = useRef<any[]>([]); // Store previous shops state
@@ -44,9 +50,11 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const [isLoading, setIsLoading] = useState(false);
     void isLoading; // Used in fetchShops for loading state management
 
-    // Filter State
+    // Overlay Filter State (for map display only)
     const [showSavedOnly, setShowSavedOnly] = useState(false);
     const [showRankedOnly, setShowRankedOnly] = useState(false);
+
+    // Search Filter State (for bottom sheet results)
     const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
     // Search Overlay State
@@ -62,6 +70,22 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     // Track if user has performed a search (to change bottom sheet title)
     const [hasSearched, setHasSearched] = useState(false);
 
+    const mapCenterRef = useRef<[number, number] | undefined>(undefined);
+    const showRankedOnlyRef = useRef(false);
+    const showSavedOnlyRef = useRef(false);
+    const userRef = useRef<any>(null);
+    const selectedFiltersRef = useRef<string[]>([]);
+
+    // Sync state to refs
+    useEffect(() => {
+        mapCenterRef.current = mapCenter;
+        showRankedOnlyRef.current = showRankedOnly;
+        showSavedOnlyRef.current = showSavedOnly;
+        userRef.current = user;
+        selectedFiltersRef.current = selectedFilters;
+    }, [mapCenter, showRankedOnly, showSavedOnly, user, selectedFilters]);
+
+    // Fetch search results for bottom sheet (excludes ranked shops initially)
     const fetchShops = useCallback(async (options: { excludeRanked?: boolean; useBounds?: boolean } = {}) => {
         const { excludeRanked = true, useBounds = false } = options;
 
@@ -69,52 +93,38 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         try {
             let url = `${API_BASE_URL}/api/shops/discovery?page=1&limit=50`;
 
-            if (showRankedOnly) {
-                if (!user) {
-                    setIsLoading(false);
-                    return;
-                }
-                url = `${API_BASE_URL}/api/ranking/all`;
-            } else if (showSavedOnly) {
-                if (!user) {
-                    setIsLoading(false);
-                    return;
-                }
-                url = `${API_BASE_URL}/api/users/${user.id}/saved_shops`;
+            // Only use bounds when explicitly requested (filter button clicked)
+            if (useBounds && mapInstanceRef.current) {
+                // Get current map bounds at the moment of search
+                const fullBounds = mapInstanceRef.current.getBounds();
+                const ne = fullBounds.getNorthEast();
+                const sw = fullBounds.getSouthWest();
+
+                console.log('[DiscoveryTab] Using current viewport bounds for filter search:', {
+                    minLat: sw.lat, maxLat: ne.lat, minLon: sw.lng, maxLon: ne.lng
+                });
+
+                url += `&minLat=${sw.lat}&maxLat=${ne.lat}&minLon=${sw.lng}&maxLon=${ne.lng}&excludeRanked=${excludeRanked}`;
+            } else if (mapCenterRef.current) {
+                // Use center point with fixed radius for initial/normal load
+                console.log('[DiscoveryTab] Using center for load:', mapCenterRef.current);
+                url += `&lat=${mapCenterRef.current[0]}&lon=${mapCenterRef.current[1]}&excludeRanked=${excludeRanked}`;
             } else {
-                // Only use bounds when explicitly requested (filter button clicked)
-                if (useBounds && mapInstanceRef.current) {
-                    // Get current map bounds at the moment of search
-                    const fullBounds = mapInstanceRef.current.getBounds();
-                    const ne = fullBounds.getNorthEast();
-                    const sw = fullBounds.getSouthWest();
-
-                    console.log('[DiscoveryTab] Using current viewport bounds for filter search:', {
-                        minLat: sw.lat, maxLat: ne.lat, minLon: sw.lng, maxLon: ne.lng
-                    });
-
-                    url += `&minLat=${sw.lat}&maxLat=${ne.lat}&minLon=${sw.lng}&maxLon=${ne.lng}&excludeRanked=${excludeRanked}`;
-                } else if (mapCenter) {
-                    // Use center point with fixed radius for initial/normal load
-                    console.log('[DiscoveryTab] Using center for load:', mapCenter);
-                    url += `&lat=${mapCenter[0]}&lon=${mapCenter[1]}&excludeRanked=${excludeRanked}`;
-                } else {
-                    // No location yet
-                    setIsLoading(false);
-                    return;
-                }
+                // No location yet
+                setIsLoading(false);
+                return;
             }
 
             // Add filter parameters
-            if (selectedFilters.length > 0) {
-                const foodKindFilters = selectedFilters.filter(f => f !== 'HIGH_MATCH');
-                const hasHighMatch = selectedFilters.includes('HIGH_MATCH');
+            if (selectedFiltersRef.current.length > 0) {
+                const foodKindFilters = selectedFiltersRef.current.filter(f => f !== 'HIGH_MATCH');
+                const hasHighMatch = selectedFiltersRef.current.includes('HIGH_MATCH');
 
                 if (foodKindFilters.length > 0) {
                     url += `&foodKinds=${foodKindFilters.join(',')}`;
                 }
                 if (hasHighMatch) {
-                    url += `&highMatchOnly=true`; // Get top 50 shops by match score in current map area
+                    url += `&highMatchOnly=true`;
                 }
             }
 
@@ -122,35 +132,12 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
             if (res.ok) {
                 const data = await res.json();
-                let shopsToSet = data;
-
-                // If ranked only, transform the ranking data to shop format
-                if (showRankedOnly) {
-                    shopsToSet = data.map((ranking: any) => ({
-                        ...ranking.shop,
-                        my_review_stats: {
-                            rank: ranking.rank,
-                            satisfaction_tier: ranking.satisfaction_tier
-                        }
-                    }));
-                }
-
-                setShops(shopsToSet);
-
-                // Reset selected shop to show bottom sheet with new results
+                setShops(data);
                 setSelectedShopId(null);
 
                 // Mark as searched when using bounds
                 if (useBounds) {
                     setHasSearched(true);
-                }
-
-                // If switching to saved/ranked and we have data, maybe center on the first one?
-                if ((showSavedOnly || showRankedOnly) && shopsToSet.length > 0) {
-                    const firstShop = shopsToSet[0];
-                    if (firstShop && firstShop.lat && firstShop.lon) {
-                        setMapCenter([firstShop.lat, firstShop.lon]);
-                    }
                 }
             }
         } catch (e) {
@@ -158,34 +145,117 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         } finally {
             setIsLoading(false);
         }
-    }, [showRankedOnly, showSavedOnly, user, mapCenter, selectedFilters]);
+    }, []); // Empty dependency array - all state accessed via refs
 
-    const prevFiltersRef = useRef<string[]>([]);
-
-    useEffect(() => {
-        // Reset when switching to saved/ranked mode
-        if (showSavedOnly || showRankedOnly) {
-            setSelectedFilters([]);
-            fetchShops();
+    // Fetch overlay shops for map display (saved/ranked buttons)
+    const fetchOverlayShops = useCallback(async () => {
+        if (!userRef.current) return;
+        if (!showRankedOnlyRef.current && !showSavedOnlyRef.current) {
+            // No overlay filters active, clear overlay
+            setOverlayShops([]);
             return;
         }
 
+        try {
+            // Both filters on: Show saved shops that also have rankings (AND condition)
+            if (showRankedOnlyRef.current && showSavedOnlyRef.current) {
+                const rankedRes = await authFetch(`${API_BASE_URL}/api/ranking/all`);
+                const savedRes = await authFetch(`${API_BASE_URL}/api/users/${userRef.current.id}/saved_shops`);
+
+                if (rankedRes.ok && savedRes.ok) {
+                    const rankedData = await rankedRes.json();
+                    const savedData = await savedRes.json();
+
+                    // Create a set of saved shop IDs for quick lookup
+                    const savedShopIds = new Set(savedData.map((s: any) => s.id));
+
+                    // Filter ranked shops to only include saved ones
+                    const overlayData = rankedData
+                        .filter((ranking: any) => savedShopIds.has(ranking.shop.id))
+                        .map((ranking: any) => ({
+                            ...ranking.shop,
+                            is_saved: true,
+                            my_review_stats: {
+                                rank: ranking.rank,
+                                satisfaction_tier: ranking.satisfaction_tier
+                            }
+                        }));
+
+                    setOverlayShops(overlayData);
+                }
+                return;
+            }
+
+            // Only ranked filter
+            if (showRankedOnlyRef.current) {
+                const res = await authFetch(`${API_BASE_URL}/api/ranking/all`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const overlayData = data.map((ranking: any) => ({
+                        ...ranking.shop,
+                        my_review_stats: {
+                            rank: ranking.rank,
+                            satisfaction_tier: ranking.satisfaction_tier
+                        }
+                    }));
+                    setOverlayShops(overlayData);
+                }
+                return;
+            }
+
+            // Only saved filter
+            if (showSavedOnlyRef.current) {
+                const res = await authFetch(`${API_BASE_URL}/api/users/${userRef.current.id}/saved_shops`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setOverlayShops(data);
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('[DiscoveryTab] Error fetching overlay shops:', e);
+        }
+    }, []); // Empty dependency array - all state accessed via refs
+
+    const prevFiltersRef = useRef<string[]>([]);
+    const prevShowSavedOnlyRef = useRef<boolean | null>(null); // null = not initialized
+    const prevShowRankedOnlyRef = useRef<boolean | null>(null);
+
+    // Effect for saved/ranked overlay changes (independent from search results)
+    useEffect(() => {
+        const savedChanged = prevShowSavedOnlyRef.current !== showSavedOnly;
+        const rankedChanged = prevShowRankedOnlyRef.current !== showRankedOnly;
+        const isInitialMount = prevShowSavedOnlyRef.current === null;
+
+        // On mount or when filters change
+        if (isInitialMount || savedChanged || rankedChanged) {
+            console.log('[DiscoveryTab] Overlay mode update:', { showSavedOnly, showRankedOnly, isInitialMount });
+            prevShowSavedOnlyRef.current = showSavedOnly;
+            prevShowRankedOnlyRef.current = showRankedOnly;
+
+            // Fetch overlay data (doesn't affect bottom sheet)
+            fetchOverlayShops();
+        }
+    }, [showSavedOnly, showRankedOnly, fetchOverlayShops]);
+
+    // Effect for search filter changes (affects bottom sheet results)
+    useEffect(() => {
         // Only fetch when filters are added (not when removed/cleared)
         const wasEmpty = prevFiltersRef.current.length === 0;
         const isNowFilled = selectedFilters.length > 0;
 
         if (isNowFilled) {
             // Filter was just added, fetch with current map bounds
-            console.log('[DiscoveryTab] Filter added, fetching shops with current bounds');
-            fetchShops({ useBounds: true });
+            console.log('[DiscoveryTab] Search filter added, fetching shops with current bounds');
+            fetchShops({ useBounds: true, excludeRanked: !selectedFilters.includes('HIGH_MATCH') });
         } else if (!wasEmpty && selectedFilters.length === 0) {
             // Filter was just cleared (by panning), don't fetch
-            console.log('[DiscoveryTab] Filter cleared by panning, NOT fetching');
+            console.log('[DiscoveryTab] Search filter cleared by panning, NOT fetching');
         }
 
         // Update previous filters
         prevFiltersRef.current = selectedFilters;
-    }, [showSavedOnly, showRankedOnly, selectedFilters, fetchShops]); // Refetch when mode or filters change
+    }, [selectedFilters, fetchShops]);
 
     // Initial Fetch with Location - fetch once when map is ready and center is set
     useEffect(() => {
@@ -216,7 +286,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 fetchShops({ excludeRanked: true });
             }, 500); // Wait for map to fully settle
         }
-    }, [mapInstanceRef.current, mapCenter, initialLoadDone, showSavedOnly, showRankedOnly, fetchShops]);
+    }, [mapInstanceRef.current, mapCenter, initialLoadDone, showSavedOnly, showRankedOnly]); // fetchShops removed
 
 
     // Refresh Listener
@@ -225,7 +295,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             setViewingCluster(false); // Reset cluster view on refresh
             fetchShops();
         }
-    }, [refreshTrigger]);
+    }, [refreshTrigger]); // fetchShops removed - stable function
 
     // Ranking Update Callback
     useEffect(() => {
@@ -298,6 +368,35 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         }
     };
 
+    // Combine shops and overlay shops for map display
+    // Remove duplicates by ID, prioritizing overlay shop data
+    const combinedShopsForMap = useMemo(() => {
+        const shopMap = new Map<number, any>();
+
+        // Add search result shops first
+        shops.forEach(shop => {
+            shopMap.set(shop.id, shop);
+        });
+
+        // Add/override with overlay shops (saved/ranked)
+        overlayShops.forEach(shop => {
+            if (shopMap.has(shop.id)) {
+                // Merge: keep base shop but add overlay properties
+                const existing = shopMap.get(shop.id);
+                shopMap.set(shop.id, {
+                    ...existing,
+                    is_saved: shop.is_saved || existing.is_saved,
+                    my_review_stats: shop.my_review_stats || existing.my_review_stats
+                });
+            } else {
+                // Add overlay shop to map
+                shopMap.set(shop.id, shop);
+            }
+        });
+
+        return Array.from(shopMap.values());
+    }, [shops, overlayShops]);
+
     const handleCurrentLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -326,18 +425,16 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
     const handleMoveEnd = useCallback(() => {
         console.log('[DiscoveryTab] handleMoveEnd called (user panned map)');
 
-        // Only clear filters when in normal mode (not in saved/ranked filter mode)
-        // and when filters are active
-        if (!showSavedOnly && !showRankedOnly) {
-            setSelectedFilters(currentFilters => {
-                if (currentFilters.length > 0) {
-                    console.log('[DiscoveryTab] Clearing filters due to map pan');
-                    return [];
-                }
-                return currentFilters;
-            });
-        }
-    }, [showSavedOnly, showRankedOnly]);
+        // Clear search filters when user pans the map (only if filters are active)
+        setSelectedFilters(currentFilters => {
+            if (currentFilters.length > 0) {
+                console.log('[DiscoveryTab] Clearing search filters due to map pan');
+                return [];
+            }
+            return currentFilters;
+        });
+        // Note: saved/check overlay filters are NOT cleared by panning
+    }, []);
 
     const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
 
@@ -365,7 +462,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 // That's a separate issue (deeplink). For now just set ID if available.
                 setSelectedShopId(id);
                 // Also center map if shop is found
-                const s = shops.find(x => x.id === id);
+                const s = combinedShopsForMap.find(x => x.id === id);
                 if (s && s.lat && s.lon) {
                     setMapCenter([s.lat, s.lon]);
                 }
@@ -375,7 +472,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 setSelectedShopId(null);
             }
         }
-    }, [searchParams, shops]);
+    }, [searchParams, combinedShopsForMap, selectedShopId]);
 
     const handleSelectShop = (shopId: number | null) => {
         if (!shopId) {
@@ -394,9 +491,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
         // Pre-calculate navigation order (sorted by distance to selected)
         // Store in Ref to define the "swipe playlist" without triggering a re-render/flicker
-        const selected = shops.find(s => s.id === shopId);
+        const selected = combinedShopsForMap.find(s => s.id === shopId);
         if (selected && selected.lat && selected.lon) {
-            const sortedIds = [...shops]
+            const sortedIds = [...combinedShopsForMap]
                 .sort((a, b) => {
                     if (a.id === selected.id) return -1;
                     if (b.id === selected.id) return 1;
@@ -411,7 +508,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             navigationOrderRef.current = sortedIds;
         } else {
             // Fallback: just current order
-            navigationOrderRef.current = shops.map(s => s.id);
+            navigationOrderRef.current = combinedShopsForMap.map(s => s.id);
         }
 
         setSelectedShopId(shopId);
@@ -459,10 +556,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
     // Override handleSwipeNavigation
     const handleSwipeNavigation = (direction: 'next' | 'prev') => {
-        if (!selectedShopId || shops.length === 0) return;
+        if (!selectedShopId || combinedShopsForMap.length === 0) return;
 
         // Use the stable navigation order
-        const navList = navigationOrderRef.current.length > 0 ? navigationOrderRef.current : shops.map(s => s.id);
+        const navList = navigationOrderRef.current.length > 0 ? navigationOrderRef.current : combinedShopsForMap.map(s => s.id);
         const currentIndex = navList.indexOf(selectedShopId);
 
         if (currentIndex === -1) return;
@@ -476,7 +573,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
         setSlideDirection(direction);
 
         const nextShopId = navList[nextIndex];
-        const nextShop = shops.find(s => s.id === nextShopId);
+        const nextShop = combinedShopsForMap.find(s => s.id === nextShopId);
 
         if (nextShop) {
             setSelectedShopId(nextShop.id); // Triggers re-render with new key
@@ -487,7 +584,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             const skipIndex = direction === 'next' ? nextIndex + 1 : nextIndex - 1;
             if (skipIndex >= 0 && skipIndex < navList.length) {
                 const skipShopId = navList[skipIndex];
-                const skipShop = shops.find(s => s.id === skipShopId);
+                const skipShop = combinedShopsForMap.find(s => s.id === skipShopId);
                 if (skipShop) {
                     setSelectedShopId(skipShop.id);
                 }
@@ -514,7 +611,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
             {/* Map Background */}
             <div className="absolute inset-0 z-0">
                 <MapContainer
-                    shops={shops}
+                    shops={combinedShopsForMap}
                     onMarkerClick={handleSelectShop}
                     onMapClick={handleCloseShop}
                     center={mapCenter}
@@ -532,10 +629,10 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
 
             {/* Bottom Sheet or Floating Card */}
             <AnimatePresence mode="popLayout" custom={slideDirection}>
-                {selectedShopId && shops.find(s => s.id === selectedShopId) ? (
+                {selectedShopId && combinedShopsForMap.find(s => s.id === selectedShopId) ? (
                     <SelectedShopCard
                         key={selectedShopId} // Key change triggers animation
-                        shop={shops.find(s => s.id === selectedShopId)}
+                        shop={combinedShopsForMap.find(s => s.id === selectedShopId)}
                         onClose={handleCloseShop}
                         onSave={handleSave}
                         onReserve={() => alert(t('discovery.bottom_sheet.reserve_alert'))}
@@ -551,7 +648,7 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                     shops={shops}
                     selectedShopId={null}
                     onSave={handleSave}
-                    isInitialLoad={!hasSearched && !showSavedOnly && !showRankedOnly}
+                    isInitialLoad={!hasSearched}
                 />
             )}
 
@@ -582,14 +679,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <button
                     onClick={() => {
                         if (!user) return alert(t('discovery.alerts.login_required'));
-                        const isTogglingOff = showSavedOnly;
                         setShowSavedOnly(!showSavedOnly);
-                        setShowRankedOnly(false); // Turn off ranked filter
                         setSelectedShopId(null);
-                        // Only reset center when turning OFF the filter
-                        if (isTogglingOff) {
-                            setMapCenter(undefined);
-                        }
+                        // Don't reset mapCenter - keep current map view
                     }}
                     className={cn(
                         "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
@@ -602,14 +694,9 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 <button
                     onClick={() => {
                         if (!user) return alert(t('discovery.alerts.login_required'));
-                        const isTogglingOff = showRankedOnly;
                         setShowRankedOnly(!showRankedOnly);
-                        setShowSavedOnly(false); // Turn off saved filter
                         setSelectedShopId(null);
-                        // Only reset center when turning OFF the filter
-                        if (isTogglingOff) {
-                            setMapCenter(undefined);
-                        }
+                        // Don't reset mapCenter - keep current map view
                     }}
                     className={cn(
                         "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",

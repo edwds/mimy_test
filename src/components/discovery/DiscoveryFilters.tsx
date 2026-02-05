@@ -34,16 +34,10 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
 
     return (
         <div className="w-full flex items-center gap-2 relative">
-            {/* Filter Chips - Scrollable from left, fades near search button */}
-            <div
-                className="flex-1 relative overflow-hidden"
-                style={{
-                    maskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent 100%)'
-                }}
-            >
-                {/* Scrollable chips container */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pr-16">
+            {/* Filter Chips - Scrollable, goes under search button */}
+            <div className="flex-1 relative overflow-hidden">
+                {/* Scrollable chips container - extends behind search button */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pr-2">
                     {/* High Match Filter */}
                     <button
                         onClick={() => toggleFilter('HIGH_MATCH')}
@@ -75,7 +69,7 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
                 </div>
             </div>
 
-            {/* Search Button - Fixed on the right, vertically centered with chips */}
+            {/* Search Button - Fixed on the right, appears above chips with shadow */}
             <div className="flex-shrink-0 absolute right-0 top-0 z-20 flex items-center h-10">
                 <button
                     onClick={onSearchClick}
