@@ -3,7 +3,7 @@
  */
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, groups, email_verifications } from "../db/schema.js";
+import { users, groups, email_verifications, neighborhood_translations } from "../db/schema.js";
 import { eq, and, like, ne, sql, isNull, or } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { EmailService } from "../services/EmailService.js";
@@ -349,33 +349,39 @@ router.delete("/group", requireAuth, async (req, res) => {
 /**
  * POST /api/affiliation/neighborhood
  * Register neighborhood based on GPS coordinates
+ *
+ * Request body:
+ * - neighborhood: "KR:경기도 성남시" (local name with country code)
+ * - englishName: "Seongnam-si, Gyeonggi-do" (optional, from MapTiler language=en)
+ * OR
+ * - lat, lon: coordinates for server-side geocoding
  */
 router.post("/neighborhood", requireAuth, async (req, res) => {
     try {
         const userId = req.user!.id;
-        const { lat, lon, neighborhood: clientNeighborhood } = req.body;
+        const { lat, lon, neighborhood: clientNeighborhood, englishName: clientEnglishName } = req.body;
 
-        // Allow client to send pre-geocoded neighborhood (from frontend MapTiler call)
-        let neighborhoodResult: { neighborhood: string; displayName: string } | null = null;
+        // Parse neighborhood info
+        let countryCode = '';
+        let localName = '';
+        let englishName = clientEnglishName || null;
 
         if (clientNeighborhood && typeof clientNeighborhood === 'string') {
-            // Client already did the geocoding
-            neighborhoodResult = {
-                neighborhood: clientNeighborhood,
-                displayName: GeocodingService.parseNeighborhood(clientNeighborhood).displayName,
-            };
+            // Client already did the geocoding - parse "KR:경기도 성남시"
+            const parsed = GeocodingService.parseNeighborhood(clientNeighborhood);
+            countryCode = parsed.countryCode || '';
+            localName = parsed.displayName || '';
         } else if (typeof lat === 'number' && typeof lon === 'number') {
             // Server-side geocoding
             const geoResult = await GeocodingService.reverseGeocode(lat, lon);
             if (geoResult) {
-                neighborhoodResult = {
-                    neighborhood: geoResult.neighborhood,
-                    displayName: geoResult.displayName,
-                };
+                const parsed = GeocodingService.parseNeighborhood(geoResult.neighborhood);
+                countryCode = parsed.countryCode || '';
+                localName = parsed.displayName || '';
             }
         }
 
-        if (!neighborhoodResult) {
+        if (!localName) {
             return res.status(400).json({
                 error: "GEOCODING_FAILED",
                 message: "위치를 확인할 수 없습니다. 다시 시도해주세요."
@@ -389,7 +395,7 @@ router.post("/neighborhood", requireAuth, async (req, res) => {
         }
 
         // Check cooldown
-        if (user.neighborhood && isWithinCooldown(user.neighborhood_joined_at)) {
+        if (user.neighborhood_id && isWithinCooldown(user.neighborhood_joined_at)) {
             const daysLeft = Math.ceil(
                 (new Date(user.neighborhood_joined_at!).getTime() + COOLDOWN_DAYS * 24 * 60 * 60 * 1000 - Date.now()) /
                 (24 * 60 * 60 * 1000)
@@ -400,10 +406,42 @@ router.post("/neighborhood", requireAuth, async (req, res) => {
             });
         }
 
-        // Update user neighborhood
+        // Find or create neighborhood translation entry
+        let [existingTranslation] = await db.select()
+            .from(neighborhood_translations)
+            .where(and(
+                eq(neighborhood_translations.country_code, countryCode),
+                eq(neighborhood_translations.local_name, localName)
+            ))
+            .limit(1);
+
+        let neighborhoodId: number;
+
+        if (existingTranslation) {
+            // Use existing translation
+            neighborhoodId = existingTranslation.id;
+            // Update english_name if provided and was missing
+            if (englishName && !existingTranslation.english_name) {
+                await db.update(neighborhood_translations)
+                    .set({ english_name: englishName })
+                    .where(eq(neighborhood_translations.id, existingTranslation.id));
+            }
+        } else {
+            // Create new translation entry
+            const [newTranslation] = await db.insert(neighborhood_translations)
+                .values({
+                    country_code: countryCode,
+                    local_name: localName,
+                    english_name: englishName,
+                })
+                .returning({ id: neighborhood_translations.id });
+            neighborhoodId = newTranslation.id;
+        }
+
+        // Update user neighborhood_id
         await db.update(users)
             .set({
-                neighborhood: neighborhoodResult.neighborhood,
+                neighborhood_id: neighborhoodId,
                 neighborhood_joined_at: new Date(),
                 updated_at: new Date(),
             })
@@ -412,13 +450,16 @@ router.post("/neighborhood", requireAuth, async (req, res) => {
         // Invalidate leaderboard cache
         await invalidatePattern('leaderboard:*');
 
-        // Add user to neighborhood leaderboard
-        await LeaderboardService.addUserToLeaderboard(userId, 'NEIGHBORHOOD', neighborhoodResult.neighborhood);
+        // Add user to neighborhood leaderboard (use full key for grouping)
+        const neighborhoodKey = `${countryCode}:${localName}`;
+        await LeaderboardService.addUserToLeaderboard(userId, 'NEIGHBORHOOD', neighborhoodKey);
 
         res.json({
             success: true,
-            neighborhood: neighborhoodResult.neighborhood,
-            displayName: neighborhoodResult.displayName,
+            neighborhoodId,
+            localName,
+            englishName: englishName || existingTranslation?.english_name || null,
+            countryCode,
         });
 
     } catch (error) {
@@ -440,13 +481,13 @@ router.delete("/neighborhood", requireAuth, async (req, res) => {
             return res.status(404).json({ error: "USER_NOT_FOUND" });
         }
 
-        if (!user.neighborhood) {
+        if (!user.neighborhood_id) {
             return res.status(400).json({ error: "NO_NEIGHBORHOOD", message: "등록된 동네가 없습니다." });
         }
 
         await db.update(users)
             .set({
-                neighborhood: null,
+                neighborhood_id: null,
                 neighborhood_joined_at: null,
                 updated_at: new Date(),
             })
@@ -475,7 +516,7 @@ router.get("/status", requireAuth, async (req, res) => {
             group_id: users.group_id,
             group_email: users.group_email,
             group_joined_at: users.group_joined_at,
-            neighborhood: users.neighborhood,
+            neighborhood_id: users.neighborhood_id,
             neighborhood_joined_at: users.neighborhood_joined_at,
         }).from(users).where(eq(users.id, userId)).limit(1);
 
@@ -495,10 +536,27 @@ router.get("/status", requireAuth, async (req, res) => {
             groupInfo = group || null;
         }
 
-        // Parse neighborhood
-        const neighborhoodParsed = user.neighborhood
-            ? GeocodingService.parseNeighborhood(user.neighborhood)
-            : null;
+        // Get neighborhood translation if user has one
+        let neighborhoodInfo = null;
+        if (user.neighborhood_id) {
+            const [translation] = await db.select()
+                .from(neighborhood_translations)
+                .where(eq(neighborhood_translations.id, user.neighborhood_id))
+                .limit(1);
+
+            if (translation) {
+                neighborhoodInfo = {
+                    id: translation.id,
+                    localName: translation.local_name,
+                    englishName: translation.english_name,
+                    countryCode: translation.country_code,
+                    // For backward compatibility with leaderboard key format
+                    value: `${translation.country_code}:${translation.local_name}`,
+                    joined_at: user.neighborhood_joined_at,
+                    can_change: !isWithinCooldown(user.neighborhood_joined_at),
+                };
+            }
+        }
 
         res.json({
             group: groupInfo ? {
@@ -507,13 +565,7 @@ router.get("/status", requireAuth, async (req, res) => {
                 joined_at: user.group_joined_at,
                 can_change: !isWithinCooldown(user.group_joined_at),
             } : null,
-            neighborhood: user.neighborhood ? {
-                value: user.neighborhood,
-                displayName: neighborhoodParsed?.displayName,
-                countryCode: neighborhoodParsed?.countryCode,
-                joined_at: user.neighborhood_joined_at,
-                can_change: !isWithinCooldown(user.neighborhood_joined_at),
-            } : null,
+            neighborhood: neighborhoodInfo,
         });
 
     } catch (error) {

@@ -175,13 +175,13 @@ export const MainTab = () => {
             >
                 <div className="flex justify-around items-center h-16">
                     <NavIcon
-                        icon={<Home className="w-6 h-6" />}
+                        Icon={Home}
                         label={t('nav.home')}
                         active={activeTab === 'home'}
                         onClick={() => handleTabClick('home')}
                     />
                     <NavIcon
-                        icon={<Compass className="w-6 h-6" />}
+                        Icon={Compass}
                         label={t('nav.discover')}
                         active={activeTab === 'discover'}
                         onClick={() => handleTabClick('discover')}
@@ -189,19 +189,19 @@ export const MainTab = () => {
 
                     {/* Write Button (Center) */}
                     <NavIcon
-                        icon={<PlusCircle className="w-6 h-6" />}
+                        Icon={PlusCircle}
                         label={t('common.write')}
                         onClick={() => navigate('/write')}
                     />
 
                     <NavIcon
-                        icon={<Trophy className="w-6 h-6" />}
+                        Icon={Trophy}
                         label={t('nav.ranking')}
                         active={activeTab === 'ranking'}
                         onClick={() => handleTabClick('ranking')}
                     />
                     <NavIcon
-                        icon={<User className="w-6 h-6" />}
+                        Icon={User}
                         label={t('nav.profile')}
                         active={activeTab === 'profile'}
                         onClick={() => handleTabClick('profile')}
@@ -212,16 +212,16 @@ export const MainTab = () => {
     );
 };
 
-const NavIcon = ({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) => (
+const NavIcon = ({ Icon, label, active = false, onClick }: { Icon: React.ComponentType<{ className?: string, strokeWidth?: number }>, label: string, active?: boolean, onClick: () => void }) => (
     <button
         onClick={onClick}
         className={cn(
             "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
             active
-                ? "text-primary scale-105"
+                ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"
         )}>
-        {icon}
-        <span className={cn("text-xs font-base transition-all", active ? "font-bold" : "")}>{label}</span>
+        <Icon className="w-6 h-6" strokeWidth={active ? 2.5 : 1.5} />
+        <span className={cn("text-xs", active ? "font-bold" : "font-base")}>{label}</span>
     </button>
 );

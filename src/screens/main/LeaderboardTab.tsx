@@ -22,18 +22,17 @@ interface LeaderboardItem {
         cluster_name?: string;
         taste_result?: { scores: Record<string, number> };
         group_id?: number;
-        neighborhood?: string;
+        neighborhood_id?: number;
+        neighborhood?: {
+            localName: string;
+            englishName: string | null;
+            countryCode: string;
+        } | null;
     };
     score: number;
     key?: string;
 }
 
-// Parse neighborhood string to get display name
-const parseNeighborhood = (neighborhood: string): string => {
-    if (!neighborhood) return '';
-    const parts = neighborhood.split(':');
-    return parts.length === 2 ? parts[1] : neighborhood;
-};
 
 export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const { t } = useTranslation();
@@ -66,7 +65,8 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const hasNeighborhood = !!userNeighborhood;
 
     // Determine selectedKey based on user's registration
-    const selectedKey = filter === 'overall' ? null : (filter === 'company' ? userGroupName : userNeighborhood);
+    // For neighborhood, use the full key format "KR:경기도 성남시" for API query
+    const selectedKey = filter === 'overall' ? null : (filter === 'company' ? userGroupName : userNeighborhood?.value);
 
     // Fetch leaderboard when filter or user changes
     useEffect(() => {
@@ -160,7 +160,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                 onClick={() => setFilter('company')}
                             />
                             <FilterChip
-                                label={userNeighborhood ? parseNeighborhood(userNeighborhood) : t('leaderboard.my_neighborhood')}
+                                label={userNeighborhood?.localName || t('leaderboard.my_neighborhood')}
                                 isActive={filter === 'neighborhood'}
                                 onClick={() => setFilter('neighborhood')}
                             />

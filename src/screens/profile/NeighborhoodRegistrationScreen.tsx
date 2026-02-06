@@ -10,9 +10,11 @@ import { useTranslation } from 'react-i18next';
 
 interface AffiliationStatus {
     neighborhood: {
-        value: string;
-        displayName: string;
+        id: number;
+        localName: string;
+        englishName: string | null;
         countryCode: string;
+        value: string;
         joined_at: string;
         can_change: boolean;
     } | null;
@@ -21,6 +23,7 @@ interface AffiliationStatus {
 interface GeocodingResult {
     neighborhood: string;
     displayName: string;
+    englishName: string | null;
 }
 
 export const NeighborhoodRegistrationScreen = () => {
@@ -71,21 +74,42 @@ export const NeighborhoodRegistrationScreen = () => {
 
             // Call MapTiler Geocoding API from frontend (using existing key)
             const apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
-            const geocodeUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${apiKey}`;
 
+            // 1. Get local language result (default)
+            const geocodeUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${apiKey}`;
             const geoRes = await fetch(geocodeUrl);
             if (!geoRes.ok) {
                 throw new Error('Geocoding failed');
             }
-
             const geoData = await geoRes.json();
-            const result = extractNeighborhood(geoData.features);
+            const localResult = extractNeighborhood(geoData.features);
 
-            if (result) {
-                setDetected(result);
-            } else {
+            if (!localResult) {
                 setError(t('profile.neighborhood.error.geocoding_failed', '주소를 변환할 수 없습니다.'));
+                return;
             }
+
+            // 2. Get English result for translation
+            let englishName: string | null = null;
+            try {
+                const geocodeUrlEn = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${apiKey}&language=en`;
+                const geoResEn = await fetch(geocodeUrlEn);
+                if (geoResEn.ok) {
+                    const geoDataEn = await geoResEn.json();
+                    const enResult = extractNeighborhood(geoDataEn.features);
+                    if (enResult) {
+                        englishName = enResult.displayName;
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to get English translation:', err);
+                // Continue without English name
+            }
+
+            setDetected({
+                ...localResult,
+                englishName,
+            });
         } catch (err: any) {
             if (err.code === 1) {
                 setError(t('profile.neighborhood.error.location_denied', '위치 정보 접근이 거부되었습니다.'));
@@ -285,7 +309,10 @@ export const NeighborhoodRegistrationScreen = () => {
             const res = await authFetch(`${API_BASE_URL}/api/affiliation/neighborhood`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ neighborhood: detected.neighborhood }),
+                body: JSON.stringify({
+                    neighborhood: detected.neighborhood,
+                    englishName: detected.englishName,
+                }),
             });
 
             const data = await res.json();
@@ -366,7 +393,10 @@ export const NeighborhoodRegistrationScreen = () => {
                                     <MapPin className="w-6 h-6 text-primary" />
                                     <div>
                                         <p className="text-sm text-muted-foreground">{t('profile.neighborhood.current', '현재 동네')}</p>
-                                        <p className="font-bold text-lg">{status.neighborhood.displayName}</p>
+                                        <p className="font-bold text-lg">{status.neighborhood.localName}</p>
+                                        {status.neighborhood.englishName && (
+                                            <p className="text-sm text-muted-foreground">{status.neighborhood.englishName}</p>
+                                        )}
                                     </div>
                                 </div>
                                 {status.neighborhood.can_change ? (

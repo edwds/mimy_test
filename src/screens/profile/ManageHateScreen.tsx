@@ -1,12 +1,9 @@
-
 import { useEffect, useState } from 'react';
-import { MainHeader } from '@/components/MainHeader';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Check, X, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, Check, X, Trash2, AlertCircle } from 'lucide-react';
 
 interface HateHistoryItem {
     id: number;
@@ -20,9 +17,8 @@ export const ManageHateScreen = () => {
     const { user } = useUser();
     const navigate = useNavigate();
     const [history, setHistory] = useState<HateHistoryItem[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [updatingId, setUpdatingId] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     useEffect(() => {
         if (user?.id) {
@@ -30,204 +26,155 @@ export const ManageHateScreen = () => {
         }
     }, [user?.id]);
 
-    const loadHistory = () => {
+    const loadHistory = async () => {
         if (!user?.id) return;
 
-        setLoading(true);
-        fetch(`${API_BASE_URL}/api/hate/history`, {
-            headers: {
-                'x-user-id': String(user.id)
-            }
-        })
-            .then(res => res.json())
-            .then(data => setHistory(Array.isArray(data) ? data : []))
-            .catch(console.error)
-            .finally(() => setLoading(false));
-    };
-
-    const handleUpdate = async (id: number, newSelection: 'EAT' | 'NOT_EAT') => {
-        if (!user?.id || updatingId) return;
-
-        setUpdatingId(id);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/hate/${id}/vote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-id': String(user.id)
-                },
-                body: JSON.stringify({ selection: newSelection })
+            const res = await fetch(`${API_BASE_URL}/api/hate/history`, {
+                credentials: 'include'
             });
-
-            if (response.ok) {
-                setHistory(prev => prev.map(item =>
-                    item.id === id ? { ...item, selection: newSelection } : item
-                ));
-                setEditingId(null);
-            }
+            const data = await res.json();
+            setHistory(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error('Failed to update selection:', error);
+            console.error('Failed to load history:', error);
         } finally {
-            setUpdatingId(null);
+            setLoading(false);
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!user?.id || updatingId) return;
+    const handleDelete = async (id: number, itemName: string) => {
+        if (!user?.id || deletingId) return;
 
-        if (!confirm(t('manage.hate.delete_confirm', 'Delete this selection?'))) {
+        if (!confirm(t('manage.hate.delete_confirm', `'{{item}}' 선택을 삭제할까요?`, { item: itemName }))) {
             return;
         }
 
-        setUpdatingId(id);
+        setDeletingId(id);
         try {
             const response = await fetch(`${API_BASE_URL}/api/hate/${id}/vote`, {
                 method: 'DELETE',
-                headers: {
-                    'x-user-id': String(user.id)
-                }
+                credentials: 'include'
             });
 
             if (response.ok) {
                 setHistory(prev => prev.filter(item => item.id !== id));
             }
         } catch (error) {
-            console.error('Failed to delete selection:', error);
+            console.error('Failed to delete:', error);
         } finally {
-            setUpdatingId(null);
+            setDeletingId(null);
         }
     };
 
+    const eatItems = history.filter(item => item.selection === 'EAT');
+    const notEatItems = history.filter(item => item.selection === 'NOT_EAT');
+
     return (
-        <div className="flex flex-col h-full bg-background relative">
-            <MainHeader
-                title={t('manage.hate.title')}
-                isVisible={true}
-                rightAction={
-                    <button onClick={() => navigate(-1)} className="text-sm font-medium pr-4">
-                        {t('common.close', 'Close')}
-                    </button>
-                }
-            />
-
-            <div className="flex-1 overflow-y-auto px-5 py-20 pb-24">
-                {loading ? (
-                    <div className="flex justify-center py-10">
-                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    </div>
-                ) : history.length === 0 ? (
-                    <div className="text-center py-20 text-muted-foreground">
-                        <p>{t('manage.hate.empty')}</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {history.map(item => {
-                            const isEditing = editingId === item.id;
-                            const isUpdating = updatingId === item.id;
-
-                            return (
-                                <div key={item.id} className="bg-muted/10 rounded-xl p-4 border border-border/50">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="text-lg font-bold">{item.item}</span>
-
-                                        {!isEditing && (
-                                            <div className={cn(
-                                                "px-3 py-1.5 rounded-full text-sm font-bold flex items-center gap-1.5",
-                                                item.selection === 'EAT'
-                                                    ? "bg-green-100 text-green-700"
-                                                    : "bg-red-100 text-red-700"
-                                            )}>
-                                                {item.selection === 'EAT' ? (
-                                                    <>
-                                                        <Check size={14} />
-                                                        {t('manage.hate.eat')}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <X size={14} />
-                                                        {t('manage.hate.not_eat')}
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {isEditing && (
-                                        <>
-                                            <div className="flex gap-2 mb-3">
-                                                <button
-                                                    onClick={() => !isUpdating && handleUpdate(item.id, 'EAT')}
-                                                    disabled={isUpdating}
-                                                    className={cn(
-                                                        "flex-1 px-4 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
-                                                        "bg-green-100 text-green-700 hover:bg-green-200"
-                                                    )}
-                                                >
-                                                    <Check size={16} />
-                                                    {t('manage.hate.eat')}
-                                                </button>
-                                                <button
-                                                    onClick={() => !isUpdating && handleUpdate(item.id, 'NOT_EAT')}
-                                                    disabled={isUpdating}
-                                                    className={cn(
-                                                        "flex-1 px-4 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50",
-                                                        "bg-red-100 text-red-700 hover:bg-red-200"
-                                                    )}
-                                                >
-                                                    <X size={16} />
-                                                    {t('manage.hate.not_eat')}
-                                                </button>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mb-3 text-center">
-                                                {t('manage.hate.edit_hint', 'Click on a button to change your choice')}
-                                            </p>
-                                        </>
-                                    )}
-
-                                    <div className="flex gap-2">
-                                        {isEditing ? (
-                                            <button
-                                                onClick={() => setEditingId(null)}
-                                                disabled={isUpdating}
-                                                className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-50"
-                                            >
-                                                {t('common.cancel', 'Cancel')}
-                                            </button>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => setEditingId(item.id)}
-                                                    disabled={isUpdating}
-                                                    className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                                >
-                                                    <Pencil size={14} />
-                                                    {t('common.edit', 'Edit')}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    disabled={isUpdating}
-                                                    className="flex-1 px-3 py-2 text-sm font-medium rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                                >
-                                                    <Trash2 size={14} />
-                                                    {t('common.delete', 'Delete')}
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+        <div className="flex flex-col h-full bg-background">
+            {/* Header */}
+            <div className="flex items-center h-14 px-4 border-b border-border/50">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="w-10 h-10 flex items-center justify-center -ml-2"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+                <h1 className="flex-1 text-center font-bold text-lg pr-8">
+                    {t('manage.hate.title', '호불호 이력')}
+                </h1>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 p-5 bg-background border-t border-border/10">
-                <button
-                    onClick={() => navigate('/main')}
-                    className="w-full bg-foreground text-background font-bold py-3.5 rounded-full hover:opacity-90 transition-opacity"
-                >
-                    {t('manage.hate.vote_more')}
-                </button>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+                {loading ? (
+                    <div className="flex justify-center items-center h-64">
+                        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : history.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                        <AlertCircle size={48} className="mb-4 opacity-50" />
+                        <p className="text-lg font-medium">{t('manage.hate.empty', '아직 선택한 항목이 없어요')}</p>
+                        <p className="text-sm mt-1">{t('manage.hate.empty_hint', '홈에서 호불호 카드를 만나보세요')}</p>
+                    </div>
+                ) : (
+                    <div className="p-4 space-y-6">
+                        {/* NOT_EAT Section */}
+                        {notEatItems.length > 0 && (
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                                        <X size={14} className="text-red-600" />
+                                    </div>
+                                    <span className="font-bold text-red-600">
+                                        {t('manage.hate.not_eat', '못 먹어요')}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {notEatItems.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {notEatItems.map(item => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between bg-red-50 rounded-xl px-4 py-3"
+                                        >
+                                            <span className="font-medium">{item.item}</span>
+                                            <button
+                                                onClick={() => handleDelete(item.id, item.item)}
+                                                disabled={deletingId === item.id}
+                                                className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                                            >
+                                                {deletingId === item.id ? (
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Trash2 size={18} />
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* EAT Section */}
+                        {eatItems.length > 0 && (
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                                        <Check size={14} className="text-green-600" />
+                                    </div>
+                                    <span className="font-bold text-green-600">
+                                        {t('manage.hate.eat', '먹을 수 있어요')}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {eatItems.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {eatItems.map(item => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between bg-green-50 rounded-xl px-4 py-3"
+                                        >
+                                            <span className="font-medium">{item.item}</span>
+                                            <button
+                                                onClick={() => handleDelete(item.id, item.item)}
+                                                disabled={deletingId === item.id}
+                                                className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                                            >
+                                                {deletingId === item.id ? (
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Trash2 size={18} />
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

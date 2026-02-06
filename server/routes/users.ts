@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard } from "../db/schema.js";
+import { users, clusters, shops, users_wantstogo, users_follow, content, likes, users_ranking, leaderboard, neighborhood_translations } from "../db/schema.js";
 import { eq, and, desc, sql, ilike, isNotNull, inArray } from "drizzle-orm";
 import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache } from "../redis.js";
@@ -97,7 +97,10 @@ router.get("/leaderboard", async (req, res) => {
                 cluster_name: clusters.name,
                 taste_result: users.taste_result,
                 group_id: users.group_id,
-                neighborhood: users.neighborhood,
+                neighborhood_id: users.neighborhood_id,
+                neighborhood_local: neighborhood_translations.local_name,
+                neighborhood_en: neighborhood_translations.english_name,
+                neighborhood_country: neighborhood_translations.country_code,
                 rank: leaderboard.rank,
                 score: leaderboard.score,
                 stats: leaderboard.stats,
@@ -106,6 +109,7 @@ router.get("/leaderboard", async (req, res) => {
                 .from(leaderboard)
                 .innerJoin(users, eq(leaderboard.user_id, users.id))
                 .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
+                .leftJoin(neighborhood_translations, eq(users.neighborhood_id, neighborhood_translations.id))
                 .where(whereCondition)
                 .orderBy(leaderboard.rank)
                 .limit(limit)
@@ -122,7 +126,12 @@ router.get("/leaderboard", async (req, res) => {
                     cluster_name: row.cluster_name,
                     taste_result: row.taste_result,
                     group_id: row.group_id,
-                    neighborhood: row.neighborhood
+                    neighborhood_id: row.neighborhood_id,
+                    neighborhood: row.neighborhood_local ? {
+                        localName: row.neighborhood_local,
+                        englishName: row.neighborhood_en,
+                        countryCode: row.neighborhood_country,
+                    } : null
                 },
                 score: row.score,
                 key: row.leaderboard_key

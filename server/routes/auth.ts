@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, content, users_follow, users_ranking, groups } from "../db/schema.js";
+import { users, clusters, content, users_follow, users_ranking, groups, neighborhood_translations } from "../db/schema.js";
 import { eq, sql, and } from "drizzle-orm";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -223,6 +223,25 @@ router.get("/me", requireAuth, async (req, res) => {
             }
         }
 
+        // Add neighborhood info if user has one
+        let neighborhoodInfo = null;
+        if (user.neighborhood_id) {
+            const [translation] = await db.select()
+                .from(neighborhood_translations)
+                .where(eq(neighborhood_translations.id, user.neighborhood_id))
+                .limit(1);
+            if (translation) {
+                neighborhoodInfo = {
+                    id: translation.id,
+                    localName: translation.local_name,
+                    englishName: translation.english_name,
+                    countryCode: translation.country_code,
+                    // For backward compatibility with leaderboard key format
+                    value: `${translation.country_code}:${translation.local_name}`,
+                };
+            }
+        }
+
         // Get stats (including ranking count)
         const stats = await db.transaction(async (tx) => {
             await tx.execute(sql`SET LOCAL max_parallel_workers_per_gather = 0`);
@@ -250,6 +269,7 @@ router.get("/me", requireAuth, async (req, res) => {
             ...user,
             ...clusterInfo,
             group_name: groupName,
+            neighborhood: neighborhoodInfo,
             stats
         });
     } catch (error: any) {

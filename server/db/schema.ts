@@ -16,6 +16,18 @@ export const groups = pgTable('groups', {
     name_idx: index('idx_groups_name').on(table.name),
 }));
 
+// --- Neighborhood Translations (dictionary for local/english names) ---
+export const neighborhood_translations = pgTable('neighborhood_translations', {
+    id: serial('id').primaryKey(),
+    country_code: varchar('country_code', { length: 5 }).notNull(),  // "KR", "JP", "US"
+    local_name: varchar('local_name', { length: 100 }).notNull(),    // "경기도 성남시"
+    english_name: varchar('english_name', { length: 100 }),          // "Seongnam-si, Gyeonggi-do"
+    created_at: timestamp('created_at').defaultNow(),
+}, (table) => ({
+    unique_neighborhood: unique().on(table.country_code, table.local_name),
+    country_idx: index('idx_neighborhood_country').on(table.country_code),
+}));
+
 // --- Users Domain ---
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
@@ -40,7 +52,7 @@ export const users = pgTable('users', {
     group_email: varchar('group_email', { length: 255 }),      // Verified company/school email
     group_joined_at: timestamp('group_joined_at'),
     // Neighborhood affiliation
-    neighborhood: varchar('neighborhood', { length: 100 }),     // "KR:강남구", "US:San Francisco"
+    neighborhood_id: integer('neighborhood_id').references(() => neighborhood_translations.id, { onDelete: 'set null' }),
     neighborhood_joined_at: timestamp('neighborhood_joined_at'),
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
@@ -49,7 +61,7 @@ export const users = pgTable('users', {
     email_idx: index('idx_users_email').on(table.email),
     phone_idx: index('idx_users_phone').on(table.phone),
     group_id_idx: index('idx_users_group_id').on(table.group_id),
-    neighborhood_idx: index('idx_users_neighborhood').on(table.neighborhood),
+    neighborhood_id_idx: index('idx_users_neighborhood_id').on(table.neighborhood_id),
 }));
 
 export const phone_verifications = pgTable('phone_verifications', {

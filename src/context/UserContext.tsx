@@ -6,6 +6,14 @@ import { Capacitor } from '@capacitor/core';
 import { CapacitorCookies } from '@capacitor/core';
 import { API_BASE_URL } from '@/lib/api';
 
+export interface NeighborhoodInfo {
+    id: number;
+    localName: string;
+    englishName: string | null;
+    countryCode: string;
+    value: string; // "KR:경기도 성남시" for backward compatibility
+}
+
 export interface User {
     id: number;
     nickname: string | null;
@@ -19,7 +27,7 @@ export interface User {
     cluster_tagline?: string;
     group_id?: number;
     group_name?: string;
-    neighborhood?: string;
+    neighborhood?: NeighborhoodInfo | null;
     stats?: {
         content_count: number;
         follower_count: number;
