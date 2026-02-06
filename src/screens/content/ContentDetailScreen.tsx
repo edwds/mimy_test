@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '@/context/UserContext';
 import { API_BASE_URL } from '@/lib/api';
-import { Heart, Send, MessageCircle, ChevronLeft } from 'lucide-react';
+import { Heart, Send, MessageCircle } from 'lucide-react';
 import { formatFullDateTime, formatVisitDate } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
+import { ProfileHeader } from '@/components/ProfileHeader';
 
 export const ContentDetailScreen = () => {
     const navigate = useNavigate();
@@ -149,15 +150,11 @@ export const ContentDetailScreen = () => {
     return (
         <div className="absolute inset-0 bg-background flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10 flex-shrink-0">
-                <div className="flex items-center justify-between px-4 h-14">
-                    <button onClick={handleClose} className="p-2 -ml-2 rounded-full hover:bg-muted">
-                        <ChevronLeft size={24} />
-                    </button>
-                    <h1 className="text-lg font-semibold">게시물</h1>
-                    <div className="w-10" />
-                </div>
-            </div>
+            <ProfileHeader
+                title="게시물"
+                onBack={handleClose}
+                isVisible={true}
+            />
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto pb-20">

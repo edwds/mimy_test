@@ -7,6 +7,7 @@ import { formatRelativeTime } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ProfileHeader } from '@/components/ProfileHeader';
+import { Capacitor } from '@capacitor/core';
 
 interface Notification {
     id: number;
@@ -175,7 +176,15 @@ export const NotificationScreen = () => {
             />
 
             {/* Notifications List */}
-            <div className="flex-1 overflow-y-auto" style={{ paddingTop: '80px' }} data-scroll-container="true">
+            <div
+                className="flex-1 overflow-y-auto"
+                style={{
+                    paddingTop: Capacitor.isNativePlatform()
+                        ? 'calc(env(safe-area-inset-top) + 80px)'
+                        : '80px'
+                }}
+                data-scroll-container="true"
+            >
                 {notifications.length > 0 ? (
                     <>
                         {/* 새로운 알림 (읽지 않음) */}
