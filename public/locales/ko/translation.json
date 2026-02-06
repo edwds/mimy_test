@@ -19,7 +19,8 @@
         "edit_record": "수정하시겠습니까?",
         "no": "아니요",
         "yes_edit": "네, 수정할게요",
-        "restaurant": "음식점"
+        "restaurant": "음식점",
+        "see_all": "전체보기"
     },
     "nav": {
         "home": "홈",
@@ -238,7 +239,13 @@
         "directions": "길찾기",
         "share": "공유하기",
         "evaluate": "기록하기",
-        "evaluated": "완료"
+        "evaluated": "완료",
+        "location": "위치",
+        "photos": "사진",
+        "reviews": "리뷰",
+        "sort_similar": "비슷한 입맛",
+        "sort_latest": "최신순",
+        "no_reviews": "아직 리뷰가 없습니다."
     },
     "vs_card": {
         "title": "더 선호하는 맛은?",

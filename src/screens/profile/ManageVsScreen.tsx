@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Trash2, AlertCircle } from 'lucide-react';
@@ -31,9 +32,7 @@ export const ManageVsScreen = () => {
         if (!user?.id) return;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/vs/history`, {
-                credentials: 'include'
-            });
+            const res = await authFetch(`${API_BASE_URL}/api/vs/history`);
             const data = await res.json();
             setHistory(Array.isArray(data) ? data : []);
         } catch (error) {
@@ -52,9 +51,8 @@ export const ManageVsScreen = () => {
 
         setDeletingId(id);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
-                method: 'DELETE',
-                credentials: 'include'
+            const response = await authFetch(`${API_BASE_URL}/api/vs/${id}/vote`, {
+                method: 'DELETE'
             });
 
             if (response.ok) {
@@ -69,8 +67,11 @@ export const ManageVsScreen = () => {
 
     return (
         <div className="flex flex-col h-full bg-background">
-            {/* Header */}
-            <div className="flex items-center h-14 px-4 border-b border-border/50">
+            {/* Header with iOS safe area */}
+            <div
+                className="flex items-center h-14 px-4 border-b border-border/50 bg-background"
+                style={{ paddingTop: 'env(safe-area-inset-top)' }}
+            >
                 <button
                     onClick={() => navigate(-1)}
                     className="w-10 h-10 flex items-center justify-center -ml-2"
@@ -82,8 +83,11 @@ export const ManageVsScreen = () => {
                 </h1>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Content with iOS safe area */}
+            <div
+                className="flex-1 overflow-y-auto"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
                         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

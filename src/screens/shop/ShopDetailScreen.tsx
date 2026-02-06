@@ -12,6 +12,7 @@ import { authFetch } from '@/lib/authFetch';
 import { API_BASE_URL } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { ImageViewer } from '@/components/ImageViewer';
+import { StaticShopMap } from '@/components/StaticShopMap';
 
 interface ShopDetail {
     id: number;
@@ -427,23 +428,17 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                             </div>
                         </div>
 
-                        {/* Address & Desc (Moved Up) */}
-                        <div className="space-y-4 mb-8">
-                            {shop.description && (
+                        {/* Description */}
+                        {shop.description && (
+                            <div className="mb-8">
                                 <p className="text-gray-600 text-base whitespace-pre-wrap leading-relaxed">
                                     {shop.description}
                                 </p>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center justify-center flex-shrink-0">
-                                    <MapPin size={16} className="text-gray-300" />
-                                </div>
-                                <div className="text-sm text-gray-500">{shop.address_full}</div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Actions Row: Directions / Evaluate / Save */}
-                        <div className="flex gap-2.5 mb-8">
+                        <div className="flex gap-2.5 mb-4">
                             <button
                                 onClick={() => {
                                     const dest = (shop.lat && shop.lon)
@@ -496,14 +491,33 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         </div>
                     </div>
 
-                    <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />
+                    {/* Location Map Section */}
+                    {shop.lat && shop.lon && (
+                        <div className="pt-2">
+                            <div className="px-6 mb-2">
+                                <h2 className="text-lg font-bold text-gray-900">{t('shop.location', 'Location')}</h2>
+                            </div>
+                            <div className="px-6 mb-3 flex items-center gap-2">
+                                <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+                                <span className="text-sm text-gray-600">{shop.address_full}</span>
+                            </div>
+                            <div className="h-44 overflow-hidden border-t border-b border-gray-100">
+                                <StaticShopMap
+                                    lat={shop.lat}
+                                    lon={shop.lon}
+                                    name={shop.name}
+                                    className="w-full h-full"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Photos Section */}
                     {latestPhotos.length >= 6 && (
                         <div className="py-6">
                             <div className="px-6 mb-3 flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-gray-900">Photos</h2>
-                                <button className="text-primary text-sm font-bold">See all</button>
+                                <h2 className="text-lg font-bold text-gray-900">{t('shop.photos', 'Photos')}</h2>
+                                <button className="text-primary text-sm font-bold">{t('common.see_all', 'See all')}</button>
                             </div>
                             <div className="overflow-x-auto no-scrollbar px-6">
                                 <div className="grid grid-rows-2 grid-flow-col gap-2 w-max">
@@ -524,12 +538,10 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                         </div>
                     )}
 
-                    {latestPhotos.length > 0 && <div className="h-2.5 bg-gray-50 border-t border-b border-gray-100" />}
-
                     {/* Review List */}
                     <div className="py-6 min-h-[500px]">
                         <div className="px-6 mb-4 flex items-center justify-between">
-                            <h2 className="text-lg font-bold">Reviews <span className="text-gray-400 ml-1">{reviews.length}</span></h2>
+                            <h2 className="text-lg font-bold">{t('shop.reviews', 'Reviews')} <span className="text-gray-400 ml-1">{reviews.length}</span></h2>
 
                             {/* Sort Dropdown */}
                             <div className="relative" ref={dropdownRef}>
@@ -537,7 +549,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     onClick={() => setShowSortDropdown(!showSortDropdown)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
                                 >
-                                    {sort === 'similar' ? 'Similar Taste' : 'Latest'}
+                                    {sort === 'similar' ? t('shop.sort_similar', 'Similar Taste') : t('shop.sort_latest', 'Latest')}
                                     <ChevronDown size={14} className={cn("transition-transform duration-200", showSortDropdown && "rotate-180")} />
                                 </button>
 
@@ -557,7 +569,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                                 sort === 'similar' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
                                             )}
                                         >
-                                            Similar Taste
+                                            {t('shop.sort_similar', 'Similar Taste')}
                                             {sort === 'similar' && <Check size={14} />}
                                         </button>
                                         <button
@@ -570,7 +582,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                                 sort === 'popular' ? "text-orange-600 bg-orange-50/50" : "text-gray-600 hover:bg-gray-50"
                                             )}
                                         >
-                                            Latest
+                                            {t('shop.sort_latest', 'Latest')}
                                             {sort === 'popular' && <Check size={14} />}
                                         </button>
                                     </motion.div>
@@ -596,7 +608,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
 
                             {reviews.length === 0 && !loadingReviews && (
                                 <div className="py-10 text-center text-gray-400 text-sm">
-                                    No reviews yet.
+                                    {t('shop.no_reviews', 'No reviews yet.')}
                                 </div>
                             )}
                         </div>

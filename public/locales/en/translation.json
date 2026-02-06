@@ -18,7 +18,8 @@
         "edit_record": "Would you like to edit?",
         "no": "No",
         "yes_edit": "Yes, edit",
-        "restaurant": "Restaurant"
+        "restaurant": "Restaurant",
+        "see_all": "See all"
     },
     "nav": {
         "home": "Home",
@@ -235,7 +236,13 @@
         "directions": "Directions",
         "share": "Share",
         "evaluate": "Record",
-        "evaluated": "Completed"
+        "evaluated": "Completed",
+        "location": "Location",
+        "photos": "Photos",
+        "reviews": "Reviews",
+        "sort_similar": "Similar Taste",
+        "sort_latest": "Latest",
+        "no_reviews": "No reviews yet."
     },
     "vs_card": {
         "title": "Which taste do you prefer?",

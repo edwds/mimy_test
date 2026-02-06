@@ -293,7 +293,7 @@ export const MapContainer = ({
 
         map.current = new maptilersdk.Map({
             container: mapContainer.current,
-            style: `https://api.maptiler.com/maps/base-v4/style.json?key=${import.meta.env.VITE_MAPTILER_API_KEY}`,
+            style: `https://api.maptiler.com/maps/streets-v4/style.json?key=${import.meta.env.VITE_MAPTILER_API_KEY}`,
             center: [126.9780, 37.5665],
             zoom: 14,
             navigationControl: false,
