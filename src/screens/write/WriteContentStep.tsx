@@ -674,11 +674,11 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-baseline gap-2 mb-1 min-w-0">
+                                    {/* 첫 번째 줄: 이름 + 만족도 */}
+                                    <div className="flex items-center gap-2 mb-1 min-w-0">
                                         <h3 className="font-bold text-sm leading-none text-gray-900 truncate">
                                             {shop.name}
                                         </h3>
-
                                         <span
                                             className={cn(
                                                 "inline-flex items-center h-5 px-2 rounded-md text-xs font-bold leading-none border shadow-sm whitespace-nowrap",
@@ -689,16 +689,38 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         >
                                             {getSatisfactionLabel()}
                                         </span>
-
-                                        <span className="text-xs leading-none text-gray-500 truncate">
-                                            {shop.category}
-                                        </span>
                                     </div>
-                                    <div className="text-xs text-gray-500 truncate">
-                                        {shop.address_region || shop.address_full}
+                                    {/* 두 번째 줄: 주소 | 방문일시 */}
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <span className="truncate">
+                                            {shop.address_region || shop.address_full}
+                                        </span>
+                                        <span className="text-gray-400">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                dateInputRef.current?.showPicker?.();
+                                            }}
+                                            className="flex items-center gap-1 hover:text-gray-700 transition-colors shrink-0"
+                                        >
+                                            <span className="whitespace-nowrap">{getRelativeTimeText(visitDate)}</span>
+                                            <Calendar className="w-3 h-3" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+                            {/* Hidden date input */}
+                            <input
+                                ref={dateInputRef}
+                                type="date"
+                                value={visitDate}
+                                onChange={(e) => {
+                                    setVisitDate(e.target.value);
+                                    setIsDateManuallySet(true);
+                                }}
+                                className="sr-only"
+                            />
                         </div>
                     )}
 
@@ -878,21 +900,43 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                         )}
                                     </div>
 
-                                    {/* Caption Button */}
-                                    <button
-                                        onClick={() => {
-                                            setCaptionEditId(item.id);
-                                            setCaptionEditText(item.caption || '');
-                                        }}
-                                        className={cn(
-                                            "text-xs text-center py-1.5 px-2 rounded-lg truncate transition-all",
-                                            item.caption
-                                                ? "font-medium text-gray-800 hover:bg-gray-100 bg-gray-50"
-                                                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 bg-gray-50/50"
-                                        )}
-                                    >
-                                        {item.caption || "설명 추가"}
-                                    </button>
+                                    {/* Caption Button/Input */}
+                                    {captionEditId === item.id ? (
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            maxLength={40}
+                                            placeholder="메뉴 이름을 적어주세요"
+                                            value={captionEditText}
+                                            onChange={(e) => setCaptionEditText(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleCaptionSave();
+                                                } else if (e.key === 'Escape') {
+                                                    setCaptionEditId(null);
+                                                    setCaptionEditText('');
+                                                }
+                                            }}
+                                            onBlur={handleCaptionSave}
+                                            className="text-sm text-center py-1.5 px-2 rounded-lg transition-all border border-primary focus:outline-none bg-white shadow-sm"
+                                        />
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setCaptionEditId(item.id);
+                                                setCaptionEditText(item.caption || '');
+                                            }}
+                                            className={cn(
+                                                "text-sm text-center py-1.5 px-2 rounded-lg truncate transition-all",
+                                                item.caption
+                                                    ? "font-medium text-gray-800 hover:bg-gray-100 bg-gray-50"
+                                                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 bg-gray-50/50"
+                                            )}
+                                        >
+                                            {item.caption || "설명 추가"}
+                                        </button>
+                                    )}
                                 </div>
                             ))}
 
@@ -936,60 +980,6 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                         </div>
                     )}
 
-                    {/* Mode Specific: Review - Metadata (Date & Companions) */}
-                    {mode === 'review' && mediaItems.length > 0 && (
-                        <div className="space-y-3">
-                            {/* Visit Date - Only shown when photos are uploaded */}
-                            <div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        dateInputRef.current?.showPicker?.();
-                                    }}
-                                    className="w-full bg-muted/30 h-11 px-4 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors flex items-center justify-between cursor-pointer"
-                                >
-                                    <span className={cn(!isDateManuallySet && "text-muted-foreground")}>
-                                        {getRelativeTimeText(visitDate)}
-                                    </span>
-                                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                                </button>
-                                <input
-                                    ref={dateInputRef}
-                                    type="date"
-                                    value={visitDate}
-                                    onChange={(e) => {
-                                        setVisitDate(e.target.value);
-                                        setIsDateManuallySet(true);
-                                    }}
-                                    className="sr-only"
-                                />
-                            </div>
-
-                            {/* Companions - Commented out for now */}
-                            {/* <div>
-                                <label className="block text-xs font-bold text-muted-foreground mb-1.5 ml-1">
-                                    {t('write.content.with_who', 'With who?')}
-                                </label>
-                                <button
-                                    onClick={() => setIsUserSelectOpen(true)}
-                                    className="w-full h-10 bg-muted/30 rounded-xl px-3 flex items-center gap-2 text-sm border border-transparent hover:bg-muted/50 border-dashed hover:border-primary/50 transition-all font-medium text-left"
-                                >
-                                    <Users className="w-4 h-4 text-muted-foreground shrink-0" />
-                                    <div className="flex-1 truncate">
-                                        {selectedUsers.length > 0 ? (
-                                            <span className="text-foreground">
-                                                {selectedUsers[0].nickname}
-                                                {selectedUsers.length > 1 && ` +${selectedUsers.length - 1}`}
-                                            </span>
-                                        ) : (
-                                            <span className="text-muted-foreground/70">{t('write.content.tag_friends', 'Tag friends')}</span>
-                                        )}
-                                    </div>
-                                    <UserPlus className="w-3 h-3 text-muted-foreground shrink-0" />
-                                </button>
-                            </div> */}
-                        </div>
-                    )}
 
                     {/* Common: Main Text */}
                     <div className="space-y-2">
@@ -1097,42 +1087,6 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
 
                 </div>
             </div>
-            {/* Caption Edit Modal */}
-            {captionEditId && (
-                <div
-                    className="fixed inset-0 z-50 flex items-start justify-center p-4"
-                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}
-                >
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCaptionEditId(null)} />
-                    <div className="relative bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl">
-                        <h3 className="text-lg font-bold mb-4 text-center">어떤 사진인가요?</h3>
-                        <Input
-                            autoFocus
-                            maxLength={40}
-                            placeholder="메뉴 이름이나 설명을 적어주세요"
-                            value={captionEditText}
-                            onChange={(e) => setCaptionEditText(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleCaptionSave()}
-                            className="mb-4"
-                        />
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setCaptionEditId(null)}
-                                className="flex-1 rounded-xl"
-                            >
-                                취소
-                            </Button>
-                            <Button
-                                onClick={handleCaptionSave}
-                                className="flex-1 rounded-xl bg-primary text-white"
-                            >
-                                확인
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Reorder Modal */}
             {isReorderModalOpen && (
