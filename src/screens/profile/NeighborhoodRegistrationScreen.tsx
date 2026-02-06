@@ -117,14 +117,9 @@ export const NeighborhoodRegistrationScreen = () => {
             '인천', '인천광역시', '광주', '광주광역시', '대전', '대전광역시',
             '울산', '울산광역시', '세종', '세종특별자치시'];
 
-        // Extract all location info from features and context
-        const extractFromText = (text: string, placeType: string) => {
+        // Extract administrative info from text (province, city, district)
+        const extractFromText = (text: string) => {
             if (!text || text.match(poiPatterns)) return;
-
-            // Country code
-            if (placeType === 'country') {
-                countryCode = text.toUpperCase().slice(0, 2);
-            }
 
             // Province level (도/특별시/광역시)
             if (text.match(/도$|특별시$|광역시$|특별자치시$|특별자치도$/)) {
@@ -148,40 +143,49 @@ export const NeighborhoodRegistrationScreen = () => {
         };
 
         for (const feature of features) {
-            const placeType = feature.place_type?.[0] || feature.type || '';
             const text = feature.text || '';
 
-            // Extract country code from properties
+            // Extract country code from properties (NOT from text like "대한민국")
             if (feature.properties?.country_code) {
                 countryCode = feature.properties.country_code.toUpperCase().slice(0, 2);
             }
 
-            extractFromText(text, placeType);
+            extractFromText(text);
 
             // Also check place_name for additional info
             if (feature.place_name) {
                 const parts = feature.place_name.split(',').map((p: string) => p.trim());
                 for (const part of parts) {
-                    extractFromText(part, '');
+                    extractFromText(part);
                 }
             }
 
             // Check context for additional administrative info
             if (feature.context) {
                 for (const ctx of feature.context) {
-                    const ctxType = ctx.id?.split('.')[0] || '';
                     const ctxText = ctx.text || '';
 
-                    if (ctxType === 'country' && ctx.short_code) {
+                    // Extract country code from context short_code
+                    if (ctx.id?.startsWith('country') && ctx.short_code) {
                         countryCode = ctx.short_code.toUpperCase().slice(0, 2);
                     }
 
-                    extractFromText(ctxText, ctxType);
+                    extractFromText(ctxText);
                 }
             }
         }
 
         let displayName = '';
+
+        // Fallback: If Korean administrative units detected but no country code, assume KR
+        if (!countryCode && (provinceName || cityName || districtName)) {
+            const hasKoreanAdminUnit = [provinceName, cityName, districtName].some(name =>
+                name && /도$|특별시$|광역시$|특별자치시$|특별자치도$|시$|군$|구$/.test(name)
+            );
+            if (hasKoreanAdminUnit) {
+                countryCode = 'KR';
+            }
+        }
 
         if (countryCode === 'KR') {
             // Korean address logic:

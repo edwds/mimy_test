@@ -42,19 +42,22 @@ mimy_test/
 │   ├── db/
 │   │   ├── index.ts          # Neon DB Connection
 │   │   └── schema.ts         # Drizzle Schema (342 lines)
-│   ├── routes/               # API Routes (14 files)
+│   ├── routes/               # API Routes (15 files)
 │   │   ├── auth.ts           # 구글 로그인, 회원가입
 │   │   ├── users.ts          # 프로필, 팔로우, 저장 맛집
 │   │   ├── shops.ts          # 맛집 검색, 상세, Google Places
 │   │   ├── content.ts        # 리뷰/포스트, 피드, 좋아요, 댓글
 │   │   ├── ranking.ts        # 개인 랭킹 관리
+│   │   ├── affiliation.ts    # 그룹/동네 등록
 │   │   ├── quiz.ts           # 미식 성향 테스트
 │   │   ├── vs.ts             # 밸런스 게임
 │   │   ├── hate.ts           # 못 먹는 음식
 │   │   └── ...
 │   ├── services/
-│   │   ├── LeaderboardService.ts  # 리더보드 계산
-│   │   └── ListService.ts         # 리스트 조회
+│   │   ├── LeaderboardService.ts  # 리더보드 계산 및 실시간 업데이트
+│   │   ├── ListService.ts         # 리스트 조회
+│   │   ├── EmailService.ts        # Resend 이메일 발송
+│   │   └── GeocodingService.ts    # MapTiler 역지오코딩
 │   ├── utils/
 │   │   ├── match.ts          # Match Score 계산 (140 lines)
 │   │   ├── enricher.ts       # 데이터 보강
@@ -155,7 +158,9 @@ mimy_test/
 - **vs**: 밸런스 게임 질문
 - **vs_votes**: 사용자 투표
 - **hate**: 못 먹는 음식
-- **leaderboard**: 리더보드 캐시
+- **leaderboard**: 리더보드 캐시 (type: OVERALL/COMPANY/NEIGHBORHOOD)
+- **groups**: 회사/학교 그룹 정보 (allowed_domains 배열)
+- **email_verifications**: 이메일 인증 코드 (5분 TTL, 최대 5회 시도)
 
 ---
 
@@ -195,6 +200,15 @@ GET    /api/vs                    # VS 게임 질문
 POST   /api/vs/:id/vote           # 투표
 
 POST   /api/upload/image          # 이미지 업로드
+
+# 소속 등록 (Affiliation)
+GET    /api/affiliation/status           # 현재 그룹/동네 상태
+GET    /api/affiliation/groups           # 등록 가능한 그룹 목록
+POST   /api/affiliation/email/send-code  # 인증 코드 이메일 발송
+POST   /api/affiliation/email/verify     # 코드 검증 및 그룹 등록
+DELETE /api/affiliation/group            # 그룹 탈퇴
+POST   /api/affiliation/neighborhood     # GPS 기반 동네 등록
+DELETE /api/affiliation/neighborhood     # 동네 해제
 ```
 
 ---
@@ -217,6 +231,9 @@ UPSTASH_REDIS_REST_TOKEN=...
 
 # Vercel Blob Storage
 BLOB_READ_WRITE_TOKEN=...
+
+# Email (Resend)
+RESEND_API_KEY=re_...
 
 # Server
 PORT=3001
@@ -266,11 +283,13 @@ npx cap open android
 **Protected** (로그인 필요):
 - `/main` - 홈 피드
 - `/main/discover` - 지도 기반 탐색
-- `/main/ranking` - 리더보드
+- `/main/ranking` - 리더보드 (그룹/동네/전체)
 - `/main/profile` - 내 프로필
 - `/write` - 리뷰 작성
 - `/quiz/*` - 미식 성향 테스트
 - `/profile/*` - 프로필 관리
+- `/profile/group` - 회사/학교 등록
+- `/profile/neighborhood` - 동네 등록
 
 **Query Parameters**:
 - `?viewUser={userId}` - 사용자 프로필 오버레이
@@ -283,6 +302,7 @@ npx cap open android
 - 사용자 인증 상태
 - 좋아요 낙관적 업데이트
 - 위치 정보 (Geolocation)
+- 그룹/동네 정보 캐싱 (`group_name`, `neighborhood`)
 
 **RankingContext** (`src/context/RankingContext.tsx`):
 - 랭킹 오버레이 제어
@@ -469,6 +489,11 @@ npm run preview      # 빌드 결과 미리보기
   - 레스토랑 랭킹 조작
   - 캐시 관리
   - 유틸리티 스크립트
+- **[AFFILIATION.md](AFFILIATION.md)** - 소속 등록 시스템 가이드
+  - 그룹(회사/학교) 이메일 인증
+  - GPS 기반 동네 등록
+  - 소속별 리더보드
+  - 한국 행정구역 파싱 로직
 
 ### 외부 서비스
 - [Neon PostgreSQL](https://neon.tech/docs)
@@ -515,11 +540,22 @@ npm run preview      # 빌드 결과 미리보기
 
 ---
 
-**마지막 업데이트**: 2026-02-05
-**버전**: v2.0
-**작성자**: Claude Code (Sonnet 4.5)
+**마지막 업데이트**: 2026-02-06
+**버전**: v2.1
+**작성자**: Claude Code (Opus 4.5)
 
 ## 변경 이력
+
+### v2.1 (2026-02-06)
+- ✅ 소속 등록 시스템 구현 (그룹/동네)
+  - 회사/학교 이메일 인증 (Resend API)
+  - GPS 기반 동네 등록 (MapTiler Geocoding)
+  - 한국 행정구역 파싱 (특별시+구, 도+시/군)
+- ✅ 리더보드 개선
+  - 그룹/동네/전체 필터
+  - 실시간 리더보드 업데이트
+  - UserContext에 그룹/동네 정보 캐싱
+- 📝 AFFILIATION.md 문서 추가
 
 ### v2.0 (2026-02-05)
 - ✅ JWT 기반 인증 시스템 완성 (x-user-id 헤더 제거)
