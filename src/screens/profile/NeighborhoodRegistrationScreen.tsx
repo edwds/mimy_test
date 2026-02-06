@@ -296,6 +296,7 @@ export const NeighborhoodRegistrationScreen = () => {
         return {
             neighborhood: countryCode ? `${countryCode}:${displayName}` : displayName,
             displayName,
+            englishName: null, // Will be populated by separate API call
         };
     };
 
