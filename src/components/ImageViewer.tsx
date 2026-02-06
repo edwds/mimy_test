@@ -143,15 +143,16 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
 
     const handleTouchEnd = (e: React.TouchEvent) => {
         if (e.touches.length < 2) {
+            // Block swipes if we were doing any pinch gesture (zoom in or out)
+            // This prevents accidental swipe/dismiss when finishing pinch
+            if (pinchStartDist.current !== null) {
+                setIsSwipeBlocked(true);
+                setTimeout(() => setIsSwipeBlocked(false), 400);
+            }
+
             setIsGesturing(false);
             pinchStartDist.current = null;
             pinchStartCenter.current = null;
-
-            // Block swipes temporarily if we were zoomed in
-            if (scale > 1.05) {
-                setIsSwipeBlocked(true);
-                setTimeout(() => setIsSwipeBlocked(false), 500);
-            }
 
             // Elastic Snap-back: Always return to 1x and center
             setScale(1);
@@ -174,7 +175,8 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
 
     // --- Dismiss Logic ---
     const handleDragEnd = (_: any, info: any) => {
-        if (scale > 1.1) return;
+        // Block dismiss/swipe if zoomed or during/after pinch gesture
+        if (scale > 1.1 || isSwipeBlocked || isGesturing) return;
 
         // Vertical Swipe to Close
         if (Math.abs(info.offset.y) > 150 && Math.abs(info.velocity.y) > 200) {
@@ -205,7 +207,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     style={{ backgroundColor: `rgba(0, 0, 0, ${0.9})` }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center touch-none select-none"
+                    className="absolute inset-0 z-[9999] flex items-center justify-center touch-none select-none"
                     onClick={onClose}
                 >
                     <motion.div
@@ -256,7 +258,7 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                             className="absolute w-full h-full flex items-center justify-center"
                         >
                             <motion.div
-                                drag={scale > 1.05 || isSwipeBlocked ? false : true}
+                                drag={scale > 1.05 || isSwipeBlocked || isGesturing ? false : true}
                                 dragElastic={0.2}
                                 dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
                                 style={{ y: dismissY }}
@@ -321,6 +323,6 @@ export const ImageViewer = ({ images, initialIndex, isOpen, onClose, imgTexts }:
                 </motion.div>
             )}
         </AnimatePresence>,
-        document.body
+        document.getElementById('root') || document.body
     );
 };

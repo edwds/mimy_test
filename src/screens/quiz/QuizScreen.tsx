@@ -208,7 +208,7 @@ export const QuizScreen = () => {
                 {/* Guide labels */}
                 <div className="mb-16 w-full max-w-md flex items-center justify-between px-6">
                     <span className="text-sm font-medium" style={{ color: '#FFB5C5' }}>{t('quiz.label_dislike', '내 취향 아님')}</span>
-                    <span className="text-sm font-medium text-gray-400">{t('quiz.label_neutral', '괜찮아요')}</span>
+                    <span className="text-sm font-medium text-gray-400">{t('quiz.label_neutral', '상관없어요')}</span>
                     <span className="text-sm font-medium" style={{ color: '#A8E6CF' }}>{t('quiz.label_like', '완전 내 취향')}</span>
                 </div>
 
@@ -431,7 +431,7 @@ export const QuizScreen = () => {
                             }
                         >
                             <span className="text-gray-600 text-lg font-bold">
-                                {t('quiz.label_neutral', '괜찮아요')}
+                                {t('quiz.label_neutral', '상관없어요')}
                             </span>
                         </motion.div>
 

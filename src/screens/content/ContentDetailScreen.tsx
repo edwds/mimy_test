@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
 import { ProfileHeader } from '@/components/ProfileHeader';
+import { ImageViewer } from '@/components/ImageViewer';
 import { Capacitor } from '@capacitor/core';
 
 export const ContentDetailScreen = () => {
@@ -29,6 +30,10 @@ export const ContentDetailScreen = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [commentCount, setCommentCount] = useState(0);
+
+    // ImageViewer state
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     useEffect(() => {
         if (!contentId) return;
@@ -246,7 +251,10 @@ export const ContentDetailScreen = () => {
                         <>
                             {content.images.length === 1 ? (
                                 <div className="px-5 mb-4">
-                                    <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100">
+                                    <div
+                                        className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer"
+                                        onClick={() => { setViewerIndex(0); setViewerOpen(true); }}
+                                    >
                                         <img src={content.images[0]} alt="content-0" className="w-full h-full object-cover" />
                                     </div>
                                 </div>
@@ -255,7 +263,8 @@ export const ContentDetailScreen = () => {
                                     {content.images.map((img: string, idx: number) => (
                                         <div
                                             key={idx}
-                                            className="flex-shrink-0 w-[310px] h-[310px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center"
+                                            className="flex-shrink-0 w-[310px] h-[310px] rounded-lg overflow-hidden bg-gray-100 border border-gray-100 snap-center cursor-pointer"
+                                            onClick={() => { setViewerIndex(idx); setViewerOpen(true); }}
                                         >
                                             <img src={img} alt={`content-${idx}`} className="w-full h-full object-cover" />
                                         </div>
@@ -418,6 +427,16 @@ export const ContentDetailScreen = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Image Viewer */}
+            {content.images && content.images.length > 0 && (
+                <ImageViewer
+                    images={content.images}
+                    initialIndex={viewerIndex}
+                    isOpen={viewerOpen}
+                    onClose={() => setViewerOpen(false)}
+                />
+            )}
         </div>
     );
 };

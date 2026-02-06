@@ -182,8 +182,9 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
 
                             // Apply rounded corners only to first and last cards
                             const isFirst = dayIdx === 0;
-                            const isLast = dayIdx === 6;
-                            const roundedClass = isFirst ? 'rounded-l-2xl' : isLast ? 'rounded-r-2xl' : '';
+                            const isLast = dayIdx === week.items.length - 1;
+                            const isOnly = isFirst && isLast;
+                            const roundedClass = isOnly ? 'rounded-2xl' : isFirst ? 'rounded-l-2xl' : isLast ? 'rounded-r-2xl' : '';
 
                             return (
                                 <div

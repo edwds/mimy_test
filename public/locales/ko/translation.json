@@ -463,7 +463,7 @@
             "flavor_unknown": "알 수 없는 취향"
         },
         "label_dislike": "내 취향 아님",
-        "label_neutral": "괜찮아요",
+        "label_neutral": "상관없어요",
         "label_like": "완전 내 취향"
     }
 }

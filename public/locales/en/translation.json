@@ -450,7 +450,7 @@
     },
     "quiz": {
         "label_dislike": "Not my taste",
-        "label_neutral": "Draw",
+        "label_neutral": "No preference",
         "label_like": "Love it"
     }
 }

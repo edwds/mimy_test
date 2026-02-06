@@ -121,6 +121,7 @@ export const NeighborhoodRegistrationScreen = () => {
         const extractFromText = (text: string) => {
             if (!text || text.match(poiPatterns)) return;
 
+            // === Korean administrative units ===
             // Province level (도/특별시/광역시)
             if (text.match(/도$|특별시$|광역시$|특별자치시$|특별자치도$/)) {
                 if (!provinceName) provinceName = text;
@@ -136,8 +137,24 @@ export const NeighborhoodRegistrationScreen = () => {
                 }
             }
 
-            // District level (구)
+            // District level (구) - Korean
             if (text.match(/구$/)) {
+                if (!districtName) districtName = text;
+            }
+
+            // === Japanese administrative units ===
+            // Prefecture level (都/道/府/県)
+            if (text.match(/都$|道$|府$|県$/)) {
+                if (!provinceName) provinceName = text;
+            }
+
+            // City level (市/町/村)
+            if (text.match(/市$|町$|村$/)) {
+                if (!cityName) cityName = text;
+            }
+
+            // District level (区) - Japanese
+            if (text.match(/区$/)) {
                 if (!districtName) districtName = text;
             }
         };
@@ -177,13 +194,19 @@ export const NeighborhoodRegistrationScreen = () => {
 
         let displayName = '';
 
-        // Fallback: If Korean administrative units detected but no country code, assume KR
+        // Fallback: If Korean/Japanese administrative units detected but no country code
         if (!countryCode && (provinceName || cityName || districtName)) {
             const hasKoreanAdminUnit = [provinceName, cityName, districtName].some(name =>
-                name && /도$|특별시$|광역시$|특별자치시$|특별자치도$|시$|군$|구$/.test(name)
+                name && /도$|특별시$|광역시$|특별자치시$|특별자치도$|시$|군$/.test(name)
             );
+            const hasJapaneseAdminUnit = [provinceName, cityName, districtName].some(name =>
+                name && /都$|道$|府$|県$|市$|町$|村$/.test(name)
+            );
+
             if (hasKoreanAdminUnit) {
                 countryCode = 'KR';
+            } else if (hasJapaneseAdminUnit) {
+                countryCode = 'JP';
             }
         }
 
@@ -208,7 +231,24 @@ export const NeighborhoodRegistrationScreen = () => {
                 displayName = districtName || cityName || provinceName || '';
             }
         } else if (countryCode === 'JP') {
-            displayName = districtName || cityName || provinceName;
+            // Japanese address logic:
+            // 1. 都 (Tokyo) + 区 (e.g. 東京都 渋谷区)
+            // 2. 府/県 + 市 (e.g. 大阪府 大阪市, 神奈川県 横浜市)
+            const isTokyoOrHokkaido = provinceName && (provinceName.endsWith('都') || provinceName.endsWith('道'));
+
+            if (isTokyoOrHokkaido && districtName) {
+                // Tokyo: 都 + 区
+                displayName = `${provinceName} ${districtName}`;
+            } else if (provinceName && cityName) {
+                // Other prefectures: 府/県 + 市
+                displayName = `${provinceName} ${cityName}`;
+            } else if (provinceName && districtName) {
+                // Fallback: 府/県 + 区
+                displayName = `${provinceName} ${districtName}`;
+            } else {
+                // Last resort
+                displayName = districtName || cityName || provinceName || '';
+            }
         } else {
             // For other countries: use city
             displayName = cityName || districtName || provinceName;
