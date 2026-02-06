@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
 import { ProfileHeader } from '@/components/ProfileHeader';
+import { Capacitor } from '@capacitor/core';
 
 export const ContentDetailScreen = () => {
     const navigate = useNavigate();
@@ -157,7 +158,14 @@ export const ContentDetailScreen = () => {
             />
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto pb-20">
+            <div
+                className="flex-1 overflow-y-auto pb-20"
+                style={{
+                    paddingTop: Capacitor.isNativePlatform()
+                        ? 'calc(env(safe-area-inset-top) + 80px)'
+                        : '80px'
+                }}
+            >
                 <div className="bg-white">
                     {/* User Header */}
                     <div className="flex px-5 py-4 gap-3 items-start">

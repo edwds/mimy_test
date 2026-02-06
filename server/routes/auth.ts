@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { users, clusters, content, users_follow, users_ranking } from "../db/schema.js";
+import { users, clusters, content, users_follow, users_ranking, groups } from "../db/schema.js";
 import { eq, sql, and } from "drizzle-orm";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -214,6 +214,15 @@ router.get("/me", requireAuth, async (req, res) => {
             }
         }
 
+        // Add group name if user has a group
+        let groupName = null;
+        if (user.group_id) {
+            const [group] = await db.select().from(groups).where(eq(groups.id, user.group_id)).limit(1);
+            if (group) {
+                groupName = group.name;
+            }
+        }
+
         // Get stats (including ranking count)
         const stats = await db.transaction(async (tx) => {
             await tx.execute(sql`SET LOCAL max_parallel_workers_per_gather = 0`);
@@ -240,6 +249,7 @@ router.get("/me", requireAuth, async (req, res) => {
         res.json({
             ...user,
             ...clusterInfo,
+            group_name: groupName,
             stats
         });
     } catch (error: any) {

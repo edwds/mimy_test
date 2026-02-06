@@ -55,6 +55,9 @@ app.use("/api/ranking", rankingRoutes);
 import importRoutes from "./routes/import.js";
 app.use("/api/import", importRoutes);
 
+import affiliationRoutes from "./routes/affiliation.js";
+app.use("/api/affiliation", affiliationRoutes);
+
 app.get("/health", (_req, res) => {
     res.send("OK");
 });

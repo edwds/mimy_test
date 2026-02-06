@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, getYear, startOfWeek, endOfWeek, subWeeks, isWithinInterval, addDays, isSameDay, startOfMonth } from 'date-fns';
+import { format, getYear, startOfWeek, endOfWeek, subWeeks, isWithinInterval, addDays, isSameDay, startOfMonth, isFuture, startOfDay } from 'date-fns';
 
 interface TimelineViewProps {
     contents: any[];
@@ -20,9 +20,10 @@ interface DayGroup {
 
 export const TimelineView = ({ contents }: TimelineViewProps) => {
     const navigate = useNavigate();
+    const [visibleWeeks, setVisibleWeeks] = useState(4);
 
     // Generate all weeks from current to past, and fill with contents
-    const { groupedByWeek, contentsWithoutDate } = React.useMemo(() => {
+    const { groupedByWeek, contentsWithoutDate, hasMore } = React.useMemo(() => {
         const now = new Date();
         const noDate: any[] = [];
 
@@ -36,11 +37,10 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
             }
         });
 
-        // Generate weeks from current to 20 weeks ago
-        const numberOfWeeks = 20;
+        // Generate weeks from current to visibleWeeks ago
         const result: WeekGroup[] = [];
 
-        for (let i = 0; i < numberOfWeeks; i++) {
+        for (let i = 0; i < visibleWeeks; i++) {
             const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
             const weekEnd = endOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
 
@@ -74,10 +74,15 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 return isWithinInterval(visitDate, { start: weekStart, end: weekEnd });
             });
 
-            // Create all 7 days of the week (Mon-Sun)
+            // Create days of the week (Mon-Sun), but exclude future dates
             const dayGroups: DayGroup[] = [];
             for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
                 const currentDay = addDays(weekStart, dayOffset);
+
+                // Skip future dates
+                if (isFuture(startOfDay(currentDay))) {
+                    continue;
+                }
 
                 // Find contents for this specific day
                 const dayContents = weekContents.filter(c => {
@@ -92,11 +97,14 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 });
             }
 
-            result.push({
-                weekLabel,
-                dateRange: `${format(weekStart, 'M.d')} – ${format(weekEnd, 'M.d')}`,
-                items: dayGroups
-            });
+            // Only add weeks that have at least one day
+            if (dayGroups.length > 0) {
+                result.push({
+                    weekLabel,
+                    dateRange: `${format(weekStart, 'M.d')} – ${format(weekEnd, 'M.d')}`,
+                    items: dayGroups
+                });
+            }
         }
 
         // Sort contents without date by created_at (newest first)
@@ -104,11 +112,29 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
 
+        // Check if there are more weeks with content in the past
+        const oldestContent = withDate.length > 0
+            ? withDate.reduce((oldest, c) => {
+                const visitDate = new Date(c.review_prop.visit_date);
+                return visitDate < oldest ? visitDate : oldest;
+            }, new Date())
+            : new Date();
+
+        const weeksFromOldestContent = Math.ceil(
+            (now.getTime() - oldestContent.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        );
+        const hasMoreWeeks = visibleWeeks < weeksFromOldestContent && visibleWeeks < 52; // Max 52 weeks (1 year)
+
         return {
             groupedByWeek: result,
-            contentsWithoutDate: sortedNoDate
+            contentsWithoutDate: sortedNoDate,
+            hasMore: hasMoreWeeks
         };
-    }, [contents]);
+    }, [contents, visibleWeeks]);
+
+    const loadMoreWeeks = () => {
+        setVisibleWeeks(prev => Math.min(prev + 4, 52)); // Load 4 more weeks, max 52
+    };
 
     const handleContentClick = (content: any) => {
         navigate(`/content/detail?contentId=${content.id}`);
@@ -243,6 +269,18 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                             );
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Load More Button */}
+            {hasMore && (
+                <div className="flex justify-center py-4 px-5">
+                    <button
+                        onClick={loadMoreWeeks}
+                        className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    >
+                        이전 주 더보기
+                    </button>
                 </div>
             )}
         </div>

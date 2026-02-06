@@ -165,11 +165,11 @@ export const SettingsScreen = () => {
                     />
                     <MenuItem
                         label={t('profile.settings.school_company')}
-                        onClick={() => handleMockAction(t('profile.settings.school_company'))}
+                        onClick={() => navigate('/profile/group')}
                     />
                     <MenuItem
                         label={t('profile.settings.neighborhood')}
-                        onClick={() => handleMockAction(t('profile.settings.neighborhood'))}
+                        onClick={() => navigate('/profile/neighborhood')}
                     />
 
                     <div className="h-px bg-border/50 my-2" />

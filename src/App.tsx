@@ -28,6 +28,8 @@ import { BannerAdminScreen } from '@/screens/admin/BannerAdminScreen';
 import { ManageRankingScreen } from '@/screens/profile/ManageRankingScreen';
 import { ManageVsScreen } from '@/screens/profile/ManageVsScreen';
 import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
+import { GroupRegistrationScreen } from '@/screens/profile/GroupRegistrationScreen';
+import { NeighborhoodRegistrationScreen } from '@/screens/profile/NeighborhoodRegistrationScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { ContentDetailScreen } from '@/screens/content/ContentDetailScreen';
 import { NotificationScreen } from '@/screens/notification/NotificationScreen';
@@ -112,6 +114,8 @@ function AppContent() {
                                 <Route path="/profile/manage/vs" element={<ProtectedRoute><ManageVsScreen /></ProtectedRoute>} />
                                 <Route path="/profile/manage/ranking" element={<ProtectedRoute><ManageRankingScreen /></ProtectedRoute>} />
                                 <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
+                                <Route path="/profile/group" element={<ProtectedRoute><GroupRegistrationScreen /></ProtectedRoute>} />
+                                <Route path="/profile/neighborhood" element={<ProtectedRoute><NeighborhoodRegistrationScreen /></ProtectedRoute>} />
                                 <Route path="/content/detail" element={<ProtectedRoute><ContentDetailScreen /></ProtectedRoute>} />
                                 <Route path="/notifications" element={<ProtectedRoute><NotificationScreen /></ProtectedRoute>} />
                                 <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />

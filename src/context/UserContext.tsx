@@ -17,6 +17,9 @@ export interface User {
     links?: string[];
     cluster_name?: string;
     cluster_tagline?: string;
+    group_id?: number;
+    group_name?: string;
+    neighborhood?: string;
     stats?: {
         content_count: number;
         follower_count: number;

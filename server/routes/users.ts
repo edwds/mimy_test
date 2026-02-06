@@ -28,20 +28,47 @@ router.get("/check-handle", async (req, res) => {
     }
 });
 
-// GET /leaderboard
-// GET /leaderboard
+// GET /leaderboard/keys - Get available keys for a type
+router.get("/leaderboard/keys", async (req, res) => {
+    try {
+        const type = (req.query.type as string)?.toUpperCase() || 'COMPANY';
+
+        if (type !== 'COMPANY' && type !== 'NEIGHBORHOOD') {
+            return res.status(400).json({ error: "Type must be COMPANY or NEIGHBORHOOD" });
+        }
+
+        const cacheKey = `leaderboard:keys:${type}`;
+
+        const result = await getOrSetCache(cacheKey, async () => {
+            const keys = await db.execute(sql`
+                SELECT DISTINCT key FROM leaderboard
+                WHERE type = ${type} AND key IS NOT NULL
+                ORDER BY key
+            `);
+            return keys.rows.map((r: any) => r.key);
+        }, 3600);
+
+        res.json(result);
+    } catch (error) {
+        console.error("Leaderboard keys error:", error);
+        res.status(500).json({ error: "Failed to fetch leaderboard keys" });
+    }
+});
+
 // GET /leaderboard
 router.get("/leaderboard", async (req, res) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         const filter = (req.query.filter as string) || '';
+        const key = (req.query.key as string) || null;  // Group name or neighborhood
         let limit = parseInt(req.query.limit as string) || 20;
 
         // Determine Type
         let type = 'OVERALL';
-        // If filter is 'company', use COMPANY type
         if (filter === 'company') {
             type = 'COMPANY';
+        } else if (filter === 'neighborhood') {
+            type = 'NEIGHBORHOOD';
         }
 
         if (filter === 'company' || filter === 'neighborhood') {
@@ -49,9 +76,17 @@ router.get("/leaderboard", async (req, res) => {
         }
 
         const offset = (page - 1) * limit;
-        const cacheKey = `leaderboard:${type}:${limit}:${page}`;
+        const cacheKey = `leaderboard:${type}:${key || 'all'}:${limit}:${page}`;
 
         const result = await getOrSetCache(cacheKey, async () => {
+            // Build where condition
+            let whereCondition;
+            if (key && (type === 'COMPANY' || type === 'NEIGHBORHOOD')) {
+                whereCondition = and(eq(leaderboard.type, type), eq(leaderboard.key, key));
+            } else {
+                whereCondition = eq(leaderboard.type, type);
+            }
+
             // Query Cache
             const cachedLeaderboard = await db.select({
                 id: users.id,
@@ -61,14 +96,17 @@ router.get("/leaderboard", async (req, res) => {
                 profile_image: users.profile_image,
                 cluster_name: clusters.name,
                 taste_result: users.taste_result,
+                group_id: users.group_id,
+                neighborhood: users.neighborhood,
                 rank: leaderboard.rank,
                 score: leaderboard.score,
-                stats: leaderboard.stats
+                stats: leaderboard.stats,
+                leaderboard_key: leaderboard.key
             })
                 .from(leaderboard)
                 .innerJoin(users, eq(leaderboard.user_id, users.id))
                 .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id}`)
-                .where(eq(leaderboard.type, type))
+                .where(whereCondition)
                 .orderBy(leaderboard.rank)
                 .limit(limit)
                 .offset(offset);
@@ -82,9 +120,12 @@ router.get("/leaderboard", async (req, res) => {
                     account_id: row.account_id,
                     profile_image: row.profile_image,
                     cluster_name: row.cluster_name,
-                    taste_result: row.taste_result
+                    taste_result: row.taste_result,
+                    group_id: row.group_id,
+                    neighborhood: row.neighborhood
                 },
-                score: row.score
+                score: row.score,
+                key: row.leaderboard_key
             }));
         }, 3600); // 1 hour TTL
 

@@ -180,8 +180,8 @@ export const NotificationScreen = () => {
                 className="flex-1 overflow-y-auto"
                 style={{
                     paddingTop: Capacitor.isNativePlatform()
-                        ? 'calc(env(safe-area-inset-top) + 80px)'
-                        : '80px'
+                        ? 'calc(env(safe-area-inset-top) + 60px)'
+                        : '60px'
                 }}
                 data-scroll-container="true"
             >

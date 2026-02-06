@@ -1,15 +1,15 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { FilterChip } from '@/components/FilterChip';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, ChevronRight } from 'lucide-react';
 import { cn, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
+import { useUser } from '@/context/UserContext';
 
 
 interface LeaderboardItem {
@@ -21,15 +21,25 @@ interface LeaderboardItem {
         profile_image: string | null;
         cluster_name?: string;
         taste_result?: { scores: Record<string, number> };
+        group_id?: number;
+        neighborhood?: string;
     };
     score: number;
+    key?: string;
 }
 
-import { UserService } from '@/services/UserService';
+// Parse neighborhood string to get display name
+const parseNeighborhood = (neighborhood: string): string => {
+    if (!neighborhood) return '';
+    const parts = neighborhood.split(':');
+    return parts.length === 2 ? parts[1] : neighborhood;
+};
 
 export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { user: currentUser } = useUser();
+
     // Smart Header State
     const containerRef = useRef<HTMLDivElement>(null);
     const { isVisible: isHeaderVisible, handleScroll: onSmartScroll } = useSmartScroll(containerRef);
@@ -41,32 +51,52 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         }
     };
 
-
-    // Filter State (Mock)
-    const [filter, setFilter] = useState<'company' | 'neighborhood'>('company');
+    // Filter State
+    const [filter, setFilter] = useState<'company' | 'neighborhood' | 'overall'>('company');
 
     // Data State
     const [items, setItems] = useState<LeaderboardItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState<any>(null);
     const [showSimilarOnly, setShowSimilarOnly] = useState(false);
 
+    // Get user's group/neighborhood info (cached in UserContext)
+    const userGroupName = currentUser?.group_name;
+    const userNeighborhood = currentUser?.neighborhood;
+    const hasGroup = !!userGroupName;
+    const hasNeighborhood = !!userNeighborhood;
+
+    // Determine selectedKey based on user's registration
+    const selectedKey = filter === 'overall' ? null : (filter === 'company' ? userGroupName : userNeighborhood);
+
+    // Fetch leaderboard when filter or user changes
     useEffect(() => {
-        if (!isEnabled) return;
+        // For overall, we don't need a key
+        // For company/neighborhood, we need the user's group/neighborhood
+        if (!isEnabled) {
+            setLoading(false);
+            setItems([]);
+            return;
+        }
+
+        if (filter !== 'overall' && !selectedKey) {
+            setLoading(false);
+            setItems([]);
+            return;
+        }
 
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [leaderboardRes, user] = await Promise.all([
-                    authFetch(`${API_BASE_URL}/api/users/leaderboard?filter=${filter}`),
-                    UserService.getCurrentUser()
-                ]);
+                let url = `${API_BASE_URL}/api/users/leaderboard?filter=${filter}`;
+                if (selectedKey) {
+                    url += `&key=${encodeURIComponent(selectedKey)}`;
+                }
+                const res = await authFetch(url);
 
-                if (leaderboardRes.ok) {
-                    const data = await leaderboardRes.json();
+                if (res.ok) {
+                    const data = await res.json();
                     setItems(data);
                 }
-                setCurrentUser(user);
             } catch (error) {
                 console.error("Failed to load data", error);
             } finally {
@@ -75,7 +105,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
         };
 
         fetchData();
-    }, [isEnabled, filter]);
+    }, [isEnabled, filter, selectedKey]);
 
     const handleScroll = () => {
         onSmartScroll();
@@ -121,20 +151,60 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                 >
 
 
-                    {/* Filter Chips & Similarity Toggle */}
+                    {/* Filter Chips */}
                     <div className="flex flex-col gap-4 mb-6">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                             <FilterChip
-                                label="회사"
+                                label={userGroupName || t('leaderboard.my_group')}
                                 isActive={filter === 'company'}
                                 onClick={() => setFilter('company')}
                             />
                             <FilterChip
-                                label="지역"
+                                label={userNeighborhood ? parseNeighborhood(userNeighborhood) : t('leaderboard.my_neighborhood')}
                                 isActive={filter === 'neighborhood'}
                                 onClick={() => setFilter('neighborhood')}
                             />
+                            <FilterChip
+                                label={t('leaderboard.filter_overall')}
+                                isActive={filter === 'overall'}
+                                onClick={() => setFilter('overall')}
+                            />
                         </div>
+
+                        {/* Registration Prompt */}
+                        {!loading && filter === 'company' && !hasGroup && (
+                            <button
+                                onClick={() => navigate('/profile/group')}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                            >
+                                <div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('leaderboard.no_company_registered')}
+                                    </p>
+                                    <p className="text-sm text-primary font-medium mt-1">
+                                        {t('leaderboard.register_company')}
+                                    </p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        )}
+
+                        {!loading && filter === 'neighborhood' && !hasNeighborhood && (
+                            <button
+                                onClick={() => navigate('/profile/neighborhood')}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                            >
+                                <div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('leaderboard.no_neighborhood_registered')}
+                                    </p>
+                                    <p className="text-sm text-primary font-medium mt-1">
+                                        {t('leaderboard.register_neighborhood')}
+                                    </p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        )}
 
                         <label className="flex items-center gap-2 cursor-pointer group">
                             <div
@@ -147,7 +217,7 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                 {showSimilarOnly && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
                             </div>
                             <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">
-                                내 입맛과 비슷한 사람만 보기
+                                {t('leaderboard.show_similar_only')}
                             </span>
                         </label>
                     </div>

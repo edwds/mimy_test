@@ -1,6 +1,21 @@
 
 import { pgTable, text, serial, integer, boolean, timestamp, unique, jsonb, doublePrecision, date, varchar, char, bigserial, bigint, index } from 'drizzle-orm/pg-core';
 
+// --- Groups Domain (must be defined before users for foreign key) ---
+export const groups = pgTable('groups', {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),           // "캐치테이블", "서울대학교"
+    type: varchar('type', { length: 20 }).notNull(),            // 'COMPANY' | 'SCHOOL'
+    allowed_domains: text('allowed_domains').array().notNull(), // ['catchtable.co.kr']
+    logo_url: text('logo_url'),
+    is_active: boolean('is_active').default(true),
+    created_at: timestamp('created_at').defaultNow(),
+    updated_at: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+    type_idx: index('idx_groups_type').on(table.type),
+    name_idx: index('idx_groups_name').on(table.name),
+}));
+
 // --- Users Domain ---
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
@@ -20,12 +35,21 @@ export const users = pgTable('users', {
     // Adding taste_cluster to support existing code in users.ts, though spec prefers users_taste table
     taste_cluster: varchar('taste_cluster', { length: 50 }),
     taste_result: jsonb('taste_result'), // Storing full quiz result
+    // Group affiliation (company/school)
+    group_id: integer('group_id').references(() => groups.id, { onDelete: 'set null' }),
+    group_email: varchar('group_email', { length: 255 }),      // Verified company/school email
+    group_joined_at: timestamp('group_joined_at'),
+    // Neighborhood affiliation
+    neighborhood: varchar('neighborhood', { length: 100 }),     // "KR:강남구", "US:San Francisco"
+    neighborhood_joined_at: timestamp('neighborhood_joined_at'),
     created_at: timestamp('created_at').defaultNow(),
     updated_at: timestamp('updated_at').defaultNow(),
 }, (table) => ({
     account_id_idx: index('idx_users_account_id').on(table.account_id),
     email_idx: index('idx_users_email').on(table.email),
     phone_idx: index('idx_users_phone').on(table.phone),
+    group_id_idx: index('idx_users_group_id').on(table.group_id),
+    neighborhood_idx: index('idx_users_neighborhood').on(table.neighborhood),
 }));
 
 export const phone_verifications = pgTable('phone_verifications', {
@@ -40,6 +64,21 @@ export const phone_verifications = pgTable('phone_verifications', {
     verified_at: timestamp('verified_at'),
 }, (table) => ({
     phone_verified_idx: index('idx_phone_verify_phone').on(table.phone, table.is_verified),
+}));
+
+export const email_verifications = pgTable('email_verifications', {
+    id: serial('id').primaryKey(),
+    email: varchar('email', { length: 255 }).notNull(),
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    code: varchar('code', { length: 6 }).notNull(),
+    expires_at: timestamp('expires_at').notNull(),
+    attempts: integer('attempts').default(0),
+    is_verified: boolean('is_verified').default(false),
+    created_at: timestamp('created_at').defaultNow(),
+    verified_at: timestamp('verified_at'),
+}, (table) => ({
+    user_id_idx: index('idx_email_verify_user').on(table.user_id, table.is_verified),
+    email_idx: index('idx_email_verify_email').on(table.email),
 }));
 
 export const users_taste = pgTable('users_taste', {

@@ -85,6 +85,13 @@
       "when": 1770170382675,
       "tag": "0011_optimal_caretaker",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1770345355345,
+      "tag": "0012_yellow_katie_power",
+      "breakpoints": true
     }
   ]
 }
