@@ -72,6 +72,45 @@ export function formatFullDateTime(dateString: string, locale: string = 'ko'): s
     });
 }
 
+// Format relative time (e.g., "방금", "5분 전", "1시간 전")
+export function formatRelativeTime(dateString: string, locale: string = 'ko'): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+        return locale === 'ko' ? '방금' : 'just now';
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+        return locale === 'ko' ? `${diffInMinutes}분 전` : `${diffInMinutes}m ago`;
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+        return locale === 'ko' ? `${diffInHours}시간 전` : `${diffInHours}h ago`;
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) {
+        return locale === 'ko' ? `${diffInDays}일 전` : `${diffInDays}d ago`;
+    }
+
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 4) {
+        return locale === 'ko' ? `${diffInWeeks}주 전` : `${diffInWeeks}w ago`;
+    }
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) {
+        return locale === 'ko' ? `${diffInMonths}개월 전` : `${diffInMonths}mo ago`;
+    }
+
+    const diffInYears = Math.floor(diffInDays / 365);
+    return locale === 'ko' ? `${diffInYears}년 전` : `${diffInYears}y ago`;
+}
+
 // Taste Match Logic
 export interface TasteScores {
     [key: string]: number;

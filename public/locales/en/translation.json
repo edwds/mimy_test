@@ -381,5 +381,10 @@
         "success": "Update successful! {{count}} records registered.",
         "error": "Update failed: {{message}}",
         "warning": "Warning: All existing data in the table will be deleted."
+    },
+    "quiz": {
+        "label_dislike": "Not my taste",
+        "label_neutral": "Draw",
+        "label_like": "Love it"
     }
 }

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db/index.js';
-import { notifications, users, content, comments } from '../db/schema.js';
-import { eq, and, desc, sql, lt } from 'drizzle-orm';
+import { notifications, users, content, comments, shops } from '../db/schema.js';
+import { eq, and, desc, sql, lt, inArray } from 'drizzle-orm';
 
 const router = Router();
 
@@ -70,6 +70,27 @@ router.get('/', async (req: Request, res: Response) => {
             }, {} as Record<number, any>);
         }
 
+        // 관련 샵 정보 가져오기
+        const shopIds = Object.values(contentMap)
+            .filter((c: any) => c.review_prop?.shop_id)
+            .map((c: any) => c.review_prop.shop_id);
+
+        let shopMap: Record<number, any> = {};
+        if (shopIds.length > 0) {
+            const shopsData = await db
+                .select({
+                    id: shops.id,
+                    name: shops.name,
+                })
+                .from(shops)
+                .where(inArray(shops.id, shopIds));
+
+            shopMap = shopsData.reduce((acc, s) => {
+                acc[s.id] = s;
+                return acc;
+            }, {} as Record<number, any>);
+        }
+
         // 관련 댓글 정보 가져오기
         const commentIds = notifs
             .filter(n => n.comment_id)
@@ -106,8 +127,11 @@ router.get('/', async (req: Request, res: Response) => {
                 }
 
                 // 샵 이름 추출
-                if (contentData.review_prop?.shop_name) {
-                    shopName = contentData.review_prop.shop_name;
+                if (contentData.review_prop?.shop_id) {
+                    const shop = shopMap[contentData.review_prop.shop_id];
+                    if (shop) {
+                        shopName = shop.name;
+                    }
                 }
             }
 

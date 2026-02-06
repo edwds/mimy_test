@@ -318,7 +318,7 @@ npx cap open android
 ## 개선이 필요한 영역
 
 ### 보안
-- [ ] JWT/Session 기반 인증으로 전환 (현재: x-user-id 헤더)
+- [x] ~~JWT/Session 기반 인증으로 전환~~ ✅ 완료 (v2.0, 2026-02-05)
 - [ ] API Rate Limiting 추가
 - [ ] Input Validation 강화
 
@@ -458,6 +458,18 @@ npm run preview      # 빌드 결과 미리보기
 
 ## 참고 문서
 
+### 프로젝트 문서
+- **[AUTH.md](AUTH.md)** - 인증 시스템 완전 가이드
+  - JWT 기반 인증 아키텍처
+  - Web/Native 플랫폼별 인증 흐름
+  - 보안 설정 (쿠키, CORS, JWT)
+  - 문제 해결 가이드
+  - v2.0 변경사항 (x-user-id 제거)
+- **[ADMIN_API_GUIDE.md](ADMIN_API_GUIDE.md)** - 관리자 API 가이드
+  - 레스토랑 랭킹 조작
+  - 캐시 관리
+  - 유틸리티 스크립트
+
 ### 외부 서비스
 - [Neon PostgreSQL](https://neon.tech/docs)
 - [Upstash Redis](https://upstash.com/docs/redis)
@@ -503,6 +515,17 @@ npm run preview      # 빌드 결과 미리보기
 
 ---
 
-**마지막 업데이트**: 2026-01-28
-**분석 버전**: v1.0
+**마지막 업데이트**: 2026-02-05
+**버전**: v2.0
 **작성자**: Claude Code (Sonnet 4.5)
+
+## 변경 이력
+
+### v2.0 (2026-02-05)
+- ✅ JWT 기반 인증 시스템 완성 (x-user-id 헤더 제거)
+- ✅ 로그아웃 버그 수정 (localStorage 정리)
+- ✅ 환경 설정 명확화 (NODE_ENV)
+- 📝 AUTH.md 문서 추가
+
+### v1.0 (2026-01-28)
+- 📝 초기 프로젝트 문서 작성

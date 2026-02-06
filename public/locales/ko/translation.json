@@ -395,6 +395,9 @@
             "start_app": "미미 시작하기",
             "tagline_default": "당신만의 특별한 미식 취향",
             "flavor_unknown": "알 수 없는 취향"
-        }
+        },
+        "label_dislike": "내 취향 아님",
+        "label_neutral": "괜찮아요",
+        "label_like": "완전 내 취향"
     }
 }

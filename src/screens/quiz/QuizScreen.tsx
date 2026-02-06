@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Loader2, X } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -20,6 +21,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 export const QuizScreen = () => {
     const navigate = useNavigate();
     const { user } = useUser();
+    const { t } = useTranslation();
 
     // 컴포넌트가 마운트될 때마다 질문 순서를 섞음
     const shuffledQuestions = useMemo(() => shuffleArray(QUESTIONS), []);
@@ -205,9 +207,9 @@ export const QuizScreen = () => {
 
                 {/* Guide labels */}
                 <div className="mb-16 w-full max-w-md flex items-center justify-between px-6">
-                    <span className="text-sm font-medium" style={{ color: '#FFB5C5' }}>아닌 편이다</span>
-                    <span className="text-sm font-medium text-gray-400">고를 수 없음</span>
-                    <span className="text-sm font-medium" style={{ color: '#A8E6CF' }}>그런 편이다</span>
+                    <span className="text-sm font-medium" style={{ color: '#FFB5C5' }}>{t('quiz.label_dislike', '내 취향 아님')}</span>
+                    <span className="text-sm font-medium text-gray-400">{t('quiz.label_neutral', '괜찮아요')}</span>
+                    <span className="text-sm font-medium" style={{ color: '#A8E6CF' }}>{t('quiz.label_like', '완전 내 취향')}</span>
                 </div>
 
 
@@ -380,7 +382,7 @@ export const QuizScreen = () => {
                             }
                         >
                             <span className="text-green-600 text-lg font-bold">
-                                그런 편이다
+                                {t('quiz.label_like', '완전 내 취향')}
                             </span>
                         </motion.div>
                         <motion.div
@@ -406,7 +408,7 @@ export const QuizScreen = () => {
                             }
                         >
                             <span className="text-red-600 text-lg font-bold">
-                                아닌 편이다
+                                {t('quiz.label_dislike', '내 취향 아님')}
                             </span>
                         </motion.div>
                         <motion.div
@@ -429,7 +431,7 @@ export const QuizScreen = () => {
                             }
                         >
                             <span className="text-gray-600 text-lg font-bold">
-                                고를 수 없음
+                                {t('quiz.label_neutral', '괜찮아요')}
                             </span>
                         </motion.div>
 

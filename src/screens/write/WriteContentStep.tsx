@@ -753,10 +753,12 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                             <>
                                 {/* Loading State */}
                                 {isLoadingSuggestions && (
-                                    <div className="w-full mb-3 flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
-                                        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                                        <span className="text-sm font-bold text-primary">근처 사진 찾는 중...</span>
-                                        <span className="text-xs text-muted-foreground">(콘솔 로그 확인)</span>
+                                    <div className="w-full mb-3 flex flex-col items-center justify-center gap-3 p-4 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 rounded-xl border border-primary/20 shadow-sm">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                            <span className="text-sm font-bold text-primary">근처 사진 찾는 중...</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground text-center">이 위치에서 촬영한 사진을 검색하고 있어요</p>
                                     </div>
                                 )}
 
@@ -767,11 +769,13 @@ export const WriteContentStep: React.FC<Props> = ({ onNext, onBack, mode, shop, 
                                             console.log('[WriteContentStep] 🔄 User manually triggered photo search');
                                             handleFindSuggestedPhotos();
                                         }}
-                                        className="w-full mb-3 flex items-center justify-center gap-2 p-3 bg-muted/30 border-2 border-dashed border-border rounded-xl text-muted-foreground font-medium text-sm hover:bg-muted/50 hover:border-primary/30 hover:text-foreground transition-colors"
+                                        className="w-full mb-3 flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-br from-muted/20 to-muted/10 border-2 border-dashed border-border rounded-xl hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 hover:border-primary/30 transition-all group active:scale-[0.98]"
                                     >
-                                        <MapPin className="w-4 h-4" />
-                                        <span>이 위치 근처 사진 찾기</span>
-                                        <span className="text-xs">(콘솔 로그 확인)</span>
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                            <span className="font-semibold text-sm text-muted-foreground group-hover:text-foreground transition-colors">이 위치 근처 사진 찾기</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground/70">100m 반경 내에서 촬영한 사진을 찾아드려요</p>
                                     </button>
                                 )}
                             </>
