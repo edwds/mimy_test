@@ -480,7 +480,7 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
 
             {/* Rank & Satisfaction Badge */}
             {(rank || satisfaction) && (
-                <div className="flex items-center gap-2 pl-1">
+                <div className="flex items-center gap-2">
                     {satisfaction && (
                         <span className={cn(
                             "font-bold px-2 py-0.5 rounded border text-[11px] whitespace-nowrap",
@@ -504,14 +504,14 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
 
             {/* Review Text or Shop Description */}
             {review_text ? (
-                <div className="relative">
-                    <p className="pl-1 text-xs text-foreground/80 leading-relaxed line-clamp-2">
+                <div className="relative -mt-1">
+                    <p className="pl-1 text-sm text-foreground/70 leading-relaxed line-clamp-2">
                         {review_text}
                     </p>
                 </div>
             ) : shop.description ? (
                 <div className="relative">
-                    <p className="pl-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="pl-1 text-sm text-foreground/70 leading-relaxed line-clamp-2">
                         {shop.description}
                     </p>
                 </div>

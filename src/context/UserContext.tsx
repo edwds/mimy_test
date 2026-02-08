@@ -54,6 +54,32 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+// Default coordinates by country
+const DEFAULT_COORDS_BY_COUNTRY: Record<string, { lat: number; lon: number }> = {
+    KR: { lat: 37.5665, lon: 126.9780 },  // Seoul City Hall
+    JP: { lat: 35.6812, lon: 139.7671 },  // Tokyo Station
+};
+
+// Infer country from browser language
+const getCountryFromLanguage = (): string => {
+    const lang = navigator.language.toLowerCase();
+    if (lang.startsWith('ja')) return 'JP';
+    return 'KR'; // Default to Korea
+};
+
+// Get default coordinates by country code or browser language
+const getDefaultCoords = (countryCode?: string | null) => {
+    const country = countryCode || getCountryFromLanguage();
+    return DEFAULT_COORDS_BY_COUNTRY[country] || DEFAULT_COORDS_BY_COUNTRY['KR'];
+};
+
+// Check if coordinates are a fallback (not real GPS)
+const isFallbackCoords = (coords: { lat: number; lon: number }) => {
+    return Object.values(DEFAULT_COORDS_BY_COUNTRY).some(
+        (c) => c.lat === coords.lat && c.lon === coords.lon
+    );
+};
+
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -109,13 +135,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                         lon: pos.coords.longitude
                     };
                     setCoordinates(newCoords);
-
-                    // Fetch recommended shops when we get location
                     fetchRecommendedShops(newCoords.lat, newCoords.lon);
                 },
-                (err) => console.log('Geolocation init error:', err),
+                (err) => {
+                    console.log('Geolocation init error:', err);
+                    // Fallback: browser language based (user not loaded yet at this point)
+                    const fallbackCoords = getDefaultCoords();
+                    setCoordinates(fallbackCoords);
+                    fetchRecommendedShops(fallbackCoords.lat, fallbackCoords.lon);
+                },
                 { timeout: 5000, enableHighAccuracy: false }
             );
+        } else {
+            // Geolocation not supported, use default location
+            const fallbackCoords = getDefaultCoords();
+            setCoordinates(fallbackCoords);
+            fetchRecommendedShops(fallbackCoords.lat, fallbackCoords.lon);
         }
     }, []);
 
@@ -128,6 +163,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             setRecommendedShops([]);
         }
     }, [user?.id]);
+
+    // Update coordinates based on neighborhood when user loads (if currently using fallback)
+    useEffect(() => {
+        if (user?.neighborhood?.countryCode && coordinates && isFallbackCoords(coordinates)) {
+            const neighborhoodCoords = getDefaultCoords(user.neighborhood.countryCode);
+            // Only update if different country
+            if (coordinates.lat !== neighborhoodCoords.lat || coordinates.lon !== neighborhoodCoords.lon) {
+                console.log('[UserContext] Updating fallback coords based on neighborhood:', user.neighborhood.countryCode);
+                setCoordinates(neighborhoodCoords);
+                fetchRecommendedShops(neighborhoodCoords.lat, neighborhoodCoords.lon);
+            }
+        }
+    }, [user?.neighborhood?.countryCode, coordinates]);
 
     const fetchRecommendedShops = async (lat: number, lon: number) => {
         try {
