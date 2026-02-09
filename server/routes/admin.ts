@@ -2,8 +2,9 @@ import { Router } from "express";
 import multer from "multer";
 import { db } from "../db/index.js";
 import { users, shops, content, users_ranking } from "../db/schema.js";
-import { eq, sql, and, inArray } from "drizzle-orm";
+import { eq, sql, and, inArray, isNotNull } from "drizzle-orm";
 import { redis } from "../redis.js";
+import { scrapeGoogleMapsCategory, sleep } from "../services/FirecrawlService.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -549,3 +550,251 @@ async function recalculateRankings() {
         // Don't fail the whole request, but log error
     }
 }
+
+// ============================================
+// Shop Category Scraping (Firecrawl)
+// ============================================
+
+// 개별 shop 카테고리 스크래핑
+router.post("/shop/:id/scrape-category", async (req, res) => {
+    try {
+        const shopId = parseInt(req.params.id);
+
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: "Invalid shop ID" });
+        }
+
+        // Shop 조회
+        const shop = await db.select({
+            id: shops.id,
+            name: shops.name,
+            google_place_id: shops.google_place_id,
+            food_kind: shops.food_kind
+        })
+            .from(shops)
+            .where(eq(shops.id, shopId))
+            .limit(1);
+
+        if (shop.length === 0) {
+            return res.status(404).json({ error: "Shop not found" });
+        }
+
+        const shopData = shop[0];
+
+        if (!shopData.google_place_id) {
+            return res.status(400).json({
+                error: "Shop has no google_place_id",
+                shop: shopData
+            });
+        }
+
+        // Firecrawl로 스크래핑
+        console.log(`[Admin] Scraping category for shop ${shopId}: ${shopData.name}`);
+        const result = await scrapeGoogleMapsCategory(shopData.google_place_id);
+
+        res.json({
+            shopId: shopData.id,
+            shopName: shopData.name,
+            currentFoodKind: shopData.food_kind,
+            scrapedCategory: result.category,
+            allCategories: result.allCategories,
+            scrapedShopName: result.shopName,
+            scrapedAddress: result.address,
+            error: result.error
+        });
+
+    } catch (error: any) {
+        console.error("[Admin] Scrape category error:", error);
+        res.status(500).json({ error: "Failed to scrape category", details: error.message });
+    }
+});
+
+// 개별 shop food_kind 업데이트
+router.patch("/shop/:id/food-kind", async (req, res) => {
+    try {
+        const shopId = parseInt(req.params.id);
+        const { food_kind } = req.body;
+
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: "Invalid shop ID" });
+        }
+
+        if (!food_kind || typeof food_kind !== 'string') {
+            return res.status(400).json({ error: "food_kind is required" });
+        }
+
+        // 업데이트
+        await db.update(shops)
+            .set({ food_kind, updated_at: new Date() })
+            .where(eq(shops.id, shopId));
+
+        // 캐시 삭제
+        if (redis) {
+            await redis.del(`shop:${shopId}`);
+        }
+
+        res.json({ success: true, shopId, food_kind });
+
+    } catch (error: any) {
+        console.error("[Admin] Update food_kind error:", error);
+        res.status(500).json({ error: "Failed to update food_kind", details: error.message });
+    }
+});
+
+// 배치 카테고리 스크래핑
+router.post("/shops/scrape-categories", async (req, res) => {
+    try {
+        const { shopIds, onlyGeneric = true, limit = 50 } = req.body;
+
+        // 일반적인 food_kind 목록 (이것들만 업데이트 대상)
+        const genericFoodKinds = [
+            'restaurant', 'food', '음식점', 'Restaurant', 'Food',
+            null, '', undefined
+        ];
+
+        // Shop 목록 조회
+        const whereCondition = shopIds && Array.isArray(shopIds) && shopIds.length > 0
+            ? and(isNotNull(shops.google_place_id), inArray(shops.id, shopIds))
+            : isNotNull(shops.google_place_id);
+
+        let shopList = await db.select({
+            id: shops.id,
+            name: shops.name,
+            google_place_id: shops.google_place_id,
+            food_kind: shops.food_kind
+        })
+            .from(shops)
+            .where(whereCondition)
+            .limit(limit);
+
+        // onlyGeneric 필터
+        if (onlyGeneric) {
+            shopList = shopList.filter(s =>
+                !s.food_kind || genericFoodKinds.includes(s.food_kind)
+            );
+        }
+
+        console.log(`[Admin] Batch scraping ${shopList.length} shops...`);
+
+        const results: Array<{
+            shopId: number;
+            shopName: string;
+            oldFoodKind: string | null;
+            newCategory: string | null;
+            status: 'success' | 'failed' | 'skipped';
+            error?: string;
+        }> = [];
+
+        for (const shop of shopList) {
+            if (!shop.google_place_id) {
+                results.push({
+                    shopId: shop.id,
+                    shopName: shop.name,
+                    oldFoodKind: shop.food_kind,
+                    newCategory: null,
+                    status: 'skipped',
+                    error: 'No google_place_id'
+                });
+                continue;
+            }
+
+            try {
+                const scrapeResult = await scrapeGoogleMapsCategory(shop.google_place_id);
+
+                if (scrapeResult.error) {
+                    results.push({
+                        shopId: shop.id,
+                        shopName: shop.name,
+                        oldFoodKind: shop.food_kind,
+                        newCategory: null,
+                        status: 'failed',
+                        error: scrapeResult.error
+                    });
+                } else if (scrapeResult.category) {
+                    results.push({
+                        shopId: shop.id,
+                        shopName: shop.name,
+                        oldFoodKind: shop.food_kind,
+                        newCategory: scrapeResult.category,
+                        status: 'success'
+                    });
+                } else {
+                    results.push({
+                        shopId: shop.id,
+                        shopName: shop.name,
+                        oldFoodKind: shop.food_kind,
+                        newCategory: null,
+                        status: 'skipped',
+                        error: 'No category found'
+                    });
+                }
+
+                // Rate limiting (Firecrawl API 보호)
+                await sleep(1500);
+
+            } catch (error: any) {
+                results.push({
+                    shopId: shop.id,
+                    shopName: shop.name,
+                    oldFoodKind: shop.food_kind,
+                    newCategory: null,
+                    status: 'failed',
+                    error: error.message
+                });
+            }
+        }
+
+        const summary = {
+            total: results.length,
+            success: results.filter(r => r.status === 'success').length,
+            failed: results.filter(r => r.status === 'failed').length,
+            skipped: results.filter(r => r.status === 'skipped').length
+        };
+
+        res.json({ summary, results });
+
+    } catch (error: any) {
+        console.error("[Admin] Batch scrape error:", error);
+        res.status(500).json({ error: "Batch scraping failed", details: error.message });
+    }
+});
+
+// 배치 결과 적용 (food_kind 일괄 업데이트)
+router.post("/shops/apply-categories", async (req, res) => {
+    try {
+        const { updates } = req.body;
+        // updates: Array<{ shopId: number, food_kind: string }>
+
+        if (!updates || !Array.isArray(updates) || updates.length === 0) {
+            return res.status(400).json({ error: "updates array is required" });
+        }
+
+        let updated = 0;
+        const clearedCacheKeys: string[] = [];
+
+        for (const { shopId, food_kind } of updates) {
+            if (!shopId || !food_kind) continue;
+
+            await db.update(shops)
+                .set({ food_kind, updated_at: new Date() })
+                .where(eq(shops.id, shopId));
+
+            if (redis) {
+                await redis.del(`shop:${shopId}`);
+                clearedCacheKeys.push(`shop:${shopId}`);
+            }
+
+            updated++;
+        }
+
+        res.json({
+            success: true,
+            updated,
+            clearedCacheKeys
+        });
+
+    } catch (error: any) {
+        console.error("[Admin] Apply categories error:", error);
+        res.status(500).json({ error: "Failed to apply categories", details: error.message });
+    }
+});
