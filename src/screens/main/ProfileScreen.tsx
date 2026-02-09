@@ -272,6 +272,18 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         }
     };
 
+    const handleMemoChange = (shopId: number, memo: string) => {
+        setSavedShops((prev) =>
+            prev.map((s) => (s.id === shopId ? { ...s, memo } : s))
+        );
+    };
+
+    const handleFolderChange = (shopId: number, folder: string) => {
+        setSavedShops((prev) =>
+            prev.map((s) => (s.id === shopId ? { ...s, folder } : s))
+        );
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col h-full bg-background relative">
@@ -653,7 +665,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                 </div>
                             ) : (
                                 savedShops.map((shop: any) => (
-                                    <ShopCard key={shop.id} shop={shop} onSave={() => handleUnsave(shop.id)} displayContext="saved_list" />
+                                    <ShopCard
+                                        key={shop.id}
+                                        shop={shop}
+                                        onSave={() => handleUnsave(shop.id)}
+                                        displayContext="saved_list"
+                                        onMemoChange={handleMemoChange}
+                                        onFolderChange={handleFolderChange}
+                                    />
                                 ))
                             )}
                         </div>

@@ -414,6 +414,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
                                     key={`${item.shop.id}-${index}`}
                                     item={item}
                                     initialIsSaved={savedShopIds.has(item.shop.id)}
+                                    sourceUserId={author?.id}
                                 />
                             ))}
 
@@ -431,7 +432,7 @@ export const ListDetailScreen = ({ userIdProp }: ListDetailProps = {}) => {
 };
 
 // Custom Ranking List Item Component
-const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; initialIsSaved?: boolean }) => {
+const RankingListItem = ({ item, initialIsSaved = false, sourceUserId }: { item: ListItem; initialIsSaved?: boolean; sourceUserId?: number }) => {
     const { shop, rank, satisfaction_tier, review_text, review_images, my_review_stats } = item;
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -470,6 +471,7 @@ const RankingListItem = ({ item, initialIsSaved = false }: { item: ListItem; ini
                 initialIsBookmarked={initialIsSaved}
                 my_review_stats={my_review_stats}
                 showActions={true}
+                sourceUserId={sourceUserId}
                 onClick={() => {
                     const current = new URLSearchParams(window.location.search);
                     current.set('viewShop', String(shop.id));

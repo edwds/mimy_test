@@ -267,10 +267,12 @@ router.get("/discovery", optionalAuth, async (req, res) => {
 });
 
 // POST /api/shops/:id/save
+// channel: 'discovery' | 'NAVER_IMPORT' | '{user_id}' (숫자 문자열 = 해당 유저 콘텐츠에서 저장)
 router.post("/:id/save", requireAuth, async (req, res) => {
     try {
         const shopId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
         const userId = req.user!.id; // Get from JWT
+        const { channel = 'discovery' } = req.body; // 출처: discovery, NAVER_IMPORT, 또는 user_id
 
         if (isNaN(shopId)) {
             return res.status(400).json({ error: "Invalid parameters" });
@@ -290,9 +292,9 @@ router.post("/:id/save", requireAuth, async (req, res) => {
             if (existing.length > 0) {
                 const current = existing[0];
                 if (current.is_deleted) {
-                    // Restore
+                    // Restore - channel 업데이트
                     await tx.update(users_wantstogo)
-                        .set({ is_deleted: false, updated_at: new Date() })
+                        .set({ is_deleted: false, channel, updated_at: new Date() })
                         .where(eq(users_wantstogo.id, current.id));
                     isSaved = true;
                 } else {
@@ -307,7 +309,7 @@ router.post("/:id/save", requireAuth, async (req, res) => {
                 await tx.insert(users_wantstogo).values({
                     user_id: userId,
                     shop_id: shopId,
-                    channel: 'discovery',
+                    channel,
                     is_deleted: false
                 });
                 isSaved = true;
@@ -328,6 +330,74 @@ router.post("/:id/save", requireAuth, async (req, res) => {
     } catch (error) {
         console.error("Save shop error:", error);
         res.status(500).json({ error: "Failed to save shop" });
+    }
+});
+
+// PATCH /api/shops/:id/save - 메모/폴더 수정
+router.patch("/:id/save", requireAuth, async (req, res) => {
+    try {
+        const shopId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+        const userId = req.user!.id;
+        const { memo, folder } = req.body;
+
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: "Invalid parameters" });
+        }
+
+        // 저장된 항목 찾기
+        const existing = await db.select().from(users_wantstogo)
+            .where(and(
+                eq(users_wantstogo.user_id, userId),
+                eq(users_wantstogo.shop_id, shopId),
+                eq(users_wantstogo.is_deleted, false)
+            )).limit(1);
+
+        if (existing.length === 0) {
+            return res.status(404).json({ error: "Saved shop not found" });
+        }
+
+        // 업데이트할 필드 구성
+        const updateData: { memo?: string | null; folder?: string | null; updated_at: Date } = {
+            updated_at: new Date()
+        };
+
+        if (memo !== undefined) {
+            updateData.memo = memo || null;
+        }
+        if (folder !== undefined) {
+            updateData.folder = folder || null;
+        }
+
+        await db.update(users_wantstogo)
+            .set(updateData)
+            .where(eq(users_wantstogo.id, existing[0].id));
+
+        res.json({ success: true, memo: updateData.memo, folder: updateData.folder });
+    } catch (error) {
+        console.error("Update saved shop error:", error);
+        res.status(500).json({ error: "Failed to update saved shop" });
+    }
+});
+
+// GET /api/shops/:id/save/folders - 내 폴더 목록 조회
+router.get("/:id/save/folders", requireAuth, async (req, res) => {
+    try {
+        const userId = req.user!.id;
+
+        // 사용자의 모든 폴더 조회 (중복 제거)
+        const folders = await db.selectDistinct({ folder: users_wantstogo.folder })
+            .from(users_wantstogo)
+            .where(and(
+                eq(users_wantstogo.user_id, userId),
+                eq(users_wantstogo.is_deleted, false),
+                sql`${users_wantstogo.folder} IS NOT NULL AND ${users_wantstogo.folder} != ''`
+            ))
+            .orderBy(users_wantstogo.folder);
+
+        res.json(folders.map(f => f.folder).filter(Boolean));
+    } catch (error) {
+        console.error("Fetch folders error:", error);
+        res.status(500).json({ error: "Failed to fetch folders" });
     }
 });
 

@@ -146,6 +146,146 @@ router.get("/leaderboard", async (req, res) => {
     }
 });
 
+// GET /recommendations - Get recommended users based on taste similarity
+// IMPORTANT: This route must be BEFORE /:id to avoid "recommendations" being treated as user ID
+router.get("/recommendations", requireAuth, async (req, res) => {
+    try {
+        const currentUserId = req.user!.id;
+        const limit = parseInt(req.query.limit as string) || 5;
+
+        console.log('[Recommendations] Fetching for user:', currentUserId);
+
+        // 1. Get current user's taste result
+        const currentUser = await db.select({
+            taste_result: users.taste_result
+        }).from(users).where(eq(users.id, currentUserId)).limit(1);
+
+        if (!currentUser.length || !currentUser[0].taste_result) {
+            console.log('[Recommendations] No taste_result for current user');
+            return res.json([]);
+        }
+
+        // taste_result structure: { clusterId, clusterData, scores: { boldness, acidity, ... } }
+        const tasteResultObj = currentUser[0].taste_result as { scores?: Record<string, number> };
+        const myTasteResult = tasteResultObj.scores;
+
+        if (!myTasteResult) {
+            console.log('[Recommendations] No scores in taste_result');
+            return res.json([]);
+        }
+
+        // 2. Find users with activity in last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Get users who have created content in last 30 days
+        const activeUserIds = await db.selectDistinct({
+            user_id: content.user_id
+        }).from(content)
+            .where(and(
+                sql`${content.created_at} >= ${thirtyDaysAgo}`,
+                eq(content.is_deleted, false)
+            ));
+
+        const activeIds = activeUserIds.map(u => u.user_id).filter(id => id !== currentUserId);
+        console.log('[Recommendations] Active users in last 30 days:', activeIds.length);
+
+        if (activeIds.length === 0) {
+            return res.json([]);
+        }
+
+        // 3. Get candidate users with their taste profiles
+        const candidates = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            taste_result: users.taste_result,
+            taste_cluster: users.taste_cluster
+        }).from(users)
+            .where(and(
+                inArray(users.id, activeIds),
+                isNotNull(users.taste_result)
+            ));
+
+        console.log('[Recommendations] Candidates with taste_result:', candidates.length);
+
+        // 4. Calculate taste match score for each candidate
+        // Using RBF (Gaussian) Kernel - same as server/utils/match.ts
+        const { calculateTasteMatch } = await import("../utils/match.js");
+
+        const candidatesWithScore = candidates
+            .map(candidate => {
+                // Extract scores from taste_result object
+                const candidateTasteObj = candidate.taste_result as { scores?: Record<string, number> };
+                const candidateTaste = candidateTasteObj?.scores;
+
+                if (!candidateTaste) {
+                    return { ...candidate, taste_match: 0 };
+                }
+
+                const matchScore = calculateTasteMatch(myTasteResult, candidateTaste);
+                return {
+                    ...candidate,
+                    taste_match: Math.round(matchScore)
+                };
+            })
+            .filter(c => c.taste_match > 0)
+            .sort((a, b) => b.taste_match - a.taste_match)
+            .slice(0, limit);
+
+        // 5. Check if current user is following these candidates
+        const candidateIds = candidatesWithScore.map(c => c.id);
+        const followingRelations = candidateIds.length > 0
+            ? await db.select({
+                following_id: users_follow.following_id
+            }).from(users_follow)
+                .where(and(
+                    eq(users_follow.follower_id, currentUserId),
+                    inArray(users_follow.following_id, candidateIds)
+                ))
+            : [];
+
+        const followingSet = new Set(followingRelations.map(r => r.following_id));
+
+        // 6. Get cluster names
+        const clusterIds = candidatesWithScore
+            .map(c => c.taste_cluster)
+            .filter((id): id is string => id !== null)
+            .map(id => parseInt(id))
+            .filter(id => !isNaN(id));
+
+        const clusterMap = new Map<number, string>();
+        if (clusterIds.length > 0) {
+            const clusterData = await db.select({
+                cluster_id: clusters.cluster_id,
+                name: clusters.name
+            }).from(clusters)
+                .where(inArray(clusters.cluster_id, clusterIds));
+
+            clusterData.forEach(c => clusterMap.set(c.cluster_id, c.name));
+        }
+
+        // 7. Format response
+        const result = candidatesWithScore.map(c => ({
+            id: c.id,
+            nickname: c.nickname,
+            account_id: c.account_id,
+            profile_image: c.profile_image,
+            taste_match: c.taste_match,
+            cluster_name: c.taste_cluster ? clusterMap.get(parseInt(c.taste_cluster)) || null : null,
+            is_following: followingSet.has(c.id)
+        }));
+
+        console.log('[Recommendations] Returning', result.length, 'users');
+        res.json(result);
+
+    } catch (error) {
+        console.error("Fetch recommendations error:", error);
+        res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+});
+
 // GET /:id (Get User Profile + Context)
 router.get("/:id", async (req, res) => {
     try {
@@ -301,7 +441,7 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
 
-        // Fetch saved shops
+        // Fetch saved shops with channel, memo, folder
         const savedShops = await db.select({
             id: shops.id,
             name: shops.name,
@@ -313,7 +453,11 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
             lat: shops.lat,
             lon: shops.lon,
             saved_at: users_wantstogo.created_at,
-            catchtable_ref: shops.catchtable_ref
+            catchtable_ref: shops.catchtable_ref,
+            // 추가 필드
+            channel: users_wantstogo.channel,
+            memo: users_wantstogo.memo,
+            folder: users_wantstogo.folder
         })
             .from(users_wantstogo)
             .innerJoin(shops, eq(users_wantstogo.shop_id, shops.id))
@@ -348,14 +492,49 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
             myRanks.forEach(r => myRanksMap.set(r.shop_id, r.rank));
         }
 
-        // Enrich with is_saved=true, match_score, and my_review_stats
-        const enriched = savedShops.map(shop => ({
-            ...shop,
-            is_saved: true,
-            shop_user_match_score: matchScoresMap.get(shop.id) || null,
-            my_rank: myRanksMap.get(shop.id) || null,
-            my_review_stats: reviewStatsMap.get(shop.id) || null
-        }));
+        // channel이 숫자(user_id)인 경우 해당 유저 닉네임 조회
+        const userChannelIds = savedShops
+            .map(s => s.channel)
+            .filter((ch): ch is string => !!ch && /^\d+$/.test(ch))
+            .map(Number);
+
+        const sourceUserMap = new Map<number, string>();
+        if (userChannelIds.length > 0) {
+            const sourceUsers = await db.select({
+                id: users.id,
+                nickname: users.nickname
+            }).from(users)
+                .where(inArray(users.id, userChannelIds));
+
+            sourceUsers.forEach(u => {
+                if (u.nickname) sourceUserMap.set(u.id, u.nickname);
+            });
+        }
+
+        // Enrich with is_saved=true, match_score, my_review_stats, and source_display
+        const enriched = savedShops.map(shop => {
+            // channel에 따른 표시 텍스트
+            let source_display: string | null = null;
+            if (shop.channel) {
+                if (shop.channel === 'NAVER_IMPORT') {
+                    source_display = '네이버지도';
+                } else if (shop.channel === 'discovery') {
+                    source_display = '탐색탭';
+                } else if (/^\d+$/.test(shop.channel)) {
+                    const sourceNickname = sourceUserMap.get(Number(shop.channel));
+                    source_display = sourceNickname ? `${sourceNickname}님` : null;
+                }
+            }
+
+            return {
+                ...shop,
+                is_saved: true,
+                shop_user_match_score: matchScoresMap.get(shop.id) || null,
+                my_rank: myRanksMap.get(shop.id) || null,
+                my_review_stats: reviewStatsMap.get(shop.id) || null,
+                source_display
+            };
+        });
 
         res.json(enriched);
     } catch (error) {

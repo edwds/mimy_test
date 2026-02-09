@@ -194,6 +194,11 @@
             "title": "What was your <br/>gourmet experience today, {{name}}?",
             "desc": "Share your dining experience"
         },
+        "user_recommendation": {
+            "title": "Similar taste profiles",
+            "subtitle": "Recently active users with similar taste preferences",
+            "match": "{{percent}}% match"
+        },
         "empty": "No contents yet.",
         "coming_soon": "Coming soon",
         "end": "You've seen it all."
@@ -226,7 +231,14 @@
             "saved_date": "Saved:",
             "record": "Record",
             "evaluated": "Completed",
-            "match_tooltip": "This is a personalized score based on reviews from people with similar tastes. (3.00 = Neutral)"
+            "match_tooltip": "This is a personalized score based on reviews from people with similar tastes. (3.00 = Neutral)",
+            "add_memo": "Add memo",
+            "edit_memo": "Edit memo",
+            "memo_title": "Memo",
+            "memo_placeholder": "Write a note about this restaurant",
+            "folder_title": "Select Folder",
+            "no_folder": "No folder",
+            "new_folder_placeholder": "New folder name"
         }
     },
     "shop": {

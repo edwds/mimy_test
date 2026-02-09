@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useRanking } from '@/context/RankingContext';
+import { useUser } from '@/context/UserContext';
 
 export interface ShopInfoCardProps {
     shop: {
@@ -23,6 +24,7 @@ export interface ShopInfoCardProps {
     onClick?: () => void;
     className?: string;
     darkMode?: boolean;
+    sourceUserId?: number; // 다른 유저의 콘텐츠에서 저장 시 해당 유저 ID
 }
 
 export const ShopInfoCard = ({
@@ -33,10 +35,12 @@ export const ShopInfoCard = ({
     showActions = true,
     onClick,
     className,
-    darkMode = false
+    darkMode = false,
+    sourceUserId
 }: ShopInfoCardProps) => {
     const navigate = useNavigate();
     const { openRanking } = useRanking();
+    const { refreshSavedShops } = useUser();
     const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
 
     const handleCardClick = (e: React.MouseEvent) => {
@@ -61,16 +65,20 @@ export const ShopInfoCard = ({
         setIsBookmarked(!prevBookmarked);
 
         try {
+            // sourceUserId가 있으면 해당 유저 ID를 channel로, 없으면 'discovery'
+            const channel = sourceUserId ? String(sourceUserId) : 'discovery';
             const res = await authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ channel })
             });
 
             if (res.ok) {
                 const data = await res.json();
                 if (typeof data.is_saved === 'boolean') {
                     setIsBookmarked(data.is_saved);
+                    // Context의 savedShops 갱신
+                    refreshSavedShops();
                 }
             } else {
                 setIsBookmarked(prevBookmarked);

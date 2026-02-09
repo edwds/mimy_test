@@ -197,6 +197,11 @@
             "title": "오늘 {{name}}님의<br/>미식은 무엇이었나요",
             "desc": "방문한 곳의 경험을 남겨주세요"
         },
+        "user_recommendation": {
+            "title": "입맛이 비슷한 사람들",
+            "subtitle": "최근 활동 중인 유저 중 입맛이 비슷한 사람들이에요",
+            "match": "{{percent}}% 일치"
+        },
         "empty": "등록된 콘텐츠가 없습니다.",
         "coming_soon": "준비 중입니다",
         "end": "모든 콘텐츠를 확인했습니다."
@@ -229,7 +234,14 @@
             "saved_date": "저장:",
             "record": "기록하기",
             "evaluated": "완료",
-            "match_tooltip": "비슷한 입맛 가진 사람들의 평가를 반영한 개인화 점수입니다. (3.00점 = 취향 기준 보통)"
+            "match_tooltip": "비슷한 입맛 가진 사람들의 평가를 반영한 개인화 점수입니다. (3.00점 = 취향 기준 보통)",
+            "add_memo": "메모 남기기",
+            "edit_memo": "메모 수정",
+            "memo_title": "메모",
+            "memo_placeholder": "이 맛집에 대한 메모를 남겨보세요",
+            "folder_title": "폴더 선택",
+            "no_folder": "폴더 없음",
+            "new_folder_placeholder": "새 폴더 이름"
         }
     },
     "shop": {

@@ -931,6 +931,7 @@ export const ContentCard = ({
                     initialIsBookmarked={isPoiBookmarked}
                     my_review_stats={content.poi?.my_review_stats || content.review_prop?.my_review_stats}
                     showActions={showActions}
+                    sourceUserId={user.id}
                     className="mx-5 mb-4"
                 />
             )}

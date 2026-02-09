@@ -105,12 +105,8 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
         }
 
         try {
-            // Formula from request:
-            // Range -2 to +2 (width 4). 7 dimensions.
-            // Max Dist = sqrt(4^2 * 7) = sqrt(16 * 7) = sqrt(112) ≈ 10.583
-
-            // Assuming taste_result is stored as { scores: { umami: number, ... } }
-            // need to cast to any because taste_result is jsonb
+            // Using RBF (Gaussian) Kernel - same as server/utils/match.ts
+            // Gaussian (RBF) Kernel: exp(-distance^2 / (2 * sigma^2))
             const myScores = (currentUser as any).taste_result?.scores || {};
             const targetScores = (user as any).taste_result?.scores || {};
 
@@ -123,11 +119,9 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                 sumSqDiff += Math.pow(v1 - v2, 2);
             });
 
-            const distance = Math.sqrt(sumSqDiff);
-            const maxDistance = Math.sqrt(16 * 7); // ~10.58
-
-            let similarity = (1 - (distance / maxDistance)) * 100;
-            similarity = Math.max(0, Math.min(100, similarity)); // Clamp 0-100
+            // RBF Kernel with sigma = 5
+            const sigma = 5;
+            const similarity = Math.exp(-sumSqDiff / (2 * sigma * sigma)) * 100;
 
             setMatchingScore(Math.round(similarity));
 

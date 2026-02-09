@@ -1,10 +1,12 @@
 import React from 'react';
-import { MapPin, Bookmark, Check, PlusCircle, HelpCircle } from 'lucide-react';
+import { MapPin, Bookmark, Check, PlusCircle, HelpCircle, Pencil, FolderOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn, formatVisitDate, calculateTasteMatch, getTasteBadgeStyle, scoreToTasteRatingStep } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '@/lib/api';
+import { authFetch } from '@/lib/authFetch';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -27,6 +29,10 @@ interface ShopCardProps {
             percentile: number;
             total_reviews: number;
         } | null;
+        // 추가 필드
+        memo?: string | null;
+        folder?: string | null;
+        source_display?: string | null; // 저장 출처 표시용 (네이버지도, 탐색탭, {닉네임}님)
     };
     onSave?: (shopId: number) => void;
     onWrite?: (shopId: number) => void;
@@ -44,15 +50,24 @@ interface ShopCardProps {
         };
     } | null;
     displayContext?: 'default' | 'discovery' | 'saved_list';
+    onMemoChange?: (shopId: number, memo: string) => void;
+    onFolderChange?: (shopId: number, folder: string) => void;
 }
 
-export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onClick, hideActions, reviewSnippet, displayContext = 'default' }) => {
+export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onClick, hideActions, reviewSnippet, displayContext = 'default', onMemoChange, onFolderChange }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user: currentUser } = useUser();
+    const { user: currentUser, refreshSavedShops } = useUser();
     const { openRanking } = useRanking();
     const [showTooltip, setShowTooltip] = useState(false);
     const tooltipRef = useRef<HTMLDivElement>(null);
+
+    // 메모/폴더 팝업 상태
+    const [showMemoPopup, setShowMemoPopup] = useState(false);
+    const [showFolderPopup, setShowFolderPopup] = useState(false);
+    const [memoText, setMemoText] = useState(shop.memo || '');
+    const [folderList, setFolderList] = useState<string[]>([]);
+    const [newFolder, setNewFolder] = useState('');
 
     // Close tooltip on click outside
     useEffect(() => {
@@ -297,20 +312,211 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                 - Saved List: Show Saved Footer.
             */}
             {displayContext !== 'discovery' && (!reviewSnippet || displayContext === 'saved_list') && shop.is_saved && shop.saved_at && (
-                <div className="bg-muted/30 px-4 py-3 border-t border-border flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                        {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}
-                        <span className="mx-1">·</span>
+                <div className="bg-muted/30 px-4 py-3 border-t border-border">
+                    {/* 저장 정보 & 폴더 버튼 */}
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                            {t('discovery.shop_card.saved_date')} {formatVisitDate(shop.saved_at, t)}
+                            {shop.source_display && (
+                                <>
+                                    <span className="mx-1">·</span>
+                                    <span className="text-muted-foreground/70">{shop.source_display}</span>
+                                </>
+                            )}
+                        </span>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onWrite?.(shop.id);
+                                // 폴더 목록 불러오기
+                                authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save/folders`)
+                                    .then(res => res.json())
+                                    .then(folders => {
+                                        setFolderList(folders);
+                                        setShowFolderPopup(true);
+                                    })
+                                    .catch(console.error);
                             }}
-                            className="text-primary hover:underline font-medium inline-flex items-center"
+                            className="text-muted-foreground hover:text-foreground transition-colors p-1 flex items-center gap-1"
                         >
-                            {t('discovery.shop_card.record')}
+                            <FolderOpen className="w-4 h-4" />
+                            {shop.folder && (
+                                <span className="text-xs">{shop.folder}</span>
+                            )}
                         </button>
-                    </span>
+                    </div>
+
+                    {/* 메모 남기기 버튼 */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMemoPopup(true);
+                        }}
+                        className="mt-2 text-xs text-primary hover:underline font-medium inline-flex items-center gap-0.5"
+                    >
+                        <Pencil className="w-3 h-3" />
+                        {shop.memo ? t('discovery.shop_card.edit_memo', '메모 수정') : t('discovery.shop_card.add_memo', '메모 남기기')}
+                    </button>
+
+                    {/* 메모 표시 */}
+                    {shop.memo && (
+                        <p className="mt-2 text-sm text-foreground/80 bg-background/50 rounded px-2 py-1.5 line-clamp-2">
+                            {shop.memo}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* 메모 팝업 */}
+            {showMemoPopup && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMemoPopup(false);
+                    }}
+                >
+                    <div
+                        className="bg-background rounded-xl p-4 w-[90%] max-w-sm shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="font-bold text-lg mb-3">{t('discovery.shop_card.memo_title', '메모')}</h3>
+                        <textarea
+                            value={memoText}
+                            onChange={(e) => setMemoText(e.target.value)}
+                            placeholder={t('discovery.shop_card.memo_placeholder', '이 맛집에 대한 메모를 남겨보세요')}
+                            className="w-full h-24 border border-border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <div className="flex gap-2 mt-3">
+                            <button
+                                onClick={() => setShowMemoPopup(false)}
+                                className="flex-1 py-2 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                            >
+                                {t('common.cancel', '취소')}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ memo: memoText })
+                                        });
+                                        onMemoChange?.(shop.id, memoText);
+                                        refreshSavedShops();
+                                        setShowMemoPopup(false);
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                className="flex-1 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+                            >
+                                {t('common.save', '저장')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 폴더 팝업 */}
+            {showFolderPopup && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowFolderPopup(false);
+                    }}
+                >
+                    <div
+                        className="bg-background rounded-xl p-4 w-[90%] max-w-sm shadow-xl max-h-[60vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="font-bold text-lg mb-3">{t('discovery.shop_card.folder_title', '폴더 선택')}</h3>
+
+                        {/* 기존 폴더 목록 */}
+                        <div className="space-y-1 mb-3">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ folder: '' })
+                                        });
+                                        onFolderChange?.(shop.id, '');
+                                        refreshSavedShops();
+                                        setShowFolderPopup(false);
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                className={cn(
+                                    "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                                    !shop.folder ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
+                                )}
+                            >
+                                {t('discovery.shop_card.no_folder', '폴더 없음')}
+                            </button>
+                            {folderList.map((folder) => (
+                                <button
+                                    key={folder}
+                                    onClick={async () => {
+                                        try {
+                                            await authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save`, {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ folder })
+                                            });
+                                            onFolderChange?.(shop.id, folder);
+                                            refreshSavedShops();
+                                            setShowFolderPopup(false);
+                                        } catch (err) {
+                                            console.error(err);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                                        shop.folder === folder ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
+                                    )}
+                                >
+                                    {folder}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* 새 폴더 추가 */}
+                        <div className="border-t border-border pt-3">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newFolder}
+                                    onChange={(e) => setNewFolder(e.target.value)}
+                                    placeholder={t('discovery.shop_card.new_folder_placeholder', '새 폴더 이름')}
+                                    className="flex-1 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                                <button
+                                    onClick={async () => {
+                                        if (!newFolder.trim()) return;
+                                        try {
+                                            await authFetch(`${API_BASE_URL}/api/shops/${shop.id}/save`, {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ folder: newFolder.trim() })
+                                            });
+                                            onFolderChange?.(shop.id, newFolder.trim());
+                                            refreshSavedShops();
+                                            setNewFolder('');
+                                            setShowFolderPopup(false);
+                                        } catch (err) {
+                                            console.error(err);
+                                        }
+                                    }}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+                                >
+                                    {t('common.add', '추가')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -7,6 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { HateCard } from '@/components/HateCard';
+import { UserRecommendationModule } from '@/components/UserRecommendationModule';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
@@ -366,6 +367,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
     const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
     const [banners, setBanners] = useState<any[]>([]);
+    const [hideUserRecommendation, setHideUserRecommendation] = useState(false);
 
     // Fetch banners
     useEffect(() => {
@@ -570,6 +572,12 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                         const bonusCardIndex = ((index + 1) / 3) - 1;
                         const bonusItem = interstitialItems[bonusCardIndex];
 
+                        // Show user recommendation module at position 5 (index 4)
+                        const showUserRecommendation = index === 4 && !hideUserRecommendation;
+                        if (index === 4) {
+                            console.log('[HomeTab] Index 4 reached, showUserRecommendation:', showUserRecommendation, 'hideUserRecommendation:', hideUserRecommendation);
+                        }
+
                         return (
                             <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined} className="mb-8">
                                 <ContentCard
@@ -578,6 +586,15 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                     showActions={true}
                                 />
                                 <div className="bg-muted" />
+
+                                {/* User Recommendation Module - Fixed at position 5 */}
+                                {showUserRecommendation && (
+                                    <div className="mt-8 bg-card border-y border-border">
+                                        <UserRecommendationModule
+                                            onClose={() => setHideUserRecommendation(true)}
+                                        />
+                                    </div>
+                                )}
 
                                 {showBonusCard && bonusItem && !hiddenBonusIndices.has(bonusCardIndex) && (
                                     <div className="mt-8">
