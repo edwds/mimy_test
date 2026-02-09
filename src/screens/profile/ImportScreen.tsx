@@ -10,13 +10,16 @@ export function ImportScreen() {
     const navigate = useNavigate();
     const { user } = useUser();
 
-
     // State
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [progressStatus, setProgressStatus] = useState({ message: '연결 중...' });
-    const [result, setResult] = useState<{ totalFound: number; importedCount: number; message: string; } | null>(null);
+    const [result, setResult] = useState<{
+        totalFound: number;
+        importedCount: number;
+        message: string;
+    } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleImport = async () => {
@@ -52,7 +55,6 @@ export function ImportScreen() {
             });
 
             if (!response.ok && response.status !== 200) {
-                // Try to parse error message
                 const text = await response.text();
                 try {
                     const json = JSON.parse(text);
@@ -76,15 +78,11 @@ export function ImportScreen() {
                 buffer += chunk;
 
                 const lines = buffer.split('\n\n');
-                // The last element is either empty or a partial chunk
-                // If it ends with \n\n, the last elem is empty.
-                // If not, we keep the last elem in buffer
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
 
-                    // SSE format: "event: ...\ndata: ..."
                     const eventMatch = line.match(/event: (.*)\ndata: (.*)/s);
                     if (eventMatch) {
                         const type = eventMatch[1].trim();
@@ -105,7 +103,7 @@ export function ImportScreen() {
                             } else if (type === 'error') {
                                 setError(data.message);
                                 setIsLoading(false);
-                                return; // Stop processing
+                                return;
                             }
                         } catch (e) {
                             console.error('Failed to parse SSE data', e);
@@ -133,6 +131,8 @@ export function ImportScreen() {
     };
 
     if (result) {
+        const failedCount = result.totalFound - result.importedCount;
+
         return (
             <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
                 {/* Header */}
@@ -153,23 +153,35 @@ export function ImportScreen() {
 
                     <h2 className="text-2xl font-bold mb-2">가져오기 성공!</h2>
                     <p className="text-gray-400 mb-8">
-                        {result.message}
+                        {result.importedCount}개를 가져오는데 성공했습니다.
                     </p>
 
-                    <div className="w-full max-w-sm bg-surface p-4 rounded-xl mb-8">
+                    <div className="w-full max-w-sm bg-surface p-4 rounded-xl mb-6">
                         <div className="flex justify-between items-center text-sm">
                             <span className="text-muted-foreground">발견된 장소</span>
                             <span className="font-medium text-foreground">{result.totalFound}개</span>
                         </div>
                         <div className="w-full h-[1px] bg-white/10 my-3" />
                         <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">저장된 장소</span>
+                            <span className="text-muted-foreground">저장 성공</span>
                             <span className="font-bold text-primary">{result.importedCount}개</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-4 text-left">
-                            * 이미 저장된 장소나, 서비스에 등록되지 않은 장소는 제외되었습니다.
-                        </p>
+                        {failedCount > 0 && (
+                            <>
+                                <div className="w-full h-[1px] bg-white/10 my-3" />
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">저장 실패</span>
+                                    <span className="font-medium text-muted-foreground">{failedCount}개</span>
+                                </div>
+                            </>
+                        )}
                     </div>
+
+                    {failedCount > 0 && (
+                        <p className="text-xs text-muted-foreground mb-6 max-w-sm">
+                            * 일부 장소는 폐업 또는 정보 부족으로 찾을 수 없었습니다.
+                        </p>
+                    )}
 
                     <button
                         onClick={() => navigate('/main/profile?tab=saved')}

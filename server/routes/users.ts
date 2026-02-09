@@ -516,8 +516,8 @@ router.get("/:id/saved_shops", optionalAuth, async (req, res) => {
             // channel에 따른 표시 텍스트
             let source_display: string | null = null;
             if (shop.channel) {
-                if (shop.channel === 'NAVER_IMPORT') {
-                    source_display = '네이버지도';
+                if (shop.channel === 'NAVER_IMPORT' || shop.channel === 'GOOGLE_IMPORT') {
+                    source_display = '장소 가져오기';
                 } else if (shop.channel === 'discovery') {
                     source_display = '탐색탭';
                 } else if (/^\d+$/.test(shop.channel)) {

@@ -1,37 +1,19 @@
 import express from 'express';
 import { db } from '../db/index.js';
 import { users_wantstogo, shops } from '../db/schema.js';
-import { and, sql } from 'drizzle-orm';
+import { and, sql, eq } from 'drizzle-orm';
 
 const router = express.Router();
 
-/**
- * Concurrency utility to process items in parallel with a limit
- */
-async function mapLimit<T, R>(
-    items: T[],
-    limit: number,
-    iterator: (item: T) => Promise<R>
-): Promise<R[]> {
-    const results: Promise<R>[] = [];
-    const executing: Promise<void>[] = [];
-
-    for (const item of items) {
-        const p = Promise.resolve().then(() => iterator(item));
-        results.push(p);
-
-        const e = p.then(() => {
-            executing.splice(executing.indexOf(e), 1);
-        });
-        executing.push(e);
-
-        if (executing.length >= limit) {
-            await Promise.race(executing);
-        }
-    }
-
-    return Promise.all(results);
-}
+const ALLOWED_GOOGLE_TYPES = [
+    "restaurant", "cafe", "bakery", "bar", "meal_delivery", "meal_takeaway",
+    "japanese_restaurant", "korean_restaurant", "chinese_restaurant", "italian_restaurant",
+    "french_restaurant", "thai_restaurant", "vietnamese_restaurant", "indian_restaurant",
+    "mexican_restaurant", "american_restaurant", "seafood_restaurant", "steak_house",
+    "pizza_restaurant", "hamburger_restaurant", "sushi_restaurant", "ramen_restaurant",
+    "fine_dining_restaurant", "fast_food_restaurant", "buffet_restaurant", "brunch_restaurant",
+    "breakfast_restaurant", "dessert_restaurant", "ice_cream_shop", "coffee_shop"
+];
 
 const normalizeName = (s: string) =>
     (s || '')
@@ -44,6 +26,139 @@ function withTimeout(ms: number) {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), ms);
     return { signal: controller.signal, clear: () => clearTimeout(t) };
+}
+
+/**
+ * Search Google Places and import shop to DB
+ */
+async function searchAndImportFromGoogle(
+    name: string,
+    lat: number,
+    lon: number,
+    uid: number,
+    apiKey: string
+): Promise<{ success: boolean; shopId?: number; shopName?: string }> {
+    try {
+        const locationBias = {
+            circle: {
+                center: { latitude: lat, longitude: lon },
+                radius: 500.0
+            }
+        };
+
+        const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.adrFormatAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.editorialSummary,places.types'
+            },
+            body: JSON.stringify({
+                textQuery: name,
+                locationBias,
+                languageCode: 'ko',
+                maxResultCount: 5
+            })
+        });
+
+        if (!response.ok) {
+            console.error(`[GoogleImport] API error for "${name}": ${response.status}`);
+            return { success: false };
+        }
+
+        const data = await response.json();
+        const places = data.places || [];
+
+        // Filter to restaurant types
+        const validPlaces = places.filter((p: any) =>
+            p.types?.some((t: string) => ALLOWED_GOOGLE_TYPES.includes(t))
+        );
+
+        if (validPlaces.length === 0) {
+            console.log(`[GoogleImport] No valid places found for "${name}"`);
+            return { success: false };
+        }
+
+        const place = validPlaces[0];
+        const googlePlaceId = place.id;
+
+        // Check if already exists in DB
+        const existing = await db
+            .select({ id: shops.id })
+            .from(shops)
+            .where(eq(shops.google_place_id, googlePlaceId))
+            .limit(1);
+
+        let shopId: number;
+
+        if (existing.length > 0) {
+            shopId = existing[0].id;
+            console.log(`[GoogleImport] "${name}" already exists as shop ${shopId}`);
+        } else {
+            // Extract region from address
+            let addressRegion = "";
+            const regionMatch = place.adrFormatAddress?.match(/<span class="region">([^<]+)<\/span>/);
+            const localityMatch = place.adrFormatAddress?.match(/<span class="locality">([^<]+)<\/span>/);
+            const parts = [];
+            if (regionMatch) parts.push(regionMatch[1]);
+            if (localityMatch) parts.push(localityMatch[1]);
+            if (parts.length > 0) addressRegion = parts.join(" ");
+            if (!addressRegion && place.formattedAddress) {
+                addressRegion = place.formattedAddress.split(" ").slice(0, 3).join(" ");
+            }
+
+            // Get thumbnail
+            let thumbnail = null;
+            if (place.photos && place.photos.length > 0) {
+                thumbnail = `https://places.googleapis.com/v1/${place.photos[0].name}/media?maxHeightPx=400&maxWidthPx=400&key=${apiKey}`;
+            }
+
+            // Get food kind from types
+            const matchedType = place.types?.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+
+            // Insert new shop
+            const newShop = await db.insert(shops).values({
+                name: place.displayName?.text || name,
+                google_place_id: googlePlaceId,
+                address_full: place.formattedAddress,
+                address_region: addressRegion,
+                lat: place.location?.latitude,
+                lon: place.location?.longitude,
+                thumbnail_img: thumbnail,
+                description: place.generativeSummary?.overview?.text || place.editorialSummary?.text || null,
+                food_kind: matchedType,
+                status: 2,
+                country_code: 'KR',
+                visibility: true
+            }).returning({ id: shops.id });
+
+            shopId = newShop[0].id;
+            console.log(`[GoogleImport] Created new shop ${shopId} for "${name}"`);
+        }
+
+        // Add to user's wantstogo list
+        await db
+            .insert(users_wantstogo)
+            .values({
+                user_id: uid,
+                shop_id: shopId,
+                channel: 'GOOGLE_IMPORT',
+                visibility: true,
+            })
+            .onConflictDoUpdate({
+                target: [users_wantstogo.user_id, users_wantstogo.shop_id],
+                set: {
+                    is_deleted: false,
+                    updated_at: new Date()
+                }
+            });
+
+        return { success: true, shopId, shopName: place.displayName?.text || name };
+
+    } catch (err) {
+        console.error(`[GoogleImport] Error processing "${name}":`, err);
+        return { success: false };
+    }
 }
 
 router.post('/naver', async (req, res) => {
@@ -72,6 +187,11 @@ router.post('/naver', async (req, res) => {
         if (!Number.isInteger(uid) || uid <= 0) {
             sendEvent('error', { message: 'Invalid userId' });
             return res.end();
+        }
+
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            console.warn('[Import] GOOGLE_MAPS_API_KEY not configured, Google fallback disabled');
         }
 
         console.log(`[Import] Processing URL: ${url} for User: ${uid}`);
@@ -146,36 +266,39 @@ router.post('/naver', async (req, res) => {
         console.log(`[Import] Found ${totalItems} valid items (from ${items.length} total)`);
         sendProgress('count', 15, `${totalItems}개의 장소를 찾았습니다. 분석을 시작합니다...`);
 
-        // 4) Process Items in Parallel
-        const CONCURRENCY = 8;
+        // 4) Process Items sequentially (to avoid Google rate limiting)
         const latRange = 0.005; // ~550m
         const lonRange = 0.005;
 
-        // Stats to track
-        let candidateHitCount = 0;
-        let matchedCount = 0;
-        let importedCount = 0;
+        let dbMatchedCount = 0;
+        let googleImportedCount = 0;
+        let failedCount = 0;
         let processedCount = 0;
 
-        await mapLimit(validItems, CONCURRENCY, async (item: any) => {
+        for (const item of validItems) {
             const name = item?.name || '';
             const px = item?.px;
             const py = item?.py;
 
             processedCount++;
-            // Update progress every 5 items or so to avoid flooding
-            if (processedCount % 5 === 0 || processedCount === totalItems) {
-                const percent = 15 + Math.floor((processedCount / totalItems) * 80); // 15% -> 95%
-                sendProgress('processing', percent, `장소 분석 및 저장 중... (${processedCount}/${totalItems})`);
+            if (processedCount % 3 === 0 || processedCount === totalItems) {
+                const percent = 15 + Math.floor((processedCount / totalItems) * 80);
+                sendProgress('processing', percent, `장소 처리 중... (${processedCount}/${totalItems})`);
             }
 
-            if (px == null || py == null) return;
+            if (px == null || py == null) {
+                failedCount++;
+                continue;
+            }
 
             const lon = Number(px);
             const lat = Number(py);
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                failedCount++;
+                continue;
+            }
 
-            // 4-1) Candidate Search
+            // 4-1) Try DB match first
             const candidates = await db
                 .select({
                     id: shops.id,
@@ -192,68 +315,65 @@ router.post('/naver', async (req, res) => {
                 )
                 .limit(100);
 
-            if (candidates.length > 0) {
-                candidateHitCount++;
+            // Name matching
+            const n = normalizeName(name);
+            const matched = candidates.find((s) => {
+                const sn = normalizeName(s.name || '');
+                if (!sn || !n) return false;
+                return sn.includes(n) || n.includes(sn);
+            });
 
-                // 4-2) Name Matching
-                const n = normalizeName(name);
-                const matched = candidates.find((s) => {
-                    const sn = normalizeName(s.name || '');
-                    if (!sn || !n) return false;
-                    // Exact match or contains
-                    const isMatch = sn.includes(n) || n.includes(sn);
-
-                    if (isMatch) {
-                        console.log(`[Import] MATCHED: "${name}" -> "${s.name}" (ID: ${s.id})`);
-                    }
-                    return isMatch;
-                });
-
-                if (!matched) {
-                    // Log failed candidates for debugging
-                    console.log(`[Import] NO MATCH for "${name}" (Candidates: ${candidates.length})`);
-                    if (candidates.length <= 5) { // Log a few for context
-                        candidates.forEach(c => console.log(`  - Candidate: "${c.name}" (${normalizeName(c.name)})`));
-                        console.log(`  - Target: "${name}" (${n})`);
-                    }
+            if (matched) {
+                // DB match found - add to wantstogo
+                console.log(`[Import] DB MATCHED: "${name}" -> "${matched.name}" (ID: ${matched.id})`);
+                try {
+                    await db
+                        .insert(users_wantstogo)
+                        .values({
+                            user_id: uid,
+                            shop_id: matched.id,
+                            channel: 'NAVER_IMPORT',
+                            visibility: true,
+                        })
+                        .onConflictDoUpdate({
+                            target: [users_wantstogo.user_id, users_wantstogo.shop_id],
+                            set: {
+                                is_deleted: false,
+                                updated_at: new Date()
+                            }
+                        });
+                    dbMatchedCount++;
+                } catch (e) {
+                    console.error(`[Import] DB insert error for "${name}":`, e);
+                    failedCount++;
                 }
-
-                if (matched) {
-                    matchedCount++;
-                    // 4-3) Insert
-                    try {
-                        await db
-                            .insert(users_wantstogo)
-                            .values({
-                                user_id: uid,
-                                shop_id: matched.id,
-                                channel: 'NAVER_IMPORT',
-                                visibility: true,
-                            })
-                            .onConflictDoUpdate({
-                                target: [users_wantstogo.user_id, users_wantstogo.shop_id],
-                                set: {
-                                    is_deleted: false,
-                                    batch_created: new Date() // force update
-                                }
-                            });
-                        importedCount++;
-                    } catch (e) {
-                        // ignore
-                    }
+            } else if (apiKey) {
+                // 4-2) No DB match - try Google
+                console.log(`[Import] No DB match for "${name}", trying Google...`);
+                const result = await searchAndImportFromGoogle(name, lat, lon, uid, apiKey);
+                if (result.success) {
+                    googleImportedCount++;
+                } else {
+                    failedCount++;
                 }
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 150));
+            } else {
+                // No Google API key configured
+                failedCount++;
             }
-        });
+        }
 
-        console.log('[Import] stats:', { totalItems, candidateHitCount, matchedCount, importedCount });
+        const totalImported = dbMatchedCount + googleImportedCount;
+        console.log('[Import] stats:', { totalItems, dbMatchedCount, googleImportedCount, failedCount, totalImported });
 
         sendProgress('complete', 100, '완료!');
         sendEvent('complete', {
             success: true,
             totalFound: totalItems,
-            importedCount,
-            debug: { candidateHitCount, matchedCount },
-            message: `${totalItems}개 중 ${importedCount}개를 가져왔습니다.`,
+            importedCount: totalImported,
+            debug: { dbMatchedCount, googleImportedCount, failedCount },
+            message: `${totalImported}개를 가져오는데 성공했습니다.`,
         });
 
         res.end();

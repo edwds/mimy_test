@@ -692,7 +692,7 @@ router.get("/search/google", async (req, res) => {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.adrFormatAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.editorialSummary,places.types'
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.adrFormatAddress,places.location,places.photos,places.rating,places.userRatingCount,places.generativeSummary,places.editorialSummary,places.types,places.primaryType,places.primaryTypeDisplayName'
             },
             body: JSON.stringify({ textQuery, languageCode: 'ko' }),
             signal: controller.signal
@@ -709,7 +709,9 @@ router.get("/search/google", async (req, res) => {
         const filtered = rawResults
             .filter((p: any) => p.types && p.types.some((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)))
             .map((p: any) => {
-                const matchedType = p.types.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+                // primaryTypeDisplayName (한국어 표시명) 우선, 없으면 primaryType, 최후에 types에서 매칭
+                const fallbackType = p.primaryType || p.types.find((t: string) => ALLOWED_GOOGLE_TYPES.includes(t)) || 'restaurant';
+                const foodKind = p.primaryTypeDisplayName?.text || fallbackType;
                 let thumb = null;
                 // New Places API photo reference
                 if (p.photos && p.photos.length > 0) {
@@ -734,7 +736,7 @@ router.get("/search/google", async (req, res) => {
                     rating: p.rating,
                     user_ratings_total: p.userRatingCount,
                     thumbnail_img: thumb,
-                    food_kind: matchedType,
+                    food_kind: foodKind,
                     // null-safe generativeSummary -> editorialSummary
                     description: p.generativeSummary?.overview?.text || p.editorialSummary?.text || null,
                     photos: p.photos
