@@ -1,4 +1,7 @@
 {
+    "splash": {
+        "acronym": "Make It My Yummy"
+    },
     "common": {
         "next": "Next",
         "start": "Start",
@@ -466,6 +469,43 @@
         "success": "Update successful! {{count}} records registered.",
         "error": "Update failed: {{message}}",
         "warning": "Warning: All existing data in the table will be deleted."
+    },
+    "about": {
+        "title": "About Service",
+        "hero": {
+            "tagline": "Rank what you ate",
+            "description": "Discover your unique taste profile and get personalized recommendations from people who share your palate."
+        },
+        "steps": {
+            "discover": {
+                "title": "Discover Your Taste",
+                "description": "Our quick quiz analyzes 7 taste dimensions to find your unique profile among 128 food clusters."
+            },
+            "rank": {
+                "title": "My Michelin Guide",
+                "description": "Rank instead of rate. Categorize restaurants as Good, OK, or Bad and build your own personal Michelin guide."
+            },
+            "share": {
+                "title": "Connect with Taste-Alikes",
+                "description": "Follow foodies who share your palate and discover their honest reviews and hidden gem recommendations."
+            },
+            "find": {
+                "title": "Perfect Recommendations",
+                "description": "Get personalized match scores based on reviews from people with similar taste preferences."
+            },
+            "compete": {
+                "title": "Compete by Group",
+                "description": "Compare rankings with people from your company, school, or neighborhood and crown your group's top foodie."
+            }
+        },
+        "outro": {
+            "subtitle": "Build your own Michelin guide",
+            "title": "Ready to start?"
+        },
+        "footer": {
+            "company": "WAD Inc.",
+            "contact": "Contact: hello@mimy.app"
+        }
     },
     "quiz": {
         "label_dislike": "Not my taste",

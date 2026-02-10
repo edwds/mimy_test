@@ -48,30 +48,30 @@ export class LeaderboardService {
                 };
             });
 
-            // Helper to insert specific rankings
-            const insertLeaderboard = async (type: string, key: string | null = null, filteredUsers: any[]) => {
-                // Sort DESC by score
-                filteredUsers.sort((a, b) => b.score - a.score);
-
-                // Take Top 100
-                const top100 = filteredUsers.slice(0, 100);
-
-                if (top100.length === 0) return;
-
-                const entries = top100.map((u, index) => ({
-                    type,
-                    key,
-                    user_id: u.id,
-                    rank: index + 1,
-                    score: u.score,
-                    stats: u.stats
-                }));
-
-                await db.insert(leaderboard).values(entries);
-                console.log(`[LeaderboardService] Inserted ${entries.length} for ${type}${key ? `:${key}` : ''}`);
-            };
-
             await db.transaction(async (tx) => {
+                // Helper to insert specific rankings (uses transaction context)
+                const insertLeaderboard = async (type: string, key: string | null = null, filteredUsers: any[]) => {
+                    // Sort DESC by score
+                    filteredUsers.sort((a, b) => b.score - a.score);
+
+                    // Take Top 100
+                    const top100 = filteredUsers.slice(0, 100);
+
+                    if (top100.length === 0) return;
+
+                    const entries = top100.map((u, index) => ({
+                        type,
+                        key,
+                        user_id: u.id,
+                        rank: index + 1,
+                        score: u.score,
+                        stats: u.stats
+                    }));
+
+                    await tx.insert(leaderboard).values(entries);
+                    console.log(`[LeaderboardService] Inserted ${entries.length} for ${type}${key ? `:${key}` : ''}`);
+                };
+
                 // Clear old DB table
                 await tx.delete(leaderboard);
 

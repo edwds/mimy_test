@@ -18,6 +18,7 @@ import { QuizScreen } from '@/screens/quiz/QuizScreen';
 import { QuizResult } from '@/screens/quiz/QuizResult';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { SettingsScreen } from '@/screens/profile/SettingsScreen';
+import { AboutScreen } from '@/screens/profile/AboutScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
@@ -108,6 +109,7 @@ function AppContent() {
                                 <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
                                 <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
                                 <Route path="/profile/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
+                                <Route path="/profile/about" element={<ProtectedRoute><AboutScreen /></ProtectedRoute>} />
                                 <Route path="/profile/lists/:userId" element={<ProtectedRoute><RedirectToList /></ProtectedRoute>} />
                                 <Route path="/profile/import" element={<ProtectedRoute><ImportScreen /></ProtectedRoute>} />
                                 <Route path="/profile/connections" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
