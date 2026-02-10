@@ -197,7 +197,7 @@ export const SettingsScreen = () => {
 
                     <MenuItem
                         label={t('profile.settings.about')}
-                        onClick={() => navigate('/profile/about')}
+                        onClick={() => navigate('/about')}
                     />
                     <MenuItem
                         label={t('profile.settings.notices')}

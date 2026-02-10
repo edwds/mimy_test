@@ -83,7 +83,7 @@ export const AboutScreen = () => {
                         ) : page.type === 'outro' ? (
                             <OutroPage t={t} />
                         ) : (
-                            <StepCard page={page} />
+                            <StepCard page={page} t={t} />
                         )}
                     </ScrollSection>
                 ))}
@@ -240,7 +240,7 @@ const OutroPage = ({ t }: PageProps) => {
 };
 
 // 피드 데모 애니메이션 (Share 섹션)
-const FeedDemo = () => {
+const FeedDemo = ({ t }: { t: any }) => {
     const [scrollY, setScrollY] = useState(0);
     const [feedCardX, setFeedCardX] = useState(0); // 0: center, -100: left
     const [profileCardX, setProfileCardX] = useState(100); // 100: right, 0: center
@@ -289,37 +289,16 @@ const FeedDemo = () => {
         return () => timers.forEach(clearTimeout);
     }, []);
 
+    const demoUsers = t('about.demo.feed.users', { returnObjects: true }) as { name: string; cluster: string }[];
+    const demoShops = t('about.demo.feed.shops', { returnObjects: true }) as { name: string; address: string; review: string }[];
+
     const feedItems = [
-        {
-            user: { name: '미식가_제이', cluster: '화끈한 마라샹궈', image: '😎' },
-            shop: '스시 오마카세',
-            address: '서울 강남구 압구정로',
-            text: '오늘 점심은 여기! 오마카세 코스 정말 만족스러웠어요. 특히 오도로가...',
-            likes: 42,
-            comments: 8,
-            image: '🍣'
-        },
-        {
-            user: { name: '맛집헌터', cluster: '진지한 미식가', image: '🧑‍🍳' },
-            shop: '라멘 이치란',
-            address: '서울 마포구 홍대입구',
-            text: '면발이 정말 쫄깃하고 국물이 진해서 좋았어요. 다음에 또 올 예정!',
-            likes: 28,
-            comments: 5,
-            image: '🍜'
-        },
-        {
-            user: { name: '푸디_린', cluster: '상큼한 탐험가', image: '👩‍🦰' },
-            shop: '트라토리아 베네',
-            address: '서울 용산구 이태원로',
-            text: '파스타 면이 알덴테로 딱 좋았고, 토마토 소스가 신선했어요!',
-            likes: 35,
-            comments: 12,
-            image: '🍝'
-        },
+        { user: { ...demoUsers[0], image: '😎' }, shop: demoShops[0].name, address: demoShops[0].address, text: demoShops[0].review, likes: 42, comments: 8, image: '🍣' },
+        { user: { ...demoUsers[1], image: '🧑‍🍳' }, shop: demoShops[1].name, address: demoShops[1].address, text: demoShops[1].review, likes: 28, comments: 5, image: '🍜' },
+        { user: { ...demoUsers[2], image: '👩‍🦰' }, shop: demoShops[2].name, address: demoShops[2].address, text: demoShops[2].review, likes: 35, comments: 12, image: '🍝' },
     ];
 
-    const clickedUserData = feedItems[1]; // 맛집헌터
+    const clickedUserData = feedItems[1];
 
     return (
         <div className="w-full h-full flex items-center justify-center px-4 relative overflow-hidden">
@@ -353,7 +332,7 @@ const FeedDemo = () => {
                                         <span className="font-bold text-sm text-gray-900">{item.user.name}</span>
                                         <span className="text-[10px] text-orange-600 font-medium">{item.user.cluster}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500">{item.shop} 방문</p>
+                                    <p className="text-xs text-gray-500">{item.shop} {t('about.demo.feed.visited')}</p>
                                 </div>
                             </motion.div>
 
@@ -412,10 +391,10 @@ const FeedDemo = () => {
                         <div className="flex-1">
                             <h3 className="font-bold text-lg text-gray-900 mb-1">{clickedUserData.user.name}</h3>
                             <div className="flex gap-3 text-xs text-gray-500 mb-2">
-                                <span><b className="text-gray-900">24</b> 콘텐츠</span>
-                                <span><b className="text-gray-900">128</b> 팔로워</span>
+                                <span><b className="text-gray-900">24</b> {t('about.demo.feed.contents')}</span>
+                                <span><b className="text-gray-900">128</b> {t('about.demo.feed.followers')}</span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-3">맛집 탐방이 취미인 직장인입니다 🍜</p>
+                            <p className="text-sm text-gray-600 mb-3">{t('about.demo.feed.bio')}</p>
                         </div>
                         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
                             {clickedUserData.user.image}
@@ -425,12 +404,12 @@ const FeedDemo = () => {
                     {/* Taste Cluster */}
                     <div className="p-3 rounded-xl bg-gradient-to-r from-orange-50 to-pink-50 mb-4">
                         <p className="font-bold text-sm text-gray-900">{clickedUserData.user.cluster}</p>
-                        <p className="text-xs text-gray-500">깊은 풍미와 묵직한 질감을 선호해요</p>
+                        <p className="text-xs text-gray-500">{t('about.demo.feed.cluster_desc')}</p>
                     </div>
 
                     {/* Match Score */}
                     <div className="flex items-center justify-between p-3 bg-pink-50 rounded-xl">
-                        <span className="text-sm text-pink-600 font-medium">나와의 미식 매칭</span>
+                        <span className="text-sm text-pink-600 font-medium">{t('about.demo.feed.taste_match')}</span>
                         <span className="text-xl font-black text-pink-600">87%</span>
                     </div>
                 </div>
@@ -450,17 +429,8 @@ const FeedDemo = () => {
     );
 };
 
-// TasteProfile 미니 카드 데이터 (from cluster.json)
-const tasteProfiles = [
-    { name: '화끈한 마라샹궈', tagline: '입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다.' },
-    { name: '고독한 평양냉면', tagline: '슴슴함 속에 은은하게 느껴지는 감칠맛만을 즐기는 미식가입니다.' },
-    { name: '달콤한 탕후루', tagline: '강렬한 단맛과 독특한 식감을 가진 트렌디한 간식을 찾아다닙니다.' },
-    { name: '상큼한 탐험가', tagline: '산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다.' },
-    { name: '진지한 미식가', tagline: '깊은 풍미와 묵직한 질감, 감칠맛이 어우러진 요리를 선호합니다.' },
-];
-
 // 랭킹 플로우 데모 애니메이션
-const RankingDemo = () => {
+const RankingDemo = ({ t }: { t: any }) => {
     const [step, setStep] = useState<'satisfaction' | 'compare' | 'result' | 'list'>('satisfaction');
     const [selectedSatisfaction, setSelectedSatisfaction] = useState<number | null>(null);
     const [selectedChoice, setSelectedChoice] = useState<'new' | 'existing' | null>(null);
@@ -520,21 +490,23 @@ const RankingDemo = () => {
         return () => timers.forEach(clearTimeout);
     }, []);
 
-    const demoShop = { name: '스시 오마카세', category: '일식' };
-    const existingShop = { name: '라멘 이치란', rank: 3 };
+    const demoMapShopsRanking = t('about.demo.map.shops', { returnObjects: true }) as { name: string; category: string }[];
+    const category = t('about.demo.ranking.category');
+    const demoShop = { name: demoMapShopsRanking[0]?.name || 'Sushi Omakase', category };
+    const existingShop = { name: demoMapShopsRanking[1]?.name || 'Ramen Ichiran', rank: 3 };
 
     // 미니 리스트 데이터
     const listItems = [
-        { rank: 1, name: '라멘 이치란', category: '일식', emoji: '🍜' },
-        { rank: 2, name: '스시 오마카세', category: '일식', emoji: '🍣' },
-        { rank: 3, name: '우동 카덴', category: '일식', emoji: '🍲' },
-        { rank: 4, name: '돈카츠 마이센', category: '일식', emoji: '🍱' },
-        { rank: 5, name: '야키토리 토리키', category: '일식', emoji: '🍢' },
-        { rank: 6, name: '소바 명가', category: '일식', emoji: '🍜' },
-        { rank: 7, name: '규카츠 모토무라', category: '일식', emoji: '🥩' },
-        { rank: 8, name: '텐동 텐야', category: '일식', emoji: '🍤' },
-        { rank: 9, name: '이자카야 하나', category: '일식', emoji: '🍶' },
-        { rank: 10, name: '카레 코코이치', category: '일식', emoji: '🍛' },
+        { rank: 1, name: demoMapShopsRanking[1]?.name, category, emoji: '🍜' },
+        { rank: 2, name: demoMapShopsRanking[0]?.name, category, emoji: '🍣' },
+        { rank: 3, name: 'Udon Kaden', category, emoji: '🍲' },
+        { rank: 4, name: 'Tonkatsu Maisen', category, emoji: '🍱' },
+        { rank: 5, name: 'Yakitori Toriki', category, emoji: '🍢' },
+        { rank: 6, name: 'Soba Meiga', category, emoji: '🍜' },
+        { rank: 7, name: 'Gyukatsu Motomura', category, emoji: '🥩' },
+        { rank: 8, name: 'Tendon Tenya', category, emoji: '🍤' },
+        { rank: 9, name: 'Izakaya Hana', category, emoji: '🍶' },
+        { rank: 10, name: 'Curry Coco Ichi', category, emoji: '🍛' },
     ];
 
     return (
@@ -572,11 +544,11 @@ const RankingDemo = () => {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="space-y-2"
                             >
-                                <p className="text-center text-xs text-gray-500 mb-3">어떠셨나요?</p>
+                                <p className="text-center text-xs text-gray-500 mb-3">{t('about.demo.ranking.how_was_it')}</p>
                                 {[
-                                    { icon: Smile, label: '맛있어요', color: 'text-orange-500', bg: 'bg-orange-50 border-orange-200' },
-                                    { icon: Meh, label: '괜찮아요', color: 'text-yellow-500', bg: 'bg-yellow-50 border-yellow-200' },
-                                    { icon: Frown, label: '별로예요', color: 'text-gray-400', bg: 'bg-gray-50 border-gray-200' },
+                                    { icon: Smile, label: t('about.demo.ranking.good'), color: 'text-orange-500', bg: 'bg-orange-50 border-orange-200' },
+                                    { icon: Meh, label: t('about.demo.ranking.ok'), color: 'text-yellow-500', bg: 'bg-yellow-50 border-yellow-200' },
+                                    { icon: Frown, label: t('about.demo.ranking.bad'), color: 'text-gray-400', bg: 'bg-gray-50 border-gray-200' },
                                 ].map((item, idx) => (
                                     <motion.div
                                         key={idx}
@@ -601,7 +573,7 @@ const RankingDemo = () => {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="space-y-3"
                             >
-                                <p className="text-center text-xs text-gray-500 mb-2">어디가 더 맛있었나요?</p>
+                                <p className="text-center text-xs text-gray-500 mb-2">{t('about.demo.ranking.which_better')}</p>
                                 <motion.div
                                     className={`p-3 rounded-xl border-2 transition-all ${selectedChoice === 'new' ? 'border-orange-400 bg-orange-50' : 'border-gray-200'
                                         }`}
@@ -609,7 +581,7 @@ const RankingDemo = () => {
                                 >
                                     <div className="text-center">
                                         <span className="text-sm font-bold text-gray-900">{demoShop.name}</span>
-                                        <p className="text-xs text-gray-400">이번에 간 곳</p>
+                                        <p className="text-xs text-gray-400">{t('about.demo.ranking.this_visit')}</p>
                                     </div>
                                 </motion.div>
                                 <p className="text-center text-[10px] text-gray-300 font-bold">VS</p>
@@ -617,7 +589,7 @@ const RankingDemo = () => {
                                     }`}>
                                     <div className="text-center">
                                         <span className="text-sm font-bold text-gray-900">{existingShop.name}</span>
-                                        <p className="text-xs text-gray-400">내 {existingShop.rank}위</p>
+                                        <p className="text-xs text-gray-400">{t('about.demo.ranking.my_rank', { rank: existingShop.rank })}</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -640,10 +612,10 @@ const RankingDemo = () => {
                                     2
                                 </motion.div>
                                 <h4 className="font-bold text-gray-900 mb-1">{demoShop.name}</h4>
-                                <p className="text-xs text-gray-500">나의 일식 2위에 등록!</p>
+                                <p className="text-xs text-gray-500">{t('about.demo.ranking.registered', { category, rank: 2 })}</p>
                                 <div className="flex justify-center gap-1 mt-3">
-                                    <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-[10px] font-medium">맛있어요</span>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">상위 15%</span>
+                                    <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-[10px] font-medium">{t('about.demo.ranking.good')}</span>
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">{t('about.demo.ranking.top_percent', { percent: 15 })}</span>
                                 </div>
                             </motion.div>
                         )}
@@ -659,8 +631,8 @@ const RankingDemo = () => {
             >
                 {/* List Header */}
                 <div className="p-4 border-b border-gray-100">
-                    <h3 className="font-bold text-base text-gray-900">나의 일식 랭킹</h3>
-                    <p className="text-xs text-gray-500">10개의 맛집</p>
+                    <h3 className="font-bold text-base text-gray-900">{t('about.demo.ranking.my_ranking', { category })}</h3>
+                    <p className="text-xs text-gray-500">{t('about.demo.ranking.n_restaurants', { count: 10 })}</p>
                 </div>
 
                 {/* List Items - 고정 높이 내에서 스크롤 */}
@@ -698,7 +670,9 @@ const RankingDemo = () => {
 };
 
 // 흐르는 TasteProfile 카드들
-const FlowingTasteCards = () => {
+const FlowingTasteCards = ({ t }: { t: any }) => {
+    const tasteProfiles = t('about.demo.taste_profiles', { returnObjects: true }) as { name: string; tagline: string }[];
+
     return (
         <div className="w-full h-full overflow-hidden relative">
             {/* 좌우 fade 효과 */}
@@ -736,7 +710,7 @@ const FlowingTasteCards = () => {
 };
 
 // 지도 + 샵카드 스와이프 데모 (Find 섹션)
-const MapDemo = () => {
+const MapDemo = ({ t }: { t: any }) => {
     const [cardIndex, setCardIndex] = useState(0);
     const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
     const [cardY, setCardY] = useState(100); // 100: 아래에 숨김, 0: 보임
@@ -758,31 +732,12 @@ const MapDemo = () => {
         { id: 4, lon: centerLon + 0.004, lat: centerLat + 0.002, score: 3.9 },
     ];
 
+    const demoMapShops = t('about.demo.map.shops', { returnObjects: true }) as { name: string; category: string; reviewer: string; cluster: string; review: string }[];
+
     const shopCards = [
-        {
-            name: '스시 오마카세',
-            category: '일식',
-            score: 4.5,
-            emoji: '🍣',
-            pinId: 1,
-            review: { nickname: '미식가김철수', cluster: '감칠맛 러버', text: '신선한 재료와 장인의 손길이 느껴지는 곳. 특히 우니가 일품!' }
-        },
-        {
-            name: '라멘 이치란',
-            category: '일식',
-            score: 4.3,
-            emoji: '🍜',
-            pinId: 2,
-            review: { nickname: '라멘덕후', cluster: '진한맛 탐험가', text: '진한 돈코츠 육수가 끝내줍니다. 면발도 딱 좋아요.' }
-        },
-        {
-            name: '트라토리아 베네',
-            category: '이탈리안',
-            score: 4.2,
-            emoji: '🍝',
-            pinId: 3,
-            review: { nickname: '파스타매니아', cluster: '산뜻한 맛 추구', text: '정통 이탈리안 파스타를 맛볼 수 있는 숨은 맛집!' }
-        },
+        { name: demoMapShops[0].name, category: demoMapShops[0].category, score: 4.5, emoji: '🍣', pinId: 1, review: { nickname: demoMapShops[0].reviewer, cluster: demoMapShops[0].cluster, text: demoMapShops[0].review } },
+        { name: demoMapShops[1].name, category: demoMapShops[1].category, score: 4.3, emoji: '🍜', pinId: 2, review: { nickname: demoMapShops[1].reviewer, cluster: demoMapShops[1].cluster, text: demoMapShops[1].review } },
+        { name: demoMapShops[2].name, category: demoMapShops[2].category, score: 4.2, emoji: '🍝', pinId: 3, review: { nickname: demoMapShops[2].reviewer, cluster: demoMapShops[2].cluster, text: demoMapShops[2].review } },
     ];
 
     // 핀 엘리먼트 생성 (MapContainer 스타일)
@@ -1050,7 +1005,7 @@ const MapDemo = () => {
                         {/* 예상 평가 뱃지 - 이미지 영역 좌하단 */}
                         <div className="absolute bottom-3 left-3">
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-900 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                                <span className="text-gray-500">예상 평가</span>
+                                <span className="text-gray-500">{t('about.demo.map.expected_rating')}</span>
                                 <span className="text-orange-600">{shopCards[cardIndex]?.score.toFixed(2)}</span>
                             </span>
                         </div>
@@ -1071,7 +1026,7 @@ const MapDemo = () => {
                                     {shopCards[cardIndex]?.name}
                                     <span className="text-sm text-gray-400 font-normal ml-2">{shopCards[cardIndex]?.category}</span>
                                 </h3>
-                                <p className="text-xs text-gray-500 mb-3">서울 성남시 분당구 판교역로</p>
+                                <p className="text-xs text-gray-500 mb-3">{t('about.demo.map.address')}</p>
                             </motion.div>
                         </AnimatePresence>
 
@@ -1082,19 +1037,19 @@ const MapDemo = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                길찾기
+                                {t('about.demo.map.directions')}
                             </button>
                             <button className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                                 </svg>
-                                평가하기
+                                {t('about.demo.map.rate')}
                             </button>
                             <button className="flex-1 h-11 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold flex items-center justify-center gap-1.5 text-sm">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                                 </svg>
-                                저장
+                                {t('about.demo.map.save')}
                             </button>
                         </div>
                     </div>
@@ -1132,26 +1087,215 @@ const MapDemo = () => {
     );
 };
 
+// 리더보드 데모 (Compete 섹션)
+const LeaderboardDemo = ({ t }: { t: any }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const isInView = useInView(ref, { once: false, margin: "-20%" });
+
+    const [filter, setFilter] = useState<'company' | 'neighborhood' | 'overall'>('company');
+    const [hasStarted, setHasStarted] = useState(false);
+
+    const demoCompanyUsers = t('about.demo.leaderboard.company_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
+    const demoNeighborhoodUsers = t('about.demo.leaderboard.neighborhood_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
+    const demoOverallUsers = t('about.demo.leaderboard.overall_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
+
+    // 데모 유저 데이터 (4명)
+    const companyUsers = demoCompanyUsers.map((u, i) => ({ rank: i + 1, ...u, score: [847, 823, 798, 756][i] }));
+    const neighborhoodUsers = demoNeighborhoodUsers.map((u, i) => ({ rank: i + 1, ...u, score: [912, 876, 834, 789][i] }));
+
+    const overallUsers = demoOverallUsers.map((u, i) => ({ rank: i + 1, ...u, score: [1247, 1189, 1134, 1098][i] }));
+
+    const users = filter === 'company' ? companyUsers : filter === 'neighborhood' ? neighborhoodUsers : overallUsers;
+
+    // 애니메이션 타이머 - 화면에 보일 때만 실행
+    useEffect(() => {
+        if (!isInView) {
+            // 화면에서 벗어나면 초기 상태로 리셋
+            setFilter('company');
+            setHasStarted(false);
+            return;
+        }
+
+        // 이미 시작했으면 중복 실행 방지
+        if (hasStarted) return;
+        setHasStarted(true);
+
+        const timers: NodeJS.Timeout[] = [];
+
+        const runAnimation = () => {
+            setFilter('company');
+
+            // Step 1: 동네 탭으로 전환
+            timers.push(setTimeout(() => {
+                setFilter('neighborhood');
+            }, 2000));
+
+            // Step 2: 전체 탭으로 전환
+            timers.push(setTimeout(() => {
+                setFilter('overall');
+            }, 4000));
+
+            // Step 3: 회사 탭으로 돌아오기
+            timers.push(setTimeout(() => {
+                setFilter('company');
+            }, 6000));
+
+            // Restart
+            timers.push(setTimeout(runAnimation, 8000));
+        };
+
+        const startTimeout = setTimeout(runAnimation, 500);
+        timers.push(startTimeout);
+
+        return () => timers.forEach(clearTimeout);
+    }, [isInView, hasStarted]);
+
+    const getRankStyle = (rank: number) => {
+        switch (rank) {
+            case 1: return { bg: 'bg-[#FFFBEB]', text: 'text-yellow-600', border: 'border-yellow-400' };
+            case 2: return { bg: 'bg-[#F9FAFB]', text: 'text-gray-500', border: 'border-gray-300' };
+            case 3: return { bg: 'bg-[#FFF7ED]', text: 'text-orange-600', border: 'border-orange-300' };
+            default: return { bg: 'bg-white', text: 'text-gray-600', border: 'border-transparent' };
+        }
+    };
+
+    return (
+        <div ref={ref} className="w-full h-full flex items-center justify-center px-4 relative overflow-hidden">
+            {/* 배경 딤 영역 */}
+            <div className="absolute inset-x-0 top-4 bottom-4 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
+
+            {/* 리더보드 카드 */}
+            <motion.div
+                animate={{ opacity: 1 }}
+                className="absolute w-full max-w-[300px] h-[420px] bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col"
+            >
+                {/* 헤더 */}
+                <div className="px-4 pt-5 pb-3">
+                    <h2 className="text-lg font-bold text-gray-900">{t('about.demo.leaderboard.title')}</h2>
+                </div>
+
+                {/* 필터 칩 */}
+                <div className="px-4 pb-4">
+                    <div className="flex gap-2">
+                        <button
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${filter === 'company'
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                                }`}
+                        >
+                            {t('about.demo.leaderboard.filters.company')}
+                        </button>
+                        <button
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${filter === 'neighborhood'
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                                }`}
+                        >
+                            {t('about.demo.leaderboard.filters.neighborhood')}
+                        </button>
+                        <button
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${filter === 'overall'
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                                }`}
+                        >
+                            {t('about.demo.leaderboard.filters.overall')}
+                        </button>
+                    </div>
+                </div>
+
+                {/* 리더보드 리스트 */}
+                <div className="flex-1 overflow-hidden px-4 pb-5">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={filter}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.25 }}
+                            className="space-y-2.5"
+                        >
+                            {users.map((user) => {
+                                const style = getRankStyle(user.rank);
+                                return (
+                                    <div
+                                        key={user.rank}
+                                        className={`flex items-center gap-3 p-3 rounded-xl ${style.bg}`}
+                                    >
+                                        {/* 순위 */}
+                                        <div className="w-6 flex justify-center">
+                                            <span className={`font-black text-base ${style.text}`}>
+                                                {user.rank}
+                                            </span>
+                                        </div>
+
+                                        {/* 프로필 이미지 */}
+                                        <div className={`w-9 h-9 rounded-full border-2 ${style.border} bg-gray-200 flex items-center justify-center flex-shrink-0`}>
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                        </div>
+
+                                        {/* 정보 */}
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-bold text-sm text-gray-900 truncate block">
+                                                {user.nickname}
+                                            </span>
+                                            <span className="text-[10px] text-orange-500">
+                                                {user.cluster}
+                                            </span>
+                                        </div>
+
+                                        {/* 점수 */}
+                                        <span className={`font-black text-base ${style.text}`}>
+                                            {user.score}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 interface StepCardProps {
     page: any;
+    t: any;
 }
 
-const StepCard = ({ page }: StepCardProps) => {
+const StepCard = ({ page, t }: StepCardProps) => {
     const ref = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: false, margin: "-20%" });
 
     const renderDemoArea = () => {
+        if (page.id === 'why') {
+            return (
+                <div className="w-full h-full flex items-center justify-center">
+                    <div className="flex gap-4 text-6xl">
+                        <span>⭐</span>
+                        <span>🍽️</span>
+                        <span>🤔</span>
+                    </div>
+                </div>
+            );
+        }
         if (page.id === 'discover') {
-            return <FlowingTasteCards />;
+            return <FlowingTasteCards t={t} />;
         }
         if (page.id === 'rank') {
-            return <RankingDemo />;
+            return <RankingDemo t={t} />;
         }
         if (page.id === 'share') {
-            return <FeedDemo />;
+            return <FeedDemo t={t} />;
         }
         if (page.id === 'find') {
-            return <MapDemo />;
+            return <MapDemo t={t} />;
+        }
+        if (page.id === 'compete') {
+            return <LeaderboardDemo t={t} />;
         }
 
         return (
@@ -1169,40 +1313,53 @@ const StepCard = ({ page }: StepCardProps) => {
             className="w-full min-h-screen flex flex-col"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)', paddingBottom: '24px' }}
         >
+            {/* Why 섹션: 이미지가 타이틀 위에 */}
+            {page.id === 'why' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+                    transition={{ duration: 0.7, delay: 0, ease: "easeOut" }}
+                    className="flex items-center justify-center h-32 mb-4"
+                >
+                    {renderDemoArea()}
+                </motion.div>
+            )}
+
             {/* Title */}
             <div className="px-10 pb-4">
                 <motion.h2
                     initial={{ opacity: 0, y: 40 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-                    transition={{ duration: 0.6, delay: 0, ease: "easeOut" }}
+                    transition={{ duration: 0.6, delay: page.id === 'why' ? 0.15 : 0, ease: "easeOut" }}
                     className="text-4xl font-bold text-foreground leading-tight text-left whitespace-pre-line"
                 >
                     {page.title}
                 </motion.h2>
             </div>
 
-            {/* Demo Area - 이미지 영역 (섹션별 높이 다름) */}
-            <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-                transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
-                className={`flex items-center justify-center ${page.id === 'rank' ? 'h-[420px]' :
-                    page.id === 'share' ? 'h-[540px]' :
-                        page.id === 'find' ? 'h-[480px]' :
-                            page.id === 'discover' ? 'h-72' :
-                                page.id === 'why' ? 'h-48' :
-                                    'h-64'
-                    }`}
-            >
-                {renderDemoArea()}
-            </motion.div>
+            {/* Demo Area - 이미지 영역 (섹션별 높이 다름, why 제외) */}
+            {page.id !== 'why' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+                    transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
+                    className={`flex items-center justify-center ${page.id === 'rank' ? 'h-[420px]' :
+                        page.id === 'share' ? 'h-[540px]' :
+                            page.id === 'find' ? 'h-[480px]' :
+                                page.id === 'discover' ? 'h-72' :
+                                    'h-[520px]'
+                        }`}
+                >
+                    {renderDemoArea()}
+                </motion.div>
+            )}
 
             {/* Description */}
             <div className="px-10 pt-4">
                 <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-                    transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+                    transition={{ duration: 0.6, delay: page.id === 'why' ? 0.3 : 0.3, ease: "easeOut" }}
                     className="text-base text-muted-foreground leading-relaxed text-left"
                 >
                     {page.description?.split('\n\n').map((paragraph: string, i: number) => (

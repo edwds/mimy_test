@@ -474,37 +474,120 @@
         "title": "About Service",
         "hero": {
             "tagline": "Rank what you ate",
-            "description": "Discover your unique taste profile and get personalized recommendations from people who share your palate."
+            "description": "Discover your unique taste profile\nand get recommendations from people who share your palate."
+        },
+        "why": {
+            "title": "Everyone loved it,\nbut not you?",
+            "description": "Have you ever been disappointed\nby a famous 4.5-star restaurant?\n\nWhat everyone calls delicious\nmight not be for you.\nEveryone has different tastes,\npreferred vibes, and priorities.\n\nOnce you know your own palate,\nyou won't be swayed by others' opinions\nand can find places you'll truly love.\n\nFollow recommendations from people\nwith similar tastes,\nand you'll fail less often\nwhile discovering new favorites."
         },
         "steps": {
             "discover": {
-                "title": "Discover Your Taste",
-                "description": "Our quick quiz analyzes 7 taste dimensions to find your unique profile among 128 food clusters."
+                "title": "Discover\nyour taste\nyou never knew",
+                "description": "We created taste cards\nthat are easy to understand, like MBTI.\n\nSwipe left or right to answer the cards.\nOnce you answer all questions,\nwe'll find your unique taste type.\n\nDo you like spicy food?\nPrefer light flavors?\nValue ambiance?\n\nDiscover the standards of your palate\nyou didn't even know about,\nand check out your unique food personality."
             },
             "rank": {
-                "title": "My Michelin Guide",
-                "description": "Rank instead of rate. Categorize restaurants as Good, OK, or Bad and build your own personal Michelin guide."
+                "title": "Pick the\nbetter one\nbetween two",
+                "description": "At mimy, your honest taste\nis what matters most.\n\nPlaces others loved but didn't impress you,\nhidden gems with low ratings\nthat were perfect for you.\n\nRank the places you've visited\nby your own standards.\n\nThe more you record,\nthe clearer your taste profile becomes,\nand your ultimate restaurant list takes shape.\n\nShare your proudly curated list\norganized by region and category\nwith your friends."
             },
             "share": {
-                "title": "Connect with Taste-Alikes",
-                "description": "Follow foodies who share your palate and discover their honest reviews and hidden gem recommendations."
+                "title": "Connect with\npeople who\nshare your taste",
+                "description": "mimy has countless foodies\nwho share your palate.\n\nWe believe that one opinion\nfrom someone with matching taste\ncan be more accurate\nthan thousands of star ratings.\n\nFollow people with similar tastes\nand discover their honest reviews\nand hidden gems.\n\nBrowse other foodies' rankings and wishlists,\nand share food stories\nwith people who get you."
             },
             "find": {
-                "title": "Perfect Recommendations",
-                "description": "Get personalized match scores based on reviews from people with similar taste preferences."
+                "title": "We recommend\nrestaurants\nyou'll love",
+                "description": "mimy doesn't just recommend\nhighly-rated places.\n\nWe analyze all users' ranking data\nand weigh places highly rated\nby people with similar tastes.\n\nThat's how we provide\npersonalized match scores just for you.\n\nFind restaurants nearby that you haven't tried\nbut perfectly match your palate.\n\nExperience recommendations made for you,\nnot generic popular ratings."
             },
             "compete": {
-                "title": "Compete by Group",
-                "description": "Compare rankings with people from your company, school, or neighborhood and crown your group's top foodie."
+                "title": "Compete with\nfriends and neighbors\nfor foodie crown",
+                "description": "On mimy, you can see\nthe real food experts in your school,\ncompany, or neighborhood.\n\nCompare food rankings with friends\nin the same group,\nsee who's been to more places,\nand find whose taste matches yours best.\n\nQuickly discover people\nwhose taste perfectly matches yours\nthrough rankings,\nand get their recommendations."
             }
         },
         "outro": {
-            "subtitle": "Build your own Michelin guide",
-            "title": "Ready to start?"
+            "subtitle": "Find your perfect restaurants",
+            "title": "Start now"
         },
         "footer": {
-            "company": "WAD Inc.",
-            "contact": "Contact: hello@mimy.app"
+            "company": "mimy.",
+            "contact": "support@mimy.app"
+        },
+        "demo": {
+            "feed": {
+                "users": [
+                    { "name": "Foodie_Jay", "cluster": "Spicy Malatang" },
+                    { "name": "TasteHunter", "cluster": "Serious Gourmet" },
+                    { "name": "Foodie_Lynn", "cluster": "Fresh Explorer" }
+                ],
+                "shops": [
+                    { "name": "Sushi Omakase", "address": "Apgujeong-ro, Gangnam", "review": "Lunch here today! The omakase course was amazing. Especially the otoro..." },
+                    { "name": "Ramen Ichiran", "address": "Hongdae, Mapo-gu", "review": "The noodles were perfectly chewy and the broth was rich. Will come back!" },
+                    { "name": "Trattoria Bene", "address": "Itaewon-ro, Yongsan", "review": "Pasta al dente perfection with fresh tomato sauce!" }
+                ],
+                "visited": "visited",
+                "contents": "posts",
+                "followers": "followers",
+                "bio": "Office worker who loves exploring restaurants 🍜",
+                "cluster_desc": "Prefers deep flavors and rich textures",
+                "taste_match": "Taste Match"
+            },
+            "ranking": {
+                "how_was_it": "How was it?",
+                "good": "Loved it",
+                "ok": "It was okay",
+                "bad": "Not great",
+                "which_better": "Which was better?",
+                "this_visit": "This visit",
+                "my_rank": "My #{{rank}}",
+                "registered": "Registered as #{{rank}} in {{category}}!",
+                "top_percent": "Top {{percent}}%",
+                "my_ranking": "My {{category}} Ranking",
+                "n_restaurants": "{{count}} restaurants",
+                "category": "Japanese"
+            },
+            "taste_profiles": [
+                { "name": "Spicy Malatang", "tagline": "Enjoys exotic dishes with numbing spice and bold, impactful flavors." },
+                { "name": "Subtle Cold Noodles", "tagline": "A gourmet who appreciates subtle umami in understated flavors." },
+                { "name": "Sweet Tanghulu", "tagline": "Seeks trendy snacks with intense sweetness and unique textures." },
+                { "name": "Fresh Explorer", "tagline": "Enjoys experimental dishes with balanced acidity and umami." },
+                { "name": "Serious Gourmet", "tagline": "Prefers dishes with deep flavors, rich textures, and umami." }
+            ],
+            "map": {
+                "shops": [
+                    { "name": "Sushi Omakase", "category": "Japanese", "reviewer": "GourmetKim", "cluster": "Umami Lover", "review": "You can feel the fresh ingredients and craftmanship. The uni was superb!" },
+                    { "name": "Ramen Ichiran", "category": "Japanese", "reviewer": "RamenFan", "cluster": "Rich Flavor Explorer", "review": "The rich tonkotsu broth is amazing. Perfect noodle texture too." },
+                    { "name": "Trattoria Bene", "category": "Italian", "reviewer": "PastaManiac", "cluster": "Fresh Taste Seeker", "review": "A hidden gem for authentic Italian pasta!" }
+                ],
+                "address": "Pangyo-yeok-ro, Bundang-gu, Seongnam",
+                "expected_rating": "Expected Rating",
+                "directions": "Directions",
+                "rate": "Rate",
+                "save": "Save"
+            },
+            "leaderboard": {
+                "title": "Leaderboard",
+                "filters": {
+                    "company": "Korea University",
+                    "neighborhood": "Gangnam-gu, Seoul",
+                    "overall": "Overall"
+                },
+                "company_users": [
+                    { "nickname": "GourmetManager", "cluster": "Umami Lover" },
+                    { "nickname": "TasteExplorer", "cluster": "Rich Flavor Explorer" },
+                    { "nickname": "OmakaseAddict", "cluster": "Fresh Taste Seeker" },
+                    { "nickname": "RamenFanatic", "cluster": "Balanced Gourmet" }
+                ],
+                "neighborhood_users": [
+                    { "nickname": "PangyoFoodie", "cluster": "Rich Flavor Explorer" },
+                    { "nickname": "BundangGourmet", "cluster": "Umami Lover" },
+                    { "nickname": "SeongnamHunter", "cluster": "Fresh Taste Seeker" },
+                    { "nickname": "YatapMukbang", "cluster": "Balanced Gourmet" }
+                ],
+                "overall_users": [
+                    { "nickname": "NationFoodKing", "cluster": "Umami Lover" },
+                    { "nickname": "MichelinHunter", "cluster": "Rich Flavor Explorer" },
+                    { "nickname": "FoodCritic", "cluster": "Fresh Taste Seeker" },
+                    { "nickname": "OmakaseMaster", "cluster": "Balanced Gourmet" }
+                ]
+            }
         }
     },
     "quiz": {

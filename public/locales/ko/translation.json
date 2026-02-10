@@ -497,7 +497,7 @@
                 "description": "mimy에는 나와 입맛이 비슷한\n수많은 미식가들이 있습니다.\n\n우리는 믿습니다.\n나와 입맛이 맞는 사람의 의견이\n수천 명의 별점보다\n더 정확한 추천이 될 수 있다고요.\n\n입맛이 비슷한 사람들을 팔로우하고,\n그들의 솔직한 리뷰와\n숨겨진 맛집을 발견해보세요.\n\n다른 미식가들의 랭킹과 위시리스트를 보며,\n취향이 통하는 사람들과\n음식 이야기를 나눠보세요."
             },
             "find": {
-                "title": "모두 좋아하는 곳은 물론\n내가 좋아할 맛집을\n추천해드려요",
+                "title": "수 많은 곳 중에\n내가 좋아할 맛집을\n추천해드려요",
                 "description": "mimy는 단순히 평점이 높은 곳만\n추천하지 않습니다.\n\n모든 사용자의 랭킹 데이터를 분석해,\n나와 입맛이 비슷한 사람들이\n높게 평가한 곳을 더 많이 반영합니다.\n\n그래서 나만을 위한,\n진짜 맞춤 추천 점수를 제공할 수 있죠.\n\n지금 이 근처에서 내가 아직 가보지 않았지만\n내 입맛에 딱 맞을 맛집을 찾아보세요.\n\n대중적인 평가가 아닌,\n나를 위한 추천을 경험해보세요."
             },
             "compete": {
@@ -506,12 +506,91 @@
             }
         },
         "outro": {
-            "subtitle": "나만의 미슐랭을 만들어보세요",
-            "title": "지금 시작해볼까요?"
+            "subtitle": "나만의 맛집 찾기",
+            "title": "지금 시작하세요"
         },
         "footer": {
-            "company": "WAD Inc.",
-            "contact": "문의: hello@mimy.app"
+            "company": "mimy.",
+            "contact": "support@mimy.app"
+        },
+        "demo": {
+            "feed": {
+                "users": [
+                    { "name": "미식가_제이", "cluster": "화끈한 마라샹궈" },
+                    { "name": "맛집헌터", "cluster": "진지한 미식가" },
+                    { "name": "푸디_린", "cluster": "상큼한 탐험가" }
+                ],
+                "shops": [
+                    { "name": "스시 오마카세", "address": "서울 강남구 압구정로", "review": "오늘 점심은 여기! 오마카세 코스 정말 만족스러웠어요. 특히 오도로가..." },
+                    { "name": "라멘 이치란", "address": "서울 마포구 홍대입구", "review": "면발이 정말 쫄깃하고 국물이 진해서 좋았어요. 다음에 또 올 예정!" },
+                    { "name": "트라토리아 베네", "address": "서울 용산구 이태원로", "review": "파스타 면이 알덴테로 딱 좋았고, 토마토 소스가 신선했어요!" }
+                ],
+                "visited": "방문",
+                "contents": "콘텐츠",
+                "followers": "팔로워",
+                "bio": "맛집 탐방이 취미인 직장인입니다 🍜",
+                "cluster_desc": "깊은 풍미와 묵직한 질감을 선호해요",
+                "taste_match": "나와의 미식 매칭"
+            },
+            "ranking": {
+                "how_was_it": "어떠셨나요?",
+                "good": "맛있어요",
+                "ok": "괜찮아요",
+                "bad": "별로예요",
+                "which_better": "어디가 더 맛있었나요?",
+                "this_visit": "이번에 간 곳",
+                "my_rank": "내 {{rank}}위",
+                "registered": "나의 {{category}} {{rank}}위에 등록!",
+                "top_percent": "상위 {{percent}}%",
+                "my_ranking": "나의 {{category}} 랭킹",
+                "n_restaurants": "{{count}}개의 맛집",
+                "category": "일식"
+            },
+            "taste_profiles": [
+                { "name": "화끈한 마라샹궈", "tagline": "입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다." },
+                { "name": "고독한 평양냉면", "tagline": "슴슴함 속에 은은하게 느껴지는 감칠맛만을 즐기는 미식가입니다." },
+                { "name": "달콤한 탕후루", "tagline": "강렬한 단맛과 독특한 식감을 가진 트렌디한 간식을 찾아다닙니다." },
+                { "name": "상큼한 탐험가", "tagline": "산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다." },
+                { "name": "진지한 미식가", "tagline": "깊은 풍미와 묵직한 질감, 감칠맛이 어우러진 요리를 선호합니다." }
+            ],
+            "map": {
+                "shops": [
+                    { "name": "스시 오마카세", "category": "일식", "reviewer": "미식가김철수", "cluster": "감칠맛 러버", "review": "신선한 재료와 장인의 손길이 느껴지는 곳. 특히 우니가 일품!" },
+                    { "name": "라멘 이치란", "category": "일식", "reviewer": "라멘덕후", "cluster": "진한맛 탐험가", "review": "진한 돈코츠 육수가 끝내줍니다. 면발도 딱 좋아요." },
+                    { "name": "트라토리아 베네", "category": "이탈리안", "reviewer": "파스타매니아", "cluster": "산뜻한 맛 추구", "review": "정통 이탈리안 파스타를 맛볼 수 있는 숨은 맛집!" }
+                ],
+                "address": "서울 성남시 분당구 판교역로",
+                "expected_rating": "예상 평가",
+                "directions": "길찾기",
+                "rate": "평가하기",
+                "save": "저장"
+            },
+            "leaderboard": {
+                "title": "리더보드",
+                "filters": {
+                    "company": "한국대학교",
+                    "neighborhood": "서울시 강남구",
+                    "overall": "전체"
+                },
+                "company_users": [
+                    { "nickname": "미식가김대리", "cluster": "감칠맛 러버" },
+                    { "nickname": "맛집탐험가", "cluster": "진한맛 탐험가" },
+                    { "nickname": "오마카세홀릭", "cluster": "산뜻한 맛 추구" },
+                    { "nickname": "라멘덕후", "cluster": "균형잡힌 미식가" }
+                ],
+                "neighborhood_users": [
+                    { "nickname": "판교맛집러", "cluster": "진한맛 탐험가" },
+                    { "nickname": "분당미식가", "cluster": "감칠맛 러버" },
+                    { "nickname": "성남푸드헌터", "cluster": "산뜻한 맛 추구" },
+                    { "nickname": "야탑동먹방", "cluster": "균형잡힌 미식가" }
+                ],
+                "overall_users": [
+                    { "nickname": "전국맛집왕", "cluster": "감칠맛 러버" },
+                    { "nickname": "미슐랭헌터", "cluster": "진한맛 탐험가" },
+                    { "nickname": "푸드크리틱", "cluster": "산뜻한 맛 추구" },
+                    { "nickname": "오마카세마스터", "cluster": "균형잡힌 미식가" }
+                ]
+            }
         }
     },
     "quiz": {
