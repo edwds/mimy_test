@@ -12,6 +12,11 @@ export const AboutScreen = () => {
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // iOS 스테이터스바 탭 시 스크롤 탑
+    const scrollToTop = () => {
+        containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     const pages = [
         {
             type: 'intro' as const,
@@ -58,12 +63,24 @@ export const AboutScreen = () => {
     ];
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* Back Button */}
+        <div className="flex flex-col h-full bg-background relative">
+            {/* iOS Status Bar Tap Area - 스테이터스바 탭 시 스크롤 탑 */}
+            {Capacitor.isNativePlatform() && (
+                <div
+                    onClick={scrollToTop}
+                    className="absolute top-0 left-0 right-0 z-50"
+                    style={{ height: 'env(safe-area-inset-top)' }}
+                />
+            )}
+
+            {/* Back Button - absolute로 프레임 내부에 위치 */}
             <button
                 onClick={() => navigate(-1)}
-                className="fixed top-4 left-4 z-20 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-sm hover:bg-muted"
-                style={{ marginTop: Capacitor.isNativePlatform() ? 'env(safe-area-inset-top)' : undefined }}
+                className="absolute z-20 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-sm hover:bg-muted"
+                style={{
+                    top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 16px)' : '16px',
+                    left: '16px'
+                }}
             >
                 <ChevronLeft className="w-6 h-6" />
             </button>
@@ -239,50 +256,48 @@ const OutroPage = ({ t }: PageProps) => {
     );
 };
 
-// 피드 데모 애니메이션 (Share 섹션)
+// 피드 데모 애니메이션 (Share 섹션) - 카드 플립 버전
 const FeedDemo = ({ t }: { t: any }) => {
     const [scrollY, setScrollY] = useState(0);
-    const [feedCardX, setFeedCardX] = useState(0); // 0: center, -100: left
-    const [profileCardX, setProfileCardX] = useState(100); // 100: right, 0: center
+    const [isFlipped, setIsFlipped] = useState(false);
     const [clickedUser, setClickedUser] = useState<number | null>(null);
+    const [highlightMatch, setHighlightMatch] = useState(false);
 
     useEffect(() => {
         const timers: NodeJS.Timeout[] = [];
 
         const runAnimation = () => {
-            // Reset - 피드가 가운데, 스크롤 0
+            // Reset
             setScrollY(0);
-            setFeedCardX(0);
-            setProfileCardX(100);
+            setIsFlipped(false);
             setClickedUser(null);
+            setHighlightMatch(false);
 
-            // Step 1: 잠시 대기 후 천천히 스크롤
-            timers.push(setTimeout(() => setScrollY(150), 1200));
-            timers.push(setTimeout(() => setScrollY(300), 2400));
+            // Step 1: 스크롤 애니메이션
+            timers.push(setTimeout(() => setScrollY(150), 1000));
+            timers.push(setTimeout(() => setScrollY(300), 2000));
 
-            // Step 2: 유저 클릭 애니메이션
-            timers.push(setTimeout(() => setClickedUser(1), 3200));
+            // Step 2: 유저 클릭 하이라이트
+            timers.push(setTimeout(() => setClickedUser(1), 2800));
 
-            // Step 3: 피드 왼쪽으로 나감
-            timers.push(setTimeout(() => setFeedCardX(-100), 3700));
+            // Step 3: 카드 플립
+            timers.push(setTimeout(() => setIsFlipped(true), 3300));
 
-            // Step 4: 프로필 오른쪽에서 들어옴
-            timers.push(setTimeout(() => setProfileCardX(0), 4000));
+            // Step 4: 매칭 스코어 강조
+            timers.push(setTimeout(() => setHighlightMatch(true), 4200));
+            timers.push(setTimeout(() => setHighlightMatch(false), 5000));
 
-            // Step 5: 프로필 보여주기 (2.5초)
-
-            // Step 6: 프로필 오른쪽으로 나감
-            timers.push(setTimeout(() => setProfileCardX(100), 6500));
-
-            // Step 7: 피드 다시 들어옴 (스크롤 0으로 리셋 먼저)
-            timers.push(setTimeout(() => setScrollY(0), 6700));
+            // Step 5: 다시 플립해서 돌아가기
             timers.push(setTimeout(() => {
+                setIsFlipped(false);
                 setClickedUser(null);
-                setFeedCardX(0);
-            }, 6800));
+            }, 5800));
 
-            // Restart (피드 등장 후 1.5초 대기)
-            timers.push(setTimeout(runAnimation, 8300));
+            // Step 6: 스크롤 리셋
+            timers.push(setTimeout(() => setScrollY(0), 6300));
+
+            // Restart
+            timers.push(setTimeout(runAnimation, 7800));
         };
 
         runAnimation();
@@ -305,126 +320,151 @@ const FeedDemo = ({ t }: { t: any }) => {
             {/* 배경 딤 */}
             <div className="absolute inset-x-0 top-0 bottom-0 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
 
-            {/* 피드 카드 */}
-            <motion.div
-                animate={{ x: `${feedCardX}%`, opacity: feedCardX === 0 ? 1 : 0 }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
-                className="absolute w-full max-w-[300px] h-[420px] overflow-hidden rounded-2xl bg-white shadow-xl border border-gray-100"
+            {/* 플립 카드 컨테이너 */}
+            <div
+                className="relative w-full max-w-[300px] h-[420px]"
+                style={{ perspective: '1000px' }}
             >
                 <motion.div
-                    className="space-y-0"
-                    animate={{ y: -scrollY }}
-                    transition={{ duration: 1.2, ease: 'easeInOut' }}
+                    className="relative w-full h-full"
+                    animate={{ rotateY: isFlipped ? 180 : 0 }}
+                    transition={{ duration: 0.6, ease: 'easeInOut' }}
+                    style={{ transformStyle: 'preserve-3d' }}
                 >
-                    {feedItems.map((item, idx) => (
-                        <div key={idx} className="p-4 border-b border-gray-100">
-                            {/* Header */}
+                    {/* 앞면 - 피드 카드 */}
+                    <div
+                        className="absolute inset-0 w-full h-full rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden"
+                        style={{ backfaceVisibility: 'hidden' }}
+                    >
+                        <motion.div
+                            className="space-y-0"
+                            animate={{ y: -scrollY }}
+                            transition={{ duration: 1.2, ease: 'easeInOut' }}
+                        >
+                            {feedItems.map((item, idx) => (
+                                <div key={idx} className="p-4 border-b border-gray-100">
+                                    {/* Header */}
+                                    <motion.div
+                                        className={`flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 transition-colors ${clickedUser === idx ? 'bg-orange-100' : ''}`}
+                                        animate={clickedUser === idx ? { scale: [1, 0.95, 1] } : {}}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg transition-all ${clickedUser === idx ? 'bg-orange-200 ring-2 ring-orange-400' : 'bg-gray-100'}`}>
+                                            {item.user.image}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-bold text-sm text-gray-900">{item.user.name}</span>
+                                                <span className="text-[10px] text-orange-600 font-medium">{item.user.cluster}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500">{item.shop} {t('about.demo.feed.visited')}</p>
+                                        </div>
+                                    </motion.div>
+
+                                    {/* Image placeholder */}
+                                    <div className="w-full h-28 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-4xl mb-3">
+                                        {item.image}
+                                    </div>
+
+                                    {/* Text */}
+                                    <p className="text-sm text-gray-700 line-clamp-2 mb-3">{item.text}</p>
+
+                                    {/* Shop Info Card */}
+                                    <div className="p-2 rounded-lg bg-gray-50 flex items-center gap-2 mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-lg flex-shrink-0">
+                                            {item.image}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-gray-900 truncate">{item.shop}</p>
+                                            <p className="text-[10px] text-gray-500">{item.address}</p>
+                                        </div>
+                                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                                            <div className="p-1 text-gray-400">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <path d="M12 8v8M8 12h8" />
+                                                </svg>
+                                            </div>
+                                            <div className="p-1 text-gray-400">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Stats */}
+                                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1">❤️ {item.likes}</span>
+                                        <span className="flex items-center gap-1">💬 {item.comments}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </motion.div>
+                    </div>
+
+                    {/* 뒷면 - 유저 프로필 카드 */}
+                    <div
+                        className="absolute inset-0 w-full h-full rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden"
+                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                    >
+                        {/* Profile Header */}
+                        <div className="p-5">
+                            <div className="flex items-start gap-4 mb-4">
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-lg text-gray-900 mb-1">{clickedUserData.user.name}</h3>
+                                    <div className="flex gap-3 text-xs text-gray-500 mb-2">
+                                        <span><b className="text-gray-900">24</b> {t('about.demo.feed.contents')}</span>
+                                        <span><b className="text-gray-900">128</b> {t('about.demo.feed.followers')}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-3">{t('about.demo.feed.bio')}</p>
+                                </div>
+                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
+                                    {clickedUserData.user.image}
+                                </div>
+                            </div>
+
+                            {/* Taste Cluster */}
+                            <div className="p-3 rounded-xl bg-gradient-to-r from-orange-50 to-pink-50 mb-4">
+                                <p className="font-bold text-sm text-gray-900">{clickedUserData.user.cluster}</p>
+                                <p className="text-xs text-gray-500">{t('about.demo.feed.cluster_desc')}</p>
+                            </div>
+
+                            {/* Match Score - 강조 애니메이션 */}
                             <motion.div
-                                className={`flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 ${clickedUser === idx ? 'bg-gray-100' : ''}`}
-                                animate={clickedUser === idx ? { scale: [1, 0.97, 1] } : {}}
-                                transition={{ duration: 0.2 }}
+                                className="flex items-center justify-between p-3 rounded-xl"
+                                animate={{
+                                    backgroundColor: highlightMatch ? 'rgb(251, 207, 232)' : 'rgb(253, 242, 248)',
+                                    scale: highlightMatch ? [1, 1.05, 1] : 1
+                                }}
+                                transition={{ duration: 0.4 }}
                             >
-                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-lg">
-                                    {item.user.image}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="font-bold text-sm text-gray-900">{item.user.name}</span>
-                                        <span className="text-[10px] text-orange-600 font-medium">{item.user.cluster}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500">{item.shop} {t('about.demo.feed.visited')}</p>
-                                </div>
+                                <span className="text-sm text-pink-600 font-medium">{t('about.demo.feed.taste_match')}</span>
+                                <motion.span
+                                    className="text-xl font-black text-pink-600"
+                                    animate={{
+                                        scale: highlightMatch ? [1, 1.2, 1] : 1
+                                    }}
+                                    transition={{ duration: 0.4 }}
+                                >
+                                    87%
+                                </motion.span>
                             </motion.div>
+                        </div>
 
-                            {/* Image placeholder */}
-                            <div className="w-full h-28 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-4xl mb-3">
-                                {item.image}
-                            </div>
-
-                            {/* Text */}
-                            <p className="text-sm text-gray-700 line-clamp-2 mb-3">{item.text}</p>
-
-                            {/* Shop Info Card */}
-                            <div className="p-2 rounded-lg bg-gray-50 flex items-center gap-2 mb-3">
-                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-lg flex-shrink-0">
-                                    {item.image}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-gray-900 truncate">{item.shop}</p>
-                                    <p className="text-[10px] text-gray-500">{item.address}</p>
-                                </div>
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-0.5 flex-shrink-0">
-                                    <div className="p-1 text-gray-400">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M12 8v8M8 12h8" />
-                                        </svg>
+                        {/* Mini Content Preview */}
+                        <div className="border-t border-gray-100 p-3">
+                            <div className="grid grid-cols-3 gap-1">
+                                {['🍜', '🍣', '🥩'].map((emoji, i) => (
+                                    <div key={i} className="aspect-square rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-2xl">
+                                        {emoji}
                                     </div>
-                                    <div className="p-1 text-gray-400">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Stats */}
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                                <span className="flex items-center gap-1">❤️ {item.likes}</span>
-                                <span className="flex items-center gap-1">💬 {item.comments}</span>
+                                ))}
                             </div>
                         </div>
-                    ))}
+                    </div>
                 </motion.div>
-            </motion.div>
-
-            {/* 유저 프로필 카드 */}
-            <motion.div
-                animate={{ x: `${profileCardX}%`, opacity: profileCardX === 0 ? 1 : 0 }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
-                className="absolute w-full max-w-[300px] h-[420px] bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100"
-            >
-                {/* Profile Header */}
-                <div className="p-5">
-                    <div className="flex items-start gap-4 mb-4">
-                        <div className="flex-1">
-                            <h3 className="font-bold text-lg text-gray-900 mb-1">{clickedUserData.user.name}</h3>
-                            <div className="flex gap-3 text-xs text-gray-500 mb-2">
-                                <span><b className="text-gray-900">24</b> {t('about.demo.feed.contents')}</span>
-                                <span><b className="text-gray-900">128</b> {t('about.demo.feed.followers')}</span>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-3">{t('about.demo.feed.bio')}</p>
-                        </div>
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
-                            {clickedUserData.user.image}
-                        </div>
-                    </div>
-
-                    {/* Taste Cluster */}
-                    <div className="p-3 rounded-xl bg-gradient-to-r from-orange-50 to-pink-50 mb-4">
-                        <p className="font-bold text-sm text-gray-900">{clickedUserData.user.cluster}</p>
-                        <p className="text-xs text-gray-500">{t('about.demo.feed.cluster_desc')}</p>
-                    </div>
-
-                    {/* Match Score */}
-                    <div className="flex items-center justify-between p-3 bg-pink-50 rounded-xl">
-                        <span className="text-sm text-pink-600 font-medium">{t('about.demo.feed.taste_match')}</span>
-                        <span className="text-xl font-black text-pink-600">87%</span>
-                    </div>
-                </div>
-
-                {/* Mini Content Preview */}
-                <div className="border-t border-gray-100 p-3">
-                    <div className="grid grid-cols-3 gap-1">
-                        {['🍜', '🍣', '🥩'].map((emoji, i) => (
-                            <div key={i} className="aspect-square rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-2xl">
-                                {emoji}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </motion.div>
+            </div>
         </div>
     );
 };
@@ -1090,10 +1130,11 @@ const MapDemo = ({ t }: { t: any }) => {
 // 리더보드 데모 (Compete 섹션)
 const LeaderboardDemo = ({ t }: { t: any }) => {
     const ref = useRef<HTMLDivElement>(null);
-    const isInView = useInView(ref, { once: false, margin: "-20%" });
+    const isInView = useInView(ref, { once: false, amount: 0.3 });
 
     const [filter, setFilter] = useState<'company' | 'neighborhood' | 'overall'>('company');
     const hasStartedRef = useRef(false);
+    const hasBeenMountedRef = useRef(false);
 
     const demoCompanyUsers = t('about.demo.leaderboard.company_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
     const demoNeighborhoodUsers = t('about.demo.leaderboard.neighborhood_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
@@ -1107,6 +1148,14 @@ const LeaderboardDemo = ({ t }: { t: any }) => {
 
     const users = filter === 'company' ? companyUsers : filter === 'neighborhood' ? neighborhoodUsers : overallUsers;
 
+    // 마운트 후 짧은 지연을 두어 초기 로드와 실제 스크롤을 구분
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            hasBeenMountedRef.current = true;
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
     // 애니메이션 타이머 - 화면에 보일 때만 실행
     useEffect(() => {
         if (!isInView) {
@@ -1115,6 +1164,9 @@ const LeaderboardDemo = ({ t }: { t: any }) => {
             hasStartedRef.current = false;
             return;
         }
+
+        // 마운트 직후에는 시작하지 않음 (초기 로드 방지)
+        if (!hasBeenMountedRef.current) return;
 
         // 이미 시작했으면 중복 실행 방지
         if (hasStartedRef.current) return;
