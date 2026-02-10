@@ -303,7 +303,7 @@ const FeedDemo = ({ t }: { t: any }) => {
     return (
         <div className="w-full h-full flex items-center justify-center px-4 relative overflow-hidden">
             {/* 배경 딤 */}
-            <div className="absolute inset-x-0 top-4 bottom-4 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
+            <div className="absolute inset-x-0 top-0 bottom-0 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
 
             {/* 피드 카드 */}
             <motion.div
@@ -512,7 +512,7 @@ const RankingDemo = ({ t }: { t: any }) => {
     return (
         <div className="w-full h-full flex items-center justify-center px-4 relative overflow-hidden">
             {/* 배경 딤 영역 */}
-            <div className="absolute inset-x-0 top-4 bottom-4 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
+            <div className="absolute inset-x-0 top-0 bottom-0 bg-gradient-to-b from-gray-100/50 to-gray-200/30" />
 
             {/* 랭킹 오버레이 카드 */}
             <motion.div
@@ -1326,7 +1326,7 @@ const StepCard = ({ page, t }: StepCardProps) => {
             )}
 
             {/* Title */}
-            <div className="px-10 pb-4">
+            <div className="px-10 pb-8">
                 <motion.h2
                     initial={{ opacity: 0, y: 40 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
@@ -1355,7 +1355,7 @@ const StepCard = ({ page, t }: StepCardProps) => {
             )}
 
             {/* Description */}
-            <div className="px-10 pt-4">
+            <div className="px-10 pt-8">
                 <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
