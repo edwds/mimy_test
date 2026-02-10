@@ -41,6 +41,8 @@
             "title": "약관 동의",
             "desc": "서비스 이용을 위해 약관에 동의해주세요.",
             "all": "전체 동의",
+            "required": "필수",
+            "optional": "선택",
             "service": "서비스 이용약관 동의 (필수)",
             "privacy": "개인정보 수집 및 이용 동의 (필수)",
             "marketing": "이벤트 및 혜택 알림 수신 동의 (선택)"
@@ -148,6 +150,41 @@
             "already_ranked_desc": "이미 이 맛집을 평가했어요.\n어떻게 하시겠어요?",
             "write_with_existing": "바로 글쓰기",
             "re_rank": "랭킹 다시 매기기"
+        }
+    },
+    "write_guide": {
+        "step1": {
+            "title": "방문한 곳을 찾아서",
+            "subtitle": "순위를 매겨주세요"
+        },
+        "step2": {
+            "title": "사진과 함께",
+            "subtitle": "기록을 써주세요"
+        },
+        "step3": {
+            "title": "쓴 글은 피드에서",
+            "subtitle": "볼 수 있어요"
+        },
+        "start_button": "시작하기",
+        "demo": {
+            "shop_name": "스시 오마카세",
+            "category": "일식",
+            "search_text": "스시",
+            "how_was_it": "어떠셨나요?",
+            "which_better": "어디가 더 좋았나요?",
+            "this_place": "이번에 방문",
+            "existing_shop": "라멘 이치란",
+            "my_rank": "내 3위",
+            "registered_rank": "일식 2위로 등록!",
+            "top_percent": "상위 15%",
+            "write_review": "리뷰 작성",
+            "done": "완료",
+            "photos": "사진",
+            "placeholder": "방문 후기를 적어주세요...",
+            "review_text": "오마카세가 정말 신선하고 맛있었어요! 특히 중트로가 최고였습니다.",
+            "username": "미식가123",
+            "cluster": "담백 러버",
+            "visited_text": "스시 오마카세를 오늘 방문"
         }
     },
     "register": {

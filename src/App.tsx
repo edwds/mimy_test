@@ -35,6 +35,7 @@ import { NeighborhoodRegistrationScreen } from '@/screens/profile/NeighborhoodRe
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { ContentDetailScreen } from '@/screens/content/ContentDetailScreen';
 import { NotificationScreen } from '@/screens/notification/NotificationScreen';
+import { TermsDetailScreen } from '@/screens/terms/TermsDetailScreen';
 import { UserProvider, useUser } from '@/context/UserContext';
 import { RankingProvider } from '@/context/RankingContext';
 import { Capacitor } from '@capacitor/core';
@@ -90,6 +91,9 @@ function AppContent() {
                                 {/* Onboarding Flow */}
                                 <Route path="/onboarding/age-check" element={<AgeCheckStep />} />
                                 <Route path="/onboarding/agreement" element={<AgreementStep />} />
+
+                                {/* Terms (Public) */}
+                                <Route path="/terms/:code" element={<TermsDetailScreen />} />
 
                                 {/* Auth */}
                                 <Route path="/login" element={<LoginPage />} />

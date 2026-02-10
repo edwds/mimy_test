@@ -40,6 +40,8 @@
             "title": "Terms of Service",
             "desc": "Please agree to the terms to continue.",
             "all": "Agree to all",
+            "required": "Required",
+            "optional": "Optional",
             "service": "Terms of Service (Required)",
             "privacy": "Privacy Policy (Required)",
             "marketing": "Marketing Consent (Optional)"
@@ -146,6 +148,41 @@
             "already_ranked_desc": "You've already ranked this place.\nWhat would you like to do?",
             "write_with_existing": "Write Review",
             "re_rank": "Re-rank"
+        }
+    },
+    "write_guide": {
+        "step1": {
+            "title": "Find the place",
+            "subtitle": "you visited and rank it"
+        },
+        "step2": {
+            "title": "Write your review",
+            "subtitle": "with photos"
+        },
+        "step3": {
+            "title": "Your post will appear",
+            "subtitle": "in the feed"
+        },
+        "start_button": "Get Started",
+        "demo": {
+            "shop_name": "Sushi Omakase",
+            "category": "Japanese",
+            "search_text": "Sushi",
+            "how_was_it": "How was it?",
+            "which_better": "Which was better?",
+            "this_place": "This visit",
+            "existing_shop": "Ramen Ichiran",
+            "my_rank": "My #3",
+            "registered_rank": "Ranked #2 in Japanese!",
+            "top_percent": "Top 15%",
+            "write_review": "Write Review",
+            "done": "Done",
+            "photos": "Photos",
+            "placeholder": "Write about your visit...",
+            "review_text": "The omakase was so fresh and delicious! The chutoro was especially amazing.",
+            "username": "FoodLover123",
+            "cluster": "Clean Flavor",
+            "visited_text": "Visited Sushi Omakase today"
         }
     },
     "register": {

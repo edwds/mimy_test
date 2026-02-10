@@ -41,6 +41,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@react-oauth/google": "^0.13.4",
     "@tabler/icons-react": "^3.36.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/multer": "^2.0.0",
     "@types/ws": "^8.18.1",
     "@upstash/redis": "^1.36.1",
@@ -67,7 +68,9 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-i18next": "^16.5.1",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.12.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "ws": "^8.19.0"

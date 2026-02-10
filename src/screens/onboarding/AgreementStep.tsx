@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Check } from 'lucide-react';
+import { ChevronLeft, Check, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+interface Term {
+    id: number;
+    code: string;
+    title: string;
+    summary: string | null;
+    is_required: boolean;
+    version: string;
+    effective_date: string;
+}
 
 // Simple Checkbox component inside file for speed
 const Checkbox = ({ checked, onCheckedChange, id }: { checked: boolean; onCheckedChange: (c: boolean) => void; id: string }) => (
@@ -27,22 +39,70 @@ export const AgreementStep = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
 
-    const [agreements, setAgreements] = useState({
-        service: false,
-        privacy: false,
-        marketing: false
-    });
+    const [terms, setTerms] = useState<Term[]>([]);
+    const [agreements, setAgreements] = useState<Record<string, boolean>>({});
+    const [loading, setLoading] = useState(true);
 
-    const allRequiredChecked = agreements.service && agreements.privacy;
-    const allChecked = agreements.service && agreements.privacy && agreements.marketing;
+    useEffect(() => {
+        const fetchTerms = async () => {
+            try {
+                const response = await fetch(`${API_URL}/api/terms`);
+                if (response.ok) {
+                    const data: Term[] = await response.json();
+                    setTerms(data);
+                    // Initialize agreements state
+                    const initialAgreements: Record<string, boolean> = {};
+                    data.forEach(term => {
+                        initialAgreements[term.code] = false;
+                    });
+                    setAgreements(initialAgreements);
+                }
+            } catch (error) {
+                console.error('Failed to fetch terms:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTerms();
+    }, []);
+
+    const requiredTerms = terms.filter(term => term.is_required);
+    const optionalTerms = terms.filter(term => !term.is_required);
+
+    const allRequiredChecked = requiredTerms.every(term => agreements[term.code]);
+    const allChecked = terms.every(term => agreements[term.code]);
 
     const toggleAll = (checked: boolean) => {
-        setAgreements({
-            service: checked,
-            privacy: checked,
-            marketing: checked
+        const newAgreements: Record<string, boolean> = {};
+        terms.forEach(term => {
+            newAgreements[term.code] = checked;
         });
+        setAgreements(newAgreements);
     };
+
+    const toggleAgreement = (code: string, checked: boolean) => {
+        setAgreements(prev => ({ ...prev, [code]: checked }));
+    };
+
+    const handleTermClick = (code: string) => {
+        navigate(`/terms/${code}`);
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 animate-in fade-in duration-500">
+                <header className="flex items-center mb-8">
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-muted">
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
+                </header>
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="animate-pulse text-muted-foreground">Loading...</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background px-6 pt-safe-offset-6 pb-safe-offset-6 animate-in fade-in duration-500 overflow-hidden">
@@ -52,7 +112,7 @@ export const AgreementStep = () => {
                 </button>
             </header>
 
-            <main className="flex-1 space-y-8">
+            <main className="flex-1 space-y-8 overflow-y-auto">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold">{t('onboarding.agreement.title')}</h1>
                     <p className="text-muted-foreground">{t('onboarding.agreement.desc')}</p>
@@ -72,49 +132,64 @@ export const AgreementStep = () => {
                     </div>
 
                     <div className="space-y-4 px-2">
-                        {/* Service Required */}
-                        <div className="flex items-center space-x-3">
-                            <Checkbox
-                                id="service"
-                                checked={agreements.service}
-                                onCheckedChange={(c) => setAgreements(prev => ({ ...prev, service: c }))}
-                            />
-                            <label htmlFor="service" className="text-sm font-medium cursor-pointer text-muted-foreground flex-1 flex justify-between items-center group">
-                                <span>{t('onboarding.agreement.service')}</span>
-                                <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100" />
-                            </label>
-                        </div>
+                        {/* Required Terms */}
+                        {requiredTerms.map((term) => (
+                            <div key={term.code} className="flex items-center space-x-3">
+                                <Checkbox
+                                    id={term.code}
+                                    checked={agreements[term.code] || false}
+                                    onCheckedChange={(c) => toggleAgreement(term.code, c)}
+                                />
+                                <label
+                                    htmlFor={term.code}
+                                    className="text-sm font-medium cursor-pointer text-muted-foreground flex-1 flex justify-between items-center group"
+                                >
+                                    <span>{term.title} ({t('onboarding.agreement.required')})</span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleTermClick(term.code);
+                                        }}
+                                        className="p-1"
+                                    >
+                                        <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100" />
+                                    </button>
+                                </label>
+                            </div>
+                        ))}
 
-                        {/* Privacy Required */}
-                        <div className="flex items-center space-x-3">
-                            <Checkbox
-                                id="privacy"
-                                checked={agreements.privacy}
-                                onCheckedChange={(c) => setAgreements(prev => ({ ...prev, privacy: c }))}
-                            />
-                            <label htmlFor="privacy" className="text-sm font-medium cursor-pointer text-muted-foreground flex-1 flex justify-between items-center group">
-                                <span>{t('onboarding.agreement.privacy')}</span>
-                                <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100" />
-                            </label>
-                        </div>
-
-                        {/* Marketing Optional */}
-                        <div className="flex items-center space-x-3">
-                            <Checkbox
-                                id="marketing"
-                                checked={agreements.marketing}
-                                onCheckedChange={(c) => setAgreements(prev => ({ ...prev, marketing: c }))}
-                            />
-                            <label htmlFor="marketing" className="text-sm font-medium cursor-pointer text-muted-foreground flex-1 flex justify-between items-center group">
-                                <span>{t('onboarding.agreement.marketing')}</span>
-                                <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100" />
-                            </label>
-                        </div>
+                        {/* Optional Terms */}
+                        {optionalTerms.map((term) => (
+                            <div key={term.code} className="flex items-center space-x-3">
+                                <Checkbox
+                                    id={term.code}
+                                    checked={agreements[term.code] || false}
+                                    onCheckedChange={(c) => toggleAgreement(term.code, c)}
+                                />
+                                <label
+                                    htmlFor={term.code}
+                                    className="text-sm font-medium cursor-pointer text-muted-foreground flex-1 flex justify-between items-center group"
+                                >
+                                    <span>{term.title} ({t('onboarding.agreement.optional')})</span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handleTermClick(term.code);
+                                        }}
+                                        className="p-1"
+                                    >
+                                        <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100" />
+                                    </button>
+                                </label>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </main>
 
-            <footer className="mt-auto">
+            <footer className="mt-auto pt-4">
                 <Button
                     className="w-full"
                     size="lg"
@@ -127,6 +202,3 @@ export const AgreementStep = () => {
         </div>
     );
 };
-
-// Import ChevronRight here since it was used but not imported
-import { ChevronRight } from 'lucide-react';

@@ -8,6 +8,7 @@ import { ContentService } from '@/services/ContentService';
 import { ShopService } from '@/services/ShopService';
 import { useRanking } from '@/context/RankingContext';
 import { useUser } from '@/context/UserContext';
+import { WriteGuideOverlay } from '@/components/WriteGuideOverlay';
 
 export const WriteFlow = () => {
     console.log('[WriteFlow] Component rendering');
@@ -23,6 +24,13 @@ export const WriteFlow = () => {
 
     const initialShopId = searchParams.get('shop_id');
     const locationState = location.state as { step?: string; shop?: any; satisfaction?: any } | undefined;
+
+    // Write Guide state - show only on first visit
+    const [showGuide, setShowGuide] = useState(() => {
+        // Don't show guide if coming with specific shop or state
+        if (initialShopId || locationState?.step) return false;
+        return !localStorage.getItem('hasSeenWriteGuide');
+    });
 
     // Data Accumulation
     const [type] = useState<'review' | 'post'>('review'); // Default to review
@@ -234,6 +242,12 @@ export const WriteFlow = () => {
 
     return (
         <div className="relative h-full bg-background overflow-hidden">
+            {/* Write Guide Overlay - shown on first visit */}
+            <WriteGuideOverlay
+                isOpen={showGuide}
+                onClose={() => setShowGuide(false)}
+            />
+
             {(step === 'SEARCH_SHOP' || isRankingOpen) && (
                 <SearchShopStep
                     key="search-shop"

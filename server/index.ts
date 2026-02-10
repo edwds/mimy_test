@@ -58,6 +58,9 @@ app.use("/api/import", importRoutes);
 import affiliationRoutes from "./routes/affiliation.js";
 app.use("/api/affiliation", affiliationRoutes);
 
+import termsRoutes from "./routes/terms.js";
+app.use("/api/terms", termsRoutes);
+
 app.get("/health", (_req, res) => {
     res.send("OK");
 });

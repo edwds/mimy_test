@@ -1093,7 +1093,7 @@ const LeaderboardDemo = ({ t }: { t: any }) => {
     const isInView = useInView(ref, { once: false, margin: "-20%" });
 
     const [filter, setFilter] = useState<'company' | 'neighborhood' | 'overall'>('company');
-    const [hasStarted, setHasStarted] = useState(false);
+    const hasStartedRef = useRef(false);
 
     const demoCompanyUsers = t('about.demo.leaderboard.company_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
     const demoNeighborhoodUsers = t('about.demo.leaderboard.neighborhood_users', { returnObjects: true }) as { nickname: string; cluster: string }[];
@@ -1112,13 +1112,13 @@ const LeaderboardDemo = ({ t }: { t: any }) => {
         if (!isInView) {
             // 화면에서 벗어나면 초기 상태로 리셋
             setFilter('company');
-            setHasStarted(false);
+            hasStartedRef.current = false;
             return;
         }
 
         // 이미 시작했으면 중복 실행 방지
-        if (hasStarted) return;
-        setHasStarted(true);
+        if (hasStartedRef.current) return;
+        hasStartedRef.current = true;
 
         const timers: NodeJS.Timeout[] = [];
 
@@ -1148,7 +1148,7 @@ const LeaderboardDemo = ({ t }: { t: any }) => {
         timers.push(startTimeout);
 
         return () => timers.forEach(clearTimeout);
-    }, [isInView, hasStarted]);
+    }, [isInView]);
 
     const getRankStyle = (rank: number) => {
         switch (rank) {

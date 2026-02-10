@@ -205,11 +205,11 @@ export const SettingsScreen = () => {
                     />
                     <MenuItem
                         label={t('profile.settings.terms')}
-                        onClick={() => handleMockAction(t('profile.settings.terms'))}
+                        onClick={() => navigate('/terms/service')}
                     />
                     <MenuItem
                         label={t('profile.settings.privacy')}
-                        onClick={() => handleMockAction(t('profile.settings.privacy'))}
+                        onClick={() => navigate('/terms/privacy')}
                     />
                     <MenuItem
                         label={t('profile.settings.opensource')}
