@@ -206,6 +206,38 @@ const MyComponent = () => {
 
 ## ✨ **최신 업데이트 (Recent Updates)**
 
+### **0. 릴레이 기록 기능 (Relay Recording)**
+Tinder 스타일의 빠른 맛집 기록 기능으로, 스와이프만으로 여러 맛집의 만족도를 빠르게 등록할 수 있습니다.
+
+#### **핵심 기능**
+- **스와이프 기반 만족도 입력**:
+  - 오른쪽 스와이프 → Good (맛있었어요)
+  - 왼쪽 스와이프 → Bad (별로였어요)
+  - 위로 스와이프 → OK (괜찮았어요)
+  - "안 가봤어요" 버튼 → 스킵
+- **가이드 애니메이션**: 첫 방문 시 자동 스와이프 데모로 사용법 안내
+- **마일스톤 시스템**: 30개 기록 시 랭킹 정리 화면으로 이동 제안
+- **랭킹 통합**: 기존 랭킹과 새 기록을 병합하여 드래그앤드롭으로 정렬
+
+#### **파일 구조**
+```
+src/screens/relay/
+├── RelayScreen.tsx           # 메인 화면
+└── components/
+    ├── RelayCard.tsx         # 스와이프 카드 (Framer Motion)
+    └── RelayCardStack.tsx    # 카드 스택 (3장)
+
+src/services/RelayService.ts  # API 호출
+server/routes/relay.ts        # Backend API
+```
+
+#### **API 엔드포인트**
+- `GET /api/relay/shops` - 근처(50%)/저장(25%)/전체(25%) 맛집 혼합 조회
+- `POST /api/ranking/batch` - 여러 랭킹 일괄 생성
+- `PUT /api/ranking/reorder` - 랭킹 순서 및 tier 일괄 수정
+
+---
+
 ### **1. VS 밸런스 게임 UI/UX 개선**
 - `VsCard` 디자인 리뉴얼: 직관적인 투표 UI 및 애니메이션 적용
 - **재도전 기능**: 투표 후 5초 카운트다운 및 "다른 질문 받기" 기능 추가
@@ -264,3 +296,30 @@ const MyComponent = () => {
 #### **파일 위치**
 - `src/screens/profile/AboutScreen.tsx` - 메인 컴포넌트 (1,400+ lines)
 - `public/locales/ko/translation.json` - `about.*`, `demo.*` 번역 키
+
+### **9. 타임라인 뷰 개선 (Timeline View Enhancement)**
+타임라인에서 주간/월간 뷰 전환 및 특정 날짜로 점프하는 기능을 추가했습니다.
+
+#### **핵심 기능**
+- **주간/월간 뷰 전환**: 상단 토글 버튼으로 Weekly ↔ Monthly 뷰 전환
+- **캘린더 점프**: 우상단 캘린더 버튼 클릭 시 날짜 선택 모달, 선택한 날짜가 포함된 주차로 이동
+- **양방향 네비게이션**: 과거로 이동 시 상단에 "다음 주 더보기", 하단에 "이전 주 더보기" 버튼 표시
+- **날짜 기반 콘텐츠 목록**: 하루에 여러 콘텐츠가 있을 경우 별도 페이지로 이동하여 무한 스크롤로 확인
+
+#### **월간 뷰 특징**
+- 해당 월에 작성된 콘텐츠를 날짜별 카드로 표시
+- 최대 7개까지 카드 표시, 초과 시 "+N" 카드로 더보기 제공
+- 카드 클릭 시:
+  - 콘텐츠 1개: 해당 콘텐츠 상세로 이동
+  - 콘텐츠 2개 이상: `/content/list?date=YYYY-MM-DD` 페이지로 이동
+
+#### **파일 구조**
+```
+src/components/TimelineView.tsx        # 주간/월간 뷰 + 캘린더 점프
+src/screens/content/ContentListScreen.tsx  # 날짜 기반 콘텐츠 목록 (무한스크롤)
+```
+
+#### **API 엔드포인트**
+- `GET /api/content/user/:userId?beforeDate=YYYY-MM-DD&limit=20`
+  - `beforeDate`: 해당 날짜 이전의 콘텐츠 조회 (visit_date 기준)
+  - 무한 스크롤 시 이전 날짜 콘텐츠 자동 로드

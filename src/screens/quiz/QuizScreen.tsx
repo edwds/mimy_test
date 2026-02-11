@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Smile, Meh, Frown } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { QUESTIONS } from '@/data/quiz';
@@ -77,6 +78,23 @@ export const QuizScreen = () => {
             }
         }, 500);
     };
+
+    // Handle preference button click
+    const handlePreferenceButton = (preference: 'like' | 'neutral' | 'dislike') => {
+        const directionMap: Record<string, 'right' | 'up' | 'left'> = {
+            like: 'right',
+            neutral: 'up',
+            dislike: 'left'
+        };
+        handleSwipe(directionMap[preference]);
+    };
+
+    // Button order matches swipe direction: left=dislike, center=neutral, right=like
+    const preferenceButtons = [
+        { value: 'dislike', icon: Frown, label: t('quiz.label_dislike', '내 취향 아님'), color: 'text-gray-500', bgColor: 'bg-gray-100 hover:bg-gray-200' },
+        { value: 'neutral', icon: Meh, label: t('quiz.label_neutral', '상관없어요'), color: 'text-yellow-500', bgColor: 'bg-yellow-50 hover:bg-yellow-100' },
+        { value: 'like', icon: Smile, label: t('quiz.label_like', '완전 내 취향'), color: 'text-orange-500', bgColor: 'bg-orange-50 hover:bg-orange-100' },
+    ];
 
     const handleDragEnd = (_: any, info: PanInfo) => {
         const xOffset = info.offset.x;
@@ -203,18 +221,9 @@ export const QuizScreen = () => {
             </div>
 
             {/* Stacked Cards Container */}
-            <main className="flex-1 flex flex-col items-center justify-center -mt-16 px-6 relative overflow-visible">
-
-                {/* Guide labels */}
-                <div className="mb-16 w-full max-w-md flex items-center justify-between px-6">
-                    <span className="text-sm font-medium" style={{ color: '#FFB5C5' }}>{t('quiz.label_dislike', '내 취향 아님')}</span>
-                    <span className="text-sm font-medium text-gray-400">{t('quiz.label_neutral', '상관없어요')}</span>
-                    <span className="text-sm font-medium" style={{ color: '#A8E6CF' }}>{t('quiz.label_like', '완전 내 취향')}</span>
-                </div>
-
-
+            <main className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-visible">
                 {/* Card Stack - cards stacked vertically with scale */}
-                <div className="relative w-full max-w-md" style={{ height: 'min(calc(200vw * 4/3), 500px)', perspective: '1000px' }}>
+                <div className="relative w-full max-w-md" style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}>
                     {/* All cards rendered with smooth transitions */}
                     {/* Card 3번째 (맨 뒤) */}
                     {currentIndex + 2 < shuffledQuestions.length && (
@@ -358,81 +367,55 @@ export const QuizScreen = () => {
                         onClick={() => showGuide && setShowGuide(false)}
                         onTouchStart={() => showGuide && setShowGuide(false)}
                     >
-                        {/* Color overlays for swipe feedback */}
+                        {/* Good overlay (orange - right swipe) */}
                         <motion.div
-                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12"
-                            style={{
-                                opacity: showGuide ? undefined : greenOverlay,
-                                background: 'linear-gradient(135deg, #E0F7F7 0%, #E8F8F5 100%)'
-                            }}
-                            animate={
-                                showGuide
-                                    ? {
-                                          // Show during right swipe (0-0.3)
-                                          opacity: [0, 0.6, 0.6, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                          transition: {
-                                              duration: 5,
-                                              repeat: Infinity,
-                                              repeatDelay: 1,
-                                              ease: "easeInOut",
-                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
-                                          }
-                                      }
-                                    : {}
-                            }
+                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12 bg-orange-50"
+                            style={{ opacity: showGuide ? undefined : greenOverlay }}
+                            animate={showGuide ? {
+                                opacity: [0, 0.92, 0.92, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                transition: {
+                                    duration: 5,
+                                    repeat: Infinity,
+                                    repeatDelay: 1,
+                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                }
+                            } : {}}
                         >
-                            <span className="text-green-600 text-lg font-bold">
-                                {t('quiz.label_like', '완전 내 취향')}
-                            </span>
+                            <Smile className="w-24 h-24 text-orange-500" strokeWidth={1.5} />
                         </motion.div>
+
+                        {/* Bad overlay (gray - left swipe) */}
                         <motion.div
-                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12"
-                            style={{
-                                opacity: showGuide ? undefined : redOverlay,
-                                background: 'linear-gradient(135deg, #FFF0F5 0%, #FFE4F3 100%)'
-                            }}
-                            animate={
-                                showGuide
-                                    ? {
-                                          // Show during left swipe (0.4-0.7)
-                                          opacity: [0, 0, 0, 0, 0, 0.6, 0.6, 0, 0, 0, 0, 0],
-                                          transition: {
-                                              duration: 5,
-                                              repeat: Infinity,
-                                              repeatDelay: 1,
-                                              ease: "easeInOut",
-                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
-                                          }
-                                      }
-                                    : {}
-                            }
+                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12 bg-gray-100"
+                            style={{ opacity: showGuide ? undefined : redOverlay }}
+                            animate={showGuide ? {
+                                opacity: [0, 0, 0, 0, 0, 0.92, 0.92, 0, 0, 0, 0, 0],
+                                transition: {
+                                    duration: 5,
+                                    repeat: Infinity,
+                                    repeatDelay: 1,
+                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                }
+                            } : {}}
                         >
-                            <span className="text-red-600 text-lg font-bold">
-                                {t('quiz.label_dislike', '내 취향 아님')}
-                            </span>
+                            <Frown className="w-24 h-24 text-gray-500" strokeWidth={1.5} />
                         </motion.div>
+
+                        {/* OK overlay (yellow - up swipe) */}
                         <motion.div
-                            className="absolute inset-0 bg-gray-400/70 pointer-events-none flex items-start justify-center pt-12"
+                            className="absolute inset-0 pointer-events-none flex items-start justify-center pt-12 bg-yellow-50"
                             style={{ opacity: showGuide ? undefined : grayOverlay }}
-                            animate={
-                                showGuide
-                                    ? {
-                                          // Show during up swipe (0.8-0.95)
-                                          opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 0.6, 0],
-                                          transition: {
-                                              duration: 5,
-                                              repeat: Infinity,
-                                              repeatDelay: 1,
-                                              ease: "easeInOut",
-                                              times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
-                                          }
-                                      }
-                                    : {}
-                            }
+                            animate={showGuide ? {
+                                opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.92, 0.92, 0],
+                                transition: {
+                                    duration: 5,
+                                    repeat: Infinity,
+                                    repeatDelay: 1,
+                                    times: [0, 0.15, 0.25, 0.3, 0.4, 0.55, 0.65, 0.7, 0.8, 0.9, 0.95, 1]
+                                }
+                            } : {}}
                         >
-                            <span className="text-gray-600 text-lg font-bold">
-                                {t('quiz.label_neutral', '상관없어요')}
-                            </span>
+                            <Meh className="w-24 h-24 text-yellow-500" strokeWidth={1.5} />
                         </motion.div>
 
                         <div className="p-10 cursor-grab active:cursor-grabbing flex items-center h-full relative">
@@ -470,14 +453,12 @@ export const QuizScreen = () => {
                                             }
                                         }}
                                     >
-                                        {/* Right arrow (0-0.3) */}
+                                        {/* Right arrow (Good - orange) */}
                                         <motion.svg
-                                            className="w-10 h-10 text-green-500 absolute"
+                                            className="w-10 h-10 text-orange-500 absolute"
                                             fill="none"
                                             stroke="currentColor"
                                             strokeWidth="2.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
                                             viewBox="0 0 24 24"
                                             animate={{
                                                 opacity: [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -492,14 +473,12 @@ export const QuizScreen = () => {
                                             <path d="M5 12h14M12 5l7 7-7 7" />
                                         </motion.svg>
 
-                                        {/* Left arrow (0.4-0.7) */}
+                                        {/* Left arrow (Bad - gray) */}
                                         <motion.svg
-                                            className="w-10 h-10 text-red-500 absolute"
+                                            className="w-10 h-10 text-gray-500 absolute"
                                             fill="none"
                                             stroke="currentColor"
                                             strokeWidth="2.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
                                             viewBox="0 0 24 24"
                                             animate={{
                                                 opacity: [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
@@ -514,14 +493,12 @@ export const QuizScreen = () => {
                                             <path d="M19 12H5M12 19l-7-7 7-7" />
                                         </motion.svg>
 
-                                        {/* Up arrow (0.8-0.95) */}
+                                        {/* Up arrow (OK - yellow) */}
                                         <motion.svg
-                                            className="w-10 h-10 text-gray-600 absolute"
+                                            className="w-10 h-10 text-yellow-500 absolute"
                                             fill="none"
                                             stroke="currentColor"
                                             strokeWidth="2.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
                                             viewBox="0 0 24 24"
                                             animate={{
                                                 opacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
@@ -543,6 +520,27 @@ export const QuizScreen = () => {
                 </div>
 
             </main>
+
+            {/* Preference Buttons */}
+            <div className="px-6 py-4">
+                <div className="flex gap-2">
+                    {preferenceButtons.map((item) => (
+                        <button
+                            key={item.value}
+                            onClick={() => handlePreferenceButton(item.value as 'like' | 'neutral' | 'dislike')}
+                            disabled={!!exitDirection}
+                            className={cn(
+                                "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
+                                item.bgColor,
+                                exitDirection && "opacity-50"
+                            )}
+                        >
+                            <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
+                            <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, getYear, getMonth, startOfWeek, endOfWeek, subWeeks, isWithinInterval, addDays, isSameDay, startOfMonth, endOfMonth, isFuture, startOfDay, subMonths, addMonths, differenceInWeeks } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { format, getYear, startOfWeek, endOfWeek, subWeeks, isWithinInterval, addDays, isSameDay, startOfMonth, endOfMonth, isFuture, startOfDay, subMonths, differenceInWeeks } from 'date-fns';
+import { Calendar } from 'lucide-react';
+import { DatePickerModal } from './DatePickerModal';
 
 interface TimelineViewProps {
     contents: any[];
@@ -36,7 +37,6 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
     const [startMonthOffset, setStartMonthOffset] = useState(0);
     const [visibleMonthsCount, setVisibleMonthsCount] = useState(4);
     const [showJumpPicker, setShowJumpPicker] = useState(false);
-    const [calendarMonth, setCalendarMonth] = useState(new Date());
 
     // Separate contents with and without visit_date (shared)
     const { withDate, noDate } = React.useMemo(() => {
@@ -223,23 +223,6 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
         setShowJumpPicker(false);
     };
 
-    const calendarDays = React.useMemo(() => {
-        const mStart = startOfMonth(calendarMonth);
-        const mEnd = endOfMonth(calendarMonth);
-        const calStart = startOfWeek(mStart, { weekStartsOn: 1 });
-        const calEnd = endOfWeek(mEnd, { weekStartsOn: 1 });
-
-        const days: Date[] = [];
-        let current = calStart;
-        while (current <= calEnd) {
-            days.push(current);
-            current = addDays(current, 1);
-        }
-        return days;
-    }, [calendarMonth]);
-
-    const isCalendarCurrentMonth = (date: Date) => getMonth(date) === getMonth(calendarMonth);
-
     const handleContentClick = (content: any) => {
         navigate(`/content/detail?contentId=${content.id}`);
     };
@@ -325,73 +308,11 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
             </div>
 
             {/* Calendar Modal */}
-            {showJumpPicker && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div
-                        className="absolute inset-0 bg-black/40"
-                        onClick={() => setShowJumpPicker(false)}
-                    />
-                    <div className="relative bg-white rounded-2xl shadow-xl p-4 mx-4 w-full max-w-xs">
-                        <div className="flex items-center justify-between mb-4">
-                            <button
-                                onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                            >
-                                <ChevronLeft className="w-5 h-5 text-gray-600" />
-                            </button>
-                            <h3 className="text-lg font-bold">
-                                {format(calendarMonth, 'yyyy년 M월')}
-                            </h3>
-                            <button
-                                onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                                disabled={isFuture(startOfMonth(addMonths(calendarMonth, 1)))}
-                            >
-                                <ChevronRight className={`w-5 h-5 ${isFuture(startOfMonth(addMonths(calendarMonth, 1))) ? 'text-gray-300' : 'text-gray-600'}`} />
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-7 gap-1 mb-2">
-                            {['월', '화', '수', '목', '금', '토', '일'].map(day => (
-                                <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="grid grid-cols-7 gap-1">
-                            {calendarDays.map((date, idx) => {
-                                const isToday = isSameDay(date, new Date());
-                                const isFutureDate = isFuture(startOfDay(date));
-                                const isOtherMonth = !isCalendarCurrentMonth(date);
-
-                                return (
-                                    <button
-                                        key={idx}
-                                        onClick={() => !isFutureDate && jumpToDate(date)}
-                                        disabled={isFutureDate}
-                                        className={`
-                                            aspect-square flex items-center justify-center text-sm rounded-full transition-colors
-                                            ${isOtherMonth ? 'text-gray-300' : 'text-gray-700'}
-                                            ${isFutureDate ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 active:bg-gray-200'}
-                                            ${isToday ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                                        `}
-                                    >
-                                        {format(date, 'd')}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        <button
-                            onClick={() => setShowJumpPicker(false)}
-                            className="absolute top-3 right-3 p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        >
-                            <X className="w-5 h-5 text-gray-500" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <DatePickerModal
+                isOpen={showJumpPicker}
+                onClose={() => setShowJumpPicker(false)}
+                onSelectDate={jumpToDate}
+            />
 
             {/* Weekly View */}
             {viewMode === 'weekly' && (

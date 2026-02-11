@@ -601,11 +601,52 @@ npm run preview      # 빌드 결과 미리보기
 
 ---
 
-**마지막 업데이트**: 2026-02-09
-**버전**: v2.2
+**마지막 업데이트**: 2026-02-11
+**버전**: v2.4
 **작성자**: Claude Code (Opus 4.5)
 
 ## 변경 이력
+
+### v2.4 (2026-02-11)
+- ✅ 타임라인 뷰 주간/월간 전환 기능 구현
+  - 주간 뷰: 주별 7일 카드 표시 (기존)
+  - 월간 뷰: 월별 콘텐츠 있는 날만 카드 표시 (최대 7개 + "+N")
+  - 뷰 모드 토글 버튼 (좌측 상단)
+  - 캘린더 모달로 특정 날짜 점프 기능
+- ✅ 날짜 기반 콘텐츠 목록 페이지 (`/content/list`)
+  - 특정 날짜의 콘텐츠 피드 형태로 표시
+  - 무한 스크롤: 이전 날짜 콘텐츠 자동 로드
+  - 여러 콘텐츠가 있는 날짜 카드 클릭 시 이동
+  - 월간 뷰 "+N" 카드 클릭 시 이동
+- ✅ API 개선
+  - `GET /api/content/user/:userId` - `beforeDate` 파라미터 추가
+  - 날짜 기반 필터링 및 visit_date 정렬 지원
+- 📝 파일 구조:
+  - `src/components/TimelineView.tsx` - 주간/월간 뷰 통합
+  - `src/screens/content/ContentListScreen.tsx` - 콘텐츠 목록 페이지 (신규)
+  - `server/routes/content.ts` - beforeDate 필터 추가
+
+### v2.3 (2026-02-11)
+- ✅ 릴레이 기록 기능 구현 (빠른 맛집 기록)
+  - Tinder 스타일 스와이프 카드 UI (`RelayScreen`)
+  - 스와이프 방향별 만족도 매핑 (오른쪽=Good, 왼쪽=Bad, 위=OK)
+  - 첫 방문 가이드 애니메이션 (자동 스와이프 데모)
+  - 30개 마일스톤 도달 시 랭킹 정리 모달
+- ✅ 릴레이 → 랭킹 연동
+  - 릴레이에서 기록한 만족도를 ManageRankingScreen으로 전달
+  - 기존 랭킹 + 새 기록 병합 및 드래그앤드롭 정렬
+  - 일괄 저장 (batchCreate → reorder)
+  - 저장 중 로딩 오버레이 표시
+- ✅ Backend API
+  - `GET /api/relay/shops` - 근처/저장/전체 맛집 혼합 조회
+  - `POST /api/ranking/batch` - 여러 랭킹 일괄 생성
+  - `PUT /api/ranking/reorder` - 랭킹 순서 및 tier 일괄 수정
+- 📝 파일 구조:
+  - `src/screens/relay/RelayScreen.tsx` - 메인 화면
+  - `src/screens/relay/components/RelayCard.tsx` - 스와이프 카드
+  - `src/screens/relay/components/RelayCardStack.tsx` - 카드 스택
+  - `src/services/RelayService.ts` - API 서비스
+  - `server/routes/relay.ts` - Backend 라우트
 
 ### v2.2 (2026-02-09)
 - 📝 Claude Code 작업 가이드라인 섹션 추가 (인사이트 보고서 기반)
