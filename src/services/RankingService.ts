@@ -40,5 +40,15 @@ export const RankingService = {
         });
         if (!res.ok) throw new Error('Failed to reorder ranking');
         return res.json();
+    },
+
+    batchCreate: async (items: { shop_id: number; satisfaction: 'good' | 'ok' | 'bad' }[]) => {
+        const res = await authFetch(`${API_BASE_URL}/api/ranking/batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items })
+        });
+        if (!res.ok) throw new Error('Failed to batch create rankings');
+        return res.json();
     }
 };

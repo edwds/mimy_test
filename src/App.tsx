@@ -22,6 +22,7 @@ import { AboutScreen } from '@/screens/profile/AboutScreen';
 import { ImportScreen } from '@/screens/profile/ImportScreen';
 import { ConnectionsScreen } from '@/screens/main/ConnectionsScreen';
 import { WriteFlow } from '@/screens/write/WriteFlow';
+import { RelayScreen } from '@/screens/relay/RelayScreen';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { AdminMatchScreen } from '@/screens/admin/AdminMatchScreen';
 import { ShopContentAdmin } from '@/screens/admin/ShopContentAdmin';
@@ -34,6 +35,7 @@ import { GroupRegistrationScreen } from '@/screens/profile/GroupRegistrationScre
 import { NeighborhoodRegistrationScreen } from '@/screens/profile/NeighborhoodRegistrationScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { ContentDetailScreen } from '@/screens/content/ContentDetailScreen';
+import { ContentListScreen } from '@/screens/content/ContentListScreen';
 import { NotificationScreen } from '@/screens/notification/NotificationScreen';
 import { TermsDetailScreen } from '@/screens/terms/TermsDetailScreen';
 import { UserProvider, useUser } from '@/context/UserContext';
@@ -109,6 +111,9 @@ function AppContent() {
                                 <Route path="/quiz/test" element={<ProtectedRoute><QuizScreen /></ProtectedRoute>} />
                                 <Route path="/quiz/result" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
 
+                                {/* Relay Recording */}
+                                <Route path="/relay" element={<ProtectedRoute><RelayScreen /></ProtectedRoute>} />
+
                                 <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
                                 <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
                                 <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
@@ -124,6 +129,7 @@ function AppContent() {
                                 <Route path="/profile/group" element={<ProtectedRoute><GroupRegistrationScreen /></ProtectedRoute>} />
                                 <Route path="/profile/neighborhood" element={<ProtectedRoute><NeighborhoodRegistrationScreen /></ProtectedRoute>} />
                                 <Route path="/content/detail" element={<ProtectedRoute><ContentDetailScreen /></ProtectedRoute>} />
+                                <Route path="/content/list" element={<ProtectedRoute><ContentListScreen /></ProtectedRoute>} />
                                 <Route path="/notifications" element={<ProtectedRoute><NotificationScreen /></ProtectedRoute>} />
                                 <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
                                 <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />

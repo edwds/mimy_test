@@ -156,6 +156,10 @@ export const SettingsScreen = () => {
                         onClick={handleRetakeQuiz}
                     />
                     <MenuItem
+                        label={t('profile.menu.quick_record')}
+                        onClick={() => navigate('/relay')}
+                    />
+                    <MenuItem
                         label={t('profile.menu.manage_vs')}
                         onClick={() => navigate('/profile/manage/vs')}
                     />

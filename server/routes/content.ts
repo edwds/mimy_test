@@ -922,6 +922,16 @@ router.get("/user/:userId", async (req, res) => {
         const limit = parseInt(req.query.limit as string) || 20;
         const offset = (page - 1) * limit;
 
+        // Date filter: if beforeDate is provided, filter by visit_date <= beforeDate
+        const beforeDate = req.query.beforeDate as string | undefined;
+
+        // Build where conditions
+        const whereConditions = [
+            eq(content.user_id, userId),
+            eq(content.is_deleted, false),
+            eq(content.visibility, true)
+        ];
+
         // Fetch User Content
         const userContent = await db.select({
             id: content.id,
@@ -952,11 +962,16 @@ router.get("/user/:userId", async (req, res) => {
             .leftJoin(users, eq(content.user_id, users.id))
             .leftJoin(clusters, sql`CAST(${users.taste_cluster} AS INTEGER) = ${clusters.cluster_id} `)
             .where(and(
-                eq(content.user_id, userId),
-                eq(content.is_deleted, false),
-                eq(content.visibility, true)
+                ...whereConditions,
+                // If beforeDate is provided, filter by visit_date
+                beforeDate ? sql`(${content.review_prop}->>'visit_date')::date <= ${beforeDate}::date` : undefined
             ))
-            .orderBy(desc(content.created_at))
+            .orderBy(
+                // Order by visit_date if filtering by date, otherwise by created_at
+                beforeDate
+                    ? sql`(${content.review_prop}->>'visit_date')::date DESC NULLS LAST`
+                    : desc(content.created_at)
+            )
             .limit(limit)
             .offset(offset);
 

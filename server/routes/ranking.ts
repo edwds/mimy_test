@@ -111,6 +111,80 @@ router.delete("/:shopId", requireAuth, async (req, res) => {
     }
 });
 
+// POST /api/ranking/batch
+// Batch create rankings from relay mode
+// items: { shop_id, satisfaction }[] - satisfaction: 'good' | 'ok' | 'bad'
+router.post("/batch", requireAuth, async (req, res) => {
+    try {
+        const user_id = req.user!.id;
+        const { items } = req.body; // items: { shop_id, satisfaction }[]
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: "Invalid parameters: items array required" });
+        }
+
+        const mapSatisfactionToTier = (s: string) => {
+            switch (s) {
+                case 'good': return 2;
+                case 'ok': return 1;
+                case 'bad': return 0;
+                default: return 2;
+            }
+        };
+
+        await db.transaction(async (tx) => {
+            // 1. Get current max rank
+            const maxRankRes = await tx.select({ maxRank: sql<number>`COALESCE(MAX(rank), 0)` })
+                .from(users_ranking)
+                .where(eq(users_ranking.user_id, user_id));
+            let currentRank = Number(maxRankRes[0]?.maxRank || 0);
+
+            // 2. Sort items by satisfaction tier (good first, then ok, then bad)
+            const sortedItems = [...items].sort((a, b) => {
+                const order = { good: 0, ok: 1, bad: 2 };
+                return (order[a.satisfaction as keyof typeof order] || 2) - (order[b.satisfaction as keyof typeof order] || 2);
+            });
+
+            // 3. Insert each item
+            for (const item of sortedItems) {
+                // Skip if already exists
+                const existing = await tx.select({ id: users_ranking.id })
+                    .from(users_ranking)
+                    .where(and(
+                        eq(users_ranking.user_id, user_id),
+                        eq(users_ranking.shop_id, item.shop_id)
+                    ))
+                    .limit(1);
+
+                if (existing.length > 0) {
+                    console.log(`[Ranking Batch] Shop ${item.shop_id} already ranked, skipping`);
+                    continue;
+                }
+
+                currentRank++;
+                const tier = mapSatisfactionToTier(item.satisfaction);
+
+                await tx.insert(users_ranking).values({
+                    user_id,
+                    shop_id: item.shop_id,
+                    satisfaction_tier: tier,
+                    rank: currentRank,
+                    latest_review_text: null,
+                    latest_review_images: null
+                });
+            }
+        });
+
+        // Invalidate cache
+        await invalidatePattern(`lists:${user_id}*`);
+
+        res.json({ success: true, count: items.length });
+    } catch (error) {
+        console.error("Batch create ranking error:", error);
+        res.status(500).json({ error: "Failed to batch create rankings" });
+    }
+});
+
 // PUT /api/ranking/reorder
 // Accepts list of items to update ranks/tiers
 router.put("/reorder", requireAuth, async (req, res) => {

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
-import { ArrowLeft, Trash2, GripVertical, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Trash2, GripVertical, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RankingService, RankingItem } from '@/services/RankingService';
 import { Button } from '@/components/ui/button';
 import React, { useRef } from 'react';
+import { RelayRating } from '@/screens/relay/RelayScreen';
 
 
 
@@ -13,10 +14,14 @@ import React, { useRef } from 'react';
 export const ManageRankingScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const [originalItems, setOriginalItems] = useState<RankingItem[]>([]); // Source of truth
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // New ratings from RelayScreen (passed via router state)
+    const newRatings = (location.state as { newRatings?: RelayRating[] } | null)?.newRatings || [];
 
     // We track delete targets by ID
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
@@ -52,9 +57,11 @@ export const ManageRankingScreen = () => {
     // User can drag items anywhere.
     // On Save, we infer the tier based on which header the item is UNDER.
 
+    // FlattenedItem with optional isNew flag and newRating data for new items from relay
     type FlattenedItem =
         | { type: 'header', id: string, tier: number, title: string }
-        | { type: 'item', id: string, data: RankingItem };
+        | { type: 'item', id: string, data: RankingItem, isNew?: false }
+        | { type: 'item', id: string, data: null, isNew: true, newRating: RelayRating };
 
     const [flatList, setFlatList] = useState<FlattenedItem[]>([]);
 
@@ -62,44 +69,84 @@ export const ManageRankingScreen = () => {
         if (!loading) {
             const newFlatList: FlattenedItem[] = [];
 
+            // Get new ratings by tier
+            const newGood = newRatings.filter(r => r.satisfaction === 'good');
+            const newOk = newRatings.filter(r => r.satisfaction === 'ok');
+            const newBad = newRatings.filter(r => r.satisfaction === 'bad');
+
             // Tier 2 (Delicious)
             newFlatList.push({ type: 'header', id: 'header-2', tier: 2, title: t('write.basic.good', 'Delicious') });
             originalItems.filter(i => i.satisfaction_tier === 2)
                 .sort((a, b) => a.rank - b.rank)
                 .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+            // Add new items at the bottom of this tier
+            newGood.forEach(r => newFlatList.push({
+                type: 'item',
+                id: `new-${r.shopId}`,
+                data: null,
+                isNew: true,
+                newRating: r
+            }));
 
             // Tier 1 (Okay)
             newFlatList.push({ type: 'header', id: 'header-1', tier: 1, title: t('write.basic.ok', 'Okay') });
             originalItems.filter(i => i.satisfaction_tier === 1)
                 .sort((a, b) => a.rank - b.rank)
                 .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+            // Add new items at the bottom of this tier
+            newOk.forEach(r => newFlatList.push({
+                type: 'item',
+                id: `new-${r.shopId}`,
+                data: null,
+                isNew: true,
+                newRating: r
+            }));
 
             // Tier 0 (Bad)
             newFlatList.push({ type: 'header', id: 'header-0', tier: 0, title: t('write.basic.bad', 'Bad') });
             originalItems.filter(i => i.satisfaction_tier === 0)
                 .sort((a, b) => a.rank - b.rank)
                 .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
+            // Add new items at the bottom of this tier
+            newBad.forEach(r => newFlatList.push({
+                type: 'item',
+                id: `new-${r.shopId}`,
+                data: null,
+                isNew: true,
+                newRating: r
+            }));
 
             setFlatList(newFlatList);
         }
-    }, [originalItems, loading, t]);
+    }, [originalItems, loading, t, newRatings]);
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            const payload: any[] = [];
+            // Separate new items from existing items
+            const newItems: { shop_id: number; satisfaction: 'good' | 'ok' | 'bad' }[] = [];
+            const reorderPayload: { shop_id: number; rank: number; satisfaction_tier: number }[] = [];
             let rankCounter = 1;
-
-            // Concatenate all tiers in order: Tier 2 -> Tier 1 -> Tier 0
-            // Since they can't change tiers, we just use the current tier value.
-
-            let currentTier = 2; // Default to top tier if above first header
+            let currentTier = 2;
 
             flatList.forEach(item => {
                 if (item.type === 'header') {
                     currentTier = item.tier;
-                } else {
-                    payload.push({
+                } else if (item.isNew && item.newRating) {
+                    // New item from relay - will be created first
+                    newItems.push({
+                        shop_id: item.newRating.shopId,
+                        satisfaction: item.newRating.satisfaction
+                    });
+                    // Also add to reorder payload for final ordering
+                    reorderPayload.push({
+                        shop_id: item.newRating.shopId,
+                        rank: rankCounter++,
+                        satisfaction_tier: currentTier
+                    });
+                } else if (item.data) {
+                    // Existing item
+                    reorderPayload.push({
                         shop_id: item.data.shop_id,
                         rank: rankCounter++,
                         satisfaction_tier: currentTier
@@ -107,7 +154,16 @@ export const ManageRankingScreen = () => {
                 }
             });
 
-            await RankingService.reorder(payload);
+            // 1. First, create new items via batch (this creates them with default ordering)
+            if (newItems.length > 0) {
+                console.log('[ManageRanking] Creating new items:', newItems);
+                await RankingService.batchCreate(newItems);
+            }
+
+            // 2. Then reorder everything (including newly created items)
+            console.log('[ManageRanking] Reordering all items:', reorderPayload);
+            await RankingService.reorder(reorderPayload);
+
             alert(t('common.saved', 'Saved'));
             navigate(-1); // Back on success
         } catch (e) {
@@ -121,11 +177,13 @@ export const ManageRankingScreen = () => {
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
 
-        let targetShopId: number | undefined; // Define targetShopId here
+        let targetShopId: number | undefined;
 
-        // Find the item to get shop_id
-        const targetItem = flatList.find(i => i.type === 'item' && i.data.id === deleteTargetId);
-        if (targetItem && targetItem.type === 'item') {
+        // Find the item to get shop_id (only existing items have data)
+        const targetItem = flatList.find(i =>
+            i.type === 'item' && !i.isNew && i.data && i.data.id === deleteTargetId
+        );
+        if (targetItem && targetItem.type === 'item' && targetItem.data) {
             targetShopId = targetItem.data.shop_id;
         }
 
@@ -134,7 +192,9 @@ export const ManageRankingScreen = () => {
         try {
             await RankingService.delete(targetShopId);
             // Remove from UI
-            setFlatList(prev => prev.filter(i => i.type !== 'item' || i.data.id !== deleteTargetId));
+            setFlatList(prev => prev.filter(i =>
+                i.type !== 'item' || i.isNew || (i.data && i.data.id !== deleteTargetId)
+            ));
 
             setDeleteTargetId(null);
         } catch (e) {
@@ -194,13 +254,21 @@ export const ManageRankingScreen = () => {
                             );
                         }
 
-                        // Item
+                        // Item (existing or new from relay)
                         return (
                             <DraggableRankingItem
                                 key={item.id}
-                                item={item} // Pass the wrapper too
+                                item={item}
+                                isNew={item.isNew || false}
                                 rankingItem={item.data}
+                                newRating={item.isNew ? item.newRating : undefined}
                                 onDelete={(id) => setDeleteTargetId(id)}
+                                onRemoveNew={(shopId) => {
+                                    // Remove new item from flatList (before save)
+                                    setFlatList(prev => prev.filter(i =>
+                                        i.type === 'header' || !('newRating' in i) || i.newRating?.shopId !== shopId
+                                    ));
+                                }}
                             />
                         );
                     })}
@@ -235,25 +303,51 @@ export const ManageRankingScreen = () => {
                     </div>
                 </div>
             )}
+
+            {/* Saving Overlay */}
+            {saving && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-4 shadow-xl">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        <div className="text-center">
+                            <p className="font-bold text-lg">
+                                {t('profile.manage.ranking.saving', '랭킹 저장 중...')}
+                            </p>
+                            {newRatings.length > 0 && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {t('profile.manage.ranking.saving_count', '{{count}}개의 새 항목 추가', { count: newRatings.length })}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 // Sub-component for individual Draggable Items
-// Sub-component for individual Draggable Items
 interface DraggableRankingItemProps {
     item: any; // FlattenedItem wrapper required for Reorder to work properly if we pass value={item}
-    rankingItem: RankingItem;
+    isNew: boolean;
+    rankingItem: RankingItem | null;
+    newRating?: RelayRating;
     onDelete: (id: number) => void;
+    onRemoveNew: (shopId: number) => void;
 }
 
-const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingItemProps) => {
+const DraggableRankingItem = ({ item, isNew, rankingItem, newRating, onDelete, onRemoveNew }: DraggableRankingItemProps) => {
     const dragControls = useDragControls();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initial touch point to detect movement
     const startPoint = useRef<{ x: number, y: number } | null>(null);
     const isDragging = useRef(false);
+
+    // Get shop info from either existing ranking or new rating
+    const shopName = isNew ? newRating?.shop.name : rankingItem?.shop.name;
+    const shopThumbnail = isNew ? newRating?.shop.thumbnail_img : rankingItem?.shop.thumbnail_img;
+    const shopCategory = isNew ? newRating?.shop.food_kind : rankingItem?.shop.category;
 
     const handlePointerDown = (e: React.PointerEvent) => {
         // Only trigger on primary button (left click or touch)
@@ -303,26 +397,23 @@ const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingI
 
     return (
         <Reorder.Item
-            value={item} // Changed back to item so Reorder tracks the FlattenedItem
-
+            value={item}
             dragListener={false}
             dragControls={dragControls}
-            className="bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-pan-y shadow-sm active:shadow-md"
+            className={`bg-card rounded-xl border p-3 flex items-center gap-3 select-none touch-pan-y shadow-sm active:shadow-md ${isNew ? 'border-primary/30 bg-primary/5' : ''}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            style={{ touchAction: 'pan-y' }} // Explicitly allow vertical scrolling
+            style={{ touchAction: 'pan-y' }}
         >
             {/* Grip Handle - Immediate Drag */}
             <div
                 className="cursor-grab active:cursor-grabbing p-1 -m-1"
-                style={{ touchAction: 'none' }} // Critical: Prevent scroll on handle
+                style={{ touchAction: 'none' }}
                 onPointerDown={(e) => {
-                    // Start drag immediately
                     dragControls.start(e);
-                    // Cancel the parent long press timer just in case
                     if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 }}
             >
@@ -330,30 +421,42 @@ const DraggableRankingItem = ({ item, rankingItem, onDelete }: DraggableRankingI
             </div>
 
             {/* Thumb */}
-            <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                {rankingItem.shop.thumbnail_img ? (
-                    <img src={rankingItem.shop.thumbnail_img} alt="" className="w-full h-full object-cover pointer-events-none" />
+            <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 relative">
+                {shopThumbnail ? (
+                    <img src={shopThumbnail} alt="" className="w-full h-full object-cover pointer-events-none" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs">🏢</div>
+                )}
+                {isNew && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                        <Sparkles className="w-2.5 h-2.5 text-white" />
+                    </div>
                 )}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm truncate">{rankingItem.shop.name}</div>
+                <div className="font-bold text-sm truncate flex items-center gap-1">
+                    {shopName}
+                    {isNew && <span className="text-xs text-primary font-normal">NEW</span>}
+                </div>
                 <div className="text-xs text-gray-500 truncate">
-                    {rankingItem.shop.category}
+                    {shopCategory || ''}
                 </div>
             </div>
 
-            {/* Delete */}
+            {/* Delete / Remove */}
             <button
                 onClick={(e) => {
-                    e.stopPropagation(); // prevent drag selection if it bubbled
-                    onDelete(rankingItem.id);
+                    e.stopPropagation();
+                    if (isNew && newRating) {
+                        onRemoveNew(newRating.shopId);
+                    } else if (rankingItem) {
+                        onDelete(rankingItem.id);
+                    }
                 }}
                 className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on delete button
+                onPointerDown={(e) => e.stopPropagation()}
             >
                 <Trash2 className="w-5 h-5" />
             </button>

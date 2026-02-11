@@ -59,6 +59,23 @@ export const QuizResult = () => {
         navigate('/main');
     };
 
+    const handleStartRelay = async () => {
+        setIsLoading(true);
+
+        // Request photo library permission on iOS (non-blocking)
+        if (Capacitor.isNativePlatform()) {
+            try {
+                await requestPhotoLibraryPermission();
+            } catch (error) {
+                console.error('[QuizResult] Failed to request photo permission:', error);
+            }
+        }
+
+        await refreshUser();
+        setIsLoading(false);
+        navigate('/relay');
+    };
+
     // Same gradient as TasteProfileSheet
     // const bgGradient = "bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)]";
 
@@ -169,20 +186,29 @@ export const QuizResult = () => {
                     </div>
                 </motion.div>
 
-                {/* Start Button */}
+                {/* Action Buttons */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="w-full max-w-md mt-8"
+                    className="w-full max-w-md mt-8 space-y-3"
                 >
                     <Button
                         size="lg"
                         className="w-full text-lg py-6 rounded-full shadow-lg shadow-primary/20"
+                        onClick={handleStartRelay}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? t('common.loading', { defaultValue: '로딩 중...' }) : t('quiz.result.start_relay', { defaultValue: '맛집 기록 시작하기' })}
+                    </Button>
+                    <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full text-lg py-6 rounded-full"
                         onClick={handleStart}
                         disabled={isLoading}
                     >
-                        {isLoading ? t('common.loading', { defaultValue: '로딩 중...' }) : t('quiz.result.start_app', { defaultValue: '시작하기' })}
+                        {t('quiz.result.skip_relay', { defaultValue: '나중에 하기' })}
                     </Button>
                 </motion.div>
             </main>

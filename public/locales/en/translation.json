@@ -368,7 +368,8 @@
             "coming_soon": "Coming soon!",
             "manage_vs": "Manage Preferences",
             "manage_hate": "Manage Dislikes",
-            "manage_ranking": "Manage Ranking"
+            "manage_ranking": "Manage Ranking",
+            "quick_record": "Quick Record"
         },
         "manage": {
             "vs": {
@@ -635,6 +636,35 @@
     "quiz": {
         "label_dislike": "Not my taste",
         "label_neutral": "No preference",
-        "label_like": "Love it"
+        "label_like": "Love it",
+        "result": {
+            "start_relay": "Start Recording",
+            "skip_relay": "Maybe Later"
+        }
+    },
+    "relay": {
+        "title": "Quick Record",
+        "subtitle": "Swipe to record restaurants",
+        "not_visited": "Haven't been",
+        "loading": "Loading restaurants...",
+        "no_shops": "No restaurants nearby to record",
+        "location_required": "Location required",
+        "location_desc": "Please allow location access to find nearby restaurants",
+        "count_suffix": " recorded",
+        "back_confirm_title": "Stop recording?",
+        "back_confirm_desc": "{{count}} records will not be saved.",
+        "discard": "Discard",
+        "milestone_title": "Organize rankings?",
+        "milestone_desc": "You've recorded {{count}} restaurants!",
+        "milestone_hint": "You can organize the ranking order and save.",
+        "organize_ranking": "Organize Rankings",
+        "continue_recording": "Keep Recording",
+        "save_error": "An error occurred while saving",
+        "guide": {
+            "right": "Loved it",
+            "left": "Not great",
+            "up": "It was OK"
+        },
+        "expected_rating": "Expected"
     }
 }
