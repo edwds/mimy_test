@@ -220,38 +220,50 @@ const OutroPage = ({ t }: PageProps) => {
     const isInView = useInView(ref, { once: false, margin: "-20%" });
 
     return (
-        <div ref={ref} className="w-full min-h-screen relative flex flex-col items-center justify-center overflow-hidden">
+        <div ref={ref} className="w-full min-h-screen relative flex flex-col overflow-hidden">
             {/* Background */}
             <div className="absolute top-[-10%] left-[-20%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 text-center space-y-10 px-12">
-                <motion.p
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                    transition={{ duration: 0.7, delay: 0, ease: "easeOut" }}
-                    className="text-2xl text-muted-foreground"
-                >
-                    {t('about.outro.subtitle')}
-                </motion.p>
-                <motion.h2
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                    transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
-                    className="text-5xl font-bold text-foreground leading-tight tracking-tight"
-                >
-                    {t('about.outro.title')}
-                </motion.h2>
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                    transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
-                    className="pt-8 space-y-2"
-                >
-                    <p className="text-base font-medium text-foreground">{t('about.footer.company')}</p>
-                    <p className="text-sm text-muted-foreground">{t('about.footer.contact')}</p>
-                </motion.div>
+            {/* Main Content - 중앙 정렬 */}
+            <div className="flex-1 flex items-center justify-center">
+                <div className="relative z-10 text-center space-y-6 px-12">
+                    <motion.p
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+                        transition={{ duration: 0.7, delay: 0, ease: "easeOut" }}
+                        className="text-2xl text-muted-foreground"
+                    >
+                        {t('about.outro.subtitle')}
+                    </motion.p>
+                    <motion.h2
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+                        transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
+                        className="text-5xl font-bold text-foreground leading-tight tracking-tight"
+                        style={{ whiteSpace: 'pre-line' }}
+                    >
+                        {t('about.outro.title')}
+                    </motion.h2>
+                </div>
             </div>
+
+            {/* Footer */}
+            <motion.footer
+                initial={{ opacity: 0 }}
+                animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+                transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
+                className="relative z-10 pb-8 px-8"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}
+            >
+                <div className="border-t border-border/30 pt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{t('about.footer.company')}</span>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span>{t('about.footer.contact')}</span>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span className="text-xs text-muted-foreground/60">© 2025</span>
+                </div>
+            </motion.footer>
         </div>
     );
 };
@@ -273,12 +285,11 @@ const FeedDemo = ({ t }: { t: any }) => {
             setClickedUser(null);
             setHighlightMatch(false);
 
-            // Step 1: 스크롤 애니메이션
-            timers.push(setTimeout(() => setScrollY(150), 1000));
-            timers.push(setTimeout(() => setScrollY(300), 2000));
+            // Step 1: 부드러운 스크롤 애니메이션 (단일 스크롤)
+            timers.push(setTimeout(() => setScrollY(300), 1000));
 
             // Step 2: 유저 클릭 하이라이트
-            timers.push(setTimeout(() => setClickedUser(1), 2800));
+            timers.push(setTimeout(() => setClickedUser(1), 2500));
 
             // Step 3: 카드 플립
             timers.push(setTimeout(() => setIsFlipped(true), 3300));
@@ -308,9 +319,9 @@ const FeedDemo = ({ t }: { t: any }) => {
     const demoShops = t('about.demo.feed.shops', { returnObjects: true }) as { name: string; address: string; review: string }[];
 
     const feedItems = [
-        { user: { ...demoUsers[0], image: '😎' }, shop: demoShops[0].name, address: demoShops[0].address, text: demoShops[0].review, likes: 42, comments: 8, image: '🍣' },
-        { user: { ...demoUsers[1], image: '🧑‍🍳' }, shop: demoShops[1].name, address: demoShops[1].address, text: demoShops[1].review, likes: 28, comments: 5, image: '🍜' },
-        { user: { ...demoUsers[2], image: '👩‍🦰' }, shop: demoShops[2].name, address: demoShops[2].address, text: demoShops[2].review, likes: 35, comments: 12, image: '🍝' },
+        { user: { ...demoUsers[0], image: '😎' }, shop: demoShops[0].name, address: demoShops[0].address, text: demoShops[0].review, likes: 42, comments: 8, images: ['🍣', '🍱', '🍵'] },
+        { user: { ...demoUsers[1], image: '🧑‍🍳' }, shop: demoShops[1].name, address: demoShops[1].address, text: demoShops[1].review, likes: 28, comments: 5, images: ['🍜', '🥟', '🍶'] },
+        { user: { ...demoUsers[2], image: '👩‍🦰' }, shop: demoShops[2].name, address: demoShops[2].address, text: demoShops[2].review, likes: 35, comments: 12, images: ['🍝', '🍕', '🥗'] },
     ];
 
     const clickedUserData = feedItems[1];
@@ -349,7 +360,7 @@ const FeedDemo = ({ t }: { t: any }) => {
                                         animate={clickedUser === idx ? { scale: [1, 0.95, 1] } : {}}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg transition-all ${clickedUser === idx ? 'bg-orange-200 ring-2 ring-orange-400' : 'bg-gray-100'}`}>
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg transition-all ${clickedUser === idx ? 'bg-orange-200' : 'bg-gray-100'}`}>
                                             {item.user.image}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -361,9 +372,18 @@ const FeedDemo = ({ t }: { t: any }) => {
                                         </div>
                                     </motion.div>
 
-                                    {/* Image placeholder */}
-                                    <div className="w-full h-28 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-4xl mb-3">
-                                        {item.image}
+                                    {/* Image Carousel */}
+                                    <div className="overflow-hidden mb-3 -mx-4">
+                                        <div className="flex gap-2 px-4">
+                                            {item.images.map((emoji, imgIdx) => (
+                                                <div
+                                                    key={imgIdx}
+                                                    className="w-36 h-36 flex-shrink-0 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-5xl"
+                                                >
+                                                    {emoji}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {/* Text */}
@@ -372,7 +392,7 @@ const FeedDemo = ({ t }: { t: any }) => {
                                     {/* Shop Info Card */}
                                     <div className="p-2 rounded-lg bg-gray-50 flex items-center gap-2 mb-3">
                                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-lg flex-shrink-0">
-                                            {item.image}
+                                            {item.images[0]}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-bold text-gray-900 truncate">{item.shop}</p>
@@ -425,20 +445,13 @@ const FeedDemo = ({ t }: { t: any }) => {
                             </div>
 
                             {/* Taste Cluster */}
-                            <div className="p-3 rounded-xl bg-gradient-to-r from-orange-50 to-pink-50 mb-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-r from-orange-50 to-pink-50 mb-2">
                                 <p className="font-bold text-sm text-gray-900">{clickedUserData.user.cluster}</p>
                                 <p className="text-xs text-gray-500">{t('about.demo.feed.cluster_desc')}</p>
                             </div>
 
                             {/* Match Score - 강조 애니메이션 */}
-                            <motion.div
-                                className="flex items-center justify-between p-3 rounded-xl"
-                                animate={{
-                                    backgroundColor: highlightMatch ? 'rgb(251, 207, 232)' : 'rgb(253, 242, 248)',
-                                    scale: highlightMatch ? [1, 1.05, 1] : 1
-                                }}
-                                transition={{ duration: 0.4 }}
-                            >
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-pink-50">
                                 <span className="text-sm text-pink-600 font-medium">{t('about.demo.feed.taste_match')}</span>
                                 <motion.span
                                     className="text-xl font-black text-pink-600"
@@ -449,7 +462,7 @@ const FeedDemo = ({ t }: { t: any }) => {
                                 >
                                     87%
                                 </motion.span>
-                            </motion.div>
+                            </div>
                         </div>
 
                         {/* Mini Content Preview */}

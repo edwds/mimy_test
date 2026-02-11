@@ -44,17 +44,25 @@ mimy_test/
 │   │   ├── shops.ts      # Shop Data & Discovery
 │   │   ├── users.ts      # User Profile & Actions
 │   │   └── ...
+│   ├── services/         # Business Logic Services
+│   │   ├── LeaderboardService.ts
+│   │   ├── FirecrawlService.ts
+│   │   └── ...
 │   └── index.ts          # Server Entry Point
 ├── src/                  # Frontend Source
 │   ├── components/       # Reusable UI Components
 │   │   ├── ui/           # Base UI Elements (Button, Input, etc.)
+│   │   ├── discovery/    # Discovery Tab Components
 │   │   └── ...           # Domain Components (ShopCard, ContentCard)
-│   ├── context/          # React Context (UserContext, etc.)
+│   ├── context/          # React Context (UserContext, RankingContext)
 │   ├── screens/          # Page Components
 │   │   ├── auth/         # Login
 │   │   ├── main/         # Main Tab (Home, Discovery, Ranking, Profile)
 │   │   ├── onboarding/   # Splash, AgeCheck, Agreement
+│   │   ├── profile/      # Profile Settings, About, Group, Neighborhood
 │   │   ├── quiz/         # Taste Analysis Quiz
+│   │   ├── shop/         # Shop Detail
+│   │   ├── write/        # Content Write Flow
 │   │   └── register/     # User Registration Flow
 │   ├── lib/              # Utilities (API client, helpers)
 │   └── App.tsx           # Route Definitions
@@ -230,3 +238,29 @@ const MyComponent = () => {
 ### **7. 검색 및 리더보드 최적화**
 - **Recent Searches**: 디스커버리 탭에 최근 검색어(LocalStorage) 기능 추가 (Swipeable Chips)
 - **Instant Leaderboard Update**: 콘텐츠 작성 시 즉각적인 랭킹 산출 및 내 리스트 갱신 (Cache Invalidation Strategy)
+
+### **8. 서비스 소개 페이지 (AboutScreen)**
+서비스의 핵심 기능을 인터랙티브 애니메이션으로 소개하는 온보딩 페이지입니다.
+
+#### **애니메이션 컴포넌트 구성**
+
+| 컴포넌트 | 섹션 | 설명 |
+|---------|------|------|
+| `IntroPage` | Hero | 로고 및 태그라인, 스크롤 힌트 애니메이션 |
+| `FlowingTasteCards` | Discover | 128개 입맛 클러스터 카드가 좌우로 무한 흐르는 애니메이션 |
+| `RankingDemo` | Rank | 만족도 선택 → 비교 → 결과 → 리스트 슬라이드 애니메이션 |
+| `FeedDemo` | Share | 피드 스크롤 → 유저 클릭 → 카드 플립(3D) → 매칭 스코어 강조 |
+| `MapDemo` | Find | MapTiler 지도 + 핀 선택 → 카드 페이지네이션 애니메이션 |
+| `LeaderboardDemo` | Compete | 회사/동네/전체 필터 전환 애니메이션 (useInView 트리거) |
+| `OutroPage` | Footer | CTA 메시지 및 회사 정보 |
+
+#### **주요 기술 구현**
+- **Framer Motion**: `useInView`, `useScroll`, `useTransform` 훅을 활용한 스크롤 기반 애니메이션
+- **CSS 3D Transform**: `perspective`, `rotateY`, `backfaceVisibility`를 사용한 카드 플립
+- **MapTiler SDK**: 인터랙티브 지도 및 커스텀 마커 (Speech Bubble 스타일)
+- **타이머 기반 시퀀스**: `setTimeout` 체이닝으로 단계별 애니메이션 시퀀스 구현
+- **useRef vs useState**: 애니메이션 상태는 리렌더링 방지를 위해 `useRef` 사용
+
+#### **파일 위치**
+- `src/screens/profile/AboutScreen.tsx` - 메인 컴포넌트 (1,400+ lines)
+- `public/locales/ko/translation.json` - `about.*`, `demo.*` 번역 키

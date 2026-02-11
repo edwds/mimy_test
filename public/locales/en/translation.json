@@ -182,7 +182,8 @@
             "review_text": "The omakase was so fresh and delicious! The chutoro was especially amazing.",
             "username": "FoodLover123",
             "cluster": "Clean Flavor",
-            "visited_text": "Visited Sushi Omakase today"
+            "visited_text": "Visited Sushi Omakase today",
+            "captions": ["Otoro?", "Sushi Set", "Matcha"]
         }
     },
     "register": {
