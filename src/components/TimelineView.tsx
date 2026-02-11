@@ -52,6 +52,16 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
         return { withDate: withDateArr, noDate: noDateArr };
     }, [contents]);
 
+    // Create date count map for calendar picker
+    const dateCountMap = React.useMemo(() => {
+        const map = new Map<string, number>();
+        withDate.forEach(c => {
+            const dateKey = format(new Date(c.review_prop.visit_date), 'yyyy-MM-dd');
+            map.set(dateKey, (map.get(dateKey) || 0) + 1);
+        });
+        return map;
+    }, [withDate]);
+
     // Generate weekly view data
     const { groupedByWeek, contentsWithoutDate, hasMorePastWeeks, hasMoreFutureWeeks } = React.useMemo(() => {
         const now = new Date();
@@ -184,6 +194,31 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
         };
     }, [withDate, startMonthOffset, visibleMonthsCount]);
 
+    // Current viewing period label for the jump button
+    const currentPeriodLabel = React.useMemo(() => {
+        const now = new Date();
+        if (viewMode === 'weekly') {
+            if (startWeekOffset === 0) return null; // At current week, no label needed
+            const viewingWeekStart = startOfWeek(subWeeks(now, startWeekOffset), { weekStartsOn: 1 });
+            const year = getYear(viewingWeekStart);
+            const month = viewingWeekStart.getMonth() + 1;
+            const weekOfMonth = Math.ceil((viewingWeekStart.getDate() + startOfMonth(viewingWeekStart).getDay()) / 7);
+            const currentYear = getYear(now);
+            return year < currentYear
+                ? `${year % 100}년 ${month}월 ${weekOfMonth}주`
+                : `${month}월 ${weekOfMonth}주`;
+        } else {
+            if (startMonthOffset === 0) return null; // At current month, no label needed
+            const viewingMonth = subMonths(now, startMonthOffset);
+            const year = getYear(viewingMonth);
+            const month = viewingMonth.getMonth() + 1;
+            const currentYear = getYear(now);
+            return year < currentYear
+                ? `${year % 100}년 ${month}월`
+                : `${month}월`;
+        }
+    }, [viewMode, startWeekOffset, startMonthOffset]);
+
     const loadMorePastWeeks = () => {
         setVisibleWeeksCount((prev: number) => Math.min(prev + 4, 52 - startWeekOffset));
     };
@@ -259,19 +294,37 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
         }
     };
 
+    // Handle view mode switch while preserving the current viewing date
+    const handleViewModeChange = (newMode: ViewMode) => {
+        if (newMode === viewMode) return;
+
+        const now = new Date();
+
+        if (newMode === 'monthly') {
+            // Switching from weekly to monthly - sync month offset from week offset
+            const viewingWeekStart = startOfWeek(subWeeks(now, startWeekOffset), { weekStartsOn: 1 });
+            const viewingMonthStart = startOfMonth(viewingWeekStart);
+            const currentMonthStart = startOfMonth(now);
+            const monthOffset = (currentMonthStart.getFullYear() - viewingMonthStart.getFullYear()) * 12
+                + (currentMonthStart.getMonth() - viewingMonthStart.getMonth());
+            setStartMonthOffset(Math.max(0, monthOffset));
+            setVisibleMonthsCount(4);
+        } else {
+            // Switching from monthly to weekly - sync week offset from month offset
+            const viewingMonth = subMonths(now, startMonthOffset);
+            const viewingMonthStart = startOfMonth(viewingMonth);
+            const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+            const weekOffset = Math.max(0, differenceInWeeks(currentWeekStart, viewingMonthStart));
+            setStartWeekOffset(weekOffset);
+            setVisibleWeeksCount(4);
+        }
+
+        setViewMode(newMode);
+    };
+
     const isEmpty = viewMode === 'weekly'
         ? groupedByWeek.length === 0 && contentsWithoutDate.length === 0
         : groupedByMonth.every(m => m.items.length === 0);
-
-    if (isEmpty) {
-        return (
-            <div className="flex flex-col items-center justify-center py-12 px-6">
-                <p className="text-sm text-center text-muted-foreground">
-                    리뷰가 없습니다
-                </p>
-            </div>
-        );
-    }
 
     return (
         <div className="pb-4 relative">
@@ -280,7 +333,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 {/* View Mode Toggle */}
                 <div className="flex bg-gray-100 rounded-full p-0.5">
                     <button
-                        onClick={() => setViewMode('weekly')}
+                        onClick={() => handleViewModeChange('weekly')}
                         className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${
                             viewMode === 'weekly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                         }`}
@@ -288,7 +341,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                         주간
                     </button>
                     <button
-                        onClick={() => setViewMode('monthly')}
+                        onClick={() => handleViewModeChange('monthly')}
                         className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${
                             viewMode === 'monthly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                         }`}
@@ -300,10 +353,14 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 {/* Jump Button */}
                 <button
                     onClick={() => setShowJumpPicker(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm ${
+                        currentPeriodLabel
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : 'text-gray-600 bg-white border border-gray-200'
+                    }`}
                 >
                     <Calendar className="w-4 h-4" />
-                    <span>이동</span>
+                    <span>{currentPeriodLabel || '이동'}</span>
                 </button>
             </div>
 
@@ -312,12 +369,21 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 isOpen={showJumpPicker}
                 onClose={() => setShowJumpPicker(false)}
                 onSelectDate={jumpToDate}
+                dateCountMap={dateCountMap}
             />
 
             {/* Weekly View */}
             {viewMode === 'weekly' && (
                 <>
-                    {hasMoreFutureWeeks && (
+                    {isEmpty ? (
+                        <div className="flex flex-col items-center justify-center py-12 px-6">
+                            <p className="text-sm text-center text-muted-foreground">
+                                리뷰가 없습니다
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {hasMoreFutureWeeks && (
                         <div className="flex justify-center py-4 px-5 mb-2">
                             <button
                                 onClick={loadMoreFutureWeeks}
@@ -419,15 +485,17 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                         </div>
                     )}
 
-                    {hasMorePastWeeks && (
-                        <div className="flex justify-center py-4 px-5">
-                            <button
-                                onClick={loadMorePastWeeks}
-                                className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                            >
-                                이전 주 더보기
-                            </button>
-                        </div>
+                            {hasMorePastWeeks && (
+                                <div className="flex justify-center py-4 px-5">
+                                    <button
+                                        onClick={loadMorePastWeeks}
+                                        className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                                    >
+                                        이전 주 더보기
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}
@@ -435,7 +503,15 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
             {/* Monthly View */}
             {viewMode === 'monthly' && (
                 <>
-                    {hasMoreFutureMonths && (
+                    {isEmpty ? (
+                        <div className="flex flex-col items-center justify-center py-12 px-6">
+                            <p className="text-sm text-center text-muted-foreground">
+                                리뷰가 없습니다
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {hasMoreFutureMonths && (
                         <div className="flex justify-center py-4 px-5 mb-2">
                             <button
                                 onClick={loadMoreFutureMonths}
@@ -533,15 +609,17 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                         </div>
                     ))}
 
-                    {hasMorePastMonths && (
-                        <div className="flex justify-center py-4 px-5">
-                            <button
-                                onClick={loadMorePastMonths}
-                                className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                            >
-                                이전 달 더보기
-                            </button>
-                        </div>
+                            {hasMorePastMonths && (
+                                <div className="flex justify-center py-4 px-5">
+                                    <button
+                                        onClick={loadMorePastMonths}
+                                        className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                                    >
+                                        이전 달 더보기
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}

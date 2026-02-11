@@ -9,6 +9,8 @@ interface DatePickerModalProps {
     initialDate?: Date;
     minYear?: number;
     maxYear?: number;
+    /** Map of date string (yyyy-MM-dd) to content count */
+    dateCountMap?: Map<string, number>;
 }
 
 type PickerMode = 'calendar' | 'year' | 'month';
@@ -19,7 +21,8 @@ export const DatePickerModal = ({
     onSelectDate,
     initialDate = new Date(),
     minYear = getYear(new Date()) - 11,
-    maxYear = getYear(new Date())
+    maxYear = getYear(new Date()),
+    dateCountMap
 }: DatePickerModalProps) => {
     const [calendarMonth, setCalendarMonth] = useState(initialDate);
     const [pickerMode, setPickerMode] = useState<PickerMode>('calendar');
@@ -189,6 +192,9 @@ export const DatePickerModal = ({
                                 const isToday = isSameDay(date, new Date());
                                 const isFutureDate = isFuture(startOfDay(date));
                                 const isOtherMonth = !isCalendarCurrentMonth(date);
+                                const dateKey = format(date, 'yyyy-MM-dd');
+                                const contentCount = dateCountMap?.get(dateKey) || 0;
+                                const hasContent = contentCount > 0;
 
                                 return (
                                     <button
@@ -196,17 +202,29 @@ export const DatePickerModal = ({
                                         onClick={() => !isFutureDate && handleDateSelect(date)}
                                         disabled={isFutureDate}
                                         className={`
-                                            aspect-square flex items-center justify-center text-sm rounded-full transition-colors
+                                            aspect-square flex flex-col items-center justify-center text-sm rounded-full transition-colors relative
                                             ${isOtherMonth ? 'text-gray-300' : 'text-gray-700'}
                                             ${isFutureDate ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 active:bg-gray-200'}
                                             ${isToday ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                                            ${hasContent && !isToday && !isOtherMonth ? 'bg-primary/10' : ''}
                                         `}
                                     >
                                         {format(date, 'd')}
+                                        {hasContent && !isOtherMonth && (
+                                            <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isToday ? 'bg-white' : 'bg-primary'}`} />
+                                        )}
                                     </button>
                                 );
                             })}
                         </div>
+
+                        {/* Today Button */}
+                        <button
+                            onClick={() => handleDateSelect(new Date())}
+                            className="w-full mt-3 py-2 text-sm font-medium text-primary bg-primary/10 rounded-xl hover:bg-primary/20 transition-colors"
+                        >
+                            오늘로 이동
+                        </button>
                     </>
                 )}
             </div>
