@@ -567,6 +567,10 @@
                 "n_restaurants": "{{count}}개의 맛집",
                 "category": "일식"
             },
+            "quiz": {
+                "like": "내 취향!",
+                "dislike": "별로..."
+            },
             "taste_profiles": [
                 {
                     "name": "화끈한 마라샹궈",

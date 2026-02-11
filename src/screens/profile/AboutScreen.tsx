@@ -6,6 +6,7 @@ import { ChevronLeft, Smile, Meh, Frown } from 'lucide-react';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import * as maptilersdk from '@maptiler/sdk';
 import "@maptiler/sdk/dist/maptiler-sdk.css";
+import { QUESTIONS } from '@/data/quiz';
 
 export const AboutScreen = () => {
     const { t } = useTranslation();
@@ -722,42 +723,311 @@ const RankingDemo = ({ t }: { t: any }) => {
     );
 };
 
-// 흐르는 TasteProfile 카드들
-const FlowingTasteCards = ({ t }: { t: any }) => {
+// 퀴즈 스와이프 → TasteProfile 카드 플로우 데모
+const QuizToTasteDemo = ({ t }: { t: any }) => {
+    const [phase, setPhase] = useState<'quiz' | 'cards'>('quiz');
+    const [currentCardIndex, setCurrentCardIndex] = useState(0);
+    const [cardState, setCardState] = useState<'idle' | 'swiping' | 'exiting'>('idle');
+    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+
+    // cards phase 내부 상태
+    const [showCenterCard, setShowCenterCard] = useState(false);
+    const [showSideCards, setShowSideCards] = useState(false);
+    const [startFlow, setStartFlow] = useState(false);
+
     const tasteProfiles = t('about.demo.taste_profiles', { returnObjects: true }) as { name: string; tagline: string }[];
 
-    return (
-        <div className="w-full h-full overflow-hidden relative">
-            {/* 좌우 fade 효과 */}
-            <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-            <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+    // 퀴즈 질문 3개 선택 (다양한 축에서)
+    const demoQuestions = [
+        QUESTIONS.find(q => q.axis === 'spiciness')!,
+        QUESTIONS.find(q => q.axis === 'experimental')!,
+        QUESTIONS.find(q => q.axis === 'richness')!,
+    ];
 
-            <motion.div
-                className="flex gap-4 items-center h-full"
-                animate={{ x: [0, -600] }}
-                transition={{
-                    x: {
-                        repeat: Infinity,
-                        repeatType: "loop",
-                        duration: 15,
-                        ease: "linear",
-                    },
-                }}
-            >
-                {/* 카드들을 2번 반복해서 무한 루프처럼 보이게 */}
-                {[...tasteProfiles, ...tasteProfiles].map((profile, i) => (
-                    <div
-                        key={i}
-                        className="shrink-0 w-44 h-56 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
-                        style={{
-                            background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
-                        }}
+    useEffect(() => {
+        const timers: NodeJS.Timeout[] = [];
+
+        const runAnimation = () => {
+            // Reset all states
+            setPhase('quiz');
+            setCurrentCardIndex(0);
+            setCardState('idle');
+            setSwipeDirection(null);
+            setShowCenterCard(false);
+            setShowSideCards(false);
+            setStartFlow(false);
+
+            // Card 1: 스와이프 시작 → 오른쪽으로 나감
+            timers.push(setTimeout(() => {
+                setSwipeDirection('right');
+                setCardState('swiping');
+            }, 1000));
+            timers.push(setTimeout(() => {
+                setCardState('exiting');
+            }, 1400));
+            timers.push(setTimeout(() => {
+                setCurrentCardIndex(1);
+                setCardState('idle');
+                setSwipeDirection(null);
+            }, 1700));
+
+            // Card 2: 스와이프 시작 → 왼쪽으로 나감
+            timers.push(setTimeout(() => {
+                setSwipeDirection('left');
+                setCardState('swiping');
+            }, 2500));
+            timers.push(setTimeout(() => {
+                setCardState('exiting');
+            }, 2900));
+            timers.push(setTimeout(() => {
+                setCurrentCardIndex(2);
+                setCardState('idle');
+                setSwipeDirection(null);
+            }, 3200));
+
+            // Card 3: 스와이프 시작 → 오른쪽으로 나감 (마지막)
+            timers.push(setTimeout(() => {
+                setSwipeDirection('right');
+                setCardState('swiping');
+            }, 4000));
+            timers.push(setTimeout(() => {
+                setCardState('exiting');
+            }, 4400));
+
+            // Phase: Cards - 중앙 카드 뿅 등장
+            timers.push(setTimeout(() => {
+                setPhase('cards');
+            }, 4500));
+            timers.push(setTimeout(() => {
+                setShowCenterCard(true);
+            }, 4600));
+
+            // Cards - 양옆 카드 추가
+            timers.push(setTimeout(() => {
+                setShowSideCards(true);
+            }, 5400));
+
+            // 플로우 애니메이션 시작
+            timers.push(setTimeout(() => {
+                setStartFlow(true);
+            }, 6200));
+
+            // Restart
+            timers.push(setTimeout(runAnimation, 12500));
+        };
+
+        runAnimation();
+        return () => timers.forEach(clearTimeout);
+    }, []);
+
+    // 카드 애니메이션 값 계산
+    const getCardAnimation = () => {
+        if (cardState === 'idle') {
+            return { x: 0, rotate: 0, opacity: 1 };
+        }
+        if (cardState === 'swiping') {
+            return {
+                x: swipeDirection === 'right' ? 80 : -80,
+                rotate: swipeDirection === 'right' ? 8 : -8,
+                opacity: 1
+            };
+        }
+        // exiting
+        return {
+            x: swipeDirection === 'right' ? 400 : -400,
+            rotate: swipeDirection === 'right' ? 20 : -20,
+            opacity: 0
+        };
+    };
+
+    return (
+        <div className="w-full h-full relative overflow-hidden">
+            <AnimatePresence mode="wait">
+                {phase === 'quiz' && (
+                    <motion.div
+                        key="quiz"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center"
                     >
-                        <span className="text-base font-bold text-gray-900 mb-2">{profile.name}</span>
-                        <span className="text-sm text-gray-600 leading-relaxed">{profile.tagline}</span>
-                    </div>
-                ))}
-            </motion.div>
+                        {/* Quiz Card Stack */}
+                        <div className="relative w-[240px] h-[320px]" style={{ perspective: '1000px' }}>
+                            {/* 뒤 카드들 */}
+                            {currentCardIndex < 2 && (
+                                <motion.div
+                                    className="absolute inset-0 rounded-2xl border border-gray-200 shadow-md"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
+                                        transformOrigin: 'top center'
+                                    }}
+                                    animate={{
+                                        scale: cardState === 'exiting' ? 0.94 : 0.88,
+                                        y: cardState === 'exiting' ? -10 : -20,
+                                    }}
+                                    transition={{ duration: 0.3 }}
+                                />
+                            )}
+                            {currentCardIndex < 1 && (
+                                <motion.div
+                                    className="absolute inset-0 rounded-2xl border border-gray-200 shadow-lg"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
+                                        transformOrigin: 'top center'
+                                    }}
+                                    animate={{
+                                        scale: cardState === 'exiting' ? 1 : 0.94,
+                                        y: cardState === 'exiting' ? 0 : -10,
+                                    }}
+                                    transition={{ duration: 0.3 }}
+                                />
+                            )}
+
+                            {/* Active card */}
+                            <AnimatePresence mode="popLayout">
+                                <motion.div
+                                    key={currentCardIndex}
+                                    className="absolute inset-0 rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)',
+                                    }}
+                                    initial={{ scale: 0.94, y: -10, opacity: 1 }}
+                                    animate={getCardAnimation()}
+                                    exit={{
+                                        x: swipeDirection === 'right' ? 400 : -400,
+                                        rotate: swipeDirection === 'right' ? 25 : -25,
+                                        opacity: 0,
+                                    }}
+                                    transition={{
+                                        type: 'spring',
+                                        stiffness: 300,
+                                        damping: 30,
+                                    }}
+                                >
+                                    {/* Swipe overlay */}
+                                    <AnimatePresence>
+                                        {swipeDirection === 'right' && cardState !== 'idle' && (
+                                            <motion.div
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="absolute inset-0 bg-green-100/60 flex items-start justify-center pt-8"
+                                            >
+                                                <span className="text-green-600 text-lg font-bold">{t('about.demo.quiz.like')}</span>
+                                            </motion.div>
+                                        )}
+                                        {swipeDirection === 'left' && cardState !== 'idle' && (
+                                            <motion.div
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="absolute inset-0 bg-red-100/60 flex items-start justify-center pt-8"
+                                            >
+                                                <span className="text-red-500 text-lg font-bold">{t('about.demo.quiz.dislike')}</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                    <div className="p-6 flex items-center justify-center h-full">
+                                        <p className="text-lg font-bold text-gray-900 text-center leading-relaxed">
+                                            {demoQuestions[currentCardIndex]?.text}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
+
+                {phase === 'cards' && (
+                    <motion.div
+                        key="cards"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute inset-0 overflow-hidden"
+                    >
+                        {/* 좌우 fade 효과 */}
+                        <motion.div
+                            className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: startFlow ? 1 : 0 }}
+                            transition={{ duration: 0.3 }}
+                        />
+                        <motion.div
+                            className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: startFlow ? 1 : 0 }}
+                            transition={{ duration: 0.3 }}
+                        />
+
+                        {/* 중앙 3장 카드 + 플로우 카드들 */}
+                        <motion.div
+                            className="absolute inset-y-0 flex items-center gap-4 z-10"
+                            style={{ left: '50%' }}
+                            animate={{ x: startFlow ? -1828 : -328 }}
+                            transition={startFlow ? {
+                                x: {
+                                    duration: 20,
+                                    ease: "linear",
+                                    repeat: Infinity,
+                                    repeatType: "loop",
+                                },
+                            } : { duration: 0 }}
+                        >
+                            {/* 왼쪽 카드 */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: showSideCards ? 1 : 0 }}
+                                transition={{ duration: 0.4, ease: 'easeOut' }}
+                                className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
+                                style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
+                            >
+                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[1]?.name}</span>
+                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[1]?.tagline}</span>
+                            </motion.div>
+
+                            {/* 중앙 카드 */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.3 }}
+                                animate={{
+                                    opacity: showCenterCard ? 1 : 0,
+                                    scale: showCenterCard ? 1 : 0.3,
+                                }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                className="shrink-0 w-52 h-64 rounded-2xl shadow-xl flex flex-col items-center justify-center p-5 text-center"
+                                style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
+                            >
+                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[0]?.name}</span>
+                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[0]?.tagline}</span>
+                            </motion.div>
+
+                            {/* 오른쪽 카드 */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: showSideCards ? 1 : 0 }}
+                                transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
+                                className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
+                                style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
+                            >
+                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[2]?.name}</span>
+                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[2]?.tagline}</span>
+                            </motion.div>
+
+                            {/* 추가 플로우 카드들 */}
+                            {[...tasteProfiles, ...tasteProfiles, ...tasteProfiles, ...tasteProfiles].map((profile, i) => (
+                                <div
+                                    key={`flow-${i}`}
+                                    className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
+                                    style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
+                                >
+                                    <span className="text-lg font-bold text-gray-900 mb-2">{profile.name}</span>
+                                    <span className="text-sm text-gray-600 leading-relaxed">{profile.tagline}</span>
+                                </div>
+                            ))}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -1348,7 +1618,7 @@ const StepCard = ({ page, t }: StepCardProps) => {
             );
         }
         if (page.id === 'discover') {
-            return <FlowingTasteCards t={t} />;
+            return <QuizToTasteDemo t={t} />;
         }
         if (page.id === 'rank') {
             return <RankingDemo t={t} />;
@@ -1411,7 +1681,7 @@ const StepCard = ({ page, t }: StepCardProps) => {
                     className={`flex items-center justify-center ${page.id === 'rank' ? 'h-[420px]' :
                         page.id === 'share' ? 'h-[540px]' :
                             page.id === 'find' ? 'h-[480px]' :
-                                page.id === 'discover' ? 'h-72' :
+                                page.id === 'discover' ? 'h-[420px]' :
                                     'h-[520px]'
                         }`}
                 >

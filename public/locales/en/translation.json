@@ -581,6 +581,10 @@
                 "n_restaurants": "{{count}} restaurants",
                 "category": "Japanese"
             },
+            "quiz": {
+                "like": "My taste!",
+                "dislike": "Not for me..."
+            },
             "taste_profiles": [
                 { "name": "Spicy Malatang", "tagline": "Enjoys exotic dishes with numbing spice and bold, impactful flavors." },
                 { "name": "Subtle Cold Noodles", "tagline": "A gourmet who appreciates subtle umami in understated flavors." },

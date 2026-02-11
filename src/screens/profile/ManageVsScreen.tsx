@@ -67,11 +67,11 @@ export const ManageVsScreen = () => {
 
     return (
         <div className="flex flex-col h-full bg-background">
-            {/* Header with iOS safe area */}
-            <div
-                className="flex items-center h-14 px-4 border-b border-border/50 bg-background"
-                style={{ paddingTop: 'env(safe-area-inset-top)' }}
-            >
+            {/* iOS Safe Area Spacer */}
+            <div className="bg-background" style={{ paddingTop: 'env(safe-area-inset-top)' }} />
+
+            {/* Header */}
+            <div className="flex items-center h-14 px-4 border-b border-border/50 bg-background">
                 <button
                     onClick={() => navigate(-1)}
                     className="w-10 h-10 flex items-center justify-center -ml-2"
