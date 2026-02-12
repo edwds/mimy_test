@@ -216,6 +216,10 @@ export const SettingsScreen = () => {
                         onClick={() => navigate('/terms/privacy')}
                     />
                     <MenuItem
+                        label={t('profile.settings.location')}
+                        onClick={() => navigate('/terms/location')}
+                    />
+                    <MenuItem
                         label={t('profile.settings.opensource')}
                         onClick={() => handleMockAction(t('profile.settings.opensource'))}
                     />
