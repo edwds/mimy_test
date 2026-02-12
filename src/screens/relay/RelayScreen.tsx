@@ -9,12 +9,15 @@ import { RelayService, RelayShop } from '@/services/RelayService';
 import { useUser } from '@/context/UserContext';
 import { RelayCard } from './components/RelayCard';
 import { RelayCardStack } from './components/RelayCardStack';
+import { RelayComparison } from './components/RelayComparison';
 
 type SwipeDirection = 'left' | 'right' | 'up' | 'back';
 type Satisfaction = 'good' | 'ok' | 'bad';
 
 // Milestone: trigger ranking organization after this many ratings
 const RATINGS_PER_BATCH = 30;
+// Comparison: insert A vs B comparisons every N ratings
+const COMPARISON_INTERVAL = 5;
 
 export interface RelayRating {
     shopId: number;
@@ -51,6 +54,11 @@ export const RelayScreen = () => {
 
     // Store ratings locally during relay
     const [ratings, setRatings] = useState<RelayRating[]>([]);
+
+    // Comparison mode state
+    const [comparisonMode, setComparisonMode] = useState(false);
+    const [comparisonQueue, setComparisonQueue] = useState<Array<{ a: RelayRating; b: RelayRating }>>([]);
+    const [comparisonIndex, setComparisonIndex] = useState(0);
 
     // Track seen shop IDs in a ref (to avoid stale closure issues)
     const seenIdsRef = useRef<Set<number>>(new Set());
@@ -116,7 +124,7 @@ export const RelayScreen = () => {
 
     // Handle swipe action
     const handleSwipe = async (direction: SwipeDirection) => {
-        if (exitDirection || showMilestoneModal) return;
+        if (exitDirection || showMilestoneModal || comparisonMode) return;
 
         // Dismiss guide on first swipe
         if (showGuide) {
@@ -158,6 +166,20 @@ export const RelayScreen = () => {
             return;
         }
 
+        // Check if comparison should trigger (every COMPARISON_INTERVAL ratings)
+        if (newRatings.length >= COMPARISON_INTERVAL && newRatings.length % COMPARISON_INTERVAL === 0) {
+            const pairs = generateComparisonPairs(newRatings);
+            if (pairs.length > 0) {
+                setTimeout(() => {
+                    setExitDirection(null);
+                    setComparisonQueue(pairs);
+                    setComparisonIndex(0);
+                    setComparisonMode(true);
+                }, 350);
+                return;
+            }
+        }
+
         // Move to next card after animation completes
         setTimeout(() => {
             setExitDirection(null);
@@ -167,7 +189,7 @@ export const RelayScreen = () => {
 
     // Handle skip (not visited)
     const handleSkip = () => {
-        if (exitDirection || showMilestoneModal) return;
+        if (exitDirection || showMilestoneModal || comparisonMode) return;
 
         if (showGuide) {
             setShowGuide(false);
@@ -254,6 +276,86 @@ export const RelayScreen = () => {
         moveToNext();
     };
 
+    // Generate comparison pairs from ratings within the same tier
+    const generateComparisonPairs = (currentRatings: RelayRating[]): Array<{ a: RelayRating; b: RelayRating }> => {
+        // Group by tier
+        const groups: Record<Satisfaction, RelayRating[]> = { good: [], ok: [], bad: [] };
+        for (const r of currentRatings) {
+            groups[r.satisfaction].push(r);
+        }
+
+        // Pick the largest tier with 2+ items
+        const tiers: Satisfaction[] = ['good', 'ok', 'bad'];
+        let targetTier: Satisfaction | null = null;
+        let maxCount = 0;
+        for (const tier of tiers) {
+            if (groups[tier].length >= 2 && groups[tier].length > maxCount) {
+                maxCount = groups[tier].length;
+                targetTier = tier;
+            }
+        }
+
+        if (!targetTier) return [];
+
+        const tierItems = groups[targetTier];
+        const pairs: Array<{ a: RelayRating; b: RelayRating }> = [];
+
+        // Generate 1-2 pairs from adjacent items (most recently added)
+        const len = tierItems.length;
+        if (len >= 2) {
+            pairs.push({ a: tierItems[len - 2], b: tierItems[len - 1] });
+        }
+        if (len >= 4) {
+            pairs.push({ a: tierItems[len - 4], b: tierItems[len - 3] });
+        }
+
+        return pairs;
+    };
+
+    // Handle comparison selection: winner moves ahead of loser within the same tier
+    const handleComparisonSelect = (winnerId: number) => {
+        setRatings(prev => {
+            const updated = [...prev];
+            const winnerIdx = updated.findIndex(r => r.shopId === winnerId);
+            const currentPair = comparisonQueue[comparisonIndex];
+            const loserId = currentPair.a.shopId === winnerId ? currentPair.b.shopId : currentPair.a.shopId;
+            const loserIdx = updated.findIndex(r => r.shopId === loserId);
+
+            // If winner is behind loser, move winner in front of loser
+            if (winnerIdx > loserIdx && winnerIdx >= 0 && loserIdx >= 0) {
+                const [winner] = updated.splice(winnerIdx, 1);
+                updated.splice(loserIdx, 0, winner);
+            }
+
+            return updated;
+        });
+
+        // Advance to next pair or exit comparison mode
+        const nextIndex = comparisonIndex + 1;
+        if (nextIndex < comparisonQueue.length) {
+            setComparisonIndex(nextIndex);
+        } else {
+            exitComparisonMode();
+        }
+    };
+
+    // Handle comparison skip
+    const handleComparisonSkip = () => {
+        const nextIndex = comparisonIndex + 1;
+        if (nextIndex < comparisonQueue.length) {
+            setComparisonIndex(nextIndex);
+        } else {
+            exitComparisonMode();
+        }
+    };
+
+    // Exit comparison mode and resume swiping
+    const exitComparisonMode = () => {
+        setComparisonMode(false);
+        setComparisonQueue([]);
+        setComparisonIndex(0);
+    };
+
     const currentShop = shops[currentIndex];
 
     // Location error state
@@ -319,67 +421,88 @@ export const RelayScreen = () => {
                 progress={`${ratings.length}${t('relay.count_suffix', '개 기록')}`}
             />
 
-            {/* Card Stack */}
-            <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
-                <div
-                    className="relative w-full max-w-md"
-                    style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
-                >
-                    {/* Background cards */}
-                    <RelayCardStack shops={shops} currentIndex={currentIndex} />
-
-                    {/* Active card */}
-                    <AnimatePresence mode="popLayout">
-                        {currentShop && (
-                            <RelayCard
-                                key={currentShop.id}
-                                shop={currentShop}
-                                isActive={true}
-                                exitDirection={exitDirection}
-                                showGuide={showGuide}
-                                onSwipe={handleSwipe}
-                                onDismissGuide={() => setShowGuide(false)}
+            {comparisonMode ? (
+                /* Comparison Mode */
+                <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative">
+                    <AnimatePresence mode="wait">
+                        {comparisonQueue[comparisonIndex] && (
+                            <RelayComparison
+                                key={`${comparisonQueue[comparisonIndex].a.shopId}-${comparisonQueue[comparisonIndex].b.shopId}`}
+                                shopA={comparisonQueue[comparisonIndex].a}
+                                shopB={comparisonQueue[comparisonIndex].b}
+                                current={comparisonIndex + 1}
+                                total={comparisonQueue.length}
+                                onSelect={handleComparisonSelect}
+                                onSkip={handleComparisonSkip}
                             />
                         )}
                     </AnimatePresence>
-                </div>
-            </main>
+                </main>
+            ) : (
+                <>
+                    {/* Card Stack */}
+                    <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
+                        <div
+                            className="relative w-full max-w-md"
+                            style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
+                        >
+                            {/* Background cards */}
+                            <RelayCardStack shops={shops} currentIndex={currentIndex} />
 
-            {/* Satisfaction Buttons */}
-            <div className="px-6 pt-4">
-                <div className="flex gap-2">
-                    {satisfactionButtons.map((item) => (
+                            {/* Active card */}
+                            <AnimatePresence mode="popLayout">
+                                {currentShop && (
+                                    <RelayCard
+                                        key={currentShop.id}
+                                        shop={currentShop}
+                                        isActive={true}
+                                        exitDirection={exitDirection}
+                                        showGuide={showGuide}
+                                        onSwipe={handleSwipe}
+                                        onDismissGuide={() => setShowGuide(false)}
+                                    />
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </main>
+
+                    {/* Satisfaction Buttons */}
+                    <div className="px-6 pt-4">
+                        <div className="flex gap-2">
+                            {satisfactionButtons.map((item) => (
+                                <button
+                                    key={item.value}
+                                    onClick={() => handleSatisfactionButton(item.value as 'good' | 'ok' | 'bad')}
+                                    disabled={!!exitDirection || showMilestoneModal}
+                                    className={cn(
+                                        "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
+                                        item.bgColor,
+                                        (exitDirection || showMilestoneModal) && "opacity-50"
+                                    )}
+                                >
+                                    <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
+                                    <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Skip button */}
+                    <div className="px-6 pb-10 pt-3">
                         <button
-                            key={item.value}
-                            onClick={() => handleSatisfactionButton(item.value as 'good' | 'ok' | 'bad')}
+                            onClick={handleSkip}
                             disabled={!!exitDirection || showMilestoneModal}
                             className={cn(
-                                "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
-                                item.bgColor,
+                                "w-full py-4 text-base text-gray-400 transition-colors",
+                                !exitDirection && !showMilestoneModal && "hover:text-gray-500 active:text-gray-600",
                                 (exitDirection || showMilestoneModal) && "opacity-50"
                             )}
                         >
-                            <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
-                            <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
+                            {t('relay.not_visited', '안 가봤어요')}
                         </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Skip button */}
-            <div className="px-6 pb-10 pt-3">
-                <button
-                    onClick={handleSkip}
-                    disabled={!!exitDirection || showMilestoneModal}
-                    className={cn(
-                        "w-full py-4 text-base text-gray-400 transition-colors",
-                        !exitDirection && !showMilestoneModal && "hover:text-gray-500 active:text-gray-600",
-                        (exitDirection || showMilestoneModal) && "opacity-50"
-                    )}
-                >
-                    {t('relay.not_visited', '안 가봤어요')}
-                </button>
-            </div>
+                    </div>
+                </>
+            )}
 
             {/* Back Confirmation Modal */}
             <AnimatePresence>

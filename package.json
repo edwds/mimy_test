@@ -62,6 +62,7 @@
     "i18next-http-backend": "^3.0.2",
     "idb": "^8.0.3",
     "jsonwebtoken": "^9.0.3",
+    "liquid-glass-react": "^1.1.1",
     "lucide-react": "^0.562.0",
     "multer": "^2.0.2",
     "pg": "^8.16.3",

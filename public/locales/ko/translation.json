@@ -766,6 +766,9 @@
             "left": "별로였어요",
             "up": "괜찮았어요"
         },
-        "expected_rating": "예상 평가"
+        "expected_rating": "예상 평가",
+        "comparison_title": "어디가 더 좋았어요?",
+        "comparison_skip": "건너뛰기",
+        "comparison_progress": "{{current}}/{{total}} 비교"
     }
 }
