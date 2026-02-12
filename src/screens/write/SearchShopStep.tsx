@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
+import { formatFoodKind } from '@/lib/foodKindMap';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
 import { Capacitor } from '@capacitor/core';
 
@@ -333,7 +334,7 @@ export const SearchShopStep: React.FC<Props> = ({ onSelect, onBack, isRankingOpe
                                                     </span>
                                                     {!isGoogleMode ? (
                                                         <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                            {shop.food_kind || '음식점'}
+                                                            {formatFoodKind(shop.food_kind)}
                                                         </span>
                                                     ) : shop.rating ? (
                                                         <span className="flex items-center text-[11px] font-bold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -645,7 +646,7 @@ const ShopItem: React.FC<{ shop: any; onSelect: (shop: any) => void }> = ({ shop
                                 {shop.name}
                             </span>
                             <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                {shop.food_kind || '음식점'}
+                                {formatFoodKind(shop.food_kind)}
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">

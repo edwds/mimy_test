@@ -29,7 +29,7 @@ interface ProfileScreenProps {
 export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScreenProps) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user, loading, savedShops: contextSavedShops, refreshSavedShops } = useUser();
+    const { user, loading, savedShops: contextSavedShops, refreshSavedShops, contentVersion } = useUser();
     const { registerCallback, unregisterCallback } = useRanking();
     const [rankingRefreshTrigger, setRankingRefreshTrigger] = useState(0);
     const lastUpdateDataRef = useRef<{ shopId: number; my_review_stats: any } | null>(null);
@@ -73,24 +73,45 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         }
     };
 
-    // Refresh listener - Only refresh data, not user (user is already in context)
-    // useEffect(() => {
-    //     if (!isEnabled) return;
-    //     if (refreshTrigger) refreshUser();
-    // }, [refreshTrigger, isEnabled, refreshUser]);
+    // Track if data has been loaded to avoid refetching on tab switch
+    const contentLoadedRef = useRef(false);
+    const listsLoadedRef = useRef(false);
+    const rankingsLoadedRef = useRef(false);
 
-    // Fetch content
+    // Reset all caches when user changes or new content is created
     useEffect(() => {
+        contentLoadedRef.current = false;
+        listsLoadedRef.current = false;
+        rankingsLoadedRef.current = false;
         setContentPage(1);
         setContents([]);
         setHasMoreContent(true);
-    }, [user?.id, activeTab, refreshTrigger]);
+        setLists([]);
+        setCurrentRankings([]);
+    }, [user?.id, contentVersion]);
 
+    // Reset caches on explicit refresh (same-tab tap)
+    const prevRefreshTrigger = useRef(refreshTrigger);
     useEffect(() => {
-        const fetchContent = async () => {
-            if (!user?.id || (activeTab !== 'content' && activeTab !== 'timeline')) return;
-            if (!hasMoreContent && contentPage > 1) return;
+        if (refreshTrigger === prevRefreshTrigger.current) return;
+        prevRefreshTrigger.current = refreshTrigger;
+        contentLoadedRef.current = false;
+        listsLoadedRef.current = false;
+        rankingsLoadedRef.current = false;
+        setContentPage(1);
+        setContents([]);
+        setHasMoreContent(true);
+        setLists([]);
+        setCurrentRankings([]);
+    }, [refreshTrigger]);
 
+    // Fetch content (lazy: only when tab is active, cached: skip if already loaded)
+    useEffect(() => {
+        if (!user?.id || (activeTab !== 'content' && activeTab !== 'timeline')) return;
+        if (contentLoadedRef.current && contentPage === 1) return;
+        if (!hasMoreContent && contentPage > 1) return;
+
+        const fetchContent = async () => {
             if (contentPage === 1) setLoadingContent(true);
             else setIsFetchingMore(true);
 
@@ -100,6 +121,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     const data = await response.json();
                     if (data.length < 20) setHasMoreContent(false);
                     setContents(prev => contentPage === 1 ? data : [...prev, ...data]);
+                    if (contentPage === 1) contentLoadedRef.current = true;
                 }
             } catch (e) {
                 console.error('Failed to load content', e);
@@ -110,7 +132,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         };
 
         fetchContent();
-    }, [user?.id, activeTab, refreshTrigger, contentPage]);
+    }, [user?.id, activeTab, contentPage, contentVersion]);
 
     const loadMoreContent = () => {
         if (!loadingContent && !isFetchingMore && hasMoreContent) {
@@ -118,15 +140,19 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         }
     };
 
-    // Fetch lists
+    // Fetch lists (lazy + cached)
     useEffect(() => {
-        const fetchLists = async () => {
-            if (!user?.id || activeTab !== 'list') return;
+        if (!user?.id || activeTab !== 'list') return;
+        if (listsLoadedRef.current) return;
 
+        const fetchLists = async () => {
             setLoadingLists(true);
             try {
                 const response = await authFetch(`${API_BASE_URL}/api/users/${user.id}/lists`);
-                if (response.ok) setLists(await response.json());
+                if (response.ok) {
+                    setLists(await response.json());
+                    listsLoadedRef.current = true;
+                }
             } catch (e) {
                 console.error('Failed to load lists', e);
             } finally {
@@ -135,20 +161,22 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         };
 
         fetchLists();
-    }, [user?.id, activeTab, refreshTrigger]);
+    }, [user?.id, activeTab, contentVersion]);
 
-    // Fetch current rankings when list tab is active and ranking_count < 30
+    // Fetch current rankings when list tab is active and ranking_count < 30 (lazy + cached)
     useEffect(() => {
-        const fetchCurrentRankings = async () => {
-            if (!user?.id || activeTab !== 'list') return;
-            if ((user.stats?.ranking_count || 0) >= 30) return;
+        if (!user?.id || activeTab !== 'list') return;
+        if ((user.stats?.ranking_count || 0) >= 30) return;
+        if (rankingsLoadedRef.current) return;
 
+        const fetchCurrentRankings = async () => {
             setLoadingRankings(true);
             try {
                 const response = await authFetch(`${API_BASE_URL}/api/ranking/all`);
                 if (response.ok) {
                     const rankings = await response.json();
                     setCurrentRankings(rankings);
+                    rankingsLoadedRef.current = true;
                 }
             } catch (e) {
                 console.error('Failed to load current rankings', e);
@@ -158,7 +186,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         };
 
         fetchCurrentRankings();
-    }, [user?.id, activeTab, refreshTrigger, user?.stats?.ranking_count]);
+    }, [user?.id, activeTab, contentVersion, user?.stats?.ranking_count]);
 
     // Sync with context savedShops
     useEffect(() => {

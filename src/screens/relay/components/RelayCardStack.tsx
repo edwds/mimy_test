@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { RelayShop } from '@/services/RelayService';
+import { formatFoodKind } from '@/lib/foodKindMap';
 
 interface RelayCardStackProps {
     shops: RelayShop[];
@@ -72,7 +73,7 @@ const CardPreview = ({ shop }: { shop: RelayShop }) => (
                 <h2 className="text-xl font-bold truncate">{shop.name}</h2>
                 {shop.food_kind && (
                     <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
-                        {shop.food_kind}
+                        {formatFoodKind(shop.food_kind)}
                     </span>
                 )}
             </div>

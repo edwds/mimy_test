@@ -50,6 +50,8 @@ interface UserContextType {
     recommendedShops: any[];
     refreshSavedShops: () => Promise<void>;
     refreshRecommendedShops: () => Promise<void>;
+    contentVersion: number;
+    notifyContentCreated: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -87,6 +89,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [authFailed, setAuthFailed] = useState<boolean>(false);
     const [savedShops, setSavedShops] = useState<any[]>([]);
     const [recommendedShops, setRecommendedShops] = useState<any[]>([]);
+    const [contentVersion, setContentVersion] = useState(0);
+
+    const notifyContentCreated = useCallback(() => {
+        setContentVersion(v => v + 1);
+    }, []);
 
     const fetchUserData = useCallback(async (skipAuthFailedCheck = false) => {
         console.log('[UserContext] fetchUserData called, authFailed:', authFailed, 'skipCheck:', skipAuthFailedCheck);
@@ -295,7 +302,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             savedShops,
             recommendedShops,
             refreshSavedShops,
-            refreshRecommendedShops
+            refreshRecommendedShops,
+            contentVersion,
+            notifyContentCreated
         }}>
             {children}
         </UserContext.Provider>

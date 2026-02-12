@@ -8,6 +8,7 @@ import { cn, scoreToTasteRatingStep } from '@/lib/utils';
 import { ContentCard } from '@/components/ContentCard';
 import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
+import { formatFoodKind } from '@/lib/foodKindMap';
 import { authFetch } from '@/lib/authFetch';
 import { API_BASE_URL } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
@@ -421,7 +422,7 @@ export const ShopDetailScreen = ({ shopIdProp }: ShopDetailProps = {}) => {
                                     {shop.name}
                                     {shop.food_kind && (
                                         <span className="text-sm text-gray-400 font-normal ml-2">
-                                            {shop.food_kind}
+                                            {formatFoodKind(shop.food_kind)}
                                         </span>
                                     )}
                                 </h1>

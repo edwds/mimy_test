@@ -7,6 +7,7 @@ import { RankingService, RankingItem } from '@/services/RankingService';
 import { Button } from '@/components/ui/button';
 import React, { useRef } from 'react';
 import { RelayRating } from '@/screens/relay/RelayScreen';
+import { formatFoodKind } from '@/lib/foodKindMap';
 
 
 
@@ -347,7 +348,7 @@ const DraggableRankingItem = ({ item, isNew, rankingItem, newRating, onDelete, o
     // Get shop info from either existing ranking or new rating
     const shopName = isNew ? newRating?.shop.name : rankingItem?.shop.name;
     const shopThumbnail = isNew ? newRating?.shop.thumbnail_img : rankingItem?.shop.thumbnail_img;
-    const shopCategory = isNew ? newRating?.shop.food_kind : rankingItem?.shop.category;
+    const shopCategory = isNew ? formatFoodKind(newRating?.shop.food_kind) : rankingItem?.shop.category;
 
     const handlePointerDown = (e: React.PointerEvent) => {
         // Only trigger on primary button (left click or touch)

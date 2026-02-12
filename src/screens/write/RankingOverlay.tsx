@@ -8,6 +8,7 @@ import { ContentService } from '@/services/ContentService';
 import { SatisfactionRating } from '@/components/SatisfactionRating';
 import { RankingBadge } from '@/components/RankingBadge';
 import { authFetch } from '@/lib/authFetch';
+import { formatFoodKind } from '@/lib/foodKindMap';
 
 interface Props {
     shop: any;
@@ -231,7 +232,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                             )}
                             <div>
                                 <h3 className="font-bold text-xl text-gray-900 leading-tight">{shop.name}</h3>
-                                <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || t('common.restaurant', 'Restaurant')}</p>
+                                <p className="text-sm text-gray-500 mt-1">{shop.category || formatFoodKind(shop.food_kind) || t('common.restaurant', 'Restaurant')}</p>
                                 <p className="text-xs text-gray-400 mt-0.5">{shop.address?.split(' ').slice(0, 2).join(' ')}</p>
                             </div>
                         </div>
@@ -334,7 +335,7 @@ export const RankingOverlay: React.FC<Props> = ({ shop, userId, onClose, onCompl
                                     )}
                                     <div>
                                         <h3 className="font-bold text-xl text-gray-900 leading-tight">{shop.name}</h3>
-                                        <p className="text-sm text-gray-500 mt-1">{shop.category || shop.food_kind || t('common.restaurant', 'Restaurant')}</p>
+                                        <p className="text-sm text-gray-500 mt-1">{shop.category || formatFoodKind(shop.food_kind) || t('common.restaurant', 'Restaurant')}</p>
                                     </div>
                                 </div>
 

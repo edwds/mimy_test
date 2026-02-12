@@ -20,7 +20,7 @@ export const WriteFlow = () => {
     console.log('[WriteFlow] Location:', location.pathname, 'State:', location.state);
 
     const { openRanking, isRankingOpen, registerCallback, unregisterCallback } = useRanking();
-    const { user } = useUser();
+    const { user, notifyContentCreated } = useUser();
 
     const initialShopId = searchParams.get('shop_id');
     const locationState = location.state as { step?: string; shop?: any; satisfaction?: any } | undefined;
@@ -208,6 +208,7 @@ export const WriteFlow = () => {
 
             const result = await ContentService.create(payload);
             console.log('[WriteFlow] ✅ Content created successfully, result:', result);
+            notifyContentCreated();
             navigate('/main');
         } catch (error: any) {
             console.error('[WriteFlow] ❌ Submit failed:', error);

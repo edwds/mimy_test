@@ -4,6 +4,7 @@ import { MapPin, Smile, Meh, Frown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { RelayShop } from '@/services/RelayService';
 import { scoreToTasteRatingStep } from '@/lib/utils';
+import { formatFoodKind } from '@/lib/foodKindMap';
 
 interface RelayCardProps {
     shop: RelayShop;
@@ -217,7 +218,7 @@ export const RelayCard = ({
                         <h2 className="text-xl font-bold truncate">{shop.name}</h2>
                         {shop.food_kind && (
                             <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
-                                {shop.food_kind}
+                                {formatFoodKind(shop.food_kind)}
                             </span>
                         )}
                     </div>

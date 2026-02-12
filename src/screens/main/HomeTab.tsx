@@ -489,12 +489,14 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                     const isFirst = index === 0;
                                     const isLast = index === banners.length - 1;
 
+                                    const isSingle = banners.length === 1;
+
                                     return (
                                         <div
                                             key={banner.id}
                                             className="flex-shrink-0 snap-center"
                                             style={{
-                                                width: 'calc(100% - 30px)',
+                                                width: isSingle ? '100%' : 'calc(100% - 30px)',
                                                 paddingLeft: isFirst ? '20px' : '5px',
                                                 paddingRight: isLast ? '20px' : '5px'
                                             }}

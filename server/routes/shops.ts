@@ -8,6 +8,7 @@ import { getShopMatchScores, getShopReviewStats } from "../utils/enricher.js";
 import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import fs from 'fs';
+import { expandFoodKindFilter } from '../utils/foodKindMap.js';
 import path from 'path';
 
 const router = Router();
@@ -45,7 +46,8 @@ router.get("/discovery", optionalAuth, async (req, res) => {
 
         // Filter parameters
         const foodKindsParam = req.query.foodKinds as string | undefined;
-        const foodKindsFilter = foodKindsParam ? foodKindsParam.split(',').filter(k => k.trim()) : [];
+        const foodKindsRaw = foodKindsParam ? foodKindsParam.split(',').filter(k => k.trim()) : [];
+        const foodKindsFilter = foodKindsRaw.length > 0 ? expandFoodKindFilter(foodKindsRaw) : [];
         const highMatchOnly = req.query.highMatchOnly === 'true'; // Top 50 shops by match score
 
         // Get user ID from JWT

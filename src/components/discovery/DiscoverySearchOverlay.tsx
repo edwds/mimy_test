@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { useRecentSearches } from '@/hooks/useRecentSearches';
+import { formatFoodKind } from '@/lib/foodKindMap';
 
 
 interface Props {
@@ -168,7 +169,7 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
                                                         {shop.name}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                        {shop.food_kind || '음식점'}
+                                                        {formatFoodKind(shop.food_kind)}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -249,7 +250,7 @@ export const DiscoverySearchOverlay: React.FC<Props> = ({ onSelect, onClose }) =
                                                             {shop.name}
                                                         </span>
                                                         <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                                                            {shop.food_kind || '음식점'}
+                                                            {formatFoodKind(shop.food_kind)}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">

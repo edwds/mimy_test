@@ -6,6 +6,7 @@ import { useUser } from '@/context/UserContext';
 import { useRanking } from '@/context/RankingContext';
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import { formatFoodKind } from '@/lib/foodKindMap';
 import { authFetch } from '@/lib/authFetch';
 
 import { useNavigate } from 'react-router-dom';
@@ -191,7 +192,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({ shop, onSave, onWrite, onCli
                             <h3 className="text-xl font-bold text-foreground">{shop.name}</h3>
                             {shop.food_kind && (
                                 <span className="text-xs text-muted-foreground font-medium px-1.5 py-0.5 bg-muted rounded">
-                                    {shop.food_kind}
+                                    {formatFoodKind(shop.food_kind)}
                                 </span>
                             )}
 

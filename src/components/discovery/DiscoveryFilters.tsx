@@ -7,14 +7,16 @@ interface DiscoveryFiltersProps {
     onFilterChange: (filters: string[]) => void;
 }
 
-// Fixed food kind categories for discovery (actual DB values in Korean)
+// 정규화된 food_kind 카테고리 (서버에서 역매핑으로 모든 DB 값에 대응)
 const FIXED_FOOD_KINDS = [
     { value: '한식', label: '한식' },
     { value: '일식', label: '일식' },
     { value: '중식', label: '중식' },
-    { value: '이탈리아음식', label: '이탈리안' },
-    { value: '퓨전음식', label: '퓨전' },
-    { value: '스테이크,립', label: '스테이크' }
+    { value: '이탈리안', label: '이탈리안' },
+    { value: '양식', label: '양식' },
+    { value: '스테이크', label: '스테이크' },
+    { value: '카페', label: '카페' },
+    { value: '해산물', label: '해산물' },
 ];
 
 export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
