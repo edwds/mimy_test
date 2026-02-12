@@ -1,138 +1,240 @@
 /**
- * food_kind 값을 한국어 표시명으로 변환하는 매핑 유틸리티
+ * food_kind 값을 정규화된 한국어 카테고리로 변환하는 매핑 유틸리티
  *
- * DB에는 다양한 소스(Google Places types, displayName, 수동 입력)에서
- * 온 값이 혼재되어 있으므로, 프론트엔드에서 통일된 한국어로 표시한다.
+ * DB에는 다양한 소스(한국 맛집 데이터, Google Places, 수동 입력)에서
+ * 온 144개 이상의 고유 값이 혼재되어 있으므로,
+ * 프론트엔드에서 ~20개 중분류 카테고리로 통일하여 표시한다.
  */
 
 const FOOD_KIND_MAP: Record<string, string> = {
-    // Google Places types (snake_case)
-    korean_restaurant: '한식',
-    japanese_restaurant: '일식',
-    chinese_restaurant: '중식',
-    italian_restaurant: '이탈리안',
-    french_restaurant: '프렌치',
-    thai_restaurant: '태국',
-    vietnamese_restaurant: '베트남',
-    indian_restaurant: '인도',
-    mexican_restaurant: '멕시칸',
-    american_restaurant: '미국식',
-    seafood_restaurant: '해산물',
-    steak_house: '스테이크',
-    sushi_restaurant: '스시',
-    ramen_restaurant: '라멘',
-    pizza_restaurant: '피자',
-    hamburger_restaurant: '햄버거',
-    cafe: '카페',
-    coffee_shop: '카페',
-    bakery: '베이커리',
-    bar: '바',
-    dessert_restaurant: '디저트',
-    ice_cream_shop: '디저트',
-    brunch_restaurant: '브런치',
-    breakfast_restaurant: '브런치',
-    buffet_restaurant: '뷔페',
-    fine_dining_restaurant: '파인다이닝',
-    fast_food_restaurant: '패스트푸드',
-    restaurant: '음식점',
-    meal_delivery: '음식점',
-    meal_takeaway: '음식점',
+    // ── 한식 ──
+    '한식': '한식',
+    '한식당': '한식',
+    '한정식': '한식',
+    '백반,가정식': '한식',
+    '찌개,전골': '한식',
+    '국수': '한식',
+    '국수,냉면': '한식',
+    '냉면': '한식',
+    '분식': '한식',
+    '족발,보쌈': '한식',
+    '보쌈,족발': '한식',
+    '족발, 보쌈': '한식',
+    '곱창,막창': '한식',
+    '뉴코리안': '한식',
+    '닭발': '한식',
+    'korean_restaurant': '한식',
+    'Korean Restaurant': '한식',
 
-    // Seed data / 수동 입력 (uppercase)
-    korean: '한식',
-    japanese: '일식',
-    chinese: '중식',
-    western: '양식',
-    italian: '이탈리안',
-    french: '프렌치',
-    thai: '태국',
-    vietnamese: '베트남',
-    indian: '인도',
-    mexican: '멕시칸',
-    american: '미국식',
-    seafood: '해산물',
-    steak: '스테이크',
-    sushi: '스시',
-    ramen: '라멘',
-    pizza: '피자',
-    hamburger: '햄버거',
-    bakery_upper: '베이커리',
-    bar_upper: '바',
-    dessert: '디저트',
-    brunch: '브런치',
-    buffet: '뷔페',
-    fine_dining: '파인다이닝',
-    fast_food: '패스트푸드',
+    // ── 일식 ──
+    '일식': '일식',
+    '이자카야': '일식',
+    '야키토리': '일식',
+    '돈가스': '일식',
+    '일본 음식점': '일식',
+    'japanese_restaurant': '일식',
+    'Japanese Restaurant': '일식',
+    '일본라면 전문식당': '일식',
 
-    // Google Places primaryTypeDisplayName (한국어)
-    한식당: '한식',
-    한식: '한식',
-    일식당: '일식',
-    일식: '일식',
-    중식당: '중식',
-    중식: '중식',
+    // ── 오마카세 ──
+    '스시오마카세': '오마카세',
+    '한우오마카세': '오마카세',
+    '가이세키오마카세': '오마카세',
+    '쿠시아게오마카세': '오마카세',
+    '돼지고기오마카세': '오마카세',
+    '일식오마카세': '오마카세',
+    '기타 오마카세': '오마카세',
+
+    // ── 스시/회 ──
+    '회,사시미': '스시/회',
+    '참치회': '스시/회',
+    '스시,초밥': '스시/회',
+    'sushi_restaurant': '스시/회',
+    '라멘': '라멘',
+    'ramen_restaurant': '라멘',
+    'Ramen Restaurant': '라멘',
+
+    // ── 중식 ──
+    '중식': '중식',
     '중국 음식점': '중식',
-    이탈리안: '이탈리안',
+    'chinese_restaurant': '중식',
+    'Chinese Restaurant': '중식',
+
+    // ── 이탈리안 ──
+    '이탈리아음식': '이탈리안',
+    '파스타': '이탈리안',
     '이탈리아 음식점': '이탈리안',
-    프렌치: '프렌치',
+    'italian_restaurant': '이탈리안',
+    '피자': '피자',
+    '피자 전문점': '피자',
+    'pizza_restaurant': '피자',
+
+    // ── 프렌치 ──
+    '프랑스음식': '프렌치',
     '프랑스 음식점': '프렌치',
+    'french_restaurant': '프렌치',
+
+    // ── 양식 ──
+    '양식': '양식',
+    '유러피안음식': '양식',
+    '스페인음식': '양식',
+    '컨템포러리': '양식',
+
+    // ── 고기/구이 ──
+    '육류,고기요리': '고기/구이',
+    '소고기구이': '고기/구이',
+    '돼지고기구이': '고기/구이',
+    '양고기': '고기/구이',
+    '바베큐': '고기/구이',
+    '숯불구이/바베큐전문점': '고기/구이',
+    'barbecue_restaurant': '고기/구이',
+    'Barbecue Restaurant': '고기/구이',
+    '닭 요리': '고기/구이',
+    '닭,오리요리': '고기/구이',
+    '오리 요리': '고기/구이',
+
+    // ── 스테이크 ──
+    '스테이크,립': '스테이크',
+    '스테이크 전문점': '스테이크',
+    '일본 스테이크 전문점': '스테이크',
+    'steak_house': '스테이크',
+
+    // ── 해산물 ──
+    '해물,생선요리': '해산물',
+    '해물(탕/찜/볶음)': '해산물',
+    '굴, 조개': '해산물',
+    '게, 랍스터': '해산물',
+    '랍스터': '해산물',
+    '복어요리': '해산물',
+    '장어요리': '해산물',
+    '장어 요리': '해산물',
+    '해산물 요리 전문식당': '해산물',
+    'seafood_restaurant': '해산물',
+    'Seafood Restaurant': '해산물',
+    '샤브샤브': '해산물',
+
+    // ── 바/주점 ──
+    '다이닝바': '바/주점',
+    '요리주점': '바/주점',
+    '와인': '바/주점',
+    '칵테일,위스키': '바/주점',
+    '맥주,호프': '바/주점',
+    '전통주': '바/주점',
+    '주점': '바/주점',
+    '오뎅바': '바/주점',
+    '와인 바': '바/주점',
+    'bar': '바/주점',
+
+    // ── 카페 ──
+    '카페': '카페',
+    '카페,디저트': '카페',
+    '커피숍/커피 전문점': '카페',
+    'coffee_shop': '카페',
+    'Coffee Shop': '카페',
+    'cafe': '카페',
+    'Cafe': '카페',
+
+    // ── 베이커리 ──
+    '베이커리': '베이커리',
+    '카페 & 베이커리': '베이커리',
+    '제과점': '베이커리',
+    '케이크': '베이커리',
+    'bakery': '베이커리',
+
+    // ── 브런치 ──
+    '브런치': '브런치',
+    '브런치 식당': '브런치',
+    'brunch_restaurant': '브런치',
+
+    // ── 태국 ──
+    '태국음식': '태국',
     '태국 음식점': '태국',
+    'Thai Restaurant': '태국',
+    'thai_restaurant': '태국',
+
+    // ── 베트남 ──
+    '베트남음식': '베트남',
     '베트남 음식점': '베트남',
-    '인도 음식점': '인도',
-    '멕시코 음식점': '멕시칸',
-    '미국 음식점': '미국식',
-    해산물: '해산물',
-    '해산물 음식점': '해산물',
-    스테이크: '스테이크',
-    '스테이크 하우스': '스테이크',
-    스시: '스시',
-    '초밥집': '스시',
-    라멘: '라멘',
-    '라멘집': '라멘',
-    피자: '피자',
-    '피자집': '피자',
-    햄버거: '햄버거',
-    '햄버거집': '햄버거',
-    카페: '카페',
-    '커피숍': '카페',
-    '커피 전문점': '카페',
-    베이커리: '베이커리',
-    '빵집': '베이커리',
-    바: '바',
-    디저트: '디저트',
-    '아이스크림': '디저트',
+    'vietnamese_restaurant': '베트남',
+    'Vietnamese Restaurant': '베트남',
+
+    // ── 인도 ──
+    '인도음식': '인도',
+    '인도요리': '인도',
+    'indian_restaurant': '인도',
+
+    // ── 멕시칸 ──
+    '멕시코,남미음식': '멕시칸',
+    '멕시코음식': '멕시칸',
+    'mexican_restaurant': '멕시칸',
+
+    // ── 미국식 ──
+    '아메리칸음식': '미국식',
+    '아메리칸 레스토랑': '미국식',
+    '햄버거': '미국식',
+    '햄버거집': '미국식',
+    'hamburger_restaurant': '미국식',
+    'american_restaurant': '미국식',
+
+    // ── 아시안 ──
+    '아시아음식': '아시안',
+
+    // ── 디저트 ──
+    '디저트': '디저트',
     '아이스크림 가게': '디저트',
-    브런치: '브런치',
-    '조식': '브런치',
-    뷔페: '뷔페',
-    파인다이닝: '파인다이닝',
-    패스트푸드: '패스트푸드',
-    양식: '양식',
-    음식점: '음식점',
+    'dessert_restaurant': '디저트',
+    'ice_cream_shop': '디저트',
+
+    // ── 뷔페 ──
+    '뷔페': '뷔페',
+    '호텔뷔페': '뷔페',
+    'buffet_restaurant': '뷔페',
+
+    // ── 퓨전 ──
+    '퓨전음식': '퓨전',
+
+    // ── 파인다이닝 ──
+    '파인다이닝': '파인다이닝',
+    '코스요리': '파인다이닝',
+    'fine_dining_restaurant': '파인다이닝',
+
+    // ── 기타 ──
+    '철판요리': '기타',
+    '기타 세계음식': '기타',
+    '베지테리안/비건': '기타',
+    '팝업 스토어': '기타',
+    '쿠킹클래스': '기타',
+    '소반&다과': '기타',
+    'restaurant': '음식점',
+    'Restaurant': '음식점',
+    '음식점': '음식점',
+    '레스토랑': '음식점',
+    'meal_delivery': '음식점',
+    'meal_takeaway': '음식점',
+    'fast_food_restaurant': '음식점',
+    ' 스시오마카세': '오마카세', // 앞에 공백 있는 데이터 대응
 };
 
 /**
- * food_kind raw 값을 한국어 표시명으로 변환
+ * food_kind raw 값을 정규화된 한국어 카테고리로 변환
  * @param foodKind DB에 저장된 food_kind 값
  * @param fallback 매핑이 없을 때 기본값 (기본: '음식점')
- * @returns 한국어 표시명
+ * @returns 정규화된 한국어 카테고리명
  */
 export function formatFoodKind(foodKind: string | null | undefined, fallback = '음식점'): string {
     if (!foodKind) return fallback;
 
-    // 정확히 매칭되는 경우 (case-insensitive)
-    const lower = foodKind.toLowerCase().trim();
-    if (FOOD_KIND_MAP[lower]) return FOOD_KIND_MAP[lower];
+    const trimmed = foodKind.trim();
 
-    // 원본 그대로 매칭 시도 (한국어 등)
-    if (FOOD_KIND_MAP[foodKind.trim()]) return FOOD_KIND_MAP[foodKind.trim()];
+    // 정확히 매칭 (원본)
+    if (FOOD_KIND_MAP[trimmed]) return FOOD_KIND_MAP[trimmed];
 
-    // 부분 매칭: "음식점" 접미사 제거 후 재시도
-    const withoutSuffix = foodKind.replace(/\s*(음식점|레스토랑|식당)$/, '').trim();
-    if (withoutSuffix !== foodKind && FOOD_KIND_MAP[withoutSuffix]) {
-        return FOOD_KIND_MAP[withoutSuffix];
+    // case-insensitive 매칭 (영어 값 대응)
+    const lower = trimmed.toLowerCase();
+    for (const [key, val] of Object.entries(FOOD_KIND_MAP)) {
+        if (key.toLowerCase() === lower) return val;
     }
 
-    // 매핑 없으면 원본 값 반환 (이미 한국어일 수 있음)
-    return foodKind;
+    // 매핑 없으면 원본 값 반환
+    return trimmed;
 }

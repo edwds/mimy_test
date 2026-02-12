@@ -8,15 +8,20 @@ interface DiscoveryFiltersProps {
 }
 
 // 정규화된 food_kind 카테고리 (서버에서 역매핑으로 모든 DB 값에 대응)
+// DB 건수가 많은 순으로 배치
 const FIXED_FOOD_KINDS = [
-    { value: '한식', label: '한식' },
     { value: '일식', label: '일식' },
-    { value: '중식', label: '중식' },
+    { value: '고기/구이', label: '고기/구이' },
     { value: '이탈리안', label: '이탈리안' },
+    { value: '한식', label: '한식' },
+    { value: '오마카세', label: '오마카세' },
+    { value: '바/주점', label: '바/주점' },
     { value: '양식', label: '양식' },
-    { value: '스테이크', label: '스테이크' },
-    { value: '카페', label: '카페' },
+    { value: '중식', label: '중식' },
     { value: '해산물', label: '해산물' },
+    { value: '스시/회', label: '스시/회' },
+    { value: '카페', label: '카페' },
+    { value: '스테이크', label: '스테이크' },
 ];
 
 export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
