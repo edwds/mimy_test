@@ -1016,7 +1016,7 @@ export const StartPage = ({ onStart }: { onStart: () => void }) => {
                 </div>
             </main>
 
-            <footer className="p-4 relative z-10 w-full max-w-md mx-auto space-y-3">
+            <footer className="px-4 pt-4 pb-8 relative z-10 w-full max-w-md mx-auto space-y-3">
                 <button
                     className="w-full group relative inline-flex h-14 items-center justify-center overflow-hidden rounded-xl bg-primary px-8 font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95"
                     onClick={onStart}

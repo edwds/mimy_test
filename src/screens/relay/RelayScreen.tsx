@@ -320,7 +320,7 @@ export const RelayScreen = () => {
             />
 
             {/* Card Stack */}
-            <main className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-visible">
+            <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
                 <div
                     className="relative w-full max-w-md"
                     style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
@@ -367,7 +367,7 @@ export const RelayScreen = () => {
             </div>
 
             {/* Skip button */}
-            <div className="px-6 pb-6 pt-3">
+            <div className="px-6 pb-10 pt-3">
                 <button
                     onClick={handleSkip}
                     disabled={!!exitDirection || showMilestoneModal}

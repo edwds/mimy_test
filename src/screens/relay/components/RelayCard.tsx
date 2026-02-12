@@ -126,7 +126,7 @@ export const RelayCard = ({
         >
             {/* Good overlay (orange - right swipe) - full card coverage with icon */}
             <motion.div
-                className="absolute inset-0 pointer-events-none flex items-center justify-center bg-orange-50"
+                className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center bg-orange-50"
                 style={{
                     opacity: showGuide ? undefined : greenOverlay,
                 }}
@@ -145,7 +145,7 @@ export const RelayCard = ({
 
             {/* Bad overlay (gray - left swipe) - full card coverage with icon */}
             <motion.div
-                className="absolute inset-0 pointer-events-none flex items-center justify-center bg-gray-100"
+                className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center bg-gray-100"
                 style={{
                     opacity: showGuide ? undefined : redOverlay,
                 }}
@@ -164,7 +164,7 @@ export const RelayCard = ({
 
             {/* OK overlay (yellow - up swipe) - full card coverage with icon */}
             <motion.div
-                className="absolute inset-0 pointer-events-none flex items-center justify-center bg-yellow-50"
+                className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center bg-yellow-50"
                 style={{
                     opacity: showGuide ? undefined : yellowOverlay,
                 }}

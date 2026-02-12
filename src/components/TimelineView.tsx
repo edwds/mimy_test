@@ -37,6 +37,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
     const [startMonthOffset, setStartMonthOffset] = useState(0);
     const [visibleMonthsCount, setVisibleMonthsCount] = useState(4);
     const [showJumpPicker, setShowJumpPicker] = useState(false);
+    const [hasUserJumped, setHasUserJumped] = useState(false);
 
     // Separate contents with and without visit_date (shared)
     const { withDate, noDate } = React.useMemo(() => {
@@ -194,8 +195,10 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
         };
     }, [withDate, startMonthOffset, visibleMonthsCount]);
 
-    // Current viewing period label for the jump button
+    // Current viewing period label for the jump button (only show when user explicitly jumped)
     const currentPeriodLabel = React.useMemo(() => {
+        if (!hasUserJumped) return null; // Only show label when user explicitly selected a date
+
         const now = new Date();
         if (viewMode === 'weekly') {
             if (startWeekOffset === 0) return null; // At current week, no label needed
@@ -217,7 +220,7 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
                 ? `${year % 100}년 ${month}월`
                 : `${month}월`;
         }
-    }, [viewMode, startWeekOffset, startMonthOffset]);
+    }, [viewMode, startWeekOffset, startMonthOffset, hasUserJumped]);
 
     const loadMorePastWeeks = () => {
         setVisibleWeeksCount((prev: number) => Math.min(prev + 4, 52 - startWeekOffset));
@@ -241,6 +244,8 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
 
     const jumpToDate = (date: Date) => {
         const now = new Date();
+        const isToday = isSameDay(date, now);
+
         if (viewMode === 'weekly') {
             const targetWeekStart = startOfWeek(date, { weekStartsOn: 1 });
             const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -255,6 +260,9 @@ export const TimelineView = ({ contents }: TimelineViewProps) => {
             setStartMonthOffset(Math.max(0, monthOffset));
             setVisibleMonthsCount(4);
         }
+
+        // Only mark as jumped if user selected a past date (not today)
+        setHasUserJumped(!isToday);
         setShowJumpPicker(false);
     };
 
