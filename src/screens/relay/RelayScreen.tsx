@@ -430,8 +430,6 @@ export const RelayScreen = () => {
                                 key={`${comparisonQueue[comparisonIndex].a.shopId}-${comparisonQueue[comparisonIndex].b.shopId}`}
                                 shopA={comparisonQueue[comparisonIndex].a}
                                 shopB={comparisonQueue[comparisonIndex].b}
-                                current={comparisonIndex + 1}
-                                total={comparisonQueue.length}
                                 onSelect={handleComparisonSelect}
                                 onSkip={handleComparisonSkip}
                             />
