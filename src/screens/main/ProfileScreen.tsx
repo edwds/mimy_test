@@ -639,29 +639,34 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     ) : null}
                                 </>
                             ) : (
-                                lists.map((list) => (
-                                    <ListCard
-                                        key={list.id}
-                                        id={list.id}
-                                        type={list.type}
-                                        title={list.title}
-                                        count={list.count}
-                                        updatedAt={list.updated_at}
-                                        author={list.author}
-                                        onPress={() => {
-                                            const query = new URLSearchParams(searchParams);
-                                            query.set('viewListUser', String(user.id));
+                                <div className="grid grid-cols-2 gap-3">
+                                    {lists.map((list) => (
+                                        <ListCard
+                                            key={list.id}
+                                            id={list.id}
+                                            type={list.type}
+                                            title={list.title}
+                                            count={list.count}
+                                            updatedAt={list.updated_at}
+                                            author={list.author}
+                                            preview_images={list.preview_images}
+                                            center_lat={list.center_lat}
+                                            center_lng={list.center_lng}
+                                            onPress={() => {
+                                                const query = new URLSearchParams(searchParams);
+                                                query.set('viewListUser', String(user.id));
 
-                                            // Set list params
-                                            query.set('type', list.type);
-                                            if (list.value) query.set('value', list.value);
-                                            if (list.title) query.set('title', list.title);
+                                                // Set list params
+                                                query.set('type', list.type);
+                                                if (list.value) query.set('value', list.value);
+                                                if (list.title) query.set('title', list.title);
 
-                                            // Navigate while keeping current path (keeps activeTab='profile')
-                                            navigate({ search: query.toString() });
-                                        }}
-                                    />
-                                ))
+                                                // Navigate while keeping current path (keeps activeTab='profile')
+                                                navigate({ search: query.toString() });
+                                            }}
+                                        />
+                                    ))}
+                                </div>
                             )}
                         </div>
                     )}
@@ -713,7 +718,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
             <TasteProfileSheet
                 isOpen={isTasteSheetOpen}
                 onClose={() => setIsTasteSheetOpen(false)}
-                data={user ? { cluster_name: user.cluster_name || '', cluster_tagline: user.cluster_tagline || '' } : null}
+                data={user ? { cluster_name: user.cluster_name || '', cluster_tagline: user.cluster_tagline || '', scores: (user as any).taste_result?.scores } : null}
                 userId={user?.id}
             />
         </div >

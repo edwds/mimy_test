@@ -1,9 +1,27 @@
-import { X } from 'lucide-react';
+import { X, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 
 
+
+const TASTE_AXES = [
+    { key: 'boldness', emoji: '🔥' },
+    { key: 'acidity', emoji: '🍋' },
+    { key: 'richness', emoji: '🧈' },
+    { key: 'experimental', emoji: '🧪' },
+    { key: 'spiciness', emoji: '🌶️' },
+    { key: 'sweetness', emoji: '🍬' },
+    { key: 'umami', emoji: '🍜' },
+] as const;
+
+const getArrowIcon = (value: number) => {
+    if (value >= 2) return { Icon: ChevronsUp, color: 'text-violet-500' };
+    if (value >= 1) return { Icon: ChevronUp, color: 'text-violet-400' };
+    if (value <= -2) return { Icon: ChevronsDown, color: 'text-amber-500' };
+    if (value <= -1) return { Icon: ChevronDown, color: 'text-amber-400' };
+    return { Icon: Minus, color: 'text-gray-300' };
+};
 
 interface TasteProfileSheetProps {
     isOpen: boolean;
@@ -11,7 +29,7 @@ interface TasteProfileSheetProps {
     data: {
         cluster_name: string;
         cluster_tagline: string;
-        // Add more fields if available in the future, e.g. description, image_url
+        scores?: Record<string, number>;
     } | null;
     userId?: number;
 }
@@ -106,12 +124,28 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 <div className="flex-1 flex flex-col p-8 z-10 relative min-h-0">
 
                     {/* Main Content: Name & Tagline */}
-                    <div className="min-h-[180px] flex flex-col justify-center text-center shrink-0">
+                    <div className="flex flex-col justify-center text-center shrink-0">
                         <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
                         <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                             {data?.cluster_tagline || 'Discovering your unique taste journey.'}
                         </h2>
                     </div>
+
+                    {/* Taste Scores - Inline Icons */}
+                    {data?.scores && Object.keys(data.scores).length > 0 && (
+                        <div className="mt-6 flex items-center justify-center gap-3 shrink-0">
+                            {TASTE_AXES.map(({ key, emoji }) => {
+                                const value = data.scores![key] ?? 0;
+                                const { Icon: ArrowIcon, color } = getArrowIcon(value);
+                                return (
+                                    <div key={key} className="flex flex-col items-center gap-0.5">
+                                        <span className="text-base leading-none">{emoji}</span>
+                                        <ArrowIcon className={cn("w-3.5 h-3.5", color)} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Divider - only show if there's data to display */}
                     {(history.length > 0 || hateHistory.filter(h => h.selection === 'NOT_EAT').length > 0) && (

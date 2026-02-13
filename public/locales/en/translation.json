@@ -356,6 +356,9 @@
         "list_detail": {
             "items_count": "{{count}} spots"
         },
+        "list_card": {
+            "shop_count": "{{count}} spots"
+        },
         "shared_count": "You tracked <strong>{{count}}</strong> places together!",
         "menu": {
             "change_id": "Change ID",

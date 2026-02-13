@@ -11,15 +11,15 @@
         "top": "상위",
         "start_quiz": "퀴즈 시작하기",
         "save": "저장",
-        "saved": "저장되었습니다",
+        "saved": "저장됐어요",
         "cancel": "취소",
         "delete": "삭제",
         "edit": "수정",
         "close": "닫기",
         "done": "완료",
-        "confirm_delete": "삭제하시겠습니까?",
-        "already_recorded": "이미 기록을 남긴 곳입니다",
-        "edit_record": "수정하시겠습니까?",
+        "confirm_delete": "삭제할까요?",
+        "already_recorded": "이미 기록한 곳이에요",
+        "edit_record": "수정할까요?",
         "no": "아니요",
         "yes_edit": "네, 수정할게요",
         "restaurant": "음식점",
@@ -107,14 +107,14 @@
             "no_results": "검색 결과가 없습니다",
             "no_results_desc": "철자를 확인하거나 주소의 일부를 포함해 보세요.",
             "saved_title": "저장된 장소",
-            "empty_saved": "방문한 곳을 검색해보세요"
+            "empty_saved": "방문한 맛집을 검색해보세요"
         },
         "basic": {
             "title": "<1>{{name}}</1>에서의<br />경험은 어떠셨나요?",
             "satisfaction": "만족도",
             "date": "방문 날짜",
             "companions": "함께한 사람",
-            "tag_placeholder": "친구 태그 (준비중)",
+            "tag_placeholder": "친구 태그 (준비 중)",
             "next": "다음",
             "good": "맛있어요",
             "ok": "괜찮아요",
@@ -123,7 +123,7 @@
         "content": {
             "title_review": "리뷰 쓰기",
             "title_post": "새 게시물",
-            "placeholder_review": "이곳에서의 경험은 어땠나요?\n맛, 서비스, 분위기에 대한 솔직한 리뷰를 남겨주세요.",
+            "placeholder_review": "이곳에서의 경험은 어땠나요?\n맛, 서비스, 분위기를 솔직하게 남겨주세요.",
             "placeholder_post": "자유롭게 이야기를 나눠보세요.",
             "photo_label": "사진",
             "add": "추가",
@@ -136,17 +136,17 @@
             "ranking_suffix": "랭킹",
             "new": "새로운 곳",
             "new_label": "New!",
-            "this_place": "이 곳",
+            "this_place": "이곳",
             "vs": "VS",
-            "tip": "(Tip: 더 기억에 남는 곳을 선택해주세요)",
+            "tip": "(팁: 더 기억에 남는 곳을 골라주세요)",
             "success_title": "랭킹 업데이트!",
             "success_desc": "<1>{{name}}</1>에서의 경험이<br />당신의 랭킹에 추가되었습니다.",
             "confirm": "확인",
             "write_review": "리뷰 작성하기",
-            "evaluate_another": "다른 곳 평가하기",
+            "evaluate_another": "다른 곳도 평가하기",
             "quit": "나중에 작성하기",
-            "already_ranked_desc": "이미 이 맛집을 평가했어요.\n어떻게 하시겠어요?",
-            "write_with_existing": "바로 글쓰기",
+            "already_ranked_desc": "이미 이 맛집을 평가했어요.\n어떻게 할까요?",
+            "write_with_existing": "바로 작성하기",
             "re_rank": "랭킹 다시 매기기"
         }
     },
@@ -159,7 +159,7 @@
         },
         "otp": {
             "title": "인증번호 입력",
-            "desc": "휴대폰으로 전송된 번호를 입력해주세요.",
+            "desc": "휴대폰으로 받은 번호를 입력해주세요.",
             "resend": "재전송",
             "verify": "인증하기"
         },
@@ -197,7 +197,7 @@
             "like": "좋아요"
         },
         "write_nudge": {
-            "title": "오늘 {{name}}님의<br/>미식은 무엇이었나요",
+            "title": "오늘 {{name}}님의<br/>미식은 무엇이었나요?",
             "desc": "방문한 곳의 경험을 남겨주세요"
         },
         "user_recommendation": {
@@ -212,7 +212,7 @@
     "discovery": {
         "search_placeholder": "이름, 지역, 메뉴로 원하는 곳을 찾아보세요",
         "search_here": "이 지역에서 다시 찾기",
-        "searching": "검색중...",
+        "searching": "검색 중...",
         "alerts": {
             "login_required": "로그인이 필요합니다.",
             "save_failed": "저장에 실패했습니다.",
@@ -220,13 +220,13 @@
             "no_gps": "GPS를 지원하지 않는 브라우저입니다."
         },
         "bottom_sheet": {
-            "selected_shop": "선택된 매장",
+            "selected_shop": "선택한 매장",
             "nearby_shops": "주변 맛집 {{count}}곳",
-            "initial_title": "{{name}}님 여기는 어때요",
+            "initial_title": "{{name}}님, 여긴 어때요?",
             "initial_subtitle": "방문하지 않은 곳 중 좋아할 것 같은 곳이에요",
             "no_shop_info": "매장 정보를 찾을 수 없습니다.",
             "no_nearby": "주변에 맛집이 없습니다.",
-            "reserve_alert": "캐치테이블 예약 준비중"
+            "reserve_alert": "캐치테이블 예약 준비 중"
         },
         "shop_card": {
             "default_desc": "맛있는 경험을 제공하는 공간입니다.",
@@ -250,7 +250,7 @@
     "shop": {
         "reservation": "예약하기",
         "saved": "저장됨",
-        "wants_to_go": "가고싶어요",
+        "wants_to_go": "가고 싶어요",
         "directions": "길찾기",
         "share": "공유하기",
         "evaluate": "기록하기",
@@ -276,7 +276,7 @@
     },
     "leaderboard": {
         "title": "랭킹",
-        "points": "Points",
+        "points": "포인트",
         "empty_title": "아직 랭킹이 없습니다.",
         "empty_desc": "첫 번째 포스트의 주인공이 되어보세요!",
         "filter_overall": "전체",
@@ -302,10 +302,10 @@
         "no_bio": "소개가 없습니다.",
         "match": "매칭",
         "tabs": {
-            "content": "컨텐츠",
+            "content": "콘텐츠",
             "list": "리스트",
             "shared": "공통 관심",
-            "saved": "가고싶어요"
+            "saved": "가고 싶어요"
         },
         "empty": {
             "content": "게시물이 없습니다",
@@ -321,6 +321,9 @@
         "list_detail": {
             "items_count": "{{count}}개의 맛집"
         },
+        "list_card": {
+            "shop_count": "{{count}}개 맛집"
+        },
         "shared_count": "함께 <strong>{{count}}</strong>곳을 저장했어요!",
         "menu": {
             "change_id": "ID 변경하기",
@@ -328,9 +331,9 @@
             "retake_quiz": "입맛 퀴즈 다시하기",
             "report": "오류 제보하기",
             "logout": "로그아웃하기",
-            "logout_confirm": "정말 로그아웃 하시겠습니까?",
-            "quiz_confirm": "퀴즈를 다시 진행하면 취향 프로필이 업데이트됩니다. 계속하시겠습니까?",
-            "coming_soon": "준비 중입니다!",
+            "logout_confirm": "정말 로그아웃할까요?",
+            "quiz_confirm": "퀴즈를 다시 진행하면 취향 프로필이 업데이트돼요. 계속할까요?",
+            "coming_soon": "준비 중이에요!",
             "manage_vs": "호불호 관리",
             "manage_hate": "못 먹는 음식 관리",
             "manage_ranking": "랭킹 관리",
@@ -343,7 +346,7 @@
                 "vote_more": "더 많은 음식 평가하기",
                 "item_a": "A",
                 "item_b": "B",
-                "delete_confirm": "이 선택을 삭제하시겠습니까?",
+                "delete_confirm": "이 선택을 삭제할까요?",
                 "edit_hint": "원하는 옵션을 클릭하여 선택을 변경하세요"
             },
             "hate": {
@@ -352,13 +355,13 @@
                 "vote_more": "더 체크하러 가기",
                 "eat": "먹음",
                 "not_eat": "안먹음",
-                "delete_confirm": "이 선택을 삭제하시겠습니까?",
+                "delete_confirm": "이 선택을 삭제할까요?",
                 "edit_hint": "버튼을 클릭하여 선택을 변경하세요"
             },
             "ranking": {
                 "title": "랭킹 관리",
                 "warning": "랭킹을 삭제하면 작성된 리뷰도 함께 삭제됩니다.",
-                "confirm_delete": "랭킹을 삭제하시겠습니까?",
+                "confirm_delete": "랭킹을 삭제할까요?",
                 "confirm_delete_desc": "이 작업은 되돌릴 수 없습니다. 관련된 리뷰도 영구적으로 삭제됩니다.",
                 "saving": "랭킹 저장 중...",
                 "saving_count": "{{count}}개의 새 항목 추가"
@@ -386,7 +389,7 @@
             "title": "ID 변경하기",
             "label": "새로운 ID",
             "placeholder": "user_id",
-            "helper": "영문 소문자, 숫자, 마침표(.), 밑줄(_)만 사용 가능합니다.",
+            "helper": "영문 소문자, 숫자, 마침표(.), 밑줄(_)만 사용할 수 있어요.",
             "save": "변경사항 저장",
             "success": "ID가 변경되었습니다.",
             "fail": "ID 변경에 실패했습니다.",
@@ -408,8 +411,8 @@
             "success_title": "등록 완료!",
             "success_desc": "{{group}}에 등록되었습니다.",
             "leave": "소속 해제",
-            "leave_confirm": "소속을 해제하시겠습니까?",
-            "cooldown_warning": "소속 변경은 30일마다 가능합니다",
+            "leave_confirm": "소속을 해제할까요?",
+            "cooldown_warning": "소속 변경은 30일에 한 번만 가능해요",
             "error": {
                 "domain_not_found": "등록되지 않은 도메인입니다",
                 "email_in_use": "이미 사용 중인 이메일입니다",
@@ -430,12 +433,12 @@
             "get_location": "현재 위치로 등록",
             "detecting": "위치 확인 중...",
             "detected": "감지된 위치",
-            "confirm_question": "이 동네로 등록하시겠습니까?",
+            "confirm_question": "이 동네로 등록할까요?",
             "success_title": "등록 완료!",
             "success_desc": "{{neighborhood}}에 등록되었습니다.",
             "clear": "동네 해제",
-            "clear_confirm": "동네 등록을 해제하시겠습니까?",
-            "cooldown_warning": "동네 변경은 30일마다 가능합니다",
+            "clear_confirm": "동네 등록을 해제할까요?",
+            "cooldown_warning": "동네 변경은 30일에 한 번만 가능해요",
             "error": {
                 "location_denied": "위치 정보 접근이 거부되었습니다.",
                 "location_unavailable": "위치 정보를 사용할 수 없습니다.",
@@ -447,7 +450,7 @@
             }
         },
         "import_btn": "장소 가져오기",
-        "unsave_fail": "저장 취소 실패"
+        "unsave_fail": "저장 해제에 실패했어요"
     },
     "date": {
         "today": "오늘",
@@ -485,7 +488,7 @@
         },
         "why": {
             "title": "모두가 맛있다는 곳,\n나만 별로였나요?",
-            "description": "맛집을 찾을 때 별점 높고\n리뷰 갯수 많은 곳을 갔다가 실망하신 적 있으신가요?\n\n사람마다 좋아하는 맛, 선호하는 분위기,\n중요하게 여기는 기준이 다 달라요.\n그래서 모두가 맛있다는 곳이\n나에게는 별로일 수 있죠.\n\n하지만 내 입맛을 정확히 알고,\n나와 입맛이 비슷한 사람들의 추천을 따르면\n실패는 줄어들고\n진짜 내가 좋아할 맛집을 찾을 수 있어요.\n\nmimy는 당신의 입맛을 발견하고,\n취향이 맞는 사람들과 연결해\n나만의 맛집을 찾도록 도와드려요."
+            "description": "맛집을 찾을 때 별점 높고\n리뷰 개수 많은 곳을 갔다가 실망하신 적 있으신가요?\n\n사람마다 좋아하는 맛, 선호하는 분위기,\n중요하게 여기는 기준이 다 달라요.\n그래서 모두가 맛있다는 곳이\n나에게는 별로일 수 있죠.\n\n하지만 내 입맛을 정확히 알고,\n나와 입맛이 비슷한 사람들의 추천을 따르면\n실패는 줄어들고\n진짜 내가 좋아할 맛집을 찾을 수 있어요.\n\nmimy는 당신의 입맛을 발견하고,\n취향이 맞는 사람들과 연결해\n나만의 맛집을 찾도록 도와드려요."
         },
         "steps": {
             "discover": {
@@ -711,11 +714,11 @@
     "write_guide": {
         "step1": {
             "title": "방문한 곳을 찾아서",
-            "subtitle": "순위를 매겨주세요"
+            "subtitle": "순위를 매겨보세요"
         },
         "step2": {
             "title": "사진과 함께",
-            "subtitle": "기록을 써주세요"
+            "subtitle": "기록을 써보세요"
         },
         "step3": {
             "title": "쓴 글은 피드에서",
@@ -741,7 +744,11 @@
             "username": "미식가123",
             "cluster": "담백 러버",
             "visited_text": "스시 오마카세를 오늘 방문",
-            "captions": ["오도로?", "스시세트", "말차"]
+            "captions": [
+                "오도로?",
+                "스시세트",
+                "말차"
+            ]
         }
     },
     "relay": {

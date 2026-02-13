@@ -669,7 +669,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
             <TasteProfileSheet
                 isOpen={isTasteSheetOpen}
                 onClose={() => setIsTasteSheetOpen(false)}
-                data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "" } : null}
+                data={user ? { cluster_name: user.cluster_name || "", cluster_tagline: user.cluster_tagline || "", scores: (user as any).taste_result?.scores } : null}
                 userId={user?.id}
             />
         </div >

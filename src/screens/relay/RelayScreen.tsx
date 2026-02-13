@@ -354,7 +354,9 @@ export const RelayScreen = () => {
         setComparisonMode(false);
         setComparisonQueue([]);
         setComparisonIndex(0);
-    };
+        // Move to next card (the swiped card that triggered comparison was already rated)
+        moveToNext();
+    };;
 
     const currentShop = shops[currentIndex];
 

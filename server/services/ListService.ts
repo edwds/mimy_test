@@ -31,13 +31,24 @@ export const ListService = {
 
         const minRankings = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
         if (overallCount >= minRankings) {
+            // Get top 3 shop images for overall ranking
+            const topShops = await db.select({
+                thumbnail_img: shops.thumbnail_img
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(eq(users_ranking.user_id, userId))
+                .orderBy(users_ranking.rank)
+                .limit(3);
+
             resultLists.push({
                 id: 'overall',
                 type: 'OVERALL',
                 title: '전체 랭킹',
                 count: Math.min(overallCount, 100),
                 updated_at: lastUpdated,
-                author: userInfo
+                author: userInfo,
+                preview_images: topShops.map(s => s.thumbnail_img).filter(Boolean)
             });
         }
 
@@ -53,6 +64,18 @@ export const ListService = {
             .having(sql`count(*) >= 10`);
 
         for (const group of regionGroups) {
+            // Get center coordinates for region
+            const centerRes = await db.select({
+                center_lat: sql<number>`avg(${shops.lat})`,
+                center_lng: sql<number>`avg(${shops.lon})`
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(and(
+                    eq(users_ranking.user_id, userId),
+                    eq(shops.address_region, group.region!)
+                ));
+
             resultLists.push({
                 id: `region_${group.region}`,
                 type: 'REGION',
@@ -60,7 +83,9 @@ export const ListService = {
                 count: Number(group.count),
                 updated_at: lastUpdated,
                 author: userInfo,
-                value: group.region
+                value: group.region,
+                center_lat: centerRes[0]?.center_lat,
+                center_lng: centerRes[0]?.center_lng
             });
         }
 
@@ -76,6 +101,19 @@ export const ListService = {
             .having(sql`count(*) >= 10`);
 
         for (const group of categoryGroups) {
+            // Get top 3 shop images for category
+            const topShops = await db.select({
+                thumbnail_img: shops.thumbnail_img
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(and(
+                    eq(users_ranking.user_id, userId),
+                    eq(shops.food_kind, group.category!)
+                ))
+                .orderBy(users_ranking.rank)
+                .limit(3);
+
             resultLists.push({
                 id: `category_${group.category}`,
                 type: 'CATEGORY',
@@ -83,7 +121,8 @@ export const ListService = {
                 count: Number(group.count),
                 updated_at: lastUpdated,
                 author: userInfo,
-                value: group.category
+                value: group.category,
+                preview_images: topShops.map(s => s.thumbnail_img).filter(Boolean)
             });
         }
         return resultLists;
