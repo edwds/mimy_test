@@ -91,9 +91,9 @@ export const QuizScreen = () => {
 
     // Button order matches swipe direction: left=dislike, center=neutral, right=like
     const preferenceButtons = [
-        { value: 'dislike', icon: Frown, label: t('quiz.label_dislike', '내 취향 아님'), color: 'text-gray-500', bgColor: 'bg-gray-100 hover:bg-gray-200' },
+        { value: 'dislike', icon: Frown, label: t('quiz.label_dislike', '취향 아님'), color: 'text-gray-500', bgColor: 'bg-gray-100 hover:bg-gray-200' },
         { value: 'neutral', icon: Meh, label: t('quiz.label_neutral', '상관없어요'), color: 'text-yellow-500', bgColor: 'bg-yellow-50 hover:bg-yellow-100' },
-        { value: 'like', icon: Smile, label: t('quiz.label_like', '완전 내 취향'), color: 'text-orange-500', bgColor: 'bg-orange-50 hover:bg-orange-100' },
+        { value: 'like', icon: Smile, label: t('quiz.label_like', '내 취향'), color: 'text-orange-500', bgColor: 'bg-orange-50 hover:bg-orange-100' },
     ];
 
     const handleDragEnd = (_: any, info: PanInfo) => {

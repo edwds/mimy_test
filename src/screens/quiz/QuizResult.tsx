@@ -6,8 +6,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
-import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile, TASTE_TYPE_LABELS } from '@/lib/tasteType';
 import { HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -171,41 +172,87 @@ export const QuizResult = () => {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
-                                className="mb-4 flex items-center justify-center gap-2"
+                                className="mb-3"
                             >
                                 <span className="text-4xl font-black tracking-[0.2em] text-primary">
                                     {tasteType.fullType}
                                 </span>
-                                <button
-                                    onClick={() => navigate('/profile/taste-guide')}
-                                    className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
-                                >
-                                    <HelpCircle className="w-5 h-5 text-muted-foreground" />
-                                </button>
                             </motion.div>
                         )}
 
-                        {/* Type Name */}
-                        <motion.h1
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                            className="text-2xl font-bold text-gray-900 mb-6"
-                        >
-                            {typeName}
-                        </motion.h1>
+                        {/* Type Code Breakdown */}
+                        {tasteType && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                                className="mb-4 flex items-center justify-center gap-1 whitespace-nowrap"
+                            >
+                                {/* Intensity */}
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                                    tasteType.axes.intensity === 'H' ? "bg-violet-100 text-violet-700" : "bg-violet-50 text-violet-600"
+                                )}>
+                                    {tasteType.axes.intensity} {TASTE_TYPE_LABELS.intensity[tasteType.axes.intensity].ko}
+                                </span>
+                                                                {/* Flavor */}
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                                    tasteType.axes.flavor === 'A' ? "bg-amber-100 text-amber-700" : "bg-amber-50 text-amber-600"
+                                )}>
+                                    {tasteType.axes.flavor} {TASTE_TYPE_LABELS.flavor[tasteType.axes.flavor].ko}
+                                </span>
+                                                                {/* Pleasure */}
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                                    tasteType.axes.pleasure === 'S' ? "bg-emerald-100 text-emerald-700" : "bg-emerald-50 text-emerald-600"
+                                )}>
+                                    {tasteType.axes.pleasure} {TASTE_TYPE_LABELS.pleasure[tasteType.axes.pleasure].ko}
+                                </span>
+                                                                {/* Exploration */}
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-[11px] font-medium shrink-0",
+                                    tasteType.axes.exploration === 'P' ? "bg-sky-100 text-sky-700" : "bg-sky-50 text-sky-600"
+                                )}>
+                                    {tasteType.axes.exploration} {TASTE_TYPE_LABELS.exploration[tasteType.axes.exploration].ko}
+                                </span>
+                                <span className="text-gray-400 text-[11px]">-</span>
+                                {/* Subtype */}
+                                <span className="text-[11px] font-medium text-gray-500 shrink-0">
+                                    {tasteType.subtype} {TASTE_TYPE_LABELS.subtype[tasteType.subtype].ko}
+                                </span>
+                            </motion.div>
+                        )}
 
                         {/* Divider */}
-                        <div className="w-full h-px bg-gray-300/50 my-4" />
+                        <div className="w-full h-px bg-gray-300/50 mt-3 mb-5" />
+
+                        {/* Type Name */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.45 }}
+                            className="flex items-center justify-center gap-1"
+                        >
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                {typeName}
+                            </h1>
+                            <button
+                                onClick={() => navigate('/profile/taste-guide')}
+                                className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                            >
+                                <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        </motion.div>
 
                         {/* Tagline */}
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
-                            className="flex-1 flex items-center"
+                            className="mt-1"
                         >
-                            <p className="text-base font-medium text-gray-700 leading-[1.6]">
+                            <p className="text-sm font-medium text-gray-600 leading-[1.7]">
                                 {typeTagline}
                             </p>
                         </motion.div>
