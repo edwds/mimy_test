@@ -1,4 +1,5 @@
-import { X, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown } from 'lucide-react';
+import { X, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown, HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/lib/api';
@@ -44,6 +45,7 @@ interface VsHistoryItem {
 }
 
 export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfileSheetProps) => {
+    const navigate = useNavigate();
     const [isVisible, setIsVisible] = useState(false);
     const [history, setHistory] = useState<VsHistoryItem[]>([]);
     const [hateHistory, setHateHistory] = useState<{ id: number; item: string; selection: 'EAT' | 'NOT_EAT' }[]>([]);
@@ -142,7 +144,19 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                                             </span>
                                         </div>
                                     )}
-                                    <span className="text-xl font-bold text-gray-900 mb-2">{displayName}</span>
+                                    <div className="flex items-center justify-center gap-1 mb-2">
+                                        <span className="text-xl font-bold text-gray-900">{displayName}</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onClose();
+                                                navigate('/profile/taste-guide');
+                                            }}
+                                            className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                                        >
+                                            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </div>
                                     <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                                         {displayTagline}
                                     </h2>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark, Calendar } from 'lucide-react';
+import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark, Calendar, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -455,10 +455,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                         return (
                             <div
-                                className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
+                                className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer relative"
                                 onClick={() => setIsTasteSheetOpen(true)}
                             >
-                                <div>
+                                <div className="flex-1 pr-8">
                                     {tasteType && (
                                         <div className="text-xs font-bold text-primary tracking-wider mb-1">
                                             {tasteType.fullType}
@@ -467,6 +467,16 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     <div className="font-bold text-base text-foreground mb-1">{displayName}</div>
                                     <div className="text-sm text-muted-foreground line-clamp-2">{displayTagline}</div>
                                 </div>
+                                {/* Help button */}
+                                <button
+                                    className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate('/profile/taste-guide');
+                                    }}
+                                >
+                                    <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                                </button>
                             </div>
                         );
                     })()}

@@ -286,6 +286,257 @@ router.get("/recommendations", requireAuth, async (req, res) => {
     }
 });
 
+// GET /similar-taste-lists - Get random similar taste user's ranking lists for feed
+router.get("/similar-taste-lists", requireAuth, async (req, res) => {
+    try {
+        const currentUserId = req.user!.id;
+        const count = parseInt(req.query.count as string) || 3;
+        const listType = req.query.type as string || 'random';
+
+        // 1. Get current user's taste result
+        const currentUser = await db.select({
+            taste_result: users.taste_result
+        }).from(users).where(eq(users.id, currentUserId)).limit(1);
+
+        if (!currentUser.length || !currentUser[0].taste_result) {
+            return res.json([]);
+        }
+
+        const tasteResultObj = currentUser[0].taste_result as { scores?: Record<string, number> };
+        const myTasteResult = tasteResultObj.scores;
+
+        if (!myTasteResult) {
+            return res.json([]);
+        }
+
+        // 2. Find users with rankings (at least 30)
+        const minRankings = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
+
+        const usersWithRankings = await db.select({
+            user_id: users_ranking.user_id,
+            count: sql<number>`count(*)`
+        })
+            .from(users_ranking)
+            .groupBy(users_ranking.user_id)
+            .having(sql`count(*) >= ${minRankings}`);
+
+        const eligibleUserIds = usersWithRankings
+            .map(u => u.user_id)
+            .filter(id => id !== currentUserId);
+
+        if (eligibleUserIds.length === 0) {
+            return res.json([]);
+        }
+
+        // 3. Get candidate users with their taste profiles
+        const candidates = await db.select({
+            id: users.id,
+            nickname: users.nickname,
+            account_id: users.account_id,
+            profile_image: users.profile_image,
+            taste_result: users.taste_result,
+            taste_cluster: users.taste_cluster
+        }).from(users)
+            .where(and(
+                inArray(users.id, eligibleUserIds),
+                isNotNull(users.taste_result)
+            ));
+
+        // 4. Calculate taste match and sort
+        const { calculateTasteMatch } = await import("../utils/match.js");
+
+        const candidatesWithScore = candidates
+            .map(candidate => {
+                const candidateTasteObj = candidate.taste_result as { scores?: Record<string, number> };
+                const candidateTaste = candidateTasteObj?.scores;
+
+                if (!candidateTaste) {
+                    return { ...candidate, taste_match: 0 };
+                }
+
+                const matchScore = calculateTasteMatch(myTasteResult, candidateTaste);
+                return { ...candidate, taste_match: Math.round(matchScore) };
+            })
+            .filter(c => c.taste_match >= 70)
+            .sort((a, b) => b.taste_match - a.taste_match);
+
+        if (candidatesWithScore.length === 0) {
+            return res.json([]);
+        }
+
+        // 5. Randomly select users from top matches
+        const shuffled = candidatesWithScore
+            .slice(0, Math.min(20, candidatesWithScore.length))
+            .sort(() => Math.random() - 0.5)
+            .slice(0, count);
+
+        // 6. Get their lists
+        const results = [];
+
+        for (const user of shuffled) {
+            let selectedType = listType;
+            if (listType === 'random') {
+                const types = ['overall', 'category', 'region'];
+                selectedType = types[Math.floor(Math.random() * types.length)];
+            }
+
+            let listQuery;
+            let listTitle = '';
+            let listValue: string | null = null;
+
+            if (selectedType === 'overall') {
+                listQuery = await db.select({
+                    rank: users_ranking.rank,
+                    shop_id: shops.id,
+                    shop_name: shops.name,
+                    shop_thumbnail: shops.thumbnail_img,
+                    food_kind: shops.food_kind,
+                    address_region: shops.address_region,
+                    review_text: users_ranking.latest_review_text,
+                    review_images: users_ranking.latest_review_images
+                })
+                    .from(users_ranking)
+                    .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                    .where(and(
+                        eq(users_ranking.user_id, user.id),
+                        eq(users_ranking.satisfaction_tier, 2)
+                    ))
+                    .orderBy(users_ranking.rank)
+                    .limit(5);
+
+                listTitle = '전체 랭킹';
+
+            } else if (selectedType === 'category') {
+                const topCategory = await db.select({
+                    food_kind: shops.food_kind,
+                    count: sql<number>`count(*)`
+                })
+                    .from(users_ranking)
+                    .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                    .where(and(
+                        eq(users_ranking.user_id, user.id),
+                        eq(users_ranking.satisfaction_tier, 2),
+                        isNotNull(shops.food_kind)
+                    ))
+                    .groupBy(shops.food_kind)
+                    .orderBy(desc(sql`count(*)`))
+                    .limit(1);
+
+                if (topCategory.length > 0 && topCategory[0].food_kind) {
+                    listValue = topCategory[0].food_kind;
+                    listTitle = `${listValue} 랭킹`;
+
+                    listQuery = await db.select({
+                        rank: users_ranking.rank,
+                        shop_id: shops.id,
+                        shop_name: shops.name,
+                        shop_thumbnail: shops.thumbnail_img,
+                        food_kind: shops.food_kind,
+                        address_region: shops.address_region,
+                        review_text: users_ranking.latest_review_text,
+                        review_images: users_ranking.latest_review_images
+                    })
+                        .from(users_ranking)
+                        .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                        .where(and(
+                            eq(users_ranking.user_id, user.id),
+                            eq(users_ranking.satisfaction_tier, 2),
+                            eq(shops.food_kind, listValue)
+                        ))
+                        .orderBy(users_ranking.rank)
+                        .limit(5);
+                }
+
+            } else if (selectedType === 'region') {
+                const topRegion = await db.select({
+                    address_region: shops.address_region,
+                    count: sql<number>`count(*)`
+                })
+                    .from(users_ranking)
+                    .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                    .where(and(
+                        eq(users_ranking.user_id, user.id),
+                        eq(users_ranking.satisfaction_tier, 2),
+                        isNotNull(shops.address_region)
+                    ))
+                    .groupBy(shops.address_region)
+                    .orderBy(desc(sql`count(*)`))
+                    .limit(1);
+
+                if (topRegion.length > 0 && topRegion[0].address_region) {
+                    listValue = topRegion[0].address_region;
+                    listTitle = `${listValue} 랭킹`;
+
+                    listQuery = await db.select({
+                        rank: users_ranking.rank,
+                        shop_id: shops.id,
+                        shop_name: shops.name,
+                        shop_thumbnail: shops.thumbnail_img,
+                        food_kind: shops.food_kind,
+                        address_region: shops.address_region,
+                        review_text: users_ranking.latest_review_text,
+                        review_images: users_ranking.latest_review_images
+                    })
+                        .from(users_ranking)
+                        .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                        .where(and(
+                            eq(users_ranking.user_id, user.id),
+                            eq(users_ranking.satisfaction_tier, 2),
+                            eq(shops.address_region, listValue)
+                        ))
+                        .orderBy(users_ranking.rank)
+                        .limit(5);
+                }
+            }
+
+            if (listQuery && listQuery.length > 0) {
+                results.push({
+                    id: `${user.id}_${selectedType}_${listValue || 'all'}`,
+                    type: selectedType.toUpperCase(),
+                    title: listTitle,
+                    value: listValue,
+                    user: {
+                        id: user.id,
+                        nickname: user.nickname,
+                        account_id: user.account_id,
+                        profile_image: user.profile_image,
+                        taste_match: user.taste_match
+                    },
+                    shops: listQuery.map(s => ({
+                        id: s.shop_id,
+                        name: s.shop_name,
+                        thumbnail: s.shop_thumbnail,
+                        food_kind: s.food_kind,
+                        region: s.address_region,
+                        rank: s.rank,
+                        review_text: s.review_text,
+                        review_images: s.review_images
+                    }))
+                });
+            }
+        }
+
+        // 7. Calculate shop_user_match_score for all shops
+        const allShopIds = results.flatMap(r => r.shops.map(s => s.id));
+        const matchScoresMap = await getShopMatchScores(allShopIds, currentUserId);
+
+        // Add shop_user_match_score to each shop
+        const enrichedResults = results.map(r => ({
+            ...r,
+            shops: r.shops.map(s => ({
+                ...s,
+                shop_user_match_score: matchScoresMap.get(s.id) ?? null
+            }))
+        }));
+
+        res.json(enrichedResults);
+
+    } catch (error) {
+        console.error("Fetch similar taste lists error:", error);
+        res.status(500).json({ error: "Failed to fetch similar taste lists" });
+    }
+});
+
 // GET /:id (Get User Profile + Context)
 router.get("/:id", async (req, res) => {
     try {

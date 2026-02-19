@@ -8,6 +8,8 @@ import { ContentCard } from '@/components/ContentCard';
 import { VsCard } from '@/components/VsCard';
 import { HateCard } from '@/components/HateCard';
 import { UserRecommendationModule } from '@/components/UserRecommendationModule';
+import { SimilarTasteListCard } from '@/components/SimilarTasteListCard';
+import { FEED_INTERSTITIAL_CONFIG, getInterstitialConfig } from '@/config/feedInterstitials';
 import { User as UserIcon, Bell, PenLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/context/UserContext'; // This line was moved from above useTranslation
@@ -368,6 +370,7 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
     const [hiddenBonusIndices, setHiddenBonusIndices] = useState<Set<number>>(new Set());
     const [banners, setBanners] = useState<any[]>([]);
     const [hideUserRecommendation, setHideUserRecommendation] = useState(false);
+    const [similarTasteLists, setSimilarTasteLists] = useState<any[]>([]);
 
     // Fetch banners
     useEffect(() => {
@@ -385,6 +388,25 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
 
         fetchBanners();
     }, []);
+
+    // Fetch similar taste lists for feed interstitials
+    useEffect(() => {
+        if (!currentUser?.id) return;
+
+        const fetchSimilarTasteLists = async () => {
+            try {
+                const res = await authFetch(`${API_BASE_URL}/api/users/similar-taste-lists?count=${FEED_INTERSTITIAL_CONFIG.similarTasteList.fetchCount}&type=random`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setSimilarTasteLists(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch similar taste lists:', error);
+            }
+        };
+
+        fetchSimilarTasteLists();
+    }, [currentUser?.id, refreshTrigger]);
 
     const handleBannerClick = (banner: any) => {
         switch (banner.action_type) {
@@ -567,18 +589,21 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
 
-                        // Calculate injection index (0-based index of VS card to show)
-                        // Show after 3rd (index 2), 6th (index 5), 9th (index 8) item.
-                        // (index + 1) % 3 === 0
-                        const showBonusCard = (index + 1) % 3 === 0;
-                        const bonusCardIndex = ((index + 1) / 3) - 1;
-                        const bonusItem = interstitialItems[bonusCardIndex];
+                        // Get interstitial config for this position
+                        const interstitial = getInterstitialConfig(index);
 
-                        // Show user recommendation module at position 5 (index 4)
-                        const showUserRecommendation = index === 4 && !hideUserRecommendation;
-                        if (index === 4) {
-                            console.log('[HomeTab] Index 4 reached, showUserRecommendation:', showUserRecommendation, 'hideUserRecommendation:', hideUserRecommendation);
-                        }
+                        // VS/Hate 카드
+                        const bonusItem = interstitial.showBonusCard
+                            ? interstitialItems[interstitial.bonusCardIndex]
+                            : null;
+
+                        // 유저 추천 모듈
+                        const showUserRecommendation = interstitial.showUserRecommendation && !hideUserRecommendation;
+
+                        // 유사 입맛 리스트 카드
+                        const similarTasteList = interstitial.showSimilarTasteList && similarTasteLists.length > 0
+                            ? similarTasteLists[interstitial.similarTasteListIndex % similarTasteLists.length]
+                            : null;
 
                         return (
                             <div key={`${item.id}-${index}`} ref={isLast ? lastElementRef : undefined} className="mb-8">
@@ -598,25 +623,33 @@ export const HomeTab: React.FC<Props> = ({ onWrite, refreshTrigger, isEnabled = 
                                     </div>
                                 )}
 
-                                {showBonusCard && bonusItem && !hiddenBonusIndices.has(bonusCardIndex) && (
+                                {/* Similar Taste List Card */}
+                                {similarTasteList && (
+                                    <div className="mt-8">
+                                        <SimilarTasteListCard list={similarTasteList} />
+                                    </div>
+                                )}
+
+                                {/* VS/Hate Bonus Card */}
+                                {bonusItem && !hiddenBonusIndices.has(interstitial.bonusCardIndex) && (
                                     <div className="mt-8">
                                         {bonusItem.type === 'vs' ? (
                                             <VsCard
                                                 id={bonusItem.id}
                                                 itemA={bonusItem.item_a}
                                                 itemB={bonusItem.item_b}
-                                                index={bonusCardIndex}
+                                                index={interstitial.bonusCardIndex}
                                                 onVote={handleVsVote}
-                                                onClose={() => handleCloseBonus(bonusCardIndex)}
+                                                onClose={() => handleCloseBonus(interstitial.bonusCardIndex)}
                                                 onNext={() => handleNextBonus(bonusItem.id)}
                                             />
                                         ) : (
                                             <HateCard
                                                 id={bonusItem.id}
                                                 item={bonusItem.item}
-                                                index={bonusCardIndex}
+                                                index={interstitial.bonusCardIndex}
                                                 onVote={handleHateVote}
-                                                onClose={() => handleCloseBonus(bonusCardIndex)}
+                                                onClose={() => handleCloseBonus(interstitial.bonusCardIndex)}
                                                 onNext={() => handleNextBonus(bonusItem.id)}
                                             />
                                         )}

@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
 import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
+import { HelpCircle } from 'lucide-react';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -170,11 +171,17 @@ export const QuizResult = () => {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
-                                className="mb-4"
+                                className="mb-4 flex items-center justify-center gap-2"
                             >
                                 <span className="text-4xl font-black tracking-[0.2em] text-primary">
                                     {tasteType.fullType}
                                 </span>
+                                <button
+                                    onClick={() => navigate('/profile/taste-guide')}
+                                    className="p-1.5 rounded-full hover:bg-white/50 transition-colors"
+                                >
+                                    <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                                </button>
                             </motion.div>
                         )}
 

@@ -34,6 +34,7 @@ import { ManageHateScreen } from '@/screens/profile/ManageHateScreen';
 import { GroupRegistrationScreen } from '@/screens/profile/GroupRegistrationScreen';
 import { NeighborhoodRegistrationScreen } from '@/screens/profile/NeighborhoodRegistrationScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
+import { TasteTypeGuideScreen } from '@/screens/profile/TasteTypeGuideScreen';
 import { ContentDetailScreen } from '@/screens/content/ContentDetailScreen';
 import { ContentListScreen } from '@/screens/content/ContentListScreen';
 import { NotificationScreen } from '@/screens/notification/NotificationScreen';
@@ -128,6 +129,7 @@ function AppContent() {
                                 <Route path="/profile/manage/hate" element={<ProtectedRoute><ManageHateScreen /></ProtectedRoute>} />
                                 <Route path="/profile/group" element={<ProtectedRoute><GroupRegistrationScreen /></ProtectedRoute>} />
                                 <Route path="/profile/neighborhood" element={<ProtectedRoute><NeighborhoodRegistrationScreen /></ProtectedRoute>} />
+                                <Route path="/profile/taste-guide" element={<ProtectedRoute><TasteTypeGuideScreen /></ProtectedRoute>} />
                                 <Route path="/content/detail" element={<ProtectedRoute><ContentDetailScreen /></ProtectedRoute>} />
                                 <Route path="/content/list" element={<ProtectedRoute><ContentListScreen /></ProtectedRoute>} />
                                 <Route path="/notifications" element={<ProtectedRoute><NotificationScreen /></ProtectedRoute>} />

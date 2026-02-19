@@ -5,7 +5,10 @@
 **Mimy**는 "My Michelin for Me"의 약자로, 사용자의 미식 성향을 분석하여 개인화된 맛집 추천을 제공하는 소셜 미식 플랫폼입니다.
 
 ### 핵심 차별화 요소
-- **128개 미식 클러스터**: 7개 축(boldness, acidity, richness, experimental, spiciness, sweetness, umami) 기반 사용자 분류
+- **32유형 MBTI 스타일 입맛 분류**: 7개 축 기반 → 4축 파생 + 안정성 지표 (예: HASP-A "선도자형 미식가")
+  - 기존 128개 클러스터 + 7축 점수는 매칭 알고리즘용으로 유지
+  - UI에서는 32유형 코드와 프로필 이름 표시
+  - 상세: [TASTE_TYPE.md](TASTE_TYPE.md)
 - **Shop User Match Score**: 0-100% 매칭 점수로 맛집 추천 (신뢰도 기반 알고리즘)
 - **소셜 기능**: 리뷰, 팔로우, 좋아요, 댓글, 밸런스 게임
 - **개인화된 랭킹**: Tier별 맛집 관리 (Good/OK/Bad)
@@ -555,6 +558,11 @@ npm run preview      # 빌드 결과 미리보기
   - GPS 기반 동네 등록
   - 소속별 리더보드
   - 한국 행정구역 파싱 로직
+- **[TASTE_TYPE.md](TASTE_TYPE.md)** - 32유형 입맛 분류 시스템 가이드
+  - MBTI 스타일 4축 + 서브타입 분류
+  - 16 기본 유형 프로필 (한/영)
+  - 7축 점수 → 32유형 변환 공식
+  - UI 적용 위치 및 마이그레이션 가이드
 
 ### 외부 서비스
 - [Neon PostgreSQL](https://neon.tech/docs)
@@ -601,11 +609,30 @@ npm run preview      # 빌드 결과 미리보기
 
 ---
 
-**마지막 업데이트**: 2026-02-11
-**버전**: v2.4
+**마지막 업데이트**: 2026-02-19
+**버전**: v2.5
 **작성자**: Claude Code (Opus 4.5)
 
 ## 변경 이력
+
+### v2.5 (2026-02-19)
+- ✅ 32유형 MBTI 스타일 입맛 분류 시스템 구현
+  - 7축 점수 → 4축 파생 (Intensity, Flavor, Pleasure, Exploration)
+  - 안정성 지표로 서브타입 결정 (-A 확신형 / -T 탐구형)
+  - 16 기본 유형 × 2 서브타입 = 32유형
+- ✅ UI 적용
+  - 퀴즈 결과: 타입 코드 대형 표시 + 프로필 이름/설명
+  - 프로필: 타입 배지 및 프로필 정보
+  - 콘텐츠 카드: 닉네임 옆 프로필 이름 표시
+  - 리더보드: 타입 배지
+- ✅ 기존 사용자 마이그레이션
+  - 1,177명 사용자 taste_result.tasteType 필드 추가
+  - 하위 호환: tasteType 없는 경우 scores에서 실시간 계산
+- 📝 파일 구조:
+  - `server/utils/tasteType.ts` - 서버 타입 변환 유틸리티 (신규)
+  - `src/lib/tasteType.ts` - 프론트엔드 타입 유틸리티 (신규)
+  - `server/scripts/migrate-taste-types.ts` - 마이그레이션 스크립트 (신규)
+  - `TASTE_TYPE.md` - 시스템 문서 (신규)
 
 ### v2.4 (2026-02-11)
 - ✅ 타임라인 뷰 주간/월간 전환 기능 구현

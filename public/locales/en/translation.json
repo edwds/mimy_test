@@ -240,6 +240,10 @@
             "subtitle": "Recently active users with similar taste preferences",
             "match": "{{percent}}% match"
         },
+        "similar_taste_list": {
+            "match": "{{percent}}% match",
+            "view_all": "View all {{count}}"
+        },
         "empty": "No contents yet.",
         "coming_soon": "Coming soon",
         "end": "You've seen it all."
