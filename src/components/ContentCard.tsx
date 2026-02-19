@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Send, MessageCircle, MoreHorizontal, Link as LinkIcon, Youtube, Instagram, Twitter } from 'lucide-react';
 import { cn, appendJosa, formatVisitDate, formatFullDateTime, calculateTasteMatch, getTasteBadgeStyle } from '@/lib/utils';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
@@ -528,8 +529,12 @@ export const ContentCard = ({
                         <span className="font-bold text-base text-gray-900 leading-tight truncate shrink-0">
                             {user.nickname}
                         </span>
-                        {user.cluster_name && (
+                        {user.taste_result?.scores && (
                             (() => {
+                                const tasteType = getTasteType(user.taste_result);
+                                if (!tasteType) return null;
+
+                                const profile = getTasteTypeProfile(tasteType, 'ko');
                                 const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
                                     ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
                                     : null;
@@ -539,7 +544,7 @@ export const ContentCard = ({
                                         "text-[11px] font-medium shrink-0",
                                         getTasteBadgeStyle(matchScore)
                                     )}>
-                                        {user.cluster_name}
+                                        {profile?.name || tasteType.fullType}
                                     </span>
                                 );
                             })()
