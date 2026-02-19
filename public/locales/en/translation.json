@@ -646,6 +646,35 @@
             "skip_relay": "Maybe Later"
         }
     },
+    "taste_type": {
+        "title": "Taste Type",
+        "axes": {
+            "intensity": {
+                "name": "Intensity",
+                "L": "Mild",
+                "H": "Bold"
+            },
+            "flavor": {
+                "name": "Flavor",
+                "D": "Deep",
+                "A": "Fresh"
+            },
+            "pleasure": {
+                "name": "Pleasure",
+                "U": "Savory",
+                "S": "Sweet"
+            },
+            "exploration": {
+                "name": "Exploration",
+                "F": "Familiar",
+                "P": "Adventurous"
+            }
+        },
+        "subtype": {
+            "A": "Assertive",
+            "T": "Turbulent"
+        }
+    },
     "relay": {
         "title": "Quick Record",
         "subtitle": "Swipe to record restaurants",

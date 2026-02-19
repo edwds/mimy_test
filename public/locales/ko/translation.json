@@ -711,6 +711,35 @@
         "label_neutral": "상관없어요",
         "label_like": "완전 내 취향"
     },
+    "taste_type": {
+        "title": "미식 유형",
+        "axes": {
+            "intensity": {
+                "name": "강도",
+                "L": "담백한",
+                "H": "강렬한"
+            },
+            "flavor": {
+                "name": "맛 방향",
+                "D": "깊은맛",
+                "A": "상큼한"
+            },
+            "pleasure": {
+                "name": "쾌감",
+                "U": "감칠맛",
+                "S": "달콤한"
+            },
+            "exploration": {
+                "name": "탐험",
+                "F": "익숙한",
+                "P": "도전적"
+            }
+        },
+        "subtype": {
+            "A": "확신형",
+            "T": "탐구형"
+        }
+    },
     "write_guide": {
         "step1": {
             "title": "방문한 곳을 찾아서",

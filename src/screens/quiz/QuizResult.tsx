@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
+import { getTasteType } from '@/lib/tasteType';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -24,6 +25,9 @@ export const QuizResult = () => {
     // Fallback if accessed directly without state
     const clusterName = result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
     const clusterTagline = result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
+
+    // Get 32-type MBTI-style taste type
+    const tasteType = getTasteType(result);
 
     useEffect(() => {
         // Show content after a brief delay to ensure proper rendering
@@ -159,12 +163,26 @@ export const QuizResult = () => {
                             {t('quiz.result.title', { defaultValue: '당신의 입맛은' })}
                         </motion.p>
 
+                        {/* Taste Type Code */}
+                        {tasteType && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
+                                className="mb-4"
+                            >
+                                <span className="text-4xl font-black tracking-[0.2em] text-primary">
+                                    {tasteType.fullType}
+                                </span>
+                            </motion.div>
+                        )}
+
                         {/* Cluster Name */}
                         <motion.h1
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 }}
-                            className="text-3xl font-bold text-gray-900 mb-6"
+                            className="text-2xl font-bold text-gray-900 mb-6"
                         >
                             {clusterName}
                         </motion.h1>

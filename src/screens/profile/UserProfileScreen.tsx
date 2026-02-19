@@ -15,6 +15,7 @@ import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ProfileHeader } from '@/components/ProfileHeader';
+import { getTasteType } from '@/lib/tasteType';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -517,28 +518,35 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     </div>
 
                     {/* Taste Cluster & Matching Score */}
-                    {user?.cluster_name && (
-                        <div className="flex gap-2">
-                            <div
-                                className="flex-1 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
-                                onClick={() => setIsTasteSheetOpen(true)}
-                            >
-                                <div>
-                                    <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                    <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                    {user?.cluster_name && (() => {
+                        const tasteType = getTasteType((user as any).taste_result);
+                        return (
+                            <div className="flex gap-2">
+                                <div
+                                    className="flex-1 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
+                                    onClick={() => setIsTasteSheetOpen(true)}
+                                >
+                                    <div>
+                                        {tasteType && (
+                                            <div className="text-xs font-bold text-primary tracking-wider mb-1">
+                                                {tasteType.fullType}
+                                            </div>
+                                        )}
+                                        <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
+                                        <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                    </div>
                                 </div>
+
+                                {/* Matching Score Badge */}
+                                {matchingScore !== null && (
+                                    <div className="flex flex-col items-center justify-center p-2 bg-pink-50 rounded-xl min-w-[80px]">
+                                        <span className="text-xs text-pink-500 font-bold uppercase">{t('profile.match')}</span>
+                                        <span className="text-xl font-black text-pink-600">{matchingScore}%</span>
+                                    </div>
+                                )}
                             </div>
-
-
-                            {/* Matching Score Badge */}
-                            {matchingScore !== null && (
-                                <div className="flex flex-col items-center justify-center p-2 bg-pink-50 rounded-xl min-w-[80px]">
-                                    <span className="text-xs text-pink-500 font-bold uppercase">{t('profile.match')}</span>
-                                    <span className="text-xl font-black text-pink-600">{matchingScore}%</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Tabs */}

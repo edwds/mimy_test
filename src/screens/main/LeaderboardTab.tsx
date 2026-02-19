@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
+import { getTasteType } from '@/lib/tasteType';
 
 
 interface LeaderboardItem {
@@ -287,20 +288,21 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                                 <h3 className="font-bold text-base truncate">
                                                     {item.user.nickname || "User"}
                                                 </h3>
-                                                {item.user.cluster_name && (
+                                                {item.user.taste_result?.scores && (
                                                     (() => {
+                                                        const tasteType = getTasteType(item.user.taste_result);
                                                         const matchScore = (currentUser?.taste_result?.scores && item.user.taste_result?.scores)
                                                             ? calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores)
                                                             : null;
 
-                                                        return (
+                                                        return tasteType ? (
                                                             <span className={cn(
-                                                                "text-[10px] truncate flex-shrink-0 transition-colors px-1.5 py-0.5 rounded-md",
+                                                                "text-[10px] truncate flex-shrink-0 transition-colors px-1.5 py-0.5 rounded-md font-bold tracking-wider",
                                                                 getTasteBadgeStyle(matchScore)
                                                             )}>
-                                                                {item.user.cluster_name}
+                                                                {tasteType.fullType}
                                                             </span>
-                                                        );
+                                                        ) : null;
                                                     })()
                                                 )}
                                             </div>

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
 import { RankingBadge } from '@/components/RankingBadge';
+import { getTasteType } from '@/lib/tasteType';
 
 type ProfileTabType = 'timeline' | 'content' | 'list' | 'saved';
 
@@ -446,17 +447,25 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     </div>
 
                     {/* Taste card */}
-                    {user.cluster_name && (
-                        <div
-                            className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
-                            onClick={() => setIsTasteSheetOpen(true)}
-                        >
-                            <div>
-                                <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                    {user.cluster_name && (() => {
+                        const tasteType = getTasteType((user as any).taste_result);
+                        return (
+                            <div
+                                className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
+                                onClick={() => setIsTasteSheetOpen(true)}
+                            >
+                                <div>
+                                    {tasteType && (
+                                        <div className="text-xs font-bold text-primary tracking-wider mb-1">
+                                            {tasteType.fullType}
+                                        </div>
+                                    )}
+                                    <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
+                                    <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Tabs */}

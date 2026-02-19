@@ -3,6 +3,7 @@ import { clusters, quiz_matches } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { MATCH_DATA } from '../data/matchData.js';
 import CLUSTER_DATA from '../data/cluster.json' with { type: "json" };
+import { calculateTasteType, type TasteType } from './tasteType.js';
 // Note: JSON import in ESM might require assertions or just default import if handled by node. 
 // Standard Node ESM for JSON: import data from './data.json' with { type: 'json' };
 // But TS might complain. 
@@ -36,6 +37,7 @@ export interface QuizResult {
         cluster_tagline: string;
     } | null;
     scores: Record<string, number>;
+    tasteType: TasteType; // 32-type MBTI-style classification
 }
 
 // Axis mapping based on frontend questions
@@ -193,10 +195,15 @@ export class QuizManager {
             console.error(`[QuizManager] ID ${clusterId} has no cluster data in DB.`);
         }
 
+        // Calculate 32-type MBTI-style classification
+        const tasteType = calculateTasteType(scoresMap);
+        console.log(`[QuizManager] Taste Type: ${tasteType.fullType} (stability: ${tasteType.stabilityScore})`);
+
         return {
             clusterId,
             clusterData: clusterInfo,
-            scores: scoresMap
+            scores: scoresMap,
+            tasteType
         };
     }
 }

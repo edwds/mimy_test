@@ -2,6 +2,7 @@ import { X, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown } from 'luci
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import { getTasteType } from '@/lib/tasteType';
 
 
 
@@ -123,8 +124,19 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                 {/* Content Container */}
                 <div className="flex-1 flex flex-col p-8 z-10 relative min-h-0">
 
-                    {/* Main Content: Name & Tagline */}
+                    {/* Main Content: Type Code, Name & Tagline */}
                     <div className="flex flex-col justify-center text-center shrink-0">
+                        {/* Taste Type Badge */}
+                        {data?.scores && (() => {
+                            const tasteType = getTasteType({ scores: data.scores });
+                            return tasteType ? (
+                                <div className="mb-3">
+                                    <span className="inline-block px-4 py-1.5 bg-primary/10 rounded-full text-sm font-bold text-primary tracking-wider">
+                                        {tasteType.fullType}
+                                    </span>
+                                </div>
+                            ) : null;
+                        })()}
                         <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
                         <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                             {data?.cluster_tagline || 'Discovering your unique taste journey.'}
