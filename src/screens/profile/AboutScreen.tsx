@@ -735,7 +735,7 @@ const QuizToTasteDemo = ({ t }: { t: any }) => {
     const [showSideCards, setShowSideCards] = useState(false);
     const [startFlow, setStartFlow] = useState(false);
 
-    const tasteProfiles = t('about.demo.taste_profiles', { returnObjects: true }) as { name: string; tagline: string }[];
+    const tasteProfiles = t('about.demo.taste_profiles', { returnObjects: true }) as { code: string; name: string; tagline: string }[];
 
     // 퀴즈 질문 3개 선택 (다양한 축에서)
     const demoQuestions = [
@@ -982,8 +982,9 @@ const QuizToTasteDemo = ({ t }: { t: any }) => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[1]?.name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[1]?.tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{tasteProfiles[1]?.code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{tasteProfiles[1]?.name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{tasteProfiles[1]?.tagline}</span>
                             </motion.div>
 
                             {/* 중앙 카드 */}
@@ -997,8 +998,9 @@ const QuizToTasteDemo = ({ t }: { t: any }) => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-xl flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[0]?.name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[0]?.tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{tasteProfiles[0]?.code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{tasteProfiles[0]?.name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{tasteProfiles[0]?.tagline}</span>
                             </motion.div>
 
                             {/* 오른쪽 카드 */}
@@ -1009,8 +1011,9 @@ const QuizToTasteDemo = ({ t }: { t: any }) => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{tasteProfiles[2]?.name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{tasteProfiles[2]?.tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{tasteProfiles[2]?.code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{tasteProfiles[2]?.name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{tasteProfiles[2]?.tagline}</span>
                             </motion.div>
 
                             {/* 추가 플로우 카드들 */}
@@ -1020,8 +1023,9 @@ const QuizToTasteDemo = ({ t }: { t: any }) => {
                                     className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                     style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                                 >
-                                    <span className="text-lg font-bold text-gray-900 mb-2">{profile.name}</span>
-                                    <span className="text-sm text-gray-600 leading-relaxed">{profile.tagline}</span>
+                                    <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{profile.code}</span>
+                                    <span className="text-base font-bold text-gray-900 mb-1">{profile.name}</span>
+                                    <span className="text-xs text-gray-600 leading-relaxed">{profile.tagline}</span>
                                 </div>
                             ))}
                         </motion.div>

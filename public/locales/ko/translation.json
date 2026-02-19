@@ -529,15 +529,15 @@
                 "users": [
                     {
                         "name": "미식가_제이",
-                        "cluster": "화끈한 마라샹궈"
+                        "cluster": "선도자형 HASP-A"
                     },
                     {
                         "name": "맛집헌터",
-                        "cluster": "진지한 미식가"
+                        "cluster": "실천자형 HDUF-T"
                     },
                     {
                         "name": "푸디_린",
-                        "cluster": "상큼한 탐험가"
+                        "cluster": "탐색자형 LAUP-A"
                     }
                 ],
                 "shops": [
@@ -584,24 +584,34 @@
             },
             "taste_profiles": [
                 {
-                    "name": "화끈한 마라샹궈",
-                    "tagline": "입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다."
+                    "code": "HASP-A",
+                    "name": "선도자형 미식가",
+                    "tagline": "강렬하고 생동감 있는 맛을 앞서 경험한다. 새로운 조합을 이끄는 타입이다."
                 },
                 {
-                    "name": "고독한 평양냉면",
-                    "tagline": "슴슴함 속에 은은하게 느껴지는 감칠맛만을 즐기는 미식가입니다."
+                    "code": "LDUF-T",
+                    "name": "보존자형 미식가",
+                    "tagline": "익숙하고 깊은 맛을 안정적으로 즐긴다. 한 번 마음에 든 메뉴를 꾸준히 찾는 편이다."
                 },
                 {
-                    "name": "달콤한 탕후루",
-                    "tagline": "강렬한 단맛과 독특한 식감을 가진 트렌디한 간식을 찾아다닙니다."
+                    "code": "LASF-A",
+                    "name": "감각자형 미식가",
+                    "tagline": "상큼하고 달콤한 조합을 즐긴다. 밝고 경쾌한 취향을 가졌다."
                 },
                 {
-                    "name": "상큼한 탐험가",
-                    "tagline": "산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다."
+                    "code": "HDUF-A",
+                    "name": "실천자형 미식가",
+                    "tagline": "강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다."
                 },
                 {
-                    "name": "진지한 미식가",
-                    "tagline": "깊은 풍미와 묵직한 질감, 감칠맛이 어우러진 요리를 선호합니다."
+                    "code": "LAUP-T",
+                    "name": "탐색자형 미식가",
+                    "tagline": "가볍고 산뜻한 메뉴를 중심으로 새로운 맛을 시도한다."
+                },
+                {
+                    "code": "HDSF-A",
+                    "name": "집중자형 미식가",
+                    "tagline": "강렬한 단맛과 묵직함에 몰입한다. 확실한 쾌감을 추구한다."
                 }
             ],
             "map": {
@@ -610,21 +620,21 @@
                         "name": "스시 오마카세",
                         "category": "일식",
                         "reviewer": "미식가김철수",
-                        "cluster": "감칠맛 러버",
+                        "cluster": "보존자형 LDUF-A",
                         "review": "신선한 재료와 장인의 손길이 느껴지는 곳. 특히 우니가 일품!"
                     },
                     {
                         "name": "라멘 이치란",
                         "category": "일식",
                         "reviewer": "라멘덕후",
-                        "cluster": "진한맛 탐험가",
+                        "cluster": "추적자형 HDUP-T",
                         "review": "진한 돈코츠 육수가 끝내줍니다. 면발도 딱 좋아요."
                     },
                     {
                         "name": "트라토리아 베네",
                         "category": "이탈리안",
                         "reviewer": "파스타매니아",
-                        "cluster": "산뜻한 맛 추구",
+                        "cluster": "감각자형 LASF-A",
                         "review": "정통 이탈리안 파스타를 맛볼 수 있는 숨은 맛집!"
                     }
                 ],
@@ -644,55 +654,55 @@
                 "company_users": [
                     {
                         "nickname": "미식가김대리",
-                        "cluster": "감칠맛 러버"
+                        "cluster": "보존자형 LDUF-A"
                     },
                     {
                         "nickname": "맛집탐험가",
-                        "cluster": "진한맛 탐험가"
+                        "cluster": "추적자형 HDUP-T"
                     },
                     {
                         "nickname": "오마카세홀릭",
-                        "cluster": "산뜻한 맛 추구"
+                        "cluster": "감각자형 LASF-A"
                     },
                     {
                         "nickname": "라멘덕후",
-                        "cluster": "균형잡힌 미식가"
+                        "cluster": "실천자형 HDUF-T"
                     }
                 ],
                 "neighborhood_users": [
                     {
                         "nickname": "판교맛집러",
-                        "cluster": "진한맛 탐험가"
+                        "cluster": "선도자형 HASP-A"
                     },
                     {
                         "nickname": "분당미식가",
-                        "cluster": "감칠맛 러버"
+                        "cluster": "보존자형 LDUF-T"
                     },
                     {
                         "nickname": "성남푸드헌터",
-                        "cluster": "산뜻한 맛 추구"
+                        "cluster": "탐색자형 LAUP-A"
                     },
                     {
                         "nickname": "야탑동먹방",
-                        "cluster": "균형잡힌 미식가"
+                        "cluster": "조율자형 HASF-T"
                     }
                 ],
                 "overall_users": [
                     {
                         "nickname": "전국맛집왕",
-                        "cluster": "감칠맛 러버"
+                        "cluster": "개척자형 HAUP-A"
                     },
                     {
                         "nickname": "미슐랭헌터",
-                        "cluster": "진한맛 탐험가"
+                        "cluster": "연구자형 LDUP-T"
                     },
                     {
                         "nickname": "푸드크리틱",
-                        "cluster": "산뜻한 맛 추구"
+                        "cluster": "정밀자형 HAUF-A"
                     },
                     {
                         "nickname": "오마카세마스터",
-                        "cluster": "균형잡힌 미식가"
+                        "cluster": "집중자형 HDSF-T"
                     }
                 ]
             }
@@ -775,7 +785,7 @@
             "placeholder": "방문 후기를 적어주세요...",
             "review_text": "오마카세가 정말 신선하고 맛있었어요! 특히 중트로가 최고였습니다.",
             "username": "미식가123",
-            "cluster": "담백 러버",
+            "cluster": "보존자형 LDUF-A",
             "visited_text": "스시 오마카세를 오늘 방문",
             "captions": [
                 "오도로?",

@@ -181,7 +181,7 @@
             "placeholder": "Write about your visit...",
             "review_text": "The omakase was so fresh and delicious! The chutoro was especially amazing.",
             "username": "FoodLover123",
-            "cluster": "Clean Flavor",
+            "cluster": "Preserver LDUF-A",
             "visited_text": "Visited Sushi Omakase today",
             "captions": ["Otoro?", "Sushi Set", "Matcha"]
         }
@@ -560,9 +560,9 @@
         "demo": {
             "feed": {
                 "users": [
-                    { "name": "Foodie_Jay", "cluster": "Spicy Malatang" },
-                    { "name": "TasteHunter", "cluster": "Serious Gourmet" },
-                    { "name": "Foodie_Lynn", "cluster": "Fresh Explorer" }
+                    { "name": "Foodie_Jay", "cluster": "Trendsetter HASP-A" },
+                    { "name": "TasteHunter", "cluster": "Practitioner HDUF-T" },
+                    { "name": "Foodie_Lynn", "cluster": "Explorer LAUP-A" }
                 ],
                 "shops": [
                     { "name": "Sushi Omakase", "address": "Apgujeong-ro, Gangnam", "review": "Lunch here today! The omakase course was amazing. Especially the otoro..." },
@@ -595,17 +595,18 @@
                 "dislike": "Not for me..."
             },
             "taste_profiles": [
-                { "name": "Spicy Malatang", "tagline": "Enjoys exotic dishes with numbing spice and bold, impactful flavors." },
-                { "name": "Subtle Cold Noodles", "tagline": "A gourmet who appreciates subtle umami in understated flavors." },
-                { "name": "Sweet Tanghulu", "tagline": "Seeks trendy snacks with intense sweetness and unique textures." },
-                { "name": "Fresh Explorer", "tagline": "Enjoys experimental dishes with balanced acidity and umami." },
-                { "name": "Serious Gourmet", "tagline": "Prefers dishes with deep flavors, rich textures, and umami." }
+                { "code": "HASP-A", "name": "The Trendsetter", "tagline": "Experiences vibrant, intense flavors first. Leads in new combinations." },
+                { "code": "LDUF-T", "name": "The Preserver", "tagline": "Enjoys familiar, deep flavors consistently. Once a favorite is found, they stick with it." },
+                { "code": "LASF-A", "name": "The Sensualist", "tagline": "Enjoys fresh and sweet combinations. Has a bright, cheerful palate." },
+                { "code": "HDUF-A", "name": "The Practitioner", "tagline": "Prefers strong, heavy flavors. Has clear, unwavering tastes." },
+                { "code": "LAUP-T", "name": "The Explorer", "tagline": "Tries new flavors centered on light, fresh dishes." },
+                { "code": "HDSF-A", "name": "The Concentrator", "tagline": "Immerses in intense sweetness and richness. Seeks definite pleasure." }
             ],
             "map": {
                 "shops": [
-                    { "name": "Sushi Omakase", "category": "Japanese", "reviewer": "GourmetKim", "cluster": "Umami Lover", "review": "You can feel the fresh ingredients and craftmanship. The uni was superb!" },
-                    { "name": "Ramen Ichiran", "category": "Japanese", "reviewer": "RamenFan", "cluster": "Rich Flavor Explorer", "review": "The rich tonkotsu broth is amazing. Perfect noodle texture too." },
-                    { "name": "Trattoria Bene", "category": "Italian", "reviewer": "PastaManiac", "cluster": "Fresh Taste Seeker", "review": "A hidden gem for authentic Italian pasta!" }
+                    { "name": "Sushi Omakase", "category": "Japanese", "reviewer": "GourmetKim", "cluster": "Preserver LDUF-A", "review": "You can feel the fresh ingredients and craftmanship. The uni was superb!" },
+                    { "name": "Ramen Ichiran", "category": "Japanese", "reviewer": "RamenFan", "cluster": "Pursuer HDUP-T", "review": "The rich tonkotsu broth is amazing. Perfect noodle texture too." },
+                    { "name": "Trattoria Bene", "category": "Italian", "reviewer": "PastaManiac", "cluster": "Sensualist LASF-A", "review": "A hidden gem for authentic Italian pasta!" }
                 ],
                 "address": "Pangyo-yeok-ro, Bundang-gu, Seongnam",
                 "expected_rating": "Expected Rating",
@@ -621,22 +622,22 @@
                     "overall": "Overall"
                 },
                 "company_users": [
-                    { "nickname": "GourmetManager", "cluster": "Umami Lover" },
-                    { "nickname": "TasteExplorer", "cluster": "Rich Flavor Explorer" },
-                    { "nickname": "OmakaseAddict", "cluster": "Fresh Taste Seeker" },
-                    { "nickname": "RamenFanatic", "cluster": "Balanced Gourmet" }
+                    { "nickname": "GourmetManager", "cluster": "Preserver LDUF-A" },
+                    { "nickname": "TasteExplorer", "cluster": "Pursuer HDUP-T" },
+                    { "nickname": "OmakaseAddict", "cluster": "Sensualist LASF-A" },
+                    { "nickname": "RamenFanatic", "cluster": "Practitioner HDUF-T" }
                 ],
                 "neighborhood_users": [
-                    { "nickname": "PangyoFoodie", "cluster": "Rich Flavor Explorer" },
-                    { "nickname": "BundangGourmet", "cluster": "Umami Lover" },
-                    { "nickname": "SeongnamHunter", "cluster": "Fresh Taste Seeker" },
-                    { "nickname": "YatapMukbang", "cluster": "Balanced Gourmet" }
+                    { "nickname": "PangyoFoodie", "cluster": "Trendsetter HASP-A" },
+                    { "nickname": "BundangGourmet", "cluster": "Preserver LDUF-T" },
+                    { "nickname": "SeongnamHunter", "cluster": "Explorer LAUP-A" },
+                    { "nickname": "YatapMukbang", "cluster": "Harmonizer HASF-T" }
                 ],
                 "overall_users": [
-                    { "nickname": "NationFoodKing", "cluster": "Umami Lover" },
-                    { "nickname": "MichelinHunter", "cluster": "Rich Flavor Explorer" },
-                    { "nickname": "FoodCritic", "cluster": "Fresh Taste Seeker" },
-                    { "nickname": "OmakaseMaster", "cluster": "Balanced Gourmet" }
+                    { "nickname": "NationFoodKing", "cluster": "Pioneer HAUP-A" },
+                    { "nickname": "MichelinHunter", "cluster": "Researcher LDUP-T" },
+                    { "nickname": "FoodCritic", "cluster": "Precisionist HAUF-A" },
+                    { "nickname": "OmakaseMaster", "cluster": "Concentrator HDSF-T" }
                 ]
             }
         }

@@ -8,14 +8,14 @@ import "@maptiler/sdk/dist/maptiler-sdk.css";
 import { useTranslation } from 'react-i18next';
 import { QUESTIONS } from '@/data/quiz';
 
-// 클러스터 데이터 (server/data/cluster.json에서 선별)
-const DEMO_CLUSTERS = [
-    { name: '상큼한 탐험가', tagline: '단맛과 강한 자극은 피하되, 산미와 감칠맛이 어우러진 새롭고 실험적인 메뉴를 즐깁니다.' },
-    { name: '달콤한 솜사탕', tagline: '다른 복잡한 맛이나 자극은 필요 없고, 익숙하고 가벼운 식감에 단순하고 명확한 단맛만을 즐깁니다.' },
-    { name: '진지한 미식가', tagline: '가벼운 신맛이나 단맛은 피하고, 깊은 풍미와 묵직한 질감, 그리고 감칠맛이 어우러진 요리를 선호합니다.' },
-    { name: '화끈한 마라샹궈', tagline: '단맛과 감칠맛보다는, 입안이 얼얼할 정도로 맵고 묵직하며 강렬한 타격감을 주는 이색 요리를 즐깁니다.' },
-    { name: '침착한 중용자', tagline: '어느 한 가지 맛에 치우치지 않고 모든 지표가 균형을 이루는 무난하고 조화로운 맛을 선호합니다.' },
-    { name: '새콤달콤 탕수육', tagline: '매운맛이나 모험은 꺼리지만, 묵직한 소스에 강한 산미와 단맛, 감칠맛이 어우러진 대중적인 맛을 좋아합니다.' },
+// 32유형 MBTI 스타일 입맛 프로필 (src/lib/tasteType.ts의 TASTE_TYPE_PROFILES에서 선별)
+const DEMO_TASTE_TYPES = [
+    { code: 'HASP-A', name: '선도자형 미식가', tagline: '강렬하고 생동감 있는 맛을 앞서 경험한다. 새로운 조합을 이끄는 타입이다.' },
+    { code: 'LDUF-T', name: '보존자형 미식가', tagline: '익숙하고 깊은 맛을 안정적으로 즐긴다. 한 번 마음에 든 메뉴를 꾸준히 찾는 편이다.' },
+    { code: 'LASF-A', name: '감각자형 미식가', tagline: '상큼하고 달콤한 조합을 즐긴다. 밝고 경쾌한 취향을 가졌다.' },
+    { code: 'HDUF-A', name: '실천자형 미식가', tagline: '강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다.' },
+    { code: 'LAUP-T', name: '탐색자형 미식가', tagline: '가볍고 산뜻한 메뉴를 중심으로 새로운 맛을 시도한다.' },
+    { code: 'HDSF-A', name: '집중자형 미식가', tagline: '강렬한 단맛과 묵직함에 몰입한다. 확실한 쾌감을 추구한다.' },
 ];
 
 // ============================================
@@ -278,8 +278,9 @@ const QuizToTasteDemo = () => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{DEMO_CLUSTERS[1].name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{DEMO_CLUSTERS[1].tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{DEMO_TASTE_TYPES[1].code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{DEMO_TASTE_TYPES[1].name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{DEMO_TASTE_TYPES[1].tagline}</span>
                             </motion.div>
 
                             {/* 중앙 카드 - 뿅 */}
@@ -293,8 +294,9 @@ const QuizToTasteDemo = () => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-xl flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{DEMO_CLUSTERS[0].name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{DEMO_CLUSTERS[0].tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{DEMO_TASTE_TYPES[0].code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{DEMO_TASTE_TYPES[0].name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{DEMO_TASTE_TYPES[0].tagline}</span>
                             </motion.div>
 
                             {/* 오른쪽 카드 - 디졸브 */}
@@ -305,19 +307,21 @@ const QuizToTasteDemo = () => {
                                 className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                 style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                             >
-                                <span className="text-lg font-bold text-gray-900 mb-2">{DEMO_CLUSTERS[2].name}</span>
-                                <span className="text-sm text-gray-600 leading-relaxed">{DEMO_CLUSTERS[2].tagline}</span>
+                                <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{DEMO_TASTE_TYPES[2].code}</span>
+                                <span className="text-base font-bold text-gray-900 mb-1">{DEMO_TASTE_TYPES[2].name}</span>
+                                <span className="text-xs text-gray-600 leading-relaxed">{DEMO_TASTE_TYPES[2].tagline}</span>
                             </motion.div>
 
                             {/* 추가 플로우 카드들 - 처음부터 렌더링 (레이아웃 변경 방지) */}
-                            {[...DEMO_CLUSTERS, ...DEMO_CLUSTERS, ...DEMO_CLUSTERS, ...DEMO_CLUSTERS].map((profile, i) => (
+                            {[...DEMO_TASTE_TYPES, ...DEMO_TASTE_TYPES, ...DEMO_TASTE_TYPES, ...DEMO_TASTE_TYPES].map((profile, i) => (
                                 <div
                                     key={`flow-${i}`}
                                     className="shrink-0 w-52 h-64 rounded-2xl shadow-lg flex flex-col items-center justify-center p-5 text-center"
                                     style={{ background: 'linear-gradient(135deg, #FDFBF7 0%, #F5F3FF 100%)' }}
                                 >
-                                    <span className="text-lg font-bold text-gray-900 mb-2">{profile.name}</span>
-                                    <span className="text-sm text-gray-600 leading-relaxed">{profile.tagline}</span>
+                                    <span className="inline-block px-3 py-1 bg-primary/10 rounded-full text-xs font-bold text-primary tracking-wider mb-2">{profile.code}</span>
+                                    <span className="text-base font-bold text-gray-900 mb-1">{profile.name}</span>
+                                    <span className="text-xs text-gray-600 leading-relaxed">{profile.tagline}</span>
                                 </div>
                             ))}
                         </motion.div>
