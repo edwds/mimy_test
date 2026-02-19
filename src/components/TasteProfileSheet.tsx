@@ -2,7 +2,7 @@ import { X, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown } from 'luci
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/lib/api';
-import { getTasteType } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 
 
 
@@ -126,21 +126,37 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
 
                     {/* Main Content: Type Code, Name & Tagline */}
                     <div className="flex flex-col justify-center text-center shrink-0">
-                        {/* Taste Type Badge */}
+                        {/* Taste Type Badge, Name & Tagline */}
                         {data?.scores && (() => {
                             const tasteType = getTasteType({ scores: data.scores });
-                            return tasteType ? (
-                                <div className="mb-3">
-                                    <span className="inline-block px-4 py-1.5 bg-primary/10 rounded-full text-sm font-bold text-primary tracking-wider">
-                                        {tasteType.fullType}
-                                    </span>
-                                </div>
-                            ) : null;
+                            const profile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+                            const displayName = profile?.name || data?.cluster_name || "Unknown";
+                            const displayTagline = profile?.tagline || data?.cluster_tagline || 'Discovering your unique taste journey.';
+
+                            return (
+                                <>
+                                    {tasteType && (
+                                        <div className="mb-3">
+                                            <span className="inline-block px-4 py-1.5 bg-primary/10 rounded-full text-sm font-bold text-primary tracking-wider">
+                                                {tasteType.fullType}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <span className="text-xl font-bold text-gray-900 mb-2">{displayName}</span>
+                                    <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
+                                        {displayTagline}
+                                    </h2>
+                                </>
+                            );
                         })()}
-                        <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
-                        <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
-                            {data?.cluster_tagline || 'Discovering your unique taste journey.'}
-                        </h2>
+                        {!data?.scores && (
+                            <>
+                                <span className="text-xl font-bold text-gray-900 mb-2">{data?.cluster_name || "Unknown"}</span>
+                                <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
+                                    {data?.cluster_tagline || 'Discovering your unique taste journey.'}
+                                </h2>
+                            </>
+                        )}
                     </div>
 
                     {/* Taste Scores - Inline Icons */}

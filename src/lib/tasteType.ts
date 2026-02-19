@@ -118,20 +118,20 @@ export function getTasteType(tasteResult: any): TasteType | null {
  */
 export const TASTE_TYPE_LABELS = {
     intensity: {
-        L: { ko: '담백한', en: 'Mild' },
-        H: { ko: '강렬한', en: 'Bold' }
+        L: { ko: '저자극', en: 'Mild' },
+        H: { ko: '고자극', en: 'Bold' }
     },
     flavor: {
-        D: { ko: '깊은맛', en: 'Deep' },
-        A: { ko: '상큼한', en: 'Fresh' }
+        D: { ko: '깊이', en: 'Deep' },
+        A: { ko: '산뜻', en: 'Fresh' }
     },
     pleasure: {
-        U: { ko: '감칠맛', en: 'Savory' },
-        S: { ko: '달콤한', en: 'Sweet' }
+        U: { ko: '감칠', en: 'Savory' },
+        S: { ko: '달콤', en: 'Sweet' }
     },
     exploration: {
-        F: { ko: '익숙한', en: 'Familiar' },
-        P: { ko: '도전적', en: 'Adventurous' }
+        F: { ko: '안정', en: 'Familiar' },
+        P: { ko: '탐험', en: 'Adventurous' }
     },
     subtype: {
         A: { ko: '확신형', en: 'Assertive' },
@@ -139,12 +139,32 @@ export const TASTE_TYPE_LABELS = {
     }
 } as const;
 
+태
+/**
+ * Gets the profile (name & tagline) for a taste type.
+ *
+ * @param tasteType - The taste type object or base code string
+ * @param lang - Language code ('ko' or 'en')
+ * @returns Object with name and tagline, or null if not found
+ */
+export function getTasteTypeProfile(tasteType: TasteType | string, lang: 'ko' | 'en' = 'ko'): { name: string; tagline: string } | null {
+    const baseCode = typeof tasteType === 'string' ? tasteType : tasteType.baseCode;
+    const profile = TASTE_TYPE_PROFILES[baseCode];
+
+    if (!profile) return null;
+
+    return {
+        name: profile.name[lang],
+        tagline: profile.tagline[lang]
+    };
+}
+
 /**
  * Gets a descriptive name for a taste type in the specified language.
  *
  * @param tasteType - The taste type object
  * @param lang - Language code ('ko' or 'en')
- * @returns Descriptive string like "강렬한 상큼한 달콤한 도전적 확신형"
+ * @returns Descriptive string like "고자극 산뜻 달콤 탐험 확신형"
  */
 export function getTasteTypeDescription(tasteType: TasteType, lang: 'ko' | 'en' = 'ko'): string {
     const { axes, subtype } = tasteType;

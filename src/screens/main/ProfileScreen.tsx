@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ShopInfoCard } from '@/components/ShopInfoCard';
 import { RankingBadge } from '@/components/RankingBadge';
-import { getTasteType } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 
 type ProfileTabType = 'timeline' | 'content' | 'list' | 'saved';
 
@@ -449,6 +449,10 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                     {/* Taste card */}
                     {user.cluster_name && (() => {
                         const tasteType = getTasteType((user as any).taste_result);
+                        const profile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+                        const displayName = profile?.name || user.cluster_name;
+                        const displayTagline = profile?.tagline || user.cluster_tagline;
+
                         return (
                             <div
                                 className="mt-2 mb-2 px-6 py-4 bg-[linear-gradient(135deg,_#FDFBF7_0%,_#F5F3FF_100%)] rounded-2xl flex items-center justify-between cursor-pointer"
@@ -460,8 +464,8 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             {tasteType.fullType}
                                         </div>
                                     )}
-                                    <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                    <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                    <div className="font-bold text-base text-foreground mb-1">{displayName}</div>
+                                    <div className="text-sm text-muted-foreground line-clamp-2">{displayTagline}</div>
                                 </div>
                             </div>
                         );

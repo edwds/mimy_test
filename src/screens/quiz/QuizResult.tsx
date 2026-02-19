@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
-import { getTasteType } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -22,12 +22,13 @@ export const QuizResult = () => {
     console.log('[QuizResult] location.state:', location.state);
     console.log('[QuizResult] result:', result);
 
-    // Fallback if accessed directly without state
-    const clusterName = result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
-    const clusterTagline = result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
-
     // Get 32-type MBTI-style taste type
     const tasteType = getTasteType(result);
+    const tasteProfile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+
+    // Use taste type profile name/tagline if available, fallback to cluster data
+    const typeName = tasteProfile?.name || result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
+    const typeTagline = tasteProfile?.tagline || result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
 
     useEffect(() => {
         // Show content after a brief delay to ensure proper rendering
@@ -177,14 +178,14 @@ export const QuizResult = () => {
                             </motion.div>
                         )}
 
-                        {/* Cluster Name */}
+                        {/* Type Name */}
                         <motion.h1
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 }}
                             className="text-2xl font-bold text-gray-900 mb-6"
                         >
-                            {clusterName}
+                            {typeName}
                         </motion.h1>
 
                         {/* Divider */}
@@ -198,7 +199,7 @@ export const QuizResult = () => {
                             className="flex-1 flex items-center"
                         >
                             <p className="text-base font-medium text-gray-700 leading-[1.6]">
-                                {clusterTagline}
+                                {typeTagline}
                             </p>
                         </motion.div>
                     </div>

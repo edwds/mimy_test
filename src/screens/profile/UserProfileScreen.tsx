@@ -15,7 +15,7 @@ import { TasteProfileSheet } from '@/components/TasteProfileSheet';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { ProfileHeader } from '@/components/ProfileHeader';
-import { getTasteType } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 
 type ProfileTabType = "content" | "list" | "saved";
 
@@ -520,6 +520,10 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                     {/* Taste Cluster & Matching Score */}
                     {user?.cluster_name && (() => {
                         const tasteType = getTasteType((user as any).taste_result);
+                        const profile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+                        const displayName = profile?.name || user.cluster_name;
+                        const displayTagline = profile?.tagline || user.cluster_tagline;
+
                         return (
                             <div className="flex gap-2">
                                 <div
@@ -532,8 +536,8 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
                                                 {tasteType.fullType}
                                             </div>
                                         )}
-                                        <div className="font-bold text-base text-foreground mb-1">{user.cluster_name}</div>
-                                        <div className="text-sm text-muted-foreground line-clamp-2">{user.cluster_tagline}</div>
+                                        <div className="font-bold text-base text-foreground mb-1">{displayName}</div>
+                                        <div className="text-sm text-muted-foreground line-clamp-2">{displayTagline}</div>
                                     </div>
                                 </div>
 
