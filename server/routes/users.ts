@@ -898,13 +898,30 @@ import { ListService } from "../services/ListService.js";
 router.get("/:id/lists", async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const cacheKey = `lists:${id}`;
+        const viewerId = req.query.viewer_id ? parseInt(req.query.viewer_id as string) : null;
+        const cacheKey = `lists:v2:${id}`;
 
         const lists = await getOrSetCache(cacheKey, async () => {
             return await ListService.fetchUserLists(id);
         }, 3600);
 
         if (!lists) return res.status(404).json({ error: "User not found" });
+
+        // If viewer_id is provided, enrich top_shops with match scores
+        if (viewerId && viewerId !== id) {
+            const allShopIds = lists.flatMap((l: any) => (l.top_shops || []).map((s: any) => s.id));
+            if (allShopIds.length > 0) {
+                const matchScoresMap = await getShopMatchScores(allShopIds, viewerId);
+                lists.forEach((l: any) => {
+                    if (l.top_shops) {
+                        l.top_shops = l.top_shops.map((s: any) => ({
+                            ...s,
+                            shop_user_match_score: matchScoresMap.get(s.id) ?? null
+                        }));
+                    }
+                });
+            }
+        }
 
         res.json(lists);
 

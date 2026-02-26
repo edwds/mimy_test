@@ -96,7 +96,7 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
 
     return (
         <div className={cn(
-            "fixed inset-0 z-50 flex items-center justify-center p-6", // Full screen flex center with padding
+            "fixed inset-0 z-[100] flex items-center justify-center p-6", // Full screen flex center with padding, z-100 to cover tab bar
             isOpen ? "pointer-events-auto" : "pointer-events-none"
         )}>
             {/* Backdrop - Blur effect */}

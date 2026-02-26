@@ -31,15 +31,18 @@ export const ListService = {
 
         const minRankings = parseInt(process.env.MIN_RANKINGS_FOR_MATCH || '30');
         if (overallCount >= minRankings) {
-            // Get top 3 shop images for overall ranking
+            // Get top 5 shops for overall ranking
             const topShops = await db.select({
-                thumbnail_img: shops.thumbnail_img
+                id: shops.id,
+                name: shops.name,
+                thumbnail: shops.thumbnail_img,
+                food_kind: shops.food_kind,
             })
                 .from(users_ranking)
                 .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
                 .where(eq(users_ranking.user_id, userId))
                 .orderBy(users_ranking.rank)
-                .limit(3);
+                .limit(5);
 
             resultLists.push({
                 id: 'overall',
@@ -48,7 +51,8 @@ export const ListService = {
                 count: Math.min(overallCount, 100),
                 updated_at: lastUpdated,
                 author: userInfo,
-                preview_images: topShops.map(s => s.thumbnail_img).filter(Boolean)
+                top_shops: topShops,
+                preview_images: topShops.map(s => s.thumbnail).filter(Boolean)
             });
         }
 
@@ -76,6 +80,22 @@ export const ListService = {
                     eq(shops.address_region, group.region!)
                 ));
 
+            // Get top 5 shops for region
+            const topShops = await db.select({
+                id: shops.id,
+                name: shops.name,
+                thumbnail: shops.thumbnail_img,
+                food_kind: shops.food_kind,
+            })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(and(
+                    eq(users_ranking.user_id, userId),
+                    eq(shops.address_region, group.region!)
+                ))
+                .orderBy(users_ranking.rank)
+                .limit(5);
+
             resultLists.push({
                 id: `region_${group.region}`,
                 type: 'REGION',
@@ -84,6 +104,7 @@ export const ListService = {
                 updated_at: lastUpdated,
                 author: userInfo,
                 value: group.region,
+                top_shops: topShops,
                 center_lat: centerRes[0]?.center_lat,
                 center_lng: centerRes[0]?.center_lng
             });
@@ -101,9 +122,12 @@ export const ListService = {
             .having(sql`count(*) >= 10`);
 
         for (const group of categoryGroups) {
-            // Get top 3 shop images for category
+            // Get top 5 shops for category
             const topShops = await db.select({
-                thumbnail_img: shops.thumbnail_img
+                id: shops.id,
+                name: shops.name,
+                thumbnail: shops.thumbnail_img,
+                food_kind: shops.food_kind,
             })
                 .from(users_ranking)
                 .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
@@ -112,7 +136,7 @@ export const ListService = {
                     eq(shops.food_kind, group.category!)
                 ))
                 .orderBy(users_ranking.rank)
-                .limit(3);
+                .limit(5);
 
             resultLists.push({
                 id: `category_${group.category}`,
@@ -122,7 +146,8 @@ export const ListService = {
                 updated_at: lastUpdated,
                 author: userInfo,
                 value: group.category,
-                preview_images: topShops.map(s => s.thumbnail_img).filter(Boolean)
+                top_shops: topShops,
+                preview_images: topShops.map(s => s.thumbnail).filter(Boolean)
             });
         }
         return resultLists;

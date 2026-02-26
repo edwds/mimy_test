@@ -196,6 +196,7 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
     // Lists State
     const [lists, setLists] = useState<any[]>([]);
     const [loadingLists, setLoadingLists] = useState(false);
+    const [listFilter, setListFilter] = useState<'ALL' | 'OVERALL' | 'CATEGORY' | 'REGION'>('ALL');
 
     // Initial Fetch & Reset
     useEffect(() => {
@@ -339,7 +340,8 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
             setLoadingLists(true);
             try {
-                const response = await authFetch(`${API_BASE_URL}/api/users/${targetId}/lists`);
+                const viewerParam = currentUser?.id ? `?viewer_id=${currentUser.id}` : '';
+                const response = await authFetch(`${API_BASE_URL}/api/users/${targetId}/lists${viewerParam}`);
                 if (response.ok) {
                     const data = await response.json();
                     setLists(data);
@@ -594,49 +596,85 @@ export const UserProfileScreen = ({ userId: propUserId }: Props) => {
 
                     {activeTab === "list" && (
                         <div className="pb-20 px-5 pt-4">
+                            {/* List type filter */}
+                            <div className="flex gap-2 mb-4">
+                                {([
+                                    { key: 'ALL', label: t('profile.list_filter.all', '전체') },
+                                    { key: 'OVERALL', label: t('profile.list_filter.overall', '전체 랭킹') },
+                                    { key: 'CATEGORY', label: t('profile.list_filter.category', '카테고리') },
+                                    { key: 'REGION', label: t('profile.list_filter.region', '지역') },
+                                ] as const).map(({ key, label }) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setListFilter(key)}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                                            listFilter === key
+                                                ? 'bg-foreground text-background'
+                                                : 'bg-muted text-muted-foreground'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
 
-
-                            {lists.map((list) => (
-                                <ListCard
-                                    key={list.id}
-                                    id={list.id}
-                                    type={list.type}
-                                    title={list.title}
-                                    count={list.count}
-                                    updatedAt={list.updated_at}
-                                    author={list.author}
-                                    onPress={() => {
-                                        // Navigate to details
-                                        // Navigate to details via Overlay (query params)
-                                        const newParams = new URLSearchParams(searchParams);
-                                        const targetId = user?.id || userId;
-
-                                        // Explicitly ensure viewUser is preserved/set
-                                        // This prevents the background profile from unmounting if it was somehow lost
-                                        if (targetId) {
-                                            newParams.set('viewUser', String(targetId));
-                                        }
-
-                                        newParams.set('viewListUser', String(targetId));
-                                        newParams.set('type', list.type);
-                                        if (list.value) newParams.set('value', list.value);
-                                        if (list.title) newParams.set('title', list.title);
-
-                                        navigate({ search: newParams.toString() });
-                                    }}
-                                />
-                            ))}
-                            {!loadingLists && lists.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                                    <List className="w-10 h-10 mb-2 opacity-20" />
-                                    <p className="text-sm">{t('profile.empty.lists')}</p>
-                                </div>
-                            )}
-                            {loadingLists && (
+                            {loadingLists ? (
                                 <div className="flex justify-center py-20">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
-                            )}
+                            ) : (() => {
+                                const filtered = lists.filter((list) => listFilter === 'ALL' || list.type === listFilter);
+                                if (lists.length === 0) {
+                                    return (
+                                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                            <List className="w-10 h-10 mb-2 opacity-20" />
+                                            <p className="text-sm">{t('profile.empty.lists')}</p>
+                                        </div>
+                                    );
+                                }
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                            <p className="text-sm">
+                                                {listFilter === 'OVERALL' && t('profile.empty.lists_overall', '전체 랭킹이 없습니다')}
+                                                {listFilter === 'CATEGORY' && t('profile.empty.lists_category', '카테고리 랭킹이 없습니다')}
+                                                {listFilter === 'REGION' && t('profile.empty.lists_region', '지역별 랭킹이 없습니다')}
+                                            </p>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="space-y-3">
+                                        {filtered.map((list) => (
+                                            <ListCard
+                                                key={list.id}
+                                                id={list.id}
+                                                type={list.type}
+                                                title={list.title}
+                                                count={list.count}
+                                                updatedAt={list.updated_at}
+                                                author={list.author}
+                                                top_shops={list.top_shops}
+                                                onPress={() => {
+                                                    const newParams = new URLSearchParams(searchParams);
+                                                    const targetId = user?.id || userId;
+
+                                                    if (targetId) {
+                                                        newParams.set('viewUser', String(targetId));
+                                                    }
+
+                                                    newParams.set('viewListUser', String(targetId));
+                                                    newParams.set('type', list.type);
+                                                    if (list.value) newParams.set('value', list.value);
+                                                    if (list.title) newParams.set('title', list.title);
+
+                                                    navigate({ search: newParams.toString() });
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 

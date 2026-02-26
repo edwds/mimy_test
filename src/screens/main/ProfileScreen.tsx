@@ -56,6 +56,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
     const [lists, setLists] = useState<any[]>([]);
     const [loadingLists, setLoadingLists] = useState(false);
+    const [listFilter, setListFilter] = useState<'ALL' | 'OVERALL' | 'CATEGORY' | 'REGION'>('ALL');
     const [currentRankings, setCurrentRankings] = useState<any[]>([]);
     const [loadingRankings, setLoadingRankings] = useState(false);
 
@@ -573,12 +574,32 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
 
                     {activeTab === 'list' && (
                         <div className="pb-20 px-5 pt-4">
-                            {/* Always show button at the top right */}
-                            <div className="mb-4 flex justify-end">
+                            {/* Top bar: filters + manage button */}
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex gap-2">
+                                    {([
+                                        { key: 'ALL', label: t('profile.list_filter.all', '전체') },
+                                        { key: 'OVERALL', label: t('profile.list_filter.overall', '전체 랭킹') },
+                                        { key: 'CATEGORY', label: t('profile.list_filter.category', '카테고리') },
+                                        { key: 'REGION', label: t('profile.list_filter.region', '지역') },
+                                    ] as const).map(({ key, label }) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => setListFilter(key)}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                                                listFilter === key
+                                                    ? 'bg-foreground text-background'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300"
+                                    className="gap-1.5 h-8 text-xs font-semibold rounded-full border-gray-300 flex-shrink-0"
                                     onClick={() => navigate('/profile/manage/ranking')}
                                 >
                                     <ListOrdered className="w-3.5 h-3.5" />
@@ -661,36 +682,48 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                         </div>
                                     ) : null}
                                 </>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-3">
-                                    {lists.map((list) => (
-                                        <ListCard
-                                            key={list.id}
-                                            id={list.id}
-                                            type={list.type}
-                                            title={list.title}
-                                            count={list.count}
-                                            updatedAt={list.updated_at}
-                                            author={list.author}
-                                            preview_images={list.preview_images}
-                                            center_lat={list.center_lat}
-                                            center_lng={list.center_lng}
-                                            onPress={() => {
-                                                const query = new URLSearchParams(searchParams);
-                                                query.set('viewListUser', String(user.id));
+                            ) : (() => {
+                                const filtered = lists.filter((list) => listFilter === 'ALL' || list.type === listFilter);
+                                return filtered.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                                        <p className="text-sm">
+                                            {listFilter === 'OVERALL' && t('profile.empty.lists_overall', '전체 랭킹이 없습니다')}
+                                            {listFilter === 'CATEGORY' && t('profile.empty.lists_category', '카테고리 랭킹이 없습니다')}
+                                            {listFilter === 'REGION' && t('profile.empty.lists_region', '지역별 랭킹이 없습니다')}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {filtered.map((list) => (
+                                            <ListCard
+                                                key={list.id}
+                                                id={list.id}
+                                                type={list.type}
+                                                title={list.title}
+                                                count={list.count}
+                                                updatedAt={list.updated_at}
+                                                author={list.author}
+                                                top_shops={list.top_shops}
+                                                preview_images={list.preview_images}
+                                                center_lat={list.center_lat}
+                                                center_lng={list.center_lng}
+                                                onPress={() => {
+                                                    const query = new URLSearchParams(searchParams);
+                                                    query.set('viewListUser', String(user.id));
 
-                                                // Set list params
-                                                query.set('type', list.type);
-                                                if (list.value) query.set('value', list.value);
-                                                if (list.title) query.set('title', list.title);
+                                                    // Set list params
+                                                    query.set('type', list.type);
+                                                    if (list.value) query.set('value', list.value);
+                                                    if (list.title) query.set('title', list.title);
 
-                                                // Navigate while keeping current path (keeps activeTab='profile')
-                                                navigate({ search: query.toString() });
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                                                    // Navigate while keeping current path (keeps activeTab='profile')
+                                                    navigate({ search: query.toString() });
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 
