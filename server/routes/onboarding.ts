@@ -21,15 +21,27 @@ router.post("/analyze-screenshots", requireAuth, async (req, res) => {
             return res.status(400).json({ error: "imageUrls array is required" });
         }
 
-        if (imageUrls.length > 5) {
-            return res.status(400).json({ error: "Maximum 5 images allowed" });
+        if (imageUrls.length > 30) {
+            return res.status(400).json({ error: "Maximum 30 images allowed" });
         }
 
         console.log(`[onboarding] Analyzing ${imageUrls.length} screenshots for user ${req.user!.id}`);
 
-        const extractedNames = await extractRestaurantNames(imageUrls);
+        // Process in batches of 5 to avoid Gemini API limits
+        const BATCH_SIZE = 5;
+        const allNames: string[] = [];
 
-        console.log(`[onboarding] Extracted ${extractedNames.length} restaurant names:`, extractedNames);
+        for (let i = 0; i < imageUrls.length; i += BATCH_SIZE) {
+            const batch = imageUrls.slice(i, i + BATCH_SIZE);
+            console.log(`[onboarding] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(imageUrls.length / BATCH_SIZE)} (${batch.length} images)`);
+            const batchNames = await extractRestaurantNames(batch);
+            allNames.push(...batchNames);
+        }
+
+        // Deduplicate names
+        const extractedNames = [...new Set(allNames)];
+
+        console.log(`[onboarding] Extracted ${extractedNames.length} unique restaurant names:`, extractedNames);
 
         res.json({ extractedNames });
     } catch (error) {
@@ -153,6 +165,8 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
         const rankedShops = await db.select({
             name: shops.name,
             food_kind: shops.food_kind,
+            description: shops.description,
+            address_region: shops.address_region,
             satisfaction_tier: users_ranking.satisfaction_tier,
             rank: users_ranking.rank,
         })
@@ -173,6 +187,8 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
             rankedShops: rankedShops.map(s => ({
                 name: s.name,
                 food_kind: s.food_kind,
+                description: s.description,
+                address_region: s.address_region,
                 satisfaction_tier: s.satisfaction_tier,
                 rank: s.rank,
             })),

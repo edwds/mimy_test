@@ -34,11 +34,23 @@ export const ShopMatchConfirm = () => {
     const matchShops = async () => {
         try {
             const result = await OnboardingService.matchShops(extractedNames);
-            setMatches(result.matches);
+
+            // Deduplicate by shop ID — keep the first occurrence only
+            const seenShopIds = new Set<number>();
+            const dedupedMatches: ShopMatch[] = [];
+            for (const m of result.matches) {
+                if (m.matched && m.shop) {
+                    if (seenShopIds.has(m.shop.id)) continue;
+                    seenShopIds.add(m.shop.id);
+                }
+                dedupedMatches.push(m);
+            }
+
+            setMatches(dedupedMatches);
 
             // Auto-select all matched shops
             const matchedIndices = new Set<number>();
-            result.matches.forEach((m, i) => {
+            dedupedMatches.forEach((m, i) => {
                 if (m.matched) matchedIndices.add(i);
             });
             setSelected(matchedIndices);

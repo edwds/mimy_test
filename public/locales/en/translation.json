@@ -714,7 +714,7 @@
         },
         "screenshot_upload": {
             "title": "Upload Screenshots",
-            "instruction": "Upload screenshots of your reservation/visit history (up to 5)",
+            "instruction": "Upload screenshots of your reservation/visit history",
             "add_photo": "Add Photo",
             "uploading": "Uploading...",
             "analyze_button": "Analyze",

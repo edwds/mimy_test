@@ -831,7 +831,7 @@
         },
         "screenshot_upload": {
             "title": "스크린샷 업로드",
-            "instruction": "예약 앱의 예약/방문 내역 스크린샷을 올려주세요 (최대 5장)",
+            "instruction": "예약 앱의 방문 내역 스크린샷을 올려주세요",
             "add_photo": "사진 추가",
             "uploading": "업로드 중...",
             "analyze_button": "분석하기",

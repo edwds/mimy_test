@@ -12,7 +12,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 export async function extractRestaurantNames(imageUrls: string[]): Promise<string[]> {
     if (!imageUrls.length) return [];
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
 
     // Fetch images and convert to base64 for Gemini
     const imageParts = await Promise.all(
@@ -73,6 +73,8 @@ export interface TasteAnalysisInput {
     rankedShops: Array<{
         name: string;
         food_kind: string | null;
+        description: string | null;
+        address_region: string | null;
         satisfaction_tier: number;
         rank: number;
     }>;
@@ -86,6 +88,13 @@ export interface TasteAnalysisResult {
     detailedAnalysis: string;
 }
 
+function formatShopDetail(s: TasteAnalysisInput['rankedShops'][number]): string {
+    let line = `  ${s.rank}위. ${s.name} (${s.food_kind || '기타'})`;
+    if (s.address_region) line += ` - ${s.address_region}`;
+    if (s.description) line += `\n      설명: ${s.description.slice(0, 100)}`;
+    return line;
+}
+
 /**
  * Generates a detailed taste analysis using Gemini Pro.
  *
@@ -93,7 +102,7 @@ export interface TasteAnalysisResult {
  * @returns Structured analysis result
  */
 export async function generateTasteAnalysis(data: TasteAnalysisInput): Promise<TasteAnalysisResult> {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
 
     const shopsByTier = {
         good: data.rankedShops.filter(s => s.satisfaction_tier === 2),
@@ -117,10 +126,10 @@ export async function generateTasteAnalysis(data: TasteAnalysisInput): Promise<T
 - 단맛(sweetness): ${data.scores.sweetness ?? 0}
 - 감칠맛(umami): ${data.scores.umami ?? 0}
 
-**평가한 맛집**:
-${shopsByTier.good.length > 0 ? `최고 (Good): ${shopsByTier.good.map(s => `${s.name}(${s.food_kind || '기타'})`).join(', ')}` : ''}
-${shopsByTier.ok.length > 0 ? `괜찮음 (OK): ${shopsByTier.ok.map(s => `${s.name}(${s.food_kind || '기타'})`).join(', ')}` : ''}
-${shopsByTier.bad.length > 0 ? `별로 (Bad): ${shopsByTier.bad.map(s => `${s.name}(${s.food_kind || '기타'})`).join(', ')}` : ''}
+**평가한 맛집** (순위순):
+${shopsByTier.good.length > 0 ? `최고 (Good):\n${shopsByTier.good.map(s => formatShopDetail(s)).join('\n')}` : ''}
+${shopsByTier.ok.length > 0 ? `괜찮음 (OK):\n${shopsByTier.ok.map(s => formatShopDetail(s)).join('\n')}` : ''}
+${shopsByTier.bad.length > 0 ? `별로 (Bad):\n${shopsByTier.bad.map(s => formatShopDetail(s)).join('\n')}` : ''}
 
 ## 응답 형식
 
@@ -138,7 +147,8 @@ ${shopsByTier.bad.length > 0 ? `별로 (Bad): ${shopsByTier.bad.map(s => `${s.na
 - 한국어로 작성
 - highlights는 4개, personalityTraits는 3개, foodRecommendations는 4개
 - 톤: 친근하고 재미있게, SNS에 공유하고 싶은 느낌
-- 평가한 맛집이 있다면 패턴을 분석에 반영`;
+- 평가한 맛집이 있다면 패턴을 분석에 반영 (지역, 설명 등 디테일 활용)
+- 맛집의 설명 정보가 있으면 어떤 종류의 음식을 선호하는지 더 구체적으로 분석`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
