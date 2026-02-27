@@ -41,6 +41,15 @@ import { NotificationScreen } from '@/screens/notification/NotificationScreen';
 import { TermsDetailScreen } from '@/screens/terms/TermsDetailScreen';
 import { UserProvider, useUser } from '@/context/UserContext';
 import { RankingProvider } from '@/context/RankingContext';
+import { OnboardingProvider } from '@/context/OnboardingContext';
+import { ImportIntro } from '@/screens/onboarding/ImportIntro';
+import { ScreenshotUpload } from '@/screens/onboarding/ScreenshotUpload';
+import { ShopMatchConfirm } from '@/screens/onboarding/ShopMatchConfirm';
+import { OnboardingRelay } from '@/screens/onboarding/OnboardingRelay';
+import { OnboardingRanking } from '@/screens/onboarding/OnboardingRanking';
+import { TasteAnalysis } from '@/screens/onboarding/TasteAnalysis';
+import { ShareResult } from '@/screens/onboarding/ShareResult';
+import { TasteSharePage } from '@/screens/onboarding/TasteSharePage';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { StatusBarGuard } from '@/components/StatusBarGuard';
@@ -82,6 +91,7 @@ function AppContent() {
     return (
         <BrowserRouter>
             <RankingProvider>
+                <OnboardingProvider>
                 <DebugLocaleSwitcher />
                 <StatusBarGuard />
                 {showLoading ? (
@@ -115,6 +125,15 @@ function AppContent() {
                                 {/* Relay Recording */}
                                 <Route path="/relay" element={<ProtectedRoute><RelayScreen /></ProtectedRoute>} />
 
+                                {/* Onboarding Flow (Protected) */}
+                                <Route path="/onboarding/import-intro" element={<ProtectedRoute><ImportIntro /></ProtectedRoute>} />
+                                <Route path="/onboarding/screenshot-upload" element={<ProtectedRoute><ScreenshotUpload /></ProtectedRoute>} />
+                                <Route path="/onboarding/shop-match" element={<ProtectedRoute><ShopMatchConfirm /></ProtectedRoute>} />
+                                <Route path="/onboarding/relay" element={<ProtectedRoute><OnboardingRelay /></ProtectedRoute>} />
+                                <Route path="/onboarding/ranking" element={<ProtectedRoute><OnboardingRanking /></ProtectedRoute>} />
+                                <Route path="/onboarding/analysis" element={<ProtectedRoute><TasteAnalysis /></ProtectedRoute>} />
+                                <Route path="/onboarding/share" element={<ProtectedRoute><ShareResult /></ProtectedRoute>} />
+
                                 <Route path="/write" element={<ProtectedRoute><WriteFlow /></ProtectedRoute>} />
                                 <Route path="/main/*" element={<ProtectedRoute><MainTab /></ProtectedRoute>} />
                                 <Route path="/profile/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
@@ -144,8 +163,12 @@ function AppContent() {
 
                                 {/* Public Shared List - No Auth Required */}
                                 <Route path="/s/:code" element={<ListDetailScreen />} />
+
+                                {/* Public Taste Share Page - No Auth Required */}
+                                <Route path="/taste/:code" element={<TasteSharePage />} />
                             </Routes>
                         )}
+                    </OnboardingProvider>
                     </RankingProvider>
                 </BrowserRouter>
     );

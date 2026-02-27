@@ -132,7 +132,9 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                         {data?.scores && (() => {
                             const tasteType = getTasteType({ scores: data.scores });
                             const profile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+                            const profileEn = tasteType ? getTasteTypeProfile(tasteType, 'en') : null;
                             const displayName = profile?.name || data?.cluster_name || "Unknown";
+                            const displayNameEn = profileEn?.name || '';
                             const displayTagline = profile?.tagline || data?.cluster_tagline || 'Discovering your unique taste journey.';
 
                             return (
@@ -144,7 +146,7 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                                             </span>
                                         </div>
                                     )}
-                                    <div className="flex items-center justify-center gap-1 mb-2">
+                                    <div className="flex items-center justify-center gap-1 mb-0.5">
                                         <span className="text-xl font-bold text-gray-900">{displayName}</span>
                                         <button
                                             onClick={(e) => {
@@ -157,6 +159,9 @@ export const TasteProfileSheet = ({ isOpen, onClose, data, userId }: TasteProfil
                                             <HelpCircle className="w-4 h-4 text-muted-foreground" />
                                         </button>
                                     </div>
+                                    {displayNameEn && (
+                                        <p className="text-xs text-gray-400 mb-2">{displayNameEn}</p>
+                                    )}
                                     <h2 className="text-lg font-medium text-gray-700 leading-[1.6]">
                                         {displayTagline}
                                     </h2>

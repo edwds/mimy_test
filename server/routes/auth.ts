@@ -14,9 +14,20 @@ const EMAIL_WHITELIST = [
     'ivoryboxedlee@gmail.com'
 ];
 
+// Normalize Gmail addresses by removing dots from local part (Gmail ignores dots)
+function normalizeEmail(email: string): string {
+    const lower = email.toLowerCase();
+    const [local, domain] = lower.split('@');
+    if (domain === 'gmail.com') {
+        return local.replace(/\./g, '') + '@gmail.com';
+    }
+    return lower;
+}
+
 // Helper function to check if email is allowed
 function isEmailAllowed(email: string): boolean {
-    return email.endsWith('@catchtable.co.kr') || EMAIL_WHITELIST.includes(email.toLowerCase());
+    const normalized = normalizeEmail(email);
+    return normalized.endsWith('@catchtable.co.kr') || EMAIL_WHITELIST.some(w => normalizeEmail(w) === normalized);
 }
 
 // Real Google Login

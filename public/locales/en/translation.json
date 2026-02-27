@@ -561,7 +561,7 @@
             "feed": {
                 "users": [
                     { "name": "Foodie_Jay", "cluster": "Trendsetter HASP-A" },
-                    { "name": "TasteHunter", "cluster": "Practitioner HDUF-T" },
+                    { "name": "TasteHunter", "cluster": "Artisan HDUF-T" },
                     { "name": "Foodie_Lynn", "cluster": "Explorer LAUP-A" }
                 ],
                 "shops": [
@@ -598,7 +598,7 @@
                 { "code": "HASP-A", "name": "The Trendsetter", "tagline": "Experiences vibrant, intense flavors first. Leads in new combinations." },
                 { "code": "LDUF-T", "name": "The Preserver", "tagline": "Enjoys familiar, deep flavors consistently. Once a favorite is found, they stick with it." },
                 { "code": "LASF-A", "name": "The Sensualist", "tagline": "Enjoys fresh and sweet combinations. Has a bright, cheerful palate." },
-                { "code": "HDUF-A", "name": "The Practitioner", "tagline": "Prefers strong, heavy flavors. Has clear, unwavering tastes." },
+                { "code": "HDUF-A", "name": "The Artisan", "tagline": "Prefers strong, heavy flavors. Has clear, unwavering tastes." },
                 { "code": "LAUP-T", "name": "The Explorer", "tagline": "Tries new flavors centered on light, fresh dishes." },
                 { "code": "HDSF-A", "name": "The Concentrator", "tagline": "Immerses in intense sweetness and richness. Seeks definite pleasure." }
             ],
@@ -625,7 +625,7 @@
                     { "nickname": "GourmetManager", "cluster": "Preserver LDUF-A" },
                     { "nickname": "TasteExplorer", "cluster": "Pursuer HDUP-T" },
                     { "nickname": "OmakaseAddict", "cluster": "Sensualist LASF-A" },
-                    { "nickname": "RamenFanatic", "cluster": "Practitioner HDUF-T" }
+                    { "nickname": "RamenFanatic", "cluster": "Artisan HDUF-T" }
                 ],
                 "neighborhood_users": [
                     { "nickname": "PangyoFoodie", "cluster": "Trendsetter HASP-A" },
@@ -704,5 +704,74 @@
             "up": "It was OK"
         },
         "expected_rating": "Expected"
+    },
+    "onboarding": {
+        "import_intro": {
+            "title": "Tell us where you've been",
+            "description": "Upload screenshots from CatchTable or Naver\nand AI will find your restaurants automatically",
+            "upload_button": "Upload Screenshots",
+            "skip": "Skip"
+        },
+        "screenshot_upload": {
+            "title": "Upload Screenshots",
+            "instruction": "Upload screenshots of your reservation/visit history (up to 5)",
+            "add_photo": "Add Photo",
+            "uploading": "Uploading...",
+            "analyze_button": "Analyze",
+            "analyzing": "AI is analyzing your screenshots...",
+            "upload_failed": "Failed to upload image",
+            "no_restaurants": "No restaurants found. Try different screenshots.",
+            "analyze_failed": "Analysis failed. Please try again."
+        },
+        "shop_match": {
+            "title": "Confirm Matches",
+            "loading": "Finding restaurants...",
+            "summary": "Found {{found}} restaurants",
+            "not_found": "No match",
+            "search": "Search",
+            "search_placeholder": "Search restaurant name",
+            "no_search_results": "No results found",
+            "confirm_button": "Rate {{count}} restaurants"
+        },
+        "relay": {
+            "loading": "Loading restaurants...",
+            "done": "Done",
+            "all_done_label": "All done!",
+            "phase_complete": "Screenshot restaurants rated!",
+            "phase_next": "Want to rate nearby restaurants too?\nMore ratings = more accurate analysis.",
+            "continue_nearby": "Rate Nearby Restaurants",
+            "skip_nearby": "Go to Ranking",
+            "nearby_done": "Rating Complete!",
+            "nearby_done_desc": "You rated {{count}} restaurants",
+            "go_ranking": "Organize Rankings"
+        },
+        "ranking": {
+            "title": "Organize Rankings",
+            "instruction": "Drag to reorder your restaurants",
+            "save_button": "Save & Get Analysis"
+        },
+        "analysis": {
+            "error": "Analysis failed. Please try again.",
+            "loading_0": "Analyzing your taste data...",
+            "loading_1": "Examining your restaurant patterns...",
+            "loading_2": "AI is writing your taste profile...",
+            "loading_3": "Almost done!"
+        },
+        "share": {
+            "your_type": "My Taste Type",
+            "personality": "Food Personality",
+            "recommendations": "Recommended Foods",
+            "share_button": "Share Results",
+            "copied": "Link copied!",
+            "go_home": "See Other Profiles",
+            "dialog_title": "Share Taste Analysis"
+        },
+        "share_page": {
+            "not_found": "Analysis not found",
+            "go_start": "Start Mimy",
+            "anonymous": "Foodie",
+            "suffix": "'s Taste Analysis",
+            "cta": "Analyze My Taste Too"
+        }
     }
 }

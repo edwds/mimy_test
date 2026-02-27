@@ -533,7 +533,7 @@
                     },
                     {
                         "name": "맛집헌터",
-                        "cluster": "실천자형 HDUF-T"
+                        "cluster": "장인형 HDUF-T"
                     },
                     {
                         "name": "푸디_린",
@@ -600,7 +600,7 @@
                 },
                 {
                     "code": "HDUF-A",
-                    "name": "실천자형 미식가",
+                    "name": "장인형 미식가",
                     "tagline": "강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다."
                 },
                 {
@@ -666,7 +666,7 @@
                     },
                     {
                         "nickname": "라멘덕후",
-                        "cluster": "실천자형 HDUF-T"
+                        "cluster": "장인형 HDUF-T"
                     }
                 ],
                 "neighborhood_users": [
@@ -821,5 +821,74 @@
         "comparison_title": "어디가 더 좋았어요?",
         "comparison_skip": "건너뛰기",
         "comparison_progress": "{{current}}/{{total}} 비교"
+    },
+    "onboarding": {
+        "import_intro": {
+            "title": "방문했던 곳들을 알려주세요",
+            "description": "캐치테이블이나 네이버 예약 스크린샷을 올리면\nAI가 자동으로 맛집을 찾아드려요",
+            "upload_button": "스크린샷 업로드하기",
+            "skip": "건너뛰기"
+        },
+        "screenshot_upload": {
+            "title": "스크린샷 업로드",
+            "instruction": "예약 앱의 예약/방문 내역 스크린샷을 올려주세요 (최대 5장)",
+            "add_photo": "사진 추가",
+            "uploading": "업로드 중...",
+            "analyze_button": "분석하기",
+            "analyzing": "AI가 스크린샷을 분석하고 있어요...",
+            "upload_failed": "이미지 업로드에 실패했어요",
+            "no_restaurants": "음식점을 찾지 못했어요. 다른 스크린샷을 시도해보세요.",
+            "analyze_failed": "분석에 실패했어요. 다시 시도해주세요."
+        },
+        "shop_match": {
+            "title": "매칭 결과 확인",
+            "loading": "맛집을 찾고 있어요...",
+            "summary": "{{found}}개 맛집을 찾았어요",
+            "not_found": "매칭 안 됨",
+            "search": "검색",
+            "search_placeholder": "맛집 이름 검색",
+            "no_search_results": "검색 결과가 없어요",
+            "confirm_button": "{{count}}개 맛집 평가하기"
+        },
+        "relay": {
+            "loading": "맛집을 불러오고 있어요...",
+            "done": "완료",
+            "all_done_label": "모두 완료!",
+            "phase_complete": "스크린샷 맛집 평가 완료!",
+            "phase_next": "근처 맛집도 더 평가해볼까요?\n더 많이 평가할수록 분석이 정확해져요.",
+            "continue_nearby": "근처 맛집도 평가하기",
+            "skip_nearby": "바로 순위 정리하기",
+            "nearby_done": "평가 완료!",
+            "nearby_done_desc": "총 {{count}}개 맛집을 평가했어요",
+            "go_ranking": "순위 정리하러 가기"
+        },
+        "ranking": {
+            "title": "순위 정리",
+            "instruction": "드래그해서 순서를 조정해보세요",
+            "save_button": "저장하고 분석받기"
+        },
+        "analysis": {
+            "error": "분석에 실패했어요. 다시 시도해주세요.",
+            "loading_0": "입맛 데이터를 분석하고 있어요...",
+            "loading_1": "평가한 맛집 패턴을 살펴보는 중...",
+            "loading_2": "AI가 입맛 프로필을 작성 중...",
+            "loading_3": "거의 다 됐어요!"
+        },
+        "share": {
+            "your_type": "나의 입맛 유형",
+            "personality": "미식 성격",
+            "recommendations": "추천 음식",
+            "share_button": "결과 공유하기",
+            "copied": "링크가 복사됐어요!",
+            "go_home": "다른 사람들의 프로필 보기",
+            "dialog_title": "입맛 분석 공유하기"
+        },
+        "share_page": {
+            "not_found": "분석 결과를 찾을 수 없어요",
+            "go_start": "Mimy 시작하기",
+            "anonymous": "미식가",
+            "suffix": "님의 입맛 분석",
+            "cta": "나도 입맛 분석하기"
+        }
     }
 }

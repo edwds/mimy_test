@@ -186,8 +186,8 @@ export const TASTE_TYPE_PROFILES: Record<string, { name: { ko: string; en: strin
         tagline: { ko: '묵직하고 달콤한 맛을 여유롭게 음미한다. 음식에서 위안을 찾는 타입이다.', en: 'Savors rich and sweet flavors leisurely. Finds comfort in food.' }
     },
     'LDSP': {
-        name: { ko: '기획자형 미식가', en: 'The Planner' },
-        tagline: { ko: '리치한 디저트를 새롭게 조합해본다. 달콤함을 창의적으로 확장한다.', en: 'Creatively combines rich desserts. Expands sweetness imaginatively.' }
+        name: { ko: '조합자형 미식가', en: 'The Composer' },
+        tagline: { ko: '깊은 풍미와 달콤함을 새롭게 조합한다. 익숙한 재료에서 창의적인 맛을 만들어낸다.', en: 'Composes new combinations of deep flavors and sweetness. Creates creative tastes from familiar ingredients.' }
     },
     'LAUF': {
         name: { ko: '절제자형 미식가', en: 'The Minimalist' },
@@ -206,7 +206,7 @@ export const TASTE_TYPE_PROFILES: Record<string, { name: { ko: string; en: strin
         tagline: { ko: '산미와 단맛의 새로운 조합에 관심이 많다. 트렌드를 빠르게 받아들인다.', en: 'Interested in new acid-sweet combinations. Quick to adopt trends.' }
     },
     'HDUF': {
-        name: { ko: '실천자형 미식가', en: 'The Practitioner' },
+        name: { ko: '장인형 미식가', en: 'The Artisan' },
         tagline: { ko: '강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다.', en: 'Prefers strong, heavy flavors. Has clear, unwavering tastes.' }
     },
     'HDUP': {
@@ -218,8 +218,8 @@ export const TASTE_TYPE_PROFILES: Record<string, { name: { ko: string; en: strin
         tagline: { ko: '강렬한 단맛과 묵직함에 몰입한다. 확실한 쾌감을 추구한다.', en: 'Immerses in intense sweetness and richness. Seeks definite pleasure.' }
     },
     'HDSP': {
-        name: { ko: '확장자형 미식가', en: 'The Expander' },
-        tagline: { ko: '자극적이고 달콤한 조합을 과감히 시도한다. 강한 맛을 즐긴다.', en: 'Boldly tries stimulating sweet combinations. Enjoys strong flavors.' }
+        name: { ko: '도전자형 미식가', en: 'The Challenger' },
+        tagline: { ko: '자극적이고 달콤한 조합을 과감히 시도한다. 강한 맛의 한계를 넓혀간다.', en: 'Boldly tries stimulating sweet combinations. Pushes the boundaries of bold flavors.' }
     },
     'HAUF': {
         name: { ko: '정밀자형 미식가', en: 'The Precisionist' },

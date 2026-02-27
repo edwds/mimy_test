@@ -413,6 +413,22 @@ export const banners = pgTable('banners', {
     active_order_idx: index('idx_banners_active_order').on(table.is_active, table.display_order),
 }));
 
+// --- Taste Analyses Domain (Onboarding LLM analysis results) ---
+export const taste_analyses = pgTable('taste_analyses', {
+    id: serial('id').primaryKey(),
+    user_id: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    share_code: varchar('share_code', { length: 20 }).unique().notNull(),
+    taste_type: varchar('taste_type', { length: 10 }).notNull(),
+    taste_scores: jsonb('taste_scores').notNull(),
+    ranked_shops_summary: jsonb('ranked_shops_summary'),
+    analysis: jsonb('analysis').notNull(),
+    created_at: timestamp('created_at').defaultNow(),
+    updated_at: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+    user_id_idx: index('idx_taste_analyses_user').on(table.user_id),
+    share_code_idx: index('idx_taste_analyses_code').on(table.share_code),
+}));
+
 // --- Notifications Domain ---
 export const notifications = pgTable('notifications', {
     id: serial('id').primaryKey(),

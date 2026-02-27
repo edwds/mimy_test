@@ -7,8 +7,26 @@ import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { requestPhotoLibraryPermission } from '@/utils/photoLocationUtils';
 import { getTasteType, getTasteTypeProfile, TASTE_TYPE_LABELS } from '@/lib/tasteType';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, ChevronsUp, ChevronUp, Minus, ChevronDown, ChevronsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const TASTE_AXES = [
+    { key: 'boldness', emoji: '🔥' },
+    { key: 'acidity', emoji: '🍋' },
+    { key: 'richness', emoji: '🧈' },
+    { key: 'experimental', emoji: '🧪' },
+    { key: 'spiciness', emoji: '🌶️' },
+    { key: 'sweetness', emoji: '🍬' },
+    { key: 'umami', emoji: '🍜' },
+] as const;
+
+const getArrowIcon = (value: number) => {
+    if (value >= 2) return { Icon: ChevronsUp, color: 'text-violet-500' };
+    if (value >= 1) return { Icon: ChevronUp, color: 'text-violet-400' };
+    if (value <= -2) return { Icon: ChevronsDown, color: 'text-amber-500' };
+    if (value <= -1) return { Icon: ChevronDown, color: 'text-amber-400' };
+    return { Icon: Minus, color: 'text-gray-300' };
+};
 
 export const QuizResult = () => {
     const navigate = useNavigate();
@@ -27,9 +45,11 @@ export const QuizResult = () => {
     // Get 32-type MBTI-style taste type
     const tasteType = getTasteType(result);
     const tasteProfile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
+    const tasteProfileEn = tasteType ? getTasteTypeProfile(tasteType, 'en') : null;
 
     // Use taste type profile name/tagline if available, fallback to cluster data
     const typeName = tasteProfile?.name || result?.clusterData?.cluster_name || t('quiz.result.flavor_unknown');
+    const typeNameEn = tasteProfileEn?.name || '';
     const typeTagline = tasteProfile?.tagline || result?.clusterData?.cluster_tagline || t('quiz.result.tagline_default');
 
     useEffect(() => {
@@ -80,7 +100,7 @@ export const QuizResult = () => {
 
         await refreshUser();
         setIsLoading(false);
-        navigate('/relay');
+        navigate('/onboarding/import-intro');
     };
 
     // Same gradient as TasteProfileSheet
@@ -232,17 +252,21 @@ export const QuizResult = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.45 }}
-                            className="flex items-center justify-center gap-1"
                         >
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                {typeName}
-                            </h1>
-                            <button
-                                onClick={() => navigate('/profile/taste-guide')}
-                                className="p-1 rounded-full hover:bg-white/50 transition-colors"
-                            >
-                                <HelpCircle className="w-5 h-5 text-muted-foreground" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                                <h1 className="text-2xl font-bold text-gray-900">
+                                    {typeName}
+                                </h1>
+                                <button
+                                    onClick={() => navigate('/profile/taste-guide')}
+                                    className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                                >
+                                    <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                                </button>
+                            </div>
+                            {typeNameEn && (
+                                <p className="text-xs text-gray-400 mt-0.5">{typeNameEn}</p>
+                            )}
                         </motion.div>
 
                         {/* Tagline */}
@@ -256,6 +280,27 @@ export const QuizResult = () => {
                                 {typeTagline}
                             </p>
                         </motion.div>
+
+                        {/* 7-Axis Taste Scores */}
+                        {result?.scores && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.55 }}
+                                className="mt-5 flex items-center justify-center gap-3"
+                            >
+                                {TASTE_AXES.map(({ key, emoji }) => {
+                                    const value = result.scores[key] ?? 0;
+                                    const { Icon: ArrowIcon, color } = getArrowIcon(value);
+                                    return (
+                                        <div key={key} className="flex flex-col items-center gap-0.5">
+                                            <span className="text-base leading-none">{emoji}</span>
+                                            <ArrowIcon className={cn("w-3.5 h-3.5", color)} />
+                                        </div>
+                                    );
+                                })}
+                            </motion.div>
+                        )}
                     </div>
                 </motion.div>
 

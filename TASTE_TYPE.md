@@ -42,7 +42,7 @@ stabilityScore = mean(|boldness|, |acidity|, |richness|, |experimental|, |spicin
 | **LDUF** | 보존자형 미식가 | The Preserver | 익숙하고 깊은 맛을 안정적으로 즐긴다. 한 번 마음에 든 메뉴를 꾸준히 찾는 편이다. |
 | **LDUP** | 연구자형 미식가 | The Researcher | 은은한 깊이의 차이를 탐구한다. 전통적인 맛 속에서도 새로운 발견을 즐긴다. |
 | **LDSF** | 감상자형 미식가 | The Appreciator | 묵직하고 달콤한 맛을 여유롭게 음미한다. 음식에서 위안을 찾는 타입이다. |
-| **LDSP** | 기획자형 미식가 | The Planner | 리치한 디저트를 새롭게 조합해본다. 달콤함을 창의적으로 확장한다. |
+| **LDSP** | 조합자형 미식가 | The Composer | 깊은 풍미와 달콤함을 새롭게 조합한다. 익숙한 재료에서 창의적인 맛을 만들어낸다. |
 | **LAUF** | 절제자형 미식가 | The Minimalist | 산뜻하고 정돈된 감칠을 선호한다. 과하지 않은 균형을 중요하게 여긴다. |
 | **LAUP** | 탐색자형 미식가 | The Explorer | 가볍고 산뜻한 메뉴를 중심으로 새로운 맛을 시도한다. |
 | **LASF** | 감각자형 미식가 | The Sensualist | 상큼하고 달콤한 조합을 즐긴다. 밝고 경쾌한 취향을 가졌다. |
@@ -52,10 +52,10 @@ stabilityScore = mean(|boldness|, |acidity|, |richness|, |experimental|, |spicin
 
 | 코드 | 한국어 이름 | 영어 이름 | 설명 |
 |------|------------|----------|------|
-| **HDUF** | 실천자형 미식가 | The Practitioner | 강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다. |
+| **HDUF** | 장인형 미식가 | The Artisan | 강하고 묵직한 맛을 선호한다. 취향이 분명하고 흔들림이 적다. |
 | **HDUP** | 추적자형 미식가 | The Pursuer | 더 진하고 강한 맛을 찾아다닌다. 깊은 맛에 대한 집요함이 있다. |
 | **HDSF** | 집중자형 미식가 | The Concentrator | 강렬한 단맛과 묵직함에 몰입한다. 확실한 쾌감을 추구한다. |
-| **HDSP** | 확장자형 미식가 | The Expander | 자극적이고 달콤한 조합을 과감히 시도한다. 강한 맛을 즐긴다. |
+| **HDSP** | 도전자형 미식가 | The Challenger | 자극적이고 달콤한 조합을 과감히 시도한다. 강한 맛의 한계를 넓혀간다. |
 | **HAUF** | 정밀자형 미식가 | The Precisionist | 매콤하고 산뜻한 자극을 또렷하게 즐긴다. 취향의 기준이 명확하다. |
 | **HAUP** | 개척자형 미식가 | The Pioneer | 날카롭고 강한 맛을 적극적으로 탐험한다. 새로운 메뉴에 개방적이다. |
 | **HASF** | 조율자형 미식가 | The Harmonizer | 매콤달콤한 균형을 안정적으로 즐긴다. 강하지만 조화로운 맛을 선호한다. |
