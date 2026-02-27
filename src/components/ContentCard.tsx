@@ -275,7 +275,6 @@ export const ContentCard = ({
     const { t, i18n } = useTranslation();
     const { user: currentUser, optimisticLikes, toggleOptimisticLike, coordinates } = useUser();
 
-    const rank = content.poi?.rank ?? content.review_prop?.rank;
     const satisfaction = content.poi?.satisfaction ?? (content.review_prop?.satisfaction as Satisfaction | undefined);
 
     // Determine initial state: favour optimistic state if present, otherwise server state
@@ -501,7 +500,6 @@ export const ContentCard = ({
     const shopName = content.poi?.shop_name ?? content.review_prop?.shop_name;
     const shopAddress = content.poi?.shop_address ?? content.review_prop?.shop_address;
     const shopThumbnail = content.poi?.thumbnail_img ?? content.review_prop?.thumbnail_img;
-    const visitCount = content.poi?.visit_count ?? content.review_prop?.visit_count;
     // const isPoiBookmarked used state above
 
     // Logic for context text (Shop visit info OR Keywords OR Default Post text)
@@ -518,7 +516,6 @@ export const ContentCard = ({
         }
     }
 
-    const companionUsers = content.review_prop?.companions_info; // Enriched companions
 
     return (
         <div className="bg-white">

@@ -30,7 +30,7 @@ export interface ShopInfoCardProps {
 
 export const ShopInfoCard = ({
     shop,
-    distance,
+    distance: _distance,
     initialIsBookmarked = false,
     my_review_stats,
     matchScore,
