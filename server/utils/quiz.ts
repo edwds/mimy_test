@@ -40,14 +40,14 @@ export interface QuizResult {
     tasteType: TasteType; // 32-type MBTI-style classification
 }
 
-// Axis mapping based on frontend questions
-// 1-3: boldness
-// 4-6: acidity
-// 7-9: richness
-// 10-12: experimental
-// 13-15: spiciness
-// 16-18: sweetness
-// 19-21: umami
+// Axis mapping based on frontend questions (2 per axis)
+// 1-2: boldness
+// 3-4: acidity
+// 5-6: richness
+// 7-8: experimental
+// 9-10: spiciness
+// 11-12: sweetness
+// 13-14: umami
 const AXIS_ORDER = [
     'boldness',
     'acidity',
@@ -138,12 +138,12 @@ export class QuizManager {
         }
 
         // Calculate sums (not averages) for each axis
-        // New system: answers are -1, 0, +1
-        // Each axis has 3 questions, so sum ranges from -3 to +3
+        // Answers are -1, 0, +1
+        // Each axis has 2 questions, so sum ranges from -2 to +2
         const sums: Record<string, number> = {};
 
-        for (let qId = 1; qId <= 21; qId++) {
-            const axisIndex = Math.ceil(qId / 3) - 1;
+        for (let qId = 1; qId <= 14; qId++) {
+            const axisIndex = Math.ceil(qId / 2) - 1;
             const axisName = AXIS_ORDER[axisIndex];
             const val = answers[qId] || 0; // -1, 0, or +1
             sums[axisName] = (sums[axisName] || 0) + val;
@@ -152,14 +152,8 @@ export class QuizManager {
         const scoreVector: number[] = [];
         const scoresMap: Record<string, number> = {};
 
-        // Map -3~+3 range to -2~+2 range for cluster matching
-        // -3 -> -2
-        // -2 -> -2
-        // -1 -> -1
-        // 0 -> 0
-        // +1 -> +1
-        // +2 -> +2
-        // +3 -> +2
+        // With 2 questions per axis, sum naturally ranges from -2 to +2
+        // Clamping kept as safety net
         for (const axis of AXIS_ORDER) {
             const sum = sums[axis] || 0;
             const clamped = Math.max(-2, Math.min(2, sum));

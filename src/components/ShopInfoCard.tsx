@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, PlusCircle, Bookmark } from 'lucide-react';
+import { Check, PlusCircle, Bookmark, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn, scoreToTasteRatingStep } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api';
 import { authFetch } from '@/lib/authFetch';
 import { useRanking } from '@/context/RankingContext';
@@ -20,6 +20,7 @@ export interface ShopInfoCardProps {
     distance?: string;
     initialIsBookmarked?: boolean;
     my_review_stats?: any;
+    matchScore?: number | null;
     showActions?: boolean;
     onClick?: () => void;
     className?: string;
@@ -32,6 +33,7 @@ export const ShopInfoCard = ({
     distance,
     initialIsBookmarked = false,
     my_review_stats,
+    matchScore,
     showActions = true,
     onClick,
     className,
@@ -119,27 +121,36 @@ export const ShopInfoCard = ({
                     {shop.name}
                 </h3>
 
-                {/* Bottom: Address & Distance */}
-                <div className={cn(
-                    "flex items-center text-[13px] gap-1",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                    {shop.address && <span className="truncate">{shop.address}</span>}
-                    {!shop.address && shop.address_region && (
-                        <span className="truncate">{shop.address_region}</span>
-                    )}
-                    {distance && (
-                        <>
-                            <span className="mx-1 opacity-30">|</span>
-                            <span>{distance}</span>
-                        </>
-                    )}
-                </div>
+                {/* My Ranking or Match Score */}
+                {my_review_stats ? (() => {
+                    const tier = my_review_stats.satisfaction;
+                    const label = tier === 2 ? '맛있어요' : tier === 1 ? '괜찮아요' : '별로예요';
+                    const color = tier === 2
+                        ? (darkMode ? 'text-orange-400' : 'text-orange-500')
+                        : (darkMode ? 'text-gray-400' : 'text-gray-500');
+                    return (
+                        <div className={cn("flex items-center gap-0.5 text-[12px]", color)}>
+                            <span>{label}</span>
+                            {typeof my_review_stats.rank === 'number' && (
+                                <span className="font-bold">{my_review_stats.rank}위</span>
+                            )}
+                        </div>
+                    );
+                })() : matchScore != null && matchScore >= 0 && (
+                    <div className={cn(
+                        "flex items-center gap-0.5 text-[12px]",
+                        darkMode ? "text-orange-400" : "text-orange-500"
+                    )}>
+                        <Star size={12} className="fill-current" />
+                        <span>예상 평가</span>
+                        <span className="font-bold">{scoreToTasteRatingStep(matchScore).toFixed(2)}</span>
+                    </div>
+                )}
             </div>
 
             {/* Actions */}
             {showActions && (
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-3 flex-shrink-0">
                     {/* Evaluate Button */}
                     <motion.button
                         whileTap={{ scale: 0.85 }}
@@ -153,9 +164,9 @@ export const ShopInfoCard = ({
                         aria-label="Evaluate"
                     >
                         {my_review_stats ? (
-                            <Check size={22} />
+                            <Check size={26} />
                         ) : (
-                            <PlusCircle size={22} />
+                            <PlusCircle size={26} />
                         )}
                     </motion.button>
 
@@ -176,7 +187,7 @@ export const ShopInfoCard = ({
                             animate={{ scale: isBookmarked ? [1, 1.4, 1] : 1 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <Bookmark size={22} className={cn(isBookmarked && 'fill-orange-600')} />
+                            <Bookmark size={26} className={cn(isBookmarked && 'fill-orange-600')} />
                         </motion.div>
                     </motion.button>
                 </div>

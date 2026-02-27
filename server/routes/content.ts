@@ -6,7 +6,7 @@ import { getOrSetCache, invalidatePattern, redis } from "../redis.js";
 import { ListService } from "../services/ListService.js";
 import { LeaderboardService } from "../services/LeaderboardService.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
-import { getShopReviewStats } from "../utils/enricher.js";
+import { getShopReviewStats, getShopMatchScores } from "../utils/enricher.js";
 import { createNotification } from "./notifications.js";
 
 const router = Router();
@@ -560,6 +560,12 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
         myRankings.forEach(r => myRankMap.set(r.shop_id, r));
     }
 
+    // 5. Match Scores
+    let matchScoresMap = new Map<number, number | null>();
+    if (shopIds.size > 0) {
+        matchScoresMap = await getShopMatchScores(Array.from(shopIds), userId);
+    }
+
     // Patch
     return feed.map(item => ({
         ...item,
@@ -570,6 +576,7 @@ async function enrichFeedWithUserStatus(feed: any[], userId: number) {
         poi: item.poi ? {
             ...item.poi,
             is_bookmarked: savedShopSet.has(item.poi.shop_id),
+            shop_user_match_score: matchScoresMap.get(item.poi.shop_id) ?? null,
             my_review_stats: myRankMap.has(item.poi.shop_id) ? {
                 satisfaction: myRankMap.get(item.poi.shop_id).satisfaction_tier,
                 rank: myRankMap.get(item.poi.shop_id).rank,

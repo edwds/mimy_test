@@ -64,6 +64,7 @@ app.use("/api/terms", termsRoutes);
 import relayRoutes from "./routes/relay.js";
 app.use("/api/relay", relayRoutes);
 
+
 app.get("/health", (_req, res) => {
     res.send("OK");
 });

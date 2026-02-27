@@ -37,7 +37,7 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
     const [searchParams] = useSearchParams();
 
     // Tabs
-    const initialTab = (searchParams.get('tab') as ProfileTabType) || 'timeline';
+    const initialTab = (searchParams.get('tab') as ProfileTabType) || 'content';
     const [activeTab, setActiveTab] = useState<ProfileTabType>(initialTab);
 
     useEffect(() => {
@@ -486,12 +486,14 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                 {/* Tabs */}
                 <div className="bg-background border-b border-border/50 z-20">
                     <div className="flex w-full px-0">
+                        {/* Timeline tab temporarily hidden
                         <TabButton
                             active={activeTab === 'timeline'}
                             onClick={() => handleTabChange('timeline')}
                             icon={<Calendar className="w-5 h-5" />}
                             label={t('profile.tabs.timeline')}
                         />
+                        */}
                         <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}

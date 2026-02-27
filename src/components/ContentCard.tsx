@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,23 +25,38 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
     const ref = useRef<HTMLDivElement>(null);
     const [expanded, setExpanded] = useState(false);
     const [canExpand, setCanExpand] = useState(false);
-    const [lineHeightPx, setLineHeightPx] = useState<number | null>(null);
+    const [collapsedHeight, setCollapsedHeight] = useState<number | undefined>(undefined);
+    const [fullHeight, setFullHeight] = useState<number | undefined>(undefined);
 
-    const measure = () => {
+    const measure = useCallback(() => {
         const el = ref.current;
         if (!el) return;
 
-        const cs = window.getComputedStyle(el);
-        const lh = parseFloat(cs.lineHeight);
-        if (!Number.isFinite(lh)) return;
+        // Measure full height (unclamped)
+        el.style.display = '';
+        el.style.webkitLineClamp = '';
+        el.style.webkitBoxOrient = '';
+        el.style.overflow = '';
+        const full = el.scrollHeight;
 
-        setLineHeightPx(lh);
+        // Measure clamped height using -webkit-line-clamp (accounts for paragraph spacing)
+        el.style.display = '-webkit-box';
+        el.style.webkitLineClamp = String(maxLines);
+        el.style.webkitBoxOrient = 'vertical';
+        el.style.overflow = 'hidden';
+        const clamped = el.clientHeight;
 
-        const maxH = lh * maxLines;
-        // Add small tolerance for rounding errors and paragraph spacing
-        const isOverflow = el.scrollHeight > Math.ceil(maxH + lh);
+        // Reset inline styles
+        el.style.display = '';
+        el.style.webkitLineClamp = '';
+        el.style.webkitBoxOrient = '';
+        el.style.overflow = '';
+
+        const isOverflow = full > clamped + 2;
         setCanExpand(isOverflow);
-    };
+        setCollapsedHeight(clamped);
+        setFullHeight(full);
+    }, [maxLines]);
 
     useLayoutEffect(() => {
         setExpanded(false);
@@ -52,13 +67,7 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
         const onResize = () => measure();
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [text, maxLines]);
-
-    const maxHeight = useMemo(() => {
-        if (!lineHeightPx) return undefined;
-        return `${lineHeightPx * maxLines}px`;
-    }, [lineHeightPx, maxLines]);
+    }, [text, maxLines, measure]);
 
     // Split text into paragraphs (consecutive newlines separate paragraphs)
     const paragraphs = useMemo(() => {
@@ -70,19 +79,15 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
             const line = lines[i];
 
             if (line === '') {
-                // Empty line
                 if (currentParagraph.length > 0) {
-                    // End current paragraph
                     result.push(currentParagraph);
                     currentParagraph = [];
                 }
             } else {
-                // Non-empty line
                 currentParagraph.push(line);
             }
         }
 
-        // Add remaining paragraph
         if (currentParagraph.length > 0) {
             result.push(currentParagraph);
         }
@@ -93,16 +98,13 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
     return (
         <div className={cn('px-5 mb-4', className)}>
             <div className="relative">
-                <div
+                <motion.div
                     ref={ref}
-                    className={cn(
-                        'text-base text-gray-800 whitespace-pre-wrap break-words',
-                        !expanded && canExpand && 'overflow-hidden'
-                    )}
-                    style={{
-                        lineHeight: '1.6',
-                        ...((!expanded && canExpand) ? { maxHeight } : {})
-                    }}
+                    className="text-gray-800 whitespace-pre-wrap break-words overflow-hidden"
+                    style={{ fontSize: '15px', lineHeight: '1.6' }}
+                    initial={false}
+                    animate={{ height: canExpand ? (expanded ? fullHeight : collapsedHeight) : 'auto' }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
                     {paragraphs.map((paragraph, pIdx) => (
                         <span key={pIdx} style={{ display: 'block' }}>
@@ -117,29 +119,38 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
                             ))}
                         </span>
                     ))}
-                </div>
+                </motion.div>
 
-                {/* Gradient Overlay when collapsed */}
-                {!expanded && canExpand && (
-                    <div
-                        className="absolute bottom-0 left-0 right-0 h-14 pointer-events-none"
-                        style={{
-                            background: 'linear-gradient(to bottom, transparent 0%, white 90%)'
+                {/* Inline "...더보기" at bottom-right of last visible line */}
+                {canExpand && !expanded && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            measure();
+                            setExpanded(true);
                         }}
-                    />
+                        className="absolute bottom-0 right-0 text-[15px] text-gray-400 bg-white pl-6"
+                        style={{
+                            lineHeight: '1.6',
+                            background: 'linear-gradient(to right, transparent, white 30%)',
+                        }}
+                    >
+                        ...더보기
+                    </button>
                 )}
             </div>
 
-            {canExpand && (
+            {canExpand && expanded && (
                 <button
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation();
-                        setExpanded(v => !v);
+                        setExpanded(false);
                     }}
-                    className="-mt-2 text-[13px] font-semibold text-gray-600 hover:text-gray-900"
+                    className="text-[13px] font-semibold text-gray-400 mt-1"
                 >
-                    {expanded ? '접기' : '더보기'}
+                    접기
                 </button>
             )}
         </div>
@@ -198,6 +209,7 @@ export interface ContentCardProps {
             catchtable_ref?: string;
             lat?: number;
             lon?: number;
+            shop_user_match_score?: number | null;
             my_review_stats?: {
                 satisfaction: Satisfaction | number;
                 rank: number;
@@ -511,9 +523,9 @@ export const ContentCard = ({
     return (
         <div className="bg-white">
             {/* Header */}
-            <div className="flex px-5 py-4 gap-3 items-start">
+            <div className="flex px-5 py-4 gap-3 items-center">
                 <div
-                    className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0 cursor-pointer active:opacity-80 mt-0.5"
+                    className="w-11 h-11 rounded-full bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0 cursor-pointer active:opacity-80"
                     onClick={handleUserClick}
                 >
                     {user.profile_image ? (
@@ -524,127 +536,43 @@ export const ContentCard = ({
                 </div>
 
                 <div className="flex flex-col min-w-0 flex-1 cursor-pointer active:opacity-80 text-left" onClick={handleUserClick}>
-                    {/* Row 1: Nickname & Cluster */}
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-bold text-base text-gray-900 leading-tight truncate shrink-0">
-                            {user.nickname}
-                        </span>
-                        {user.taste_result?.scores && (
-                            (() => {
-                                const tasteType = getTasteType(user.taste_result);
-                                if (!tasteType) return null;
+                    {/* Row 1: Nickname */}
+                    <span className="font-bold text-base text-gray-900 leading-tight truncate">
+                        {user.nickname}
+                    </span>
 
-                                const profile = getTasteTypeProfile(tasteType, 'ko');
-                                const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
-                                    ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
-                                    : null;
+                    {/* Row 2: Taste Cluster */}
+                    {user.taste_result?.scores && (
+                        (() => {
+                            const tasteType = getTasteType(user.taste_result);
+                            if (!tasteType) return null;
 
-                                return (
-                                    <span className={cn(
-                                        "text-[11px] font-medium shrink-0",
-                                        getTasteBadgeStyle(matchScore)
-                                    )}>
-                                        {profile?.name || tasteType.fullType}
-                                    </span>
-                                );
-                            })()
-                        )}
-                    </div>
+                            const profile = getTasteTypeProfile(tasteType, 'ko');
+                            const matchScore = (currentUser && (currentUser as any).taste_result?.scores && user.taste_result?.scores)
+                                ? calculateTasteMatch((currentUser as any).taste_result.scores, user.taste_result.scores)
+                                : null;
 
-                    {/* Row 2: Visit Info (Max 2 lines) */}
-                    {(shopName || contextText || (companionUsers && companionUsers.length > 0)) && (
-                        <div className="text-[13px] text-gray-500 font-normal leading-snug mt-1 line-clamp-2">
-                            {i18n.language === 'ko' ? (
-                                <>
-                                    {/* Korean: [Companions]와/과 함께 [Shop]을/를 [Date] [N번째] 방문 */}
-                                    {companionUsers && companionUsers.length > 0 && (
-                                        <span>
-                                            {(() => {
-                                                const MAX = 3;
-                                                const overflow = companionUsers.length - MAX;
-                                                if (overflow > 0) {
-                                                    const display = companionUsers.slice(0, MAX);
-                                                    const others = t('write.content.and_others', { count: overflow });
-                                                    return (
-                                                        <>
-                                                            {display.map((u, i) => (
-                                                                <span key={i}>{u.nickname}, </span>
-                                                            ))}
-                                                            {appendJosa(others, '와/과')}
-                                                            {' '}{t('content.visit_info.with')}
-                                                        </>
-                                                    );
-                                                }
-                                                return (
-                                                    <>
-                                                        {companionUsers.map((u, i) => (
-                                                            <span key={i}>
-                                                                {i < companionUsers.length - 1
-                                                                    ? `${u.nickname}, `
-                                                                    : appendJosa(u.nickname, '와/과')}
-                                                            </span>
-                                                        ))}
-                                                        {' '}{t('content.visit_info.with')}
-                                                    </>
-                                                );
-                                            })()}
-                                        </span>
-                                    )}
-
-                                    {shopName && (
-                                        <span className="shrink-0">
-                                            {' '}{appendJosa(shopName, '을/를')}
-                                        </span>
-                                    )}
-
-                                    {content.review_prop?.visit_date && (
-                                        <span className="shrink-0">{' '}{formatVisitDate(content.review_prop.visit_date, t)}</span>
-                                    )}
-
-                                    {typeof visitCount === 'number' && visitCount >= 2 && (
-                                        <span className="shrink-0">{' '}{visitCount}{t('content.visit_info.nth')}</span>
-                                    )}
-
-                                    {shopName && <span className="shrink-0">{' '}{t('content.visit_info.visited')}</span>}
-                                </>
-                            ) : (
-                                <>
-                                    {/* English: Visited [Shop Name] [Date] ([Nth] visit) with [Companions] */}
-                                    {shopName && <span className="shrink-0">{t('content.visit_info.visited')}</span>}
-                                    {shopName && <span className="shrink-0">{' '}{shopName}</span>}
-                                    {content.review_prop?.visit_date && (
-                                        <span className="shrink-0">{' '}{formatVisitDate(content.review_prop.visit_date, t)}</span>
-                                    )}
-                                    {typeof visitCount === 'number' && visitCount >= 2 && (
-                                        <span className="shrink-0">
-                                            {' '}({visitCount}{visitCount === 2 ? '2nd' : visitCount === 3 ? '3rd' : 'th'} {t('content.visit_info.nth')})
-                                        </span>
-                                    )}
-                                    {companionUsers && companionUsers.length > 0 && (
-                                        <span className="shrink-0">
-                                            {' '}{t('content.visit_info.with')}{' '}
-                                            {companionUsers.map((u, i) => (
-                                                <span key={i}>
-                                                    {u.nickname}{i < companionUsers.length - 1 ? ', ' : ''}
-                                                </span>
-                                            ))}
-                                        </span>
-                                    )}
-                                </>
-                            )}
-
-                            {/* Post Keywords (if not review) */}
-                            {!shopName && contextText && (
-                                <span>{contextText}</span>
-                            )}
-                        </div>
+                            return (
+                                <span className={cn(
+                                    "text-[13px] font-medium mt-0.5",
+                                    getTasteBadgeStyle(matchScore)
+                                )}>
+                                    {profile?.name || tasteType.fullType}
+                                </span>
+                            );
+                        })()
                     )}
 
-                    {/* Row 3: Satisfaction & Ranking */}
+                    {/* Row 3 (formerly): Post Keywords only */}
+                    {!shopName && contextText && (
+                        <div className="text-[13px] text-gray-500 font-normal leading-snug mt-1 line-clamp-2">
+                            <span>{contextText}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* More / Menu Button */}
-                <div className="relative ml-auto flex items-center gap-2 flex-shrink-0 mt-0.5">
+                <div className="relative ml-auto flex items-center gap-2 flex-shrink-0">
                     {showActions && currentUser?.id !== user.id && (
                         <button
                             type="button"
@@ -807,43 +735,37 @@ export const ContentCard = ({
                 )
             }
 
-            {/* Satisfaction & Ranking (Merged Badge) */}
-            {(satisfaction || (typeof rank === 'number' && rank > 0)) && (
-                <div className="px-4 mb-2 mt-2 flex items-center gap-2 text-[13px]">
-                    {/* Badge: Satisfaction + Tier */}
-                    {(satisfaction || (user.ranking_count && user.ranking_count >= 50)) && (
+            {/* Satisfaction + Visit Info */}
+            {(satisfaction || shopName || content.review_prop?.visit_date) && (
+                <div className="px-5 mb-2 mt-2 flex items-center gap-1.5 text-[13px]">
+                    {satisfaction && (
                         <span className={cn(
-                            "font-bold px-2 py-0.5 rounded-full border border-current text-xs flex items-center gap-1",
-                            satisfaction === 'good' ? "text-orange-600 border-orange-200 bg-orange-50" : "text-gray-500 border-gray-200 bg-gray-50"
+                            "font-bold text-[13px]",
+                            satisfaction === 'good' ? "text-orange-600" : satisfaction === 'bad' ? "text-gray-400" : "text-gray-500"
                         )}>
-                            {satisfaction && t(`write.basic.${satisfaction}`)}
-
-                            {/* Separator if both exist */}
-                            {satisfaction && typeof rank === 'number' && rank > 0 && user.ranking_count && user.ranking_count >= 50 && (
-                                <span className="opacity-30 mx-0.5">|</span>
-                            )}
-
-                            {/* Tier Info */}
-                            {typeof rank === 'number' && rank > 0 && user.ranking_count && user.ranking_count >= 50 && (() => {
-                                const percent = Math.ceil((rank / user.ranking_count) * 100);
-                                return (
-                                    <span>{t('common.top')} {percent}%</span>
-                                );
-                            })()}
+                            {t(`write.basic.${satisfaction}`)}
                         </span>
                     )}
-
-                    {/* Rank (Outside Badge) */}
-                    {typeof rank === 'number' && rank > 0 && (() => {
-                        const isTop5Percent = user.ranking_count && user.ranking_count >= 50 && ((rank / user.ranking_count) * 100 <= 5);
-                        const showTrophy = isTop5Percent || rank <= 10;
-                        return (
-                            <span className="font-medium text-xs text-gray-800 flex items-center gap-1">
-                                {showTrophy && <span className="font-light">🏆</span>}
-                                {rank}{i18n.language === 'ko' ? '위' : (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th')}
-                            </span>
-                        );
-                    })()}
+                    {(shopName || content.review_prop?.visit_date) && (
+                        <span className="text-gray-600">
+                            {i18n.language === 'ko' ? (
+                                <>
+                                    {shopName && <span>{appendJosa(shopName, '을/를')}</span>}
+                                    {content.review_prop?.visit_date && (
+                                        <span>{shopName ? ' ' : ''}{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                    )}
+                                    {shopName && <span> {t('content.visit_info.visited')}</span>}
+                                </>
+                            ) : (
+                                <>
+                                    {shopName && <span>{t('content.visit_info.visited')} {shopName}</span>}
+                                    {content.review_prop?.visit_date && (
+                                        <span>{shopName ? ' ' : ''}{formatVisitDate(content.review_prop.visit_date, t)}</span>
+                                    )}
+                                </>
+                            )}
+                        </span>
+                    )}
                 </div>
             )}
 
@@ -853,7 +775,7 @@ export const ContentCard = ({
                     onClick={(e) => { e.stopPropagation(); onSmartTap(e, 0, 'text'); }}
                     className="relative"
                 >
-                    <ContentBody text={content.text} maxLines={10} />
+                    <ContentBody text={content.text} maxLines={5} />
                     <AnimatePresence>
                         {showHeart && heartTarget === 'text' && heartPos && (
                             <motion.div
@@ -935,6 +857,7 @@ export const ContentCard = ({
                     }
                     initialIsBookmarked={isPoiBookmarked}
                     my_review_stats={content.poi?.my_review_stats || content.review_prop?.my_review_stats}
+                    matchScore={content.poi?.shop_user_match_score}
                     showActions={showActions}
                     sourceUserId={user.id}
                     className="mx-5 mb-4"

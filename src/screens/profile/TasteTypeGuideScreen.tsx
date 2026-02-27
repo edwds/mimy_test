@@ -106,7 +106,7 @@ export const TasteTypeGuideScreen = () => {
             </header>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto pb-safe-offset-6">
+            <main className="flex-1 overflow-y-auto pb-safe-offset-20">
                 {/* Intro Section */}
                 <section className="px-6 py-6 bg-gradient-to-br from-[#FDFBF7] to-[#F5F3FF]">
                     <h2 className="text-xl font-bold text-foreground mb-2">
