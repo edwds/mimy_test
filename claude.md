@@ -170,7 +170,7 @@ mimy_test/
 ### 계산 로직
 
 1. **신뢰할 수 있는 리뷰어 필터링**
-   - 100개 이상 랭킹을 등록한 사용자만 사용
+   - 30개 이상 랭킹을 등록한 사용자만 사용
    - 최소 3명 이상 필요
 
 2. **Rank Percentile 계산**
@@ -385,7 +385,7 @@ npx cap open android
 1. **추천 알고리즘 고도화**
    - Satisfaction Tier 기반 점수 재조정
    - Bayesian Average 적용
-   - 신뢰도 기준 강화 (100+ 평가)
+   - 신뢰도 기준: 30+ 평가 (환경변수 MIN_RANKINGS_FOR_MATCH로 조정 가능)
 
 2. **UX 개선**
    - 리뷰 작성 플로우 간소화

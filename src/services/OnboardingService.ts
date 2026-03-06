@@ -13,16 +13,28 @@ export interface ShopMatch {
     } | null;
 }
 
+export interface MatchedRecommendation {
+    name: string;
+    reason: string;
+    shop: {
+        id: number;
+        name: string;
+        food_kind: string | null;
+        thumbnail_img: string | null;
+    } | null;
+}
+
 export interface TasteAnalysisResult {
     summary: string;
-    highlights: string[];
-    personalityTraits: string[];
-    foodRecommendations: string[];
-    detailedAnalysis: string;
+    insights?: string[];
+    avoidNote?: string;
+    recommendations?: Array<{ name: string; reason: string }>;
+    detailedAnalysis?: string; // backward compat with existing DB data
 }
 
 export interface TasteAnalysisResponse {
     analysis: TasteAnalysisResult;
+    matchedRecommendations: MatchedRecommendation[];
     shareCode: string;
     tasteType: {
         fullType: string;
@@ -45,6 +57,7 @@ export interface TasteShareData {
         rank: number;
     }> | null;
     analysis: TasteAnalysisResult;
+    matchedRecommendations: MatchedRecommendation[];
     tasteProfile: { name: string; tagline: string } | null;
     tasteProfileEn: { name: string; tagline: string } | null;
     user: {
@@ -54,7 +67,49 @@ export interface TasteShareData {
     createdAt: string;
 }
 
+export interface CatchtableImportResult {
+    extractedNames: string[];
+    catchtableRefs: Array<{ name: string; shopRef: string }>;
+}
+
 export const OnboardingService = {
+    importCatchtable: async (): Promise<CatchtableImportResult> => {
+        const response = await fetch('https://ct-api.catchtable.co.kr/api/v4/user/reservations/_list?statusGroup=DONE&sortCode=DESC&size=100', {
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('AUTH_REQUIRED');
+            }
+            throw new Error('FETCH_FAILED');
+        }
+
+        const json = await response.json();
+        const items: any[] = json?.data?.items || [];
+
+        if (items.length === 0) {
+            throw new Error('EMPTY');
+        }
+
+        // Extract names and shopRefs, deduplicate by shopRef
+        const seen = new Set<string>();
+        const extractedNames: string[] = [];
+        const catchtableRefs: Array<{ name: string; shopRef: string }> = [];
+
+        for (const item of items) {
+            const shopName = item?.shop?.shopName;
+            const shopRef = item?.shop?.shopRef;
+            if (!shopName || !shopRef) continue;
+            if (seen.has(shopRef)) continue;
+            seen.add(shopRef);
+            extractedNames.push(shopName);
+            catchtableRefs.push({ name: shopName, shopRef });
+        }
+
+        return { extractedNames, catchtableRefs };
+    },
+
     analyzeScreenshots: async (imageUrls: string[]): Promise<{ extractedNames: string[] }> => {
         const response = await authFetch(`${API_BASE_URL}/api/onboarding/analyze-screenshots`, {
             method: 'POST',
@@ -68,10 +123,10 @@ export const OnboardingService = {
         return response.json();
     },
 
-    matchShops: async (names: string[]): Promise<{ matches: ShopMatch[] }> => {
+    matchShops: async (names: string[], catchtableRefs?: Array<{ name: string; shopRef: string }>): Promise<{ matches: ShopMatch[] }> => {
         const response = await authFetch(`${API_BASE_URL}/api/onboarding/match-shops`, {
             method: 'POST',
-            body: JSON.stringify({ names }),
+            body: JSON.stringify({ names, catchtableRefs }),
         });
 
         if (!response.ok) {

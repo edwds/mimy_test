@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { shops, users, users_ranking, taste_analyses } from "../db/schema.js";
+import { shops, users, users_ranking, taste_analyses, hate_result, hate_prop, shop_naver_briefing } from "../db/schema.js";
 import { eq, or, sql, and, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { extractRestaurantNames, generateTasteAnalysis, type TasteAnalysisInput } from "../utils/gemini.js";
@@ -56,11 +56,29 @@ router.post("/analyze-screenshots", requireAuth, async (req, res) => {
  */
 router.post("/match-shops", requireAuth, async (req, res) => {
     try {
-        const { names } = req.body;
+        const { names, catchtableRefs } = req.body;
 
         if (!names || !Array.isArray(names) || names.length === 0) {
             return res.status(400).json({ error: "names array is required" });
         }
+
+        // Build a lookup map from name → shopRef for catchtable matching
+        const refMap = new Map<string, string>();
+        if (Array.isArray(catchtableRefs)) {
+            for (const ref of catchtableRefs) {
+                if (ref.name && ref.shopRef) {
+                    refMap.set(ref.name, ref.shopRef);
+                }
+            }
+        }
+
+        const shopFields = {
+            id: shops.id,
+            name: shops.name,
+            food_kind: shops.food_kind,
+            thumbnail_img: shops.thumbnail_img,
+            address_full: shops.address_full,
+        };
 
         const matches: Array<{
             extractedName: string;
@@ -76,28 +94,28 @@ router.post("/match-shops", requireAuth, async (req, res) => {
 
         for (const name of names) {
             const normalizedName = name.replace(/\s+/g, '');
+            let results: typeof matches[0]['shop'][] = [];
+
+            // Priority 0: catchtable_ref exact match
+            const shopRef = refMap.get(name);
+            if (shopRef) {
+                results = await db.select(shopFields)
+                    .from(shops)
+                    .where(eq(shops.catchtable_ref, shopRef))
+                    .limit(1);
+            }
 
             // Priority 1: Exact match (space-normalized, case-insensitive)
-            let results = await db.select({
-                id: shops.id,
-                name: shops.name,
-                food_kind: shops.food_kind,
-                thumbnail_img: shops.thumbnail_img,
-                address_full: shops.address_full,
-            })
-                .from(shops)
-                .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`)
-                .limit(1);
+            if (results.length === 0) {
+                results = await db.select(shopFields)
+                    .from(shops)
+                    .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`)
+                    .limit(1);
+            }
 
             // Priority 2: Partial match (extracted name in DB name)
             if (results.length === 0) {
-                results = await db.select({
-                    id: shops.id,
-                    name: shops.name,
-                    food_kind: shops.food_kind,
-                    thumbnail_img: shops.thumbnail_img,
-                    address_full: shops.address_full,
-                })
+                results = await db.select(shopFields)
                     .from(shops)
                     .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${'%' + normalizedName + '%'}`)
                     .limit(1);
@@ -105,13 +123,7 @@ router.post("/match-shops", requireAuth, async (req, res) => {
 
             // Priority 3: Reverse partial match (DB name in extracted name)
             if (results.length === 0) {
-                results = await db.select({
-                    id: shops.id,
-                    name: shops.name,
-                    food_kind: shops.food_kind,
-                    thumbnail_img: shops.thumbnail_img,
-                    address_full: shops.address_full,
-                })
+                results = await db.select(shopFields)
                     .from(shops)
                     .where(sql`${normalizedName} ILIKE '%' || REPLACE(${shops.name}, ' ', '') || '%'`)
                     .limit(1);
@@ -161,7 +173,7 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
             return res.status(400).json({ error: "Invalid taste type" });
         }
 
-        // Get user's ranked shops
+        // Get user's ranked shops with naver briefing
         const rankedShops = await db.select({
             name: shops.name,
             food_kind: shops.food_kind,
@@ -169,11 +181,21 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
             address_region: shops.address_region,
             satisfaction_tier: users_ranking.satisfaction_tier,
             rank: users_ranking.rank,
+            briefing: shop_naver_briefing.briefing_text,
         })
             .from(users_ranking)
             .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+            .leftJoin(shop_naver_briefing, eq(shops.id, shop_naver_briefing.shop_id))
             .where(eq(users_ranking.user_id, userId))
-            .orderBy(asc(users_ranking.rank));
+            .orderBy(asc(users_ranking.rank))
+            .limit(30);
+
+        // Get user's hated foods
+        const hateItems = await db.select({ item: hate_prop.item })
+            .from(hate_result)
+            .innerJoin(hate_prop, eq(hate_result.prop_id, hate_prop.id))
+            .where(and(eq(hate_result.user_id, userId), eq(hate_result.selection, 'NOT_EAT')));
+        const hatedFoods = hateItems.map(h => h.item);
 
         // Generate LLM analysis
         const analysisInput: TasteAnalysisInput = {
@@ -191,11 +213,80 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
                 address_region: s.address_region,
                 satisfaction_tier: s.satisfaction_tier,
                 rank: s.rank,
+                briefing: s.briefing,
             })),
+            hatedFoods,
         };
 
         console.log(`[onboarding] Generating taste analysis for user ${userId}`);
         const analysis = await generateTasteAnalysis(analysisInput);
+
+        // Match recommendation names against shops DB
+        const matchedRecommendations = await Promise.all(
+            analysis.recommendations.map(async (rec) => {
+                const normalizedName = rec.name.replace(/\s+/g, '');
+                const address = rec.address || '';
+                const shopFields = {
+                    id: shops.id,
+                    name: shops.name,
+                    food_kind: shops.food_kind,
+                    thumbnail_img: shops.thumbnail_img,
+                };
+
+                // Priority 1: Name + address match
+                let results: typeof matchedRecommendations extends Promise<(infer R)[]> ? any[] : any[] = [];
+                if (address) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(and(
+                            sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`,
+                            sql`${shops.address_full} ILIKE ${'%' + address.replace(/\s+/g, '%') + '%'}`
+                        ))
+                        .limit(1);
+                }
+
+                // Priority 2: Exact name match
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`)
+                        .limit(1);
+                }
+
+                // Priority 3: Partial name match (LLM name in DB name)
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${'%' + normalizedName + '%'}`)
+                        .limit(1);
+                }
+
+                // Priority 4: Reverse partial match (DB name in LLM name)
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`${normalizedName} ILIKE '%' || REPLACE(${shops.name}, ' ', '') || '%'`)
+                        .limit(1);
+                }
+
+                // Priority 5: Strip common suffixes (본점, 강남점, etc.) and retry
+                if (results.length === 0) {
+                    const stripped = normalizedName.replace(/(본점|강남점|역삼점|신사점|청담점|압구정점|서울점|홍대점|이태원점|한남점|성수점|삼성점|잠실점|여의도점|판교점|분당점)$/, '');
+                    if (stripped !== normalizedName && stripped.length >= 2) {
+                        results = await db.select(shopFields)
+                            .from(shops)
+                            .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${'%' + stripped + '%'}`)
+                            .limit(1);
+                    }
+                }
+
+                return {
+                    name: rec.name,
+                    reason: rec.reason,
+                    shop: results.length > 0 ? results[0] : null,
+                };
+            })
+        );
 
         // Generate unique share code
         const shareCode = crypto.randomBytes(6).toString('base64url').slice(0, 8);
@@ -232,6 +323,7 @@ router.post("/taste-analysis", requireAuth, async (req, res) => {
 
         res.json({
             analysis,
+            matchedRecommendations,
             shareCode,
             tasteType: {
                 fullType: tasteType.fullType,
@@ -276,11 +368,79 @@ router.get("/taste/:code", async (req, res) => {
         const tasteProfile = getTasteTypeProfile(result.taste_type.split('-')[0], 'ko');
         const tasteProfileEn = getTasteTypeProfile(result.taste_type.split('-')[0], 'en');
 
+        // Match recommendation names against shops DB
+        const analysisData = result.analysis as any;
+        const recs = Array.isArray(analysisData?.recommendations) ? analysisData.recommendations : [];
+        const matchedRecommendations = await Promise.all(
+            recs.map(async (rec: any) => {
+                const name = rec.name || rec;
+                const reason = rec.reason || '';
+                const address = rec.address || '';
+                const normalizedName = String(name).replace(/\s+/g, '');
+                const shopFields = {
+                    id: shops.id,
+                    name: shops.name,
+                    food_kind: shops.food_kind,
+                    thumbnail_img: shops.thumbnail_img,
+                };
+
+                // Priority 1: Name + address
+                let results: any[] = [];
+                if (address) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(and(
+                            sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`,
+                            sql`${shops.address_full} ILIKE ${'%' + address.replace(/\s+/g, '%') + '%'}`
+                        ))
+                        .limit(1);
+                }
+
+                // Priority 2: Exact name
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${normalizedName}`)
+                        .limit(1);
+                }
+
+                // Priority 3: Partial match
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${'%' + normalizedName + '%'}`)
+                        .limit(1);
+                }
+
+                // Priority 4: Reverse partial
+                if (results.length === 0) {
+                    results = await db.select(shopFields)
+                        .from(shops)
+                        .where(sql`${normalizedName} ILIKE '%' || REPLACE(${shops.name}, ' ', '') || '%'`)
+                        .limit(1);
+                }
+
+                // Priority 5: Strip suffixes
+                if (results.length === 0) {
+                    const stripped = normalizedName.replace(/(본점|강남점|역삼점|신사점|청담점|압구정점|서울점|홍대점|이태원점|한남점|성수점|삼성점|잠실점|여의도점|판교점|분당점)$/, '');
+                    if (stripped !== normalizedName && stripped.length >= 2) {
+                        results = await db.select(shopFields)
+                            .from(shops)
+                            .where(sql`REPLACE(${shops.name}, ' ', '') ILIKE ${'%' + stripped + '%'}`)
+                            .limit(1);
+                    }
+                }
+
+                return { name, reason, shop: results.length > 0 ? results[0] : null };
+            })
+        );
+
         res.json({
             tasteType: result.taste_type,
             tasteScores: result.taste_scores,
             rankedShopsSummary: result.ranked_shops_summary,
             analysis: result.analysis,
+            matchedRecommendations,
             tasteProfile,
             tasteProfileEn,
             user: {

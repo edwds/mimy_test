@@ -107,6 +107,24 @@ const FOOD_KIND_REVERSE_MAP: Record<string, string[]> = {
 };
 
 /**
+ * food_kind raw 값 → 정규화된 카테고리명 (정방향 매핑)
+ * FOOD_KIND_REVERSE_MAP을 뒤집어서 생성
+ */
+const FOOD_KIND_FORMAT_MAP: Record<string, string> = {};
+for (const [normalized, rawValues] of Object.entries(FOOD_KIND_REVERSE_MAP)) {
+    for (const raw of rawValues) {
+        FOOD_KIND_FORMAT_MAP[raw] = normalized;
+        FOOD_KIND_FORMAT_MAP[raw.toLowerCase()] = normalized;
+    }
+}
+
+export function formatFoodKind(foodKind: string | null | undefined, fallback = '음식점'): string {
+    if (!foodKind) return fallback;
+    const trimmed = foodKind.trim();
+    return FOOD_KIND_FORMAT_MAP[trimmed] || FOOD_KIND_FORMAT_MAP[trimmed.toLowerCase()] || trimmed;
+}
+
+/**
  * 정규화된 카테고리명 배열을 DB 매칭용 raw 값 배열로 확장
  */
 export function expandFoodKindFilter(normalizedNames: string[]): string[] {

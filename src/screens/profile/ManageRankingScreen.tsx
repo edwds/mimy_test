@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ArrowLeft, Trash2, GripVertical, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RankingService, RankingItem } from '@/services/RankingService';
+import { RankingService, RankingItem, TIER_ORDER, TIER_NUM, TIER_LABEL, TIER_COLOR, TIER_FROM_NUM, RANKED_TIERS, type Satisfaction } from '@/services/RankingService';
 import { Button } from '@/components/ui/button';
 import React, { useRef } from 'react';
 import { RelayRating } from '@/screens/relay/RelayScreen';
@@ -22,10 +22,18 @@ export const ManageRankingScreen = () => {
     const [saving, setSaving] = useState(false);
 
     // New ratings from RelayScreen (passed via router state)
-    const newRatings = (location.state as { newRatings?: RelayRating[] } | null)?.newRatings || [];
+    // useMemo to prevent new [] reference on every render (which would retrigger useEffect)
+    const newRatings = useMemo(
+        () => (location.state as { newRatings?: RelayRating[] } | null)?.newRatings || [],
+        [location.state]
+    );
 
     // We track delete targets by ID
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+    // Reset all rankings
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [resetting, setResetting] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -60,7 +68,7 @@ export const ManageRankingScreen = () => {
 
     // FlattenedItem with optional isNew flag and newRating data for new items from relay
     type FlattenedItem =
-        | { type: 'header', id: string, tier: number, title: string }
+        | { type: 'header', id: string, tier: number, tierName: Satisfaction, title: string }
         | { type: 'item', id: string, data: RankingItem, isNew?: false }
         | { type: 'item', id: string, data: null, isNew: true, newRating: RelayRating };
 
@@ -70,74 +78,58 @@ export const ManageRankingScreen = () => {
         if (!loading) {
             const newFlatList: FlattenedItem[] = [];
 
-            // Get new ratings by tier
-            const newGood = newRatings.filter(r => r.satisfaction === 'good');
-            const newOk = newRatings.filter(r => r.satisfaction === 'ok');
-            const newBad = newRatings.filter(r => r.satisfaction === 'bad');
+            // Build 5-tier sections dynamically
+            for (const tierName of TIER_ORDER) {
+                const tierNum = TIER_NUM[tierName];
+                const tierItems = originalItems.filter(i => i.satisfaction_tier === tierNum)
+                    .sort((a, b) => a.rank - b.rank);
+                const tierNewRatings = newRatings.filter(r => r.satisfaction === tierName);
 
-            // Tier 2 (Delicious)
-            newFlatList.push({ type: 'header', id: 'header-2', tier: 2, title: t('write.basic.good', 'Delicious') });
-            originalItems.filter(i => i.satisfaction_tier === 2)
-                .sort((a, b) => a.rank - b.rank)
-                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
-            // Add new items at the bottom of this tier
-            newGood.forEach(r => newFlatList.push({
-                type: 'item',
-                id: `new-${r.shopId}`,
-                data: null,
-                isNew: true,
-                newRating: r
-            }));
+                // Only show header if there are items or new ratings, or always for all tiers
+                newFlatList.push({
+                    type: 'header',
+                    id: `header-${tierNum}`,
+                    tier: tierNum,
+                    tierName,
+                    title: TIER_LABEL[tierName],
+                });
 
-            // Tier 1 (Okay)
-            newFlatList.push({ type: 'header', id: 'header-1', tier: 1, title: t('write.basic.ok', 'Okay') });
-            originalItems.filter(i => i.satisfaction_tier === 1)
-                .sort((a, b) => a.rank - b.rank)
-                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
-            // Add new items at the bottom of this tier
-            newOk.forEach(r => newFlatList.push({
-                type: 'item',
-                id: `new-${r.shopId}`,
-                data: null,
-                isNew: true,
-                newRating: r
-            }));
+                // Existing items
+                tierItems.forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
 
-            // Tier 0 (Bad)
-            newFlatList.push({ type: 'header', id: 'header-0', tier: 0, title: t('write.basic.bad', 'Bad') });
-            originalItems.filter(i => i.satisfaction_tier === 0)
-                .sort((a, b) => a.rank - b.rank)
-                .forEach(i => newFlatList.push({ type: 'item', id: String(i.id), data: i }));
-            // Add new items at the bottom of this tier
-            newBad.forEach(r => newFlatList.push({
-                type: 'item',
-                id: `new-${r.shopId}`,
-                data: null,
-                isNew: true,
-                newRating: r
-            }));
+                // New items at the bottom of this tier
+                tierNewRatings.forEach(r => newFlatList.push({
+                    type: 'item',
+                    id: `new-${r.shopId}`,
+                    data: null,
+                    isNew: true,
+                    newRating: r
+                }));
+            }
 
             setFlatList(newFlatList);
         }
-    }, [originalItems, loading, t, newRatings]);
+    }, [originalItems, loading, newRatings]);
 
     const handleSave = async () => {
         setSaving(true);
         try {
             // Separate new items from existing items
-            const newItems: { shop_id: number; satisfaction: 'good' | 'ok' | 'bad' }[] = [];
+            const newItems: { shop_id: number; satisfaction: Satisfaction }[] = [];
             const reorderPayload: { shop_id: number; rank: number; satisfaction_tier: number }[] = [];
             let rankCounter = 1;
-            let currentTier = 2;
+            let currentTier = TIER_NUM.goat; // Start with highest tier
 
             flatList.forEach(item => {
                 if (item.type === 'header') {
                     currentTier = item.tier;
                 } else if (item.isNew && item.newRating) {
                     // New item from relay - will be created first
+                    // Use the tier from header position (user may have dragged to different tier)
+                    const tierName = TIER_FROM_NUM[currentTier] ?? 'good';
                     newItems.push({
                         shop_id: item.newRating.shopId,
-                        satisfaction: item.newRating.satisfaction
+                        satisfaction: tierName
                     });
                     // Also add to reorder payload for final ordering
                     reorderPayload.push({
@@ -206,6 +198,21 @@ export const ManageRankingScreen = () => {
 
     if (loading) return <div className="p-4">Loading...</div>;
 
+    const handleResetAll = async () => {
+        setResetting(true);
+        try {
+            await RankingService.deleteAll();
+            setShowResetConfirm(false);
+            setOriginalItems([]);
+            setFlatList([]);
+        } catch (e) {
+            console.error(e);
+            alert("Failed to reset rankings");
+        } finally {
+            setResetting(false);
+        }
+    };
+
     // We need to enable `dragListener={false}` on headers.
 
     return (
@@ -235,6 +242,18 @@ export const ManageRankingScreen = () => {
                 </span>
             </div>
 
+            {/* Reset button */}
+            {originalItems.length > 0 && (
+                <div className="px-4 pt-3">
+                    <button
+                        onClick={() => setShowResetConfirm(true)}
+                        className="text-sm text-red-500 hover:text-red-600 transition-colors"
+                    >
+                        {t('profile.manage.ranking.reset', '전체 랭킹 초기화')}
+                    </button>
+                </div>
+            )}
+
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
@@ -248,8 +267,13 @@ export const ManageRankingScreen = () => {
                                     dragListener={false}
                                     className="pt-4 pb-2"
                                 >
-                                    <div className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-1">
+                                    <div className={`text-lg font-bold border-b border-gray-100 pb-1 ${TIER_COLOR[item.tierName]}`}>
                                         {item.title}
+                                        {RANKED_TIERS.includes(item.tierName) && (
+                                            <span className="text-xs font-normal text-muted-foreground ml-2">
+                                                {t('profile.manage.ranking.ranked_tier', '순위 비교')}
+                                            </span>
+                                        )}
                                     </div>
                                 </Reorder.Item>
                             );
@@ -299,6 +323,36 @@ export const ManageRankingScreen = () => {
                                 onClick={handleDelete}
                             >
                                 {t('common.delete', 'Delete')}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Confirmation */}
+            {showResetConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6 animate-in fade-in">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+                        <h3 className="font-bold text-lg mb-2">{t('profile.manage.ranking.reset_title', '전체 랭킹을 초기화할까요?')}</h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                            {t('profile.manage.ranking.reset_desc', '모든 랭킹과 연결된 리뷰가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.')}
+                        </p>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl h-11"
+                                onClick={() => setShowResetConfirm(false)}
+                                disabled={resetting}
+                            >
+                                {t('common.cancel', '취소')}
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="flex-1 rounded-xl h-11 bg-red-600 hover:bg-red-700 text-white"
+                                onClick={handleResetAll}
+                                disabled={resetting}
+                            >
+                                {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('profile.manage.ranking.reset_confirm', '초기화')}
                             </Button>
                         </div>
                     </div>
@@ -411,11 +465,11 @@ const DraggableRankingItem = ({ item, isNew, rankingItem, newRating, onDelete, o
         >
             {/* Grip Handle - Immediate Drag */}
             <div
-                className="cursor-grab active:cursor-grabbing p-1 -m-1"
+                className="cursor-grab active:cursor-grabbing p-2 -m-2"
                 style={{ touchAction: 'none' }}
                 onPointerDown={(e) => {
+                    e.stopPropagation();
                     dragControls.start(e);
-                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 }}
             >
                 <GripVertical className="w-5 h-5 text-gray-400" />

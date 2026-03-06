@@ -6,22 +6,20 @@ import { ArrowLeft, Loader2, MapPinOff, Smile, Meh, Frown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { RelayService, RelayShop } from '@/services/RelayService';
+import { RankingService, TIER_NUM, TIER_FROM_NUM, TIER_ORDER, type Satisfaction } from '@/services/RankingService';
 import { useUser } from '@/context/UserContext';
 import { RelayCard } from './components/RelayCard';
 import { RelayCardStack } from './components/RelayCardStack';
-import { RelayComparison } from './components/RelayComparison';
+import { PlacementOverlay, type PlacementShop } from '@/components/PlacementOverlay';
 
 type SwipeDirection = 'left' | 'right' | 'up' | 'back';
-type Satisfaction = 'good' | 'ok' | 'bad';
 
 // Milestone: trigger ranking organization after this many ratings
 const RATINGS_PER_BATCH = 30;
-// Comparison: insert A vs B comparisons every N ratings
-const COMPARISON_INTERVAL = 5;
 
 export interface RelayRating {
     shopId: number;
-    satisfaction: Satisfaction;
+    satisfaction: Satisfaction; // Relay swipe maps to 'good' | 'ok' | 'bad' (GOAT/BEST come later)
     shop: RelayShop; // Include shop info for ManageRankingScreen
 }
 
@@ -44,7 +42,7 @@ export const RelayScreen = () => {
     const [showMilestoneModal, setShowMilestoneModal] = useState(false);
 
     // Stats tracking (for future analytics)
-    const [_stats, setStats] = useState({
+    const [_stats, setStats] = useState<Record<string, number>>({
         recorded: 0,
         skipped: 0,
         good: 0,
@@ -52,19 +50,64 @@ export const RelayScreen = () => {
         bad: 0
     });
 
-    // Store ratings locally during relay
+    // Store ratings locally during relay (for count tracking)
     const [ratings, setRatings] = useState<RelayRating[]>([]);
 
-    // Comparison mode state
-    const [comparisonMode, setComparisonMode] = useState(false);
-    const [comparisonQueue, setComparisonQueue] = useState<Array<{ a: RelayRating; b: RelayRating }>>([]);
-    const [comparisonIndex, setComparisonIndex] = useState(0);
+    // --- Inline placement state ---
+    const [tierLists, setTierLists] = useState<Record<Satisfaction, PlacementShop[]>>({
+        goat: [],
+        best: [],
+        good: [],
+        ok: [],
+        bad: [],
+    });
+    const [pendingPlacement, setPendingPlacement] = useState<{
+        shop: PlacementShop;
+        tier: Satisfaction;
+    } | null>(null);
+    const [existingRankingsLoaded, setExistingRankingsLoaded] = useState(false);
+    // Track which shopIds are newly added (not from existing rankings)
+    const newShopIdsRef = useRef<Set<number>>(new Set());
+    const [isSaving, setIsSaving] = useState(false);
 
     // Track seen shop IDs in a ref (to avoid stale closure issues)
     const seenIdsRef = useRef<Set<number>>(new Set());
 
     // Track pagination offset
     const [offset, setOffset] = useState(0);
+
+    // Load existing rankings on mount
+    useEffect(() => {
+        const loadExisting = async () => {
+            try {
+                const rankings = await RankingService.getAll();
+                const tiers: Record<Satisfaction, PlacementShop[]> = {
+                    goat: [], best: [], good: [], ok: [], bad: [],
+                };
+
+                // Sort by rank first
+                const sorted = [...rankings].sort((a, b) => a.rank - b.rank);
+                for (const item of sorted) {
+                    const shop: PlacementShop = {
+                        shopId: item.shop_id,
+                        shopName: item.shop.name,
+                        photo_url: item.shop.thumbnail_img,
+                        food_kind: item.shop.category,
+                        region: item.shop.address_region,
+                    };
+                    const tierName = TIER_FROM_NUM[item.satisfaction_tier] ?? 'good';
+                    tiers[tierName].push(shop);
+                }
+
+                setTierLists(tiers);
+            } catch (err) {
+                console.error('[RelayScreen] Failed to load existing rankings:', err);
+            } finally {
+                setExistingRankingsLoaded(true);
+            }
+        };
+        loadExisting();
+    }, []);
 
     // Load shops with pagination, filter duplicates on client
     const loadShops = useCallback(async (pageOffset: number = 0) => {
@@ -124,7 +167,7 @@ export const RelayScreen = () => {
 
     // Handle swipe action
     const handleSwipe = async (direction: SwipeDirection) => {
-        if (exitDirection || showMilestoneModal || comparisonMode) return;
+        if (exitDirection || showMilestoneModal || pendingPlacement) return;
 
         // Dismiss guide on first swipe
         if (showGuide) {
@@ -138,7 +181,8 @@ export const RelayScreen = () => {
 
         // Map swipe to satisfaction
         // right = good, up = ok, left = bad
-        const satisfactionMap: Record<SwipeDirection, 'good' | 'ok' | 'bad'> = {
+        // Note: GOAT/BEST promotion happens later (not during relay swipe)
+        const satisfactionMap: Record<SwipeDirection, Satisfaction> = {
             right: 'good',
             up: 'ok',
             left: 'bad',
@@ -153,43 +197,99 @@ export const RelayScreen = () => {
             [satisfaction]: prev[satisfaction] + 1
         }));
 
-        // Store rating locally (include shop info for ManageRankingScreen)
+        // Store rating locally
         const newRatings = [...ratings, { shopId: currentShop.id, satisfaction, shop: currentShop }];
         setRatings(newRatings);
 
-        // Check if milestone reached (every RATINGS_PER_BATCH ratings)
-        if (newRatings.length >= RATINGS_PER_BATCH && newRatings.length % RATINGS_PER_BATCH === 0) {
-            setTimeout(() => {
-                setExitDirection(null);
-                setShowMilestoneModal(true);
-            }, 350);
-            return;
-        }
-
-        // Check if comparison should trigger (every COMPARISON_INTERVAL ratings)
-        if (newRatings.length >= COMPARISON_INTERVAL && newRatings.length % COMPARISON_INTERVAL === 0) {
-            const pairs = generateComparisonPairs(newRatings);
-            if (pairs.length > 0) {
-                setTimeout(() => {
-                    setExitDirection(null);
-                    setComparisonQueue(pairs);
-                    setComparisonIndex(0);
-                    setComparisonMode(true);
-                }, 350);
-                return;
-            }
-        }
-
-        // Move to next card after animation completes
+        // After card exit animation, advance index & show placement overlay
         setTimeout(() => {
             setExitDirection(null);
-            moveToNext();
+
+            // Advance card index now so the next card is ready behind the overlay
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            if (nextIndex < shops.length - 5 && hasMore && !isLoading) {
+                loadShops(offset);
+            }
+
+            // Show placement overlay
+            const placementShop: PlacementShop = {
+                shopId: currentShop.id,
+                shopName: currentShop.name,
+                photo_url: currentShop.thumbnail_img,
+                food_kind: currentShop.food_kind,
+                region: currentShop.address_region || currentShop.address_full,
+            };
+            setPendingPlacement({ shop: placementShop, tier: satisfaction });
         }, 350);
     };
 
+    // Handle placement complete (card already advanced in handleSwipe)
+    const handlePlaced = useCallback((insertIndex: number) => {
+        if (!pendingPlacement) return;
+        const { shop, tier } = pendingPlacement;
+
+        newShopIdsRef.current.add(shop.shopId);
+
+        setTierLists(prev => {
+            const tierList = [...prev[tier]];
+            tierList.splice(insertIndex, 0, shop);
+            return { ...prev, [tier]: tierList };
+        });
+
+        setPendingPlacement(null);
+
+        // Check milestone
+        const totalRatings = ratings.length;
+        if (totalRatings >= RATINGS_PER_BATCH && totalRatings % RATINGS_PER_BATCH === 0) {
+            setShowMilestoneModal(true);
+            return;
+        }
+
+        // Card already advanced - check if we need more
+        if (currentIndex >= shops.length) {
+            if (hasMore) {
+                loadShops(offset);
+            } else {
+                handleSave();
+            }
+        }
+    }, [pendingPlacement, ratings.length, currentIndex, shops.length, hasMore, offset]);
+
+    // Handle placement skip (place at bottom of tier, card already advanced)
+    const handlePlacementSkip = useCallback(() => {
+        if (!pendingPlacement) return;
+        const { shop, tier } = pendingPlacement;
+
+        newShopIdsRef.current.add(shop.shopId);
+
+        setTierLists(prev => ({
+            ...prev,
+            [tier]: [...prev[tier], shop],
+        }));
+
+        setPendingPlacement(null);
+
+        // Check milestone
+        const totalRatings = ratings.length;
+        if (totalRatings >= RATINGS_PER_BATCH && totalRatings % RATINGS_PER_BATCH === 0) {
+            setShowMilestoneModal(true);
+            return;
+        }
+
+        // Card already advanced - check if we need more
+        if (currentIndex >= shops.length) {
+            if (hasMore) {
+                loadShops(offset);
+            } else {
+                handleSave();
+            }
+        }
+    }, [pendingPlacement, ratings.length, currentIndex, shops.length, hasMore, offset]);
+
     // Handle skip (not visited)
     const handleSkip = () => {
-        if (exitDirection || showMilestoneModal || comparisonMode) return;
+        if (exitDirection || showMilestoneModal || pendingPlacement) return;
 
         if (showGuide) {
             setShowGuide(false);
@@ -220,8 +320,8 @@ export const RelayScreen = () => {
                 loadShops(offset);
                 setCurrentIndex(nextIndex);
             } else {
-                // No more cards - show milestone modal to save
-                setShowMilestoneModal(true);
+                // No more cards - save
+                handleSave();
             }
         } else {
             setCurrentIndex(nextIndex);
@@ -239,7 +339,7 @@ export const RelayScreen = () => {
             navigate(-1);
             return;
         }
-        setShowMilestoneModal(true);
+        handleSave();
     };
 
     // Handle back button click
@@ -257,106 +357,54 @@ export const RelayScreen = () => {
         navigate(-1);
     };
 
-    // Navigate to ManageRankingScreen with new ratings
-    // Don't save here - ManageRankingScreen will merge with existing rankings and save all at once
-    const saveAndNavigate = () => {
+    // Save all rankings
+    const handleSave = async () => {
         setShowMilestoneModal(false);
+        setIsSaving(true);
 
-        // Pass ratings to ManageRankingScreen via router state
-        // ManageRankingScreen will merge these with existing rankings
-        navigate('/profile/manage/ranking', {
-            state: { newRatings: ratings }
-        });
+        try {
+            // 1. Batch create new items
+            const newItems = ratings.map(r => ({
+                shop_id: r.shopId,
+                satisfaction: r.satisfaction,
+            }));
+            if (newItems.length > 0) {
+                await RankingService.batchCreate(newItems);
+            }
+
+            // 2. Reorder everything (existing + new) using all 5 tiers
+            const allItems: { shop_id: number; rank: number; satisfaction_tier: number }[] = [];
+            let rank = 1;
+            for (const tierName of TIER_ORDER) {
+                const tierNum = TIER_NUM[tierName];
+                for (const shop of tierLists[tierName]) {
+                    allItems.push({ shop_id: shop.shopId, rank: rank++, satisfaction_tier: tierNum });
+                }
+            }
+
+            if (allItems.length > 0) {
+                await RankingService.reorder(allItems);
+            }
+
+            navigate(-1);
+        } catch (err) {
+            console.error('[RelayScreen] Failed to save rankings:', err);
+            setIsSaving(false);
+        }
     };
 
-    // Continue after milestone (don't save yet, keep going)
+    // Continue after milestone (card already advanced, just dismiss modal)
     const continueAfterMilestone = () => {
         setShowMilestoneModal(false);
-        // Move to next card
-        moveToNext();
-    };
-
-    // Generate comparison pairs from ratings within the same tier
-    const generateComparisonPairs = (currentRatings: RelayRating[]): Array<{ a: RelayRating; b: RelayRating }> => {
-        // Group by tier
-        const groups: Record<Satisfaction, RelayRating[]> = { good: [], ok: [], bad: [] };
-        for (const r of currentRatings) {
-            groups[r.satisfaction].push(r);
-        }
-
-        // Pick the largest tier with 2+ items
-        const tiers: Satisfaction[] = ['good', 'ok', 'bad'];
-        let targetTier: Satisfaction | null = null;
-        let maxCount = 0;
-        for (const tier of tiers) {
-            if (groups[tier].length >= 2 && groups[tier].length > maxCount) {
-                maxCount = groups[tier].length;
-                targetTier = tier;
+        // Card already advanced in handleSwipe - check if we need more
+        if (currentIndex >= shops.length) {
+            if (hasMore) {
+                loadShops(offset);
+            } else {
+                handleSave();
             }
         }
-
-        if (!targetTier) return [];
-
-        const tierItems = groups[targetTier];
-        const pairs: Array<{ a: RelayRating; b: RelayRating }> = [];
-
-        // Generate 1-2 pairs from adjacent items (most recently added)
-        const len = tierItems.length;
-        if (len >= 2) {
-            pairs.push({ a: tierItems[len - 2], b: tierItems[len - 1] });
-        }
-        if (len >= 4) {
-            pairs.push({ a: tierItems[len - 4], b: tierItems[len - 3] });
-        }
-
-        return pairs;
     };
-
-    // Handle comparison selection: winner moves ahead of loser within the same tier
-    const handleComparisonSelect = (winnerId: number) => {
-        setRatings(prev => {
-            const updated = [...prev];
-            const winnerIdx = updated.findIndex(r => r.shopId === winnerId);
-            const currentPair = comparisonQueue[comparisonIndex];
-            const loserId = currentPair.a.shopId === winnerId ? currentPair.b.shopId : currentPair.a.shopId;
-            const loserIdx = updated.findIndex(r => r.shopId === loserId);
-
-            // If winner is behind loser, move winner in front of loser
-            if (winnerIdx > loserIdx && winnerIdx >= 0 && loserIdx >= 0) {
-                const [winner] = updated.splice(winnerIdx, 1);
-                updated.splice(loserIdx, 0, winner);
-            }
-
-            return updated;
-        });
-
-        // Advance to next pair or exit comparison mode
-        const nextIndex = comparisonIndex + 1;
-        if (nextIndex < comparisonQueue.length) {
-            setComparisonIndex(nextIndex);
-        } else {
-            exitComparisonMode();
-        }
-    };
-
-    // Handle comparison skip
-    const handleComparisonSkip = () => {
-        const nextIndex = comparisonIndex + 1;
-        if (nextIndex < comparisonQueue.length) {
-            setComparisonIndex(nextIndex);
-        } else {
-            exitComparisonMode();
-        }
-    };
-
-    // Exit comparison mode and resume swiping
-    const exitComparisonMode = () => {
-        setComparisonMode(false);
-        setComparisonQueue([]);
-        setComparisonIndex(0);
-        // Move to next card (the swiped card that triggered comparison was already rated)
-        moveToNext();
-    };;
 
     const currentShop = shops[currentIndex];
 
@@ -396,8 +444,8 @@ export const RelayScreen = () => {
         );
     }
 
-    // Satisfaction button handler
-    const handleSatisfactionButton = (satisfaction: 'good' | 'ok' | 'bad') => {
+    // Satisfaction button handler (relay only uses good/ok/bad, GOAT/BEST come later)
+    const handleSatisfactionButton = (satisfaction: Satisfaction) => {
         const directionMap: Record<string, 'right' | 'up' | 'left'> = {
             good: 'right',
             ok: 'up',
@@ -423,86 +471,105 @@ export const RelayScreen = () => {
                 progress={`${ratings.length}${t('relay.count_suffix', '개 기록')}`}
             />
 
-            {comparisonMode ? (
-                /* Comparison Mode */
-                <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative">
-                    <AnimatePresence mode="wait">
-                        {comparisonQueue[comparisonIndex] && (
-                            <RelayComparison
-                                key={`${comparisonQueue[comparisonIndex].a.shopId}-${comparisonQueue[comparisonIndex].b.shopId}`}
-                                shopA={comparisonQueue[comparisonIndex].a}
-                                shopB={comparisonQueue[comparisonIndex].b}
-                                onSelect={handleComparisonSelect}
-                                onSkip={handleComparisonSkip}
-                            />
-                        )}
-                    </AnimatePresence>
-                </main>
-            ) : (
-                <>
-                    {/* Card Stack */}
-                    <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
-                        <div
-                            className="relative w-full max-w-md"
-                            style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
-                        >
-                            {/* Background cards */}
-                            <RelayCardStack shops={shops} currentIndex={currentIndex} />
+            <>
+                {/* Card Stack */}
+                <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
+                    <div
+                        className="relative w-full max-w-md"
+                        style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
+                    >
+                        {/* Background cards */}
+                        <RelayCardStack shops={shops} currentIndex={currentIndex} />
 
-                            {/* Active card */}
-                            <AnimatePresence mode="popLayout">
-                                {currentShop && (
-                                    <RelayCard
-                                        key={currentShop.id}
-                                        shop={currentShop}
-                                        isActive={true}
-                                        exitDirection={exitDirection}
-                                        showGuide={showGuide}
-                                        onSwipe={handleSwipe}
-                                        onDismissGuide={() => setShowGuide(false)}
-                                    />
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </main>
-
-                    {/* Satisfaction Buttons */}
-                    <div className="px-6 pt-4">
-                        <div className="flex gap-2">
-                            {satisfactionButtons.map((item) => (
-                                <button
-                                    key={item.value}
-                                    onClick={() => handleSatisfactionButton(item.value as 'good' | 'ok' | 'bad')}
-                                    disabled={!!exitDirection || showMilestoneModal}
-                                    className={cn(
-                                        "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
-                                        item.bgColor,
-                                        (exitDirection || showMilestoneModal) && "opacity-50"
-                                    )}
-                                >
-                                    <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
-                                    <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Skip button */}
-                    <div className="px-6 pb-10 pt-3">
-                        <button
-                            onClick={handleSkip}
-                            disabled={!!exitDirection || showMilestoneModal}
-                            className={cn(
-                                "w-full py-4 text-base text-gray-400 transition-colors",
-                                !exitDirection && !showMilestoneModal && "hover:text-gray-500 active:text-gray-600",
-                                (exitDirection || showMilestoneModal) && "opacity-50"
+                        {/* Active card */}
+                        <AnimatePresence mode="popLayout">
+                            {currentShop && (
+                                <RelayCard
+                                    key={currentShop.id}
+                                    shop={currentShop}
+                                    isActive={true}
+                                    exitDirection={exitDirection}
+                                    showGuide={showGuide}
+                                    onSwipe={handleSwipe}
+                                    onDismissGuide={() => setShowGuide(false)}
+                                />
                             )}
-                        >
-                            {t('relay.not_visited', '안 가봤어요')}
-                        </button>
+                        </AnimatePresence>
                     </div>
-                </>
-            )}
+                </main>
+
+                {/* Satisfaction Buttons */}
+                <div className="px-6 pt-4">
+                    <div className="flex gap-2">
+                        {satisfactionButtons.map((item) => (
+                            <button
+                                key={item.value}
+                                onClick={() => handleSatisfactionButton(item.value as Satisfaction)}
+                                disabled={!!exitDirection || showMilestoneModal || !!pendingPlacement}
+                                className={cn(
+                                    "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
+                                    item.bgColor,
+                                    (exitDirection || showMilestoneModal || pendingPlacement) && "opacity-50"
+                                )}
+                            >
+                                <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
+                                <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Skip button */}
+                <div className="px-6 pb-10 pt-3">
+                    <button
+                        onClick={handleSkip}
+                        disabled={!!exitDirection || showMilestoneModal || !!pendingPlacement}
+                        className={cn(
+                            "w-full py-4 text-base text-gray-400 transition-colors",
+                            !exitDirection && !showMilestoneModal && !pendingPlacement && "hover:text-gray-500 active:text-gray-600",
+                            (exitDirection || showMilestoneModal || pendingPlacement) && "opacity-50"
+                        )}
+                    >
+                        {t('relay.not_visited', '안 가봤어요')}
+                    </button>
+                </div>
+            </>
+
+            {/* Inline Placement Overlay */}
+            <AnimatePresence>
+                {pendingPlacement && existingRankingsLoaded && (
+                    <PlacementOverlay
+                        key={pendingPlacement.shop.shopId}
+                        newShop={pendingPlacement.shop}
+                        tier={pendingPlacement.tier}
+                        tierShops={tierLists[pendingPlacement.tier]}
+                        tierOffset={
+                            // Calculate offset by summing all tiers above this one
+                            TIER_ORDER.slice(0, TIER_ORDER.indexOf(pendingPlacement.tier))
+                                .reduce((sum, t) => sum + tierLists[t].length, 0)
+                        }
+                        onPlaced={handlePlaced}
+                        onSkip={handlePlacementSkip}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Saving overlay */}
+            <AnimatePresence>
+                {isSaving && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    >
+                        <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <p className="text-sm font-medium">{t('relay.saving', '저장 중...')}</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Back Confirmation Modal */}
             <AnimatePresence>
@@ -573,9 +640,9 @@ export const RelayScreen = () => {
                             <div className="flex flex-col gap-3">
                                 <Button
                                     className="w-full rounded-xl h-11"
-                                    onClick={saveAndNavigate}
+                                    onClick={handleSave}
                                 >
-                                    {t('relay.organize_ranking', '랭킹 정리하기')}
+                                    {t('relay.save_ranking', '저장하기')}
                                 </Button>
                                 {hasMore && currentIndex < shops.length && (
                                     <Button

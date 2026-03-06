@@ -72,29 +72,30 @@ export const calculateShopMatchScore = (viewerScores: TasteScores | null, review
         let satisfaction = 0;
 
         if (r.satisfactionTier !== undefined) {
-            // Tier Logic
-            // Tier 2 (Good): [0.3, 1.0]
-            // Tier 1 (OK):   [-0.2, 0.2]
-            // Tier 0 (Bad):  [-1.0, -0.3]
+            // 5-Tier System:
+            // Tier 4 (GOAT): [0.75, 1.0]  - tier-internal rank-based percentile
+            // Tier 3 (BEST): [0.40, 0.75]  - tier-internal rank-based percentile
+            // Tier 2 (GOOD): fixed ~0.30    - bucket (no comparison)
+            // Tier 1 (OK):   fixed ~0.00    - bucket
+            // Tier 0 (BAD):  fixed ~-0.60   - bucket
 
             switch (r.satisfactionTier) {
-                case 2: // Good
-                    // rank 1 -> 1.0, rank N -> 0.3
-                    satisfaction = 0.3 + (0.7 * percentile);
+                case 4: // GOAT
+                    satisfaction = 0.75 + (0.25 * percentile);
                     break;
-                case 1: // OK
-                    // rank 1 -> 0.2, rank N -> -0.2
-                    satisfaction = -0.2 + (0.4 * percentile);
+                case 3: // BEST
+                    satisfaction = 0.40 + (0.35 * percentile);
                     break;
-                case 0: // Bad
-                    // rank 1 -> -0.3, rank N -> -1.0
-                    // Note: higher rank (more percentile) means "better" bad, so closer to -0.3?
-                    // Or rank 1 (best of bad) = -0.3, rank N (worst of bad) = -1.0.
-                    // Percentile 1.0 is "best rank".
-                    satisfaction = -1.0 + (0.7 * percentile);
+                case 2: // GOOD (bucket - no ranking within tier)
+                    satisfaction = 0.30;
+                    break;
+                case 1: // OK (bucket)
+                    satisfaction = 0.00;
+                    break;
+                case 0: // BAD (bucket)
+                    satisfaction = -0.60;
                     break;
                 default:
-                    // Fallback to pure rank if tier is weird
                     satisfaction = (2 * percentile) - 1;
             }
 
@@ -172,14 +173,20 @@ export const calculateGlobalShopScore = (reviewers: ReviewerSignal[], options?: 
 
         if (r.satisfactionTier !== undefined) {
             switch (r.satisfactionTier) {
-                case 2: // Good
-                    satisfaction = 0.3 + (0.7 * percentile);
+                case 4: // GOAT
+                    satisfaction = 0.75 + (0.25 * percentile);
                     break;
-                case 1: // OK
-                    satisfaction = -0.2 + (0.4 * percentile);
+                case 3: // BEST
+                    satisfaction = 0.40 + (0.35 * percentile);
                     break;
-                case 0: // Bad
-                    satisfaction = -1.0 + (0.7 * percentile);
+                case 2: // GOOD (bucket)
+                    satisfaction = 0.30;
+                    break;
+                case 1: // OK (bucket)
+                    satisfaction = 0.00;
+                    break;
+                case 0: // BAD (bucket)
+                    satisfaction = -0.60;
                     break;
                 default:
                     satisfaction = (2 * percentile) - 1;

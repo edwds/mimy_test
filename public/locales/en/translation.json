@@ -26,6 +26,7 @@
     },
     "nav": {
         "home": "Home",
+        "feed": "Feed",
         "discover": "Discover",
         "ranking": "Ranking",
         "profile": "Profile"
@@ -118,6 +119,8 @@
             "companions": "Companions",
             "tag_placeholder": "Tag friends (Coming soon)",
             "next": "Next",
+            "goat": "GOAT",
+            "best": "The Best",
             "good": "Delicious",
             "ok": "Okay",
             "bad": "Not Good"
@@ -141,6 +144,7 @@
             "tip": "(Tip: Choose the place that was more memorable)",
             "success_title": "Ranking Updated!",
             "success_desc": "Your experience at <1>{{name}}</1><br />has been added to your ranking.",
+            "added_to_bucket": "Added",
             "confirm": "Confirm",
             "write_review": "Write a Review",
             "evaluate_another": "Evaluate Another",
@@ -244,11 +248,95 @@
             "match": "{{percent}}% match",
             "view_all": "View all {{count}}"
         },
+        "sections": {
+            "similar_taste_reviews": "Reviews from similar taste users",
+            "recommended_shops": "Recommended for you",
+            "vs_game": "Balance game",
+            "similar_taste_users": "Similar taste profiles",
+            "similar_taste_lists": "Lists from similar tastes",
+            "popular_posts": "Popular posts",
+            "following_feed": "From people you follow",
+            "see_all": "More",
+            "regional_similar_taste_reviews": "Reviews from similar tastes in {{region}}",
+            "search_region": "Search region",
+            "search_region_placeholder": "Search for a region",
+            "change_region": "Change region",
+            "no_region_results": "No results found",
+            "similar_taste_reviews_title": "Posts from similar taste",
+            "food_kind_select": "Food type",
+            "food_kind_all": "View all",
+            "select_food_kind": "Select food type",
+            "regional_feed_title": "{{foodKind}} in {{region}}",
+            "regional_feed_title_all": "Posts in {{region}}",
+            "top_section": "TOP 10 by category {{name}} would love",
+            "top_subtitle": "Ranked by highest expected score per category",
+            "top_overall": "Overall TOP 10",
+            "top_food_kind": "{{foodKind}} TOP 10",
+            "leaderboard_section": "Foodie Ranking TOP 10",
+            "leaderboard_subtitle": "Top foodies ranked by review count",
+            "leaderboard_overall": "Overall"
+        },
+        "onboarding": {
+            "title": "Get Started",
+            "profile": "Profile",
+            "quiz": "Taste Quiz",
+            "ranking20": "20 Rankings",
+            "content5": "5 Posts",
+            "save10": "Save 10",
+            "leaderboard": "Leaderboard",
+            "ranking100": "100 Rankings"
+        },
+        "onboarding_cta": {
+            "profile": {
+                "title": "Complete your profile",
+                "subtitle": "Set your nickname and photo to connect with fellow foodies.",
+                "cta": "Set up profile"
+            },
+            "quiz": {
+                "title": "Discover your taste type",
+                "subtitle": "It only takes a minute. Find your unique foodie personality among 32 types.",
+                "cta": "Start taste quiz"
+            },
+            "ranking20": {
+                "title": "Rate 20 restaurants",
+                "subtitle": "The more you rate, the more accurate your recommendations become.",
+                "cta": "Rate restaurants"
+            },
+            "content5": {
+                "title": "Write 5 reviews",
+                "subtitle": "Share your experiences and attract people with similar tastes.",
+                "cta": "Write a review"
+            },
+            "save10": {
+                "title": "Save 10 restaurants",
+                "subtitle": "The more you save, the more complete your personal food map becomes.",
+                "cta": "Explore restaurants"
+            },
+            "leaderboard": {
+                "title": "Register your affiliation",
+                "subtitle": "Add your company or neighborhood to see local foodie rankings.",
+                "cta": "Register affiliation"
+            },
+            "ranking100": {
+                "title": "Rate 100 restaurants",
+                "subtitle": "Reach 100 ratings and your scores will influence recommendations for others.",
+                "cta": "Keep rating"
+            },
+            "complete": {
+                "title": "Congratulations! You've completed all steps",
+                "subtitle": "Mimy can now give you even more accurate restaurant recommendations."
+            }
+        },
         "empty": "No contents yet.",
         "coming_soon": "Coming soon",
         "end": "You've seen it all."
     },
     "discovery": {
+        "controls": {
+            "location": "Location",
+            "saved": "Saved",
+            "visited": "Visited"
+        },
         "search_placeholder": "Search by name, area, or menu",
         "search_here": "Search here",
         "searching": "Searching...",
@@ -346,8 +434,27 @@
             "shared": "Shared Picks",
             "saved": "Want to go"
         },
+        "setup": {
+            "no_quiz_status": "You haven't taken the taste quiz yet",
+            "no_quiz_action": "Take the taste quiz",
+            "missing_photo_and_bio": "Add a profile photo and bio",
+            "missing_photo": "Add a profile photo",
+            "missing_bio": "Add a bio",
+            "edit_profile_action": "Edit profile",
+            "no_affiliation_status": "Register your group to see their rankings",
+            "register_affiliation_action": "Register school/company or neighborhood"
+        },
         "empty": {
             "content": "No contents yet",
+            "content_desc": "Record your dining experiences",
+            "content_action": "Write a review",
+            "quick_record_desc": "Quickly build your restaurant rankings",
+            "relay_desc": "Record restaurants with a simple swipe",
+            "relay_action": "Start quick recording",
+            "saved_desc": "Save restaurants you're interested in",
+            "saved_action": "Discover restaurants",
+            "import_desc": "Import places you've visited from other platforms",
+            "import_action": "Import places",
             "lists": "No public lists",
             "lists_requirement": "Complete 30+ rankings to create\nyour personalized restaurant ranking list",
             "progress": "Progress",
@@ -376,7 +483,10 @@
             "manage_vs": "Manage Preferences",
             "manage_hate": "Manage Dislikes",
             "manage_ranking": "Manage Ranking",
-            "quick_record": "Quick Record"
+            "quick_record": "Quick Record",
+            "generate_card": "Generate Profile Card",
+            "generate_card_confirm": "Generate a new profile card with your current ranking data?",
+            "generate_card_fail": "Failed to generate profile card. Taste quiz and ranking data are required."
         },
         "manage": {
             "vs": {
@@ -401,7 +511,8 @@
                 "title": "Manage Ranking",
                 "warning": "Deleting a ranking will also delete the associated review.",
                 "confirm_delete": "Delete Ranking?",
-                "confirm_delete_desc": "This action cannot be undone. The associated review will also be deleted."
+                "confirm_delete_desc": "This action cannot be undone. The associated review will also be deleted.",
+                "ranked_tier": "Ranked"
             }
         },
         "settings": {
@@ -705,6 +816,16 @@
         },
         "expected_rating": "Expected"
     },
+    "feed": {
+        "title": "Feed",
+        "community": "Community",
+        "filters": {
+            "similar_taste": "Similar Taste",
+            "region": "Region",
+            "following": "Following",
+            "like": "Likes"
+        }
+    },
     "onboarding": {
         "import_intro": {
             "title": "Tell us where you've been",
@@ -721,7 +842,11 @@
             "analyzing": "AI is analyzing your screenshots...",
             "upload_failed": "Failed to upload image",
             "no_restaurants": "No restaurants found. Try different screenshots.",
-            "analyze_failed": "Analysis failed. Please try again."
+            "analyze_failed": "Analysis failed. Please try again.",
+            "catchtable_import": "Import from CatchTable",
+            "catchtable_importing": "Importing from CatchTable...",
+            "catchtable_auth_error": "Please log in to CatchTable first",
+            "catchtable_empty": "No completed reservations found"
         },
         "shop_match": {
             "title": "Confirm Matches",

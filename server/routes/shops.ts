@@ -479,6 +479,170 @@ router.get("/search", optionalAuth, async (req, res) => {
     }
 });
 
+// GET /api/shops/top-lists - Get TOP 10 overall + per food kind
+router.get("/top-lists", optionalAuth, async (req, res) => {
+    try {
+        const uid = req.user?.id || 0;
+        const cacheKey = 'global:top-lists:v2';
+
+        let cached: any = null;
+        if (redis) {
+            try {
+                const raw = await redis.get(cacheKey);
+                if (raw && typeof raw === 'string') cached = JSON.parse(raw);
+            } catch (e) { /* cache miss */ }
+        }
+
+        if (!cached) {
+            // Weighted score: GOAT(4)=5, BEST(3)=4, GOOD(2)=3, OK(1)=1, BAD(0)=0
+            const weightExpr = sql`
+                SUM(CASE
+                    WHEN ${users_ranking.satisfaction_tier} = 4 THEN 5
+                    WHEN ${users_ranking.satisfaction_tier} = 3 THEN 4
+                    WHEN ${users_ranking.satisfaction_tier} = 2 THEN 3
+                    WHEN ${users_ranking.satisfaction_tier} = 1 THEN 1
+                    ELSE 0
+                END)
+            `;
+            const positiveCountExpr = sql`
+                COUNT(*) FILTER (WHERE ${users_ranking.satisfaction_tier} >= 2)
+            `;
+
+            // Overall candidate pool: top 50 by popularity
+            const candidateRows = await db
+                .select({
+                    shop_id: users_ranking.shop_id,
+                    score: weightExpr.as('score'),
+                })
+                .from(users_ranking)
+                .groupBy(users_ranking.shop_id)
+                .having(sql`COUNT(*) FILTER (WHERE ${users_ranking.satisfaction_tier} >= 2) >= 2`)
+                .orderBy(desc(sql`score`))
+                .limit(50);
+
+            const candidateIds = candidateRows.map(r => r.shop_id);
+
+            // Per food kind: query separately to ensure each kind has enough candidates (up to 20)
+            const perKindRows = await db
+                .select({
+                    shop_id: users_ranking.shop_id,
+                    food_kind: shops.food_kind,
+                    score: weightExpr.as('score'),
+                })
+                .from(users_ranking)
+                .innerJoin(shops, eq(users_ranking.shop_id, shops.id))
+                .where(sql`${shops.food_kind} IS NOT NULL`)
+                .groupBy(users_ranking.shop_id, shops.food_kind)
+                .having(sql`COUNT(*) FILTER (WHERE ${users_ranking.satisfaction_tier} >= 2) >= 2`)
+                .orderBy(desc(sql`score`));
+
+            const { formatFoodKind } = await import('../utils/foodKindMap.js');
+            const kindGroups: Record<string, number[]> = {};
+            for (const row of perKindRows) {
+                const normalized = formatFoodKind(row.food_kind);
+                if (normalized === '기타' || normalized === '음식점') continue;
+                if (!kindGroups[normalized]) kindGroups[normalized] = [];
+                if (kindGroups[normalized].length < 20) {
+                    kindGroups[normalized].push(row.shop_id);
+                }
+            }
+
+            // Only keep food kinds with at least 3 shops
+            const byFoodKind: { foodKind: string; shopIds: number[] }[] = [];
+            for (const [foodKind, shopIds] of Object.entries(kindGroups)) {
+                if (shopIds.length >= 3) {
+                    byFoodKind.push({ foodKind, shopIds });
+                }
+            }
+
+            cached = {
+                candidateIds,
+                byFoodKind,
+            };
+
+            // Cache for 2 hours
+            if (redis) {
+                try {
+                    await redis.setex(cacheKey, 7200, JSON.stringify(cached));
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        // Per-user result cache (10 min) - includes personalized match scores
+        const userCacheKey = `top-lists:user:${uid}:v2`;
+        if (uid > 0 && redis) {
+            try {
+                const userCached = await redis.get(userCacheKey);
+                if (userCached && typeof userCached === 'string') {
+                    return res.json(JSON.parse(userCached));
+                }
+            } catch (e) { /* cache miss */ }
+        }
+
+        // Collect all unique shop IDs
+        const allShopIds = new Set<number>(cached.candidateIds);
+        for (const group of cached.byFoodKind) {
+            for (const id of group.shopIds) allShopIds.add(id);
+        }
+
+        if (allShopIds.size === 0) {
+            return res.json({ overall: [], byFoodKind: [] });
+        }
+
+        const idArray = Array.from(allShopIds);
+
+        // Get shop details + user's match scores in parallel
+        const [shopDetails, matchScores] = await Promise.all([
+            db.select().from(shops).where(inArray(shops.id, idArray)),
+            uid > 0 ? getShopMatchScores(idArray, uid) : Promise.resolve(new Map()),
+        ]);
+
+        const shopMap = new Map(shopDetails.map(s => [s.id, s]));
+
+        const buildShop = (shopId: number) => {
+            const shop = shopMap.get(shopId);
+            if (!shop) return null;
+            return {
+                id: shop.id,
+                name: shop.name,
+                description: shop.description,
+                thumbnail_img: shop.thumbnail_img,
+                food_kind: shop.food_kind,
+                address_region: shop.address_region,
+                shop_user_match_score: matchScores.get(shop.id) ?? null,
+            };
+        };
+
+        // Sort by match score (descending), fallback to original popularity order
+        const sortByScore = (a: any, b: any) =>
+            (b.shop_user_match_score ?? 0) - (a.shop_user_match_score ?? 0);
+
+        const overall = cached.candidateIds
+            .map(buildShop).filter(Boolean)
+            .sort(sortByScore).slice(0, 10);
+
+        const byFoodKind = cached.byFoodKind.map((g: any) => ({
+            foodKind: g.foodKind,
+            shops: g.shopIds.map(buildShop).filter(Boolean)
+                .sort(sortByScore).slice(0, 10),
+        }));
+
+        const result = { overall, byFoodKind };
+
+        // Cache per-user result for 10 min
+        if (uid > 0 && redis) {
+            try {
+                await redis.setex(userCacheKey, 600, JSON.stringify(result));
+            } catch (e) { /* ignore */ }
+        }
+
+        res.json(result);
+    } catch (error: any) {
+        console.error("[top-lists] Error:", error);
+        res.status(500).json({ error: "Failed to fetch top lists" });
+    }
+});
+
 // GET /api/shops/:id
 router.get("/:id", optionalAuth, async (req, res) => {
     try {

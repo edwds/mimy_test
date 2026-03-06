@@ -8,15 +8,19 @@ import { ChevronRight, ChevronLeft, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
+import { useOnboarding } from '@/context/OnboardingContext';
+import { OnboardingService } from '@/services/OnboardingService';
 
 export const SettingsScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { user, logout, refreshUser } = useUser();
+    const { setAnalysisResult } = useOnboarding();
 
     const [isIdSheetOpen, setIsIdSheetOpen] = useState(false);
     const [newId, setNewId] = useState('');
     const [savingId, setSavingId] = useState(false);
+    const [generatingCard, setGeneratingCard] = useState(false);
 
     const handleLogout = async () => {
         console.log('[SettingsScreen] Logout button clicked');
@@ -55,6 +59,21 @@ export const SettingsScreen = () => {
     const handleRetakeQuiz = () => {
         if (window.confirm(t('profile.menu.quiz_confirm'))) {
             navigate('/quiz/test');
+        }
+    };
+
+    const handleGenerateCard = async () => {
+        if (!window.confirm(t('profile.menu.generate_card_confirm'))) return;
+
+        setGeneratingCard(true);
+        try {
+            const result = await OnboardingService.generateTasteAnalysis();
+            setAnalysisResult(result.analysis, result.shareCode, result.tasteType, result.tasteProfile, result.matchedRecommendations);
+            navigate('/onboarding/share');
+        } catch {
+            alert(t('profile.menu.generate_card_fail'));
+        } finally {
+            setGeneratingCard(false);
         }
     };
 
@@ -156,6 +175,10 @@ export const SettingsScreen = () => {
                         onClick={handleRetakeQuiz}
                     />
                     <MenuItem
+                        label={t('profile.menu.generate_card')}
+                        onClick={handleGenerateCard}
+                    />
+                    <MenuItem
                         label={t('profile.menu.quick_record')}
                         onClick={() => navigate('/relay')}
                     />
@@ -238,6 +261,16 @@ export const SettingsScreen = () => {
                     />
                 </div>
             </main>
+
+            {/* Generating Card Overlay */}
+            {generatingCard && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                    <div className="bg-background rounded-2xl p-8 flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        <p className="text-sm text-muted-foreground">{t('profile.menu.generate_card')}</p>
+                    </div>
+                </div>
+            )}
 
             {/* ID Sheet */}
             {isIdSheetOpen && (

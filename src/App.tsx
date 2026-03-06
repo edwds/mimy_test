@@ -37,6 +37,7 @@ import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
 import { TasteTypeGuideScreen } from '@/screens/profile/TasteTypeGuideScreen';
 import { ContentDetailScreen } from '@/screens/content/ContentDetailScreen';
 import { ContentListScreen } from '@/screens/content/ContentListScreen';
+
 import { NotificationScreen } from '@/screens/notification/NotificationScreen';
 import { TermsDetailScreen } from '@/screens/terms/TermsDetailScreen';
 import { UserProvider, useUser } from '@/context/UserContext';
@@ -46,13 +47,13 @@ import { ImportIntro } from '@/screens/onboarding/ImportIntro';
 import { ScreenshotUpload } from '@/screens/onboarding/ScreenshotUpload';
 import { ShopMatchConfirm } from '@/screens/onboarding/ShopMatchConfirm';
 import { OnboardingRelay } from '@/screens/onboarding/OnboardingRelay';
-import { OnboardingRanking } from '@/screens/onboarding/OnboardingRanking';
 import { TasteAnalysis } from '@/screens/onboarding/TasteAnalysis';
 import { ShareResult } from '@/screens/onboarding/ShareResult';
 import { TasteSharePage } from '@/screens/onboarding/TasteSharePage';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { StatusBarGuard } from '@/components/StatusBarGuard';
+import { Agentation } from 'agentation';
 
 // Initialize GoogleAuth once at app startup
 if (Capacitor.isNativePlatform()) {
@@ -130,7 +131,6 @@ function AppContent() {
                                 <Route path="/onboarding/screenshot-upload" element={<ProtectedRoute><ScreenshotUpload /></ProtectedRoute>} />
                                 <Route path="/onboarding/shop-match" element={<ProtectedRoute><ShopMatchConfirm /></ProtectedRoute>} />
                                 <Route path="/onboarding/relay" element={<ProtectedRoute><OnboardingRelay /></ProtectedRoute>} />
-                                <Route path="/onboarding/ranking" element={<ProtectedRoute><OnboardingRanking /></ProtectedRoute>} />
                                 <Route path="/onboarding/analysis" element={<ProtectedRoute><TasteAnalysis /></ProtectedRoute>} />
                                 <Route path="/onboarding/share" element={<ProtectedRoute><ShareResult /></ProtectedRoute>} />
 
@@ -151,6 +151,7 @@ function AppContent() {
                                 <Route path="/profile/taste-guide" element={<ProtectedRoute><TasteTypeGuideScreen /></ProtectedRoute>} />
                                 <Route path="/content/detail" element={<ProtectedRoute><ContentDetailScreen /></ProtectedRoute>} />
                                 <Route path="/content/list" element={<ProtectedRoute><ContentListScreen /></ProtectedRoute>} />
+
                                 <Route path="/notifications" element={<ProtectedRoute><NotificationScreen /></ProtectedRoute>} />
                                 <Route path="/admin" element={<ProtectedRoute><AdminScreen /></ProtectedRoute>} />
                                 <Route path="/admin/match" element={<ProtectedRoute><AdminMatchScreen /></ProtectedRoute>} />
@@ -185,6 +186,7 @@ function App() {
         <GoogleOAuthProvider clientId={googleClientId || ""}>
             <UserProvider>
                 <AppContent />
+                {import.meta.env.DEV && <Agentation />}
             </UserProvider>
         </GoogleOAuthProvider>
     );

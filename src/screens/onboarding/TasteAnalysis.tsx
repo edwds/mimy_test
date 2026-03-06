@@ -40,6 +40,7 @@ export const TasteAnalysis = () => {
                     result.shareCode,
                     result.tasteType,
                     result.tasteProfile,
+                    result.matchedRecommendations,
                 );
                 navigate('/onboarding/share', { replace: true });
             } catch (err) {

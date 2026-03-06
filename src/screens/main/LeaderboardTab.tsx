@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '@/lib/authFetch';
 import { useUser } from '@/context/UserContext';
-import { getTasteType } from '@/lib/tasteType';
+import { getTasteType, getTasteTypeProfile } from '@/lib/tasteType';
 
 
 interface LeaderboardItem {
@@ -291,16 +291,17 @@ export const LeaderboardTab = ({ isEnabled }: { isEnabled?: boolean }) => {
                                                 {item.user.taste_result?.scores && (
                                                     (() => {
                                                         const tasteType = getTasteType(item.user.taste_result);
+                                                        const tasteProfile = tasteType ? getTasteTypeProfile(tasteType, 'ko') : null;
                                                         const matchScore = (currentUser?.taste_result?.scores && item.user.taste_result?.scores)
                                                             ? calculateTasteMatch(currentUser.taste_result.scores, item.user.taste_result.scores)
                                                             : null;
 
-                                                        return tasteType ? (
+                                                        return tasteProfile ? (
                                                             <span className={cn(
-                                                                "text-[10px] truncate flex-shrink-0 transition-colors px-1.5 py-0.5 rounded-md font-bold tracking-wider",
+                                                                "text-[10px] truncate flex-shrink-0 transition-colors px-1.5 py-0.5 rounded-md font-bold max-w-[100px]",
                                                                 getTasteBadgeStyle(matchScore)
                                                             )}>
-                                                                {tasteType.fullType}
+                                                                {tasteProfile.name}
                                                             </span>
                                                         ) : null;
                                                     })()

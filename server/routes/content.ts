@@ -7,6 +7,7 @@ import { ListService } from "../services/ListService.js";
 import { LeaderboardService } from "../services/LeaderboardService.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { getShopReviewStats, getShopMatchScores } from "../utils/enricher.js";
+import { expandFoodKindFilter } from "../utils/foodKindMap.js";
 import { createNotification } from "./notifications.js";
 
 const router = Router();
@@ -81,10 +82,15 @@ const getRankKey = (userId: number, shopId: number) => `${userId}:${shopId}`;
 // Helper: Fetch Feed Content (Pure Logic)
 async function fetchFeedContent(params: {
     page: number, limit: number, filter: string,
-    lat: number | null, lon: number | null, user_id: number | null
+    lat: number | null, lon: number | null, user_id: number | null,
+    regionLat?: number | null, regionLon?: number | null, regionRadius?: number,
+    excludeIds?: number[], maxPerUser?: number, maxPerShop?: number,
+    foodKinds?: string[]
 }) {
-    const { page, limit, filter, lat: userLat, lon: userLon, user_id: currentUserId } = params;
+    const { page, limit, filter, lat: userLat, lon: userLon, user_id: currentUserId, regionLat, regionLon, regionRadius = 5, excludeIds, maxPerUser, maxPerShop, foodKinds } = params;
     const offset = (page - 1) * limit;
+    const needsDedup = (maxPerUser != null) || (maxPerShop != null);
+    const fetchLimit = needsDedup ? limit * 3 : limit;
 
     // 1. Fetch Content + User Info
     let query = db.select({
@@ -149,22 +155,128 @@ async function fetchFeedContent(params: {
             whereConditions.push(sql`
                 (
                     ${R} * acos(
-                        least(1.0, greatest(-1.0, 
-                            cos(radians(${userLat})) * cos(radians(${shops.lat})) * 
-                            cos(radians(${shops.lon}) - radians(${userLon})) + 
+                        least(1.0, greatest(-1.0,
+                            cos(radians(${userLat})) * cos(radians(${shops.lat})) *
+                            cos(radians(${shops.lon}) - radians(${userLon})) +
                             sin(radians(${userLat})) * sin(radians(${shops.lat}))
                         ))
                     )
                 ) <= 5
             `);
         }
+    } else if (filter === 'similar_taste') {
+        if (!currentUserId) return [];
+        // Get current user's taste scores
+        const currentUserData = await db.select({ taste_result: users.taste_result })
+            .from(users).where(eq(users.id, currentUserId)).limit(1);
+        if (!currentUserData.length || !currentUserData[0].taste_result) return [];
+        const myScores = (currentUserData[0].taste_result as any).scores;
+        if (!myScores) return [];
+
+        // Filter reviews from users with similar taste (RBF match >= 75%)
+        // RBF: exp(-d² / (2*σ²)) >= 0.75, σ=5 → d² <= -50*ln(0.75) ≈ 14.38
+        // 7 axes: boldness, acidity, richness, experimental, spiciness, sweetness, umami
+        const axes = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+        const distExpr = axes.map(axis => {
+            const val = Number(myScores[axis]) || 0;
+            return `POWER(COALESCE((users.taste_result->'scores'->>'${axis}')::float, 0) - ${val}, 2)`;
+        }).join(' + ');
+
+        whereConditions.push(eq(content.type, 'review'));
+        whereConditions.push(ne(content.user_id, currentUserId));
+        // Use the already-joined users table for taste distance filter
+        whereConditions.push(sql.raw(`(${distExpr}) <= 14.38`));
+    } else if (filter === 'similar_taste_region') {
+        if (!currentUserId || regionLat == null || regionLon == null) return [];
+        // Get current user's taste scores
+        const currentUserData2 = await db.select({ taste_result: users.taste_result })
+            .from(users).where(eq(users.id, currentUserId)).limit(1);
+        if (!currentUserData2.length || !currentUserData2[0].taste_result) return [];
+        const myScores2 = (currentUserData2[0].taste_result as any).scores;
+        if (!myScores2) return [];
+
+        // Same taste distance filter as similar_taste (RBF >= 75%, d² <= 14.38)
+        const axes2 = ['boldness', 'acidity', 'richness', 'experimental', 'spiciness', 'sweetness', 'umami'];
+        const distExpr2 = axes2.map(axis => {
+            const val = Number(myScores2[axis]) || 0;
+            return `POWER(COALESCE((users.taste_result->'scores'->>'${axis}')::float, 0) - ${val}, 2)`;
+        }).join(' + ');
+
+        // Join shops for coordinate-based proximity filter
+        query = query.innerJoin(shops,
+            sql`CAST(${content.review_prop}->>'shop_id' AS INTEGER) = ${shops.id}`
+        );
+
+        const R = 6371;
+        whereConditions.push(eq(content.type, 'review'));
+        whereConditions.push(ne(content.user_id, currentUserId));
+        whereConditions.push(sql.raw(`(${distExpr2}) <= 14.38`));
+        whereConditions.push(sql`
+            (
+                ${R} * acos(
+                    least(1.0, greatest(-1.0,
+                        cos(radians(${regionLat})) * cos(radians(${shops.lat})) *
+                        cos(radians(${shops.lon}) - radians(${regionLon})) +
+                        sin(radians(${regionLat})) * sin(radians(${shops.lat}))
+                    ))
+                )
+            ) <= ${regionRadius}
+        `);
+
+        // Food kind filter (expand normalized names to raw DB values)
+        if (foodKinds && foodKinds.length > 0) {
+            const expandedKinds = expandFoodKindFilter(foodKinds);
+            whereConditions.push(
+                sql`${shops.food_kind} IN (${sql.join(expandedKinds.map(k => sql`${k}`), sql`, `)})`
+            );
+        }
+    } else if (filter === 'popular_posts') {
+        whereConditions.push(eq(content.type, 'post'));
     }
 
-    const feedItems = await query
+    // Exclude specific content IDs (e.g., already shown in another section)
+    if (excludeIds && excludeIds.length > 0) {
+        whereConditions.push(sql`${content.id} NOT IN (${sql.raw(excludeIds.join(','))})`);
+    }
+
+    // Custom ordering for specific filters
+    let orderClause;
+    if (filter === 'popular_posts') {
+        orderClause = sql`(SELECT COUNT(*) FROM likes WHERE likes.target_type = 'content' AND likes.target_id = ${content.id}) DESC, ${content.created_at} DESC`;
+    } else {
+        orderClause = sql`${content.created_at} DESC`;
+    }
+
+    let feedItems = await query
         .where(and(...whereConditions))
-        .orderBy(desc(content.created_at))
-        .limit(limit)
+        .orderBy(orderClause)
+        .limit(fetchLimit)
         .offset(offset);
+
+    // Post-query deduplication: max N items per user or per shop
+    if (needsDedup && feedItems.length > 0) {
+        const userCount = new Map<number, number>();
+        const shopCount = new Map<number, number>();
+        feedItems = feedItems.filter(item => {
+            // Max per user check
+            if (maxPerUser != null) {
+                const uid = item.user_id;
+                const cnt = (userCount.get(uid) || 0) + 1;
+                if (cnt > maxPerUser) return false;
+                userCount.set(uid, cnt);
+            }
+            // Max per shop check
+            if (maxPerShop != null && item.review_prop) {
+                const shopId = Number((item.review_prop as any).shop_id);
+                if (shopId) {
+                    const cnt = (shopCount.get(shopId) || 0) + 1;
+                    if (cnt > maxPerShop) return false;
+                    shopCount.set(shopId, cnt);
+                }
+            }
+            return true;
+        }).slice(0, limit);
+    }
 
     if (feedItems.length === 0) {
         return [];
@@ -616,6 +728,26 @@ router.get("/feed", optionalAuth, async (req, res) => {
 
         const currentUserId = req.user?.id || null; // Get from JWT if available
 
+        // Region coordinates for similar_taste_region filter
+        const rawRegionLat = parseFloat(req.query.regionLat as string);
+        const rawRegionLon = parseFloat(req.query.regionLon as string);
+        const regionLat = Number.isFinite(rawRegionLat) ? rawRegionLat : null;
+        const regionLon = Number.isFinite(rawRegionLon) ? rawRegionLon : null;
+        const regionRadius = parseFloat(req.query.regionRadius as string) || 5;
+
+        // Exclude content IDs (comma-separated)
+        const excludeIdsRaw = req.query.excludeIds as string;
+        const excludeIds = excludeIdsRaw
+            ? excludeIdsRaw.split(',').map(Number).filter(n => Number.isFinite(n) && n > 0)
+            : undefined;
+
+        // Food kind filter (comma-separated normalized names)
+        const foodKindsParam = req.query.foodKinds as string | undefined;
+        const foodKinds = foodKindsParam ? foodKindsParam.split(',').filter(k => k.trim()) : undefined;
+
+        // Dedup flag: when true, apply maxPerUser/maxPerShop (used by home tab previews)
+        const dedup = req.query.dedup === '1';
+
         // Caching Logic: Only for global feed (popular)
         const isGlobal = (filter === 'popular' || filter === '') && !userLat; // popular doesn't use location currently in code, but checking safety
 
@@ -639,6 +771,63 @@ router.get("/feed", optionalAuth, async (req, res) => {
                 return res.json(enriched);
             }
 
+            return res.json(baseFeed);
+        } else if (filter === 'similar_taste' && currentUserId) {
+            // Cached per-user for similar taste feed
+            const dedupSuffix = dedup ? ':dedup' : '';
+            const cacheKey = `feed:similar_taste:user:${currentUserId}:p${page}:l${limit}${dedupSuffix}`;
+            let baseFeed = await getOrSetCache(cacheKey, async () => {
+                return fetchFeedContent({
+                    page, limit, filter, lat: null, lon: null, user_id: currentUserId,
+                    ...(dedup && { maxPerUser: 2 })
+                });
+            }, 300); // 5 min TTL
+
+            baseFeed = await enrichFeedWithLiveStats(baseFeed);
+            if (currentUserId && baseFeed.length > 0) {
+                const enriched = await enrichFeedWithUserStatus(baseFeed, currentUserId);
+                return res.json(enriched);
+            }
+            return res.json(baseFeed);
+        } else if (filter === 'similar_taste_region' && currentUserId && regionLat && regionLon) {
+            // Cached per-user per-coordinates for regional similar taste feed
+            // Round to 2 decimal places for cache key stability (~1km precision)
+            const latKey = regionLat.toFixed(2);
+            const lonKey = regionLon.toFixed(2);
+            // excludeIds affect results, so include in cache key when present
+            const excludeSuffix = excludeIds?.length ? `:ex${excludeIds.sort().join('_')}` : '';
+            const foodKindSuffix = foodKinds?.length ? `:fk${foodKinds.sort().join('_')}` : '';
+            const dedupSuffix2 = dedup ? ':dedup' : '';
+            const cacheKey = `feed:similar_taste_region:${latKey},${lonKey}:r${regionRadius}:user:${currentUserId}:p${page}:l${limit}${excludeSuffix}${foodKindSuffix}${dedupSuffix2}`;
+            let baseFeed = await getOrSetCache(cacheKey, async () => {
+                return fetchFeedContent({
+                    page, limit, filter, lat: null, lon: null, user_id: currentUserId,
+                    regionLat, regionLon, regionRadius,
+                    excludeIds, foodKinds,
+                    ...(dedup && { maxPerShop: 2 })
+                });
+            }, 300); // 5 min TTL
+
+            baseFeed = await enrichFeedWithLiveStats(baseFeed);
+            if (currentUserId && baseFeed.length > 0) {
+                const enriched = await enrichFeedWithUserStatus(baseFeed, currentUserId);
+                return res.json(enriched);
+            }
+            return res.json(baseFeed);
+        } else if (filter === 'popular_posts') {
+            // Cached globally for popular posts
+            const cacheKey = `feed:popular_posts:p${page}`;
+            let baseFeed = await getOrSetCache(cacheKey, async () => {
+                return fetchFeedContent({
+                    page, limit, filter, lat: null, lon: null, user_id: null
+                });
+            }, 300); // 5 min TTL
+
+            baseFeed = await enrichFeedWithLiveStats(baseFeed);
+            if (currentUserId && baseFeed.length > 0) {
+                const enriched = await enrichFeedWithUserStatus(baseFeed, currentUserId);
+                return res.json(enriched);
+            }
             return res.json(baseFeed);
         } else {
             // Dynamic Feed (No Cache)

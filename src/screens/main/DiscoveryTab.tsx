@@ -760,42 +760,51 @@ export const DiscoveryTab: React.FC<Props> = ({ isActive, refreshTrigger, isEnab
                 className="absolute right-4 z-10 flex flex-col gap-3"
                 style={{ top: Capacitor.isNativePlatform() ? 'calc(env(safe-area-inset-top) + 6.25rem)' : '8rem' }}
             >
-                <button
-                    onClick={handleCurrentLocation}
-                    className="h-10 w-10 flex items-center justify-center bg-white rounded-full shadow-lg border border-gray-100 active:scale-95 transition-transform"
-                >
-                    <Locate className="w-5 h-5 text-gray-700" />
-                </button>
+                <div className="flex flex-col items-center">
+                    <button
+                        onClick={handleCurrentLocation}
+                        className="h-10 w-10 flex items-center justify-center bg-white rounded-full shadow-lg border border-gray-100 active:scale-95 transition-transform"
+                    >
+                        <Locate className="w-5 h-5 text-gray-700" />
+                    </button>
+                    <span className="text-[10px] font-medium mt-1 text-gray-600 bg-white/80 rounded px-1.5 py-0.5">{t('discovery.controls.location')}</span>
+                </div>
 
-                <button
-                    onClick={() => {
-                        if (!user) return alert(t('discovery.alerts.login_required'));
-                        setShowSavedOnly(!showSavedOnly);
-                        setSelectedShopId(null);
-                        // Don't reset mapCenter - keep current map view
-                    }}
-                    className={cn(
-                        "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
-                        showSavedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
-                    )}
-                >
-                    <Bookmark className={cn("w-5 h-5", showSavedOnly ? "fill-current text-white" : "")} />
-                </button>
+                <div className="flex flex-col items-center">
+                    <button
+                        onClick={() => {
+                            if (!user) return alert(t('discovery.alerts.login_required'));
+                            setShowSavedOnly(!showSavedOnly);
+                            setSelectedShopId(null);
+                            // Don't reset mapCenter - keep current map view
+                        }}
+                        className={cn(
+                            "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
+                            showSavedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
+                        )}
+                    >
+                        <Bookmark className={cn("w-5 h-5", showSavedOnly ? "fill-current text-white" : "")} />
+                    </button>
+                    <span className={cn("text-[10px] font-medium mt-1 bg-white/80 rounded px-1.5 py-0.5", showSavedOnly ? "text-primary" : "text-gray-600")}>{t('discovery.controls.saved')}</span>
+                </div>
 
-                <button
-                    onClick={() => {
-                        if (!user) return alert(t('discovery.alerts.login_required'));
-                        setShowRankedOnly(!showRankedOnly);
-                        setSelectedShopId(null);
-                        // Don't reset mapCenter - keep current map view
-                    }}
-                    className={cn(
-                        "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
-                        showRankedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
-                    )}
-                >
-                    <Check className={cn("w-5 h-5", showRankedOnly ? "text-white" : "")} />
-                </button>
+                <div className="flex flex-col items-center">
+                    <button
+                        onClick={() => {
+                            if (!user) return alert(t('discovery.alerts.login_required'));
+                            setShowRankedOnly(!showRankedOnly);
+                            setSelectedShopId(null);
+                            // Don't reset mapCenter - keep current map view
+                        }}
+                        className={cn(
+                            "h-10 w-10 flex items-center justify-center rounded-full shadow-lg border active:scale-95 transition-all text-gray-700",
+                            showRankedOnly ? "bg-primary text-white border-primary" : "bg-white border-gray-100"
+                        )}
+                    >
+                        <Check className={cn("w-5 h-5", showRankedOnly ? "text-white" : "")} />
+                    </button>
+                    <span className={cn("text-[10px] font-medium mt-1 bg-white/80 rounded px-1.5 py-0.5", showRankedOnly ? "text-primary" : "text-gray-600")}>{t('discovery.controls.visited')}</span>
+                </div>
             </div>
             {/* Search Overlay */}
             {isSearching && (

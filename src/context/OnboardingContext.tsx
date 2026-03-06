@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import type { TasteAnalysisResult } from '@/services/OnboardingService';
+import type { TasteAnalysisResult, MatchedRecommendation } from '@/services/OnboardingService';
 
 export interface OnboardingShop {
     shopId: number;
@@ -15,11 +15,18 @@ export interface OnboardingRating {
     shop: OnboardingShop;
 }
 
+export interface CatchtableRef {
+    name: string;
+    shopRef: string;
+}
+
 interface OnboardingState {
     extractedNames: string[];
+    catchtableRefs: CatchtableRef[];
     confirmedShops: OnboardingShop[];
     ratings: OnboardingRating[];
     analysis: TasteAnalysisResult | null;
+    matchedRecommendations: MatchedRecommendation[];
     shareCode: string | null;
     tasteType: {
         fullType: string;
@@ -34,10 +41,11 @@ interface OnboardingState {
 
 interface OnboardingContextType extends OnboardingState {
     setExtractedNames: (names: string[]) => void;
+    setCatchtableRefs: (refs: CatchtableRef[]) => void;
     setConfirmedShops: (shops: OnboardingShop[]) => void;
     addRating: (rating: OnboardingRating) => void;
     setRatings: (ratings: OnboardingRating[]) => void;
-    setAnalysisResult: (analysis: TasteAnalysisResult, shareCode: string, tasteType: OnboardingState['tasteType'], tasteProfile: OnboardingState['tasteProfile']) => void;
+    setAnalysisResult: (analysis: TasteAnalysisResult, shareCode: string, tasteType: OnboardingState['tasteType'], tasteProfile: OnboardingState['tasteProfile'], matchedRecommendations?: MatchedRecommendation[]) => void;
     reset: () => void;
 }
 
@@ -45,9 +53,11 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 
 const initialState: OnboardingState = {
     extractedNames: [],
+    catchtableRefs: [],
     confirmedShops: [],
     ratings: [],
     analysis: null,
+    matchedRecommendations: [],
     shareCode: null,
     tasteType: null,
     tasteProfile: null,
@@ -58,6 +68,10 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
 
     const setExtractedNames = useCallback((names: string[]) => {
         setState(prev => ({ ...prev, extractedNames: names }));
+    }, []);
+
+    const setCatchtableRefs = useCallback((refs: CatchtableRef[]) => {
+        setState(prev => ({ ...prev, catchtableRefs: refs }));
     }, []);
 
     const setConfirmedShops = useCallback((shops: OnboardingShop[]) => {
@@ -80,8 +94,9 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         shareCode: string,
         tasteType: OnboardingState['tasteType'],
         tasteProfile: OnboardingState['tasteProfile'],
+        matchedRecommendations?: MatchedRecommendation[],
     ) => {
-        setState(prev => ({ ...prev, analysis, shareCode, tasteType, tasteProfile }));
+        setState(prev => ({ ...prev, analysis, shareCode, tasteType, tasteProfile, matchedRecommendations: matchedRecommendations || [] }));
     }, []);
 
     const reset = useCallback(() => {
@@ -91,12 +106,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     const contextValue = useMemo(() => ({
         ...state,
         setExtractedNames,
+        setCatchtableRefs,
         setConfirmedShops,
         addRating,
         setRatings,
         setAnalysisResult,
         reset,
-    }), [state, setExtractedNames, setConfirmedShops, addRating, setRatings, setAnalysisResult, reset]);
+    }), [state, setExtractedNames, setCatchtableRefs, setConfirmedShops, addRating, setRatings, setAnalysisResult, reset]);
 
     return (
         <OnboardingContext.Provider value={contextValue}>

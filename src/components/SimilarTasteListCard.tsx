@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, MapPin, UtensilsCrossed, Crown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useUser } from '@/context/UserContext';
 import { scoreToTasteRatingStep } from '@/lib/utils';
 
 interface Shop {
@@ -40,8 +39,6 @@ interface Props {
 export const SimilarTasteListCard: React.FC<Props> = ({ list }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { user: currentUser } = useUser();
-
     const handleCardClick = () => {
         const params = new URLSearchParams({
             type: list.type,
@@ -70,21 +67,18 @@ export const SimilarTasteListCard: React.FC<Props> = ({ list }) => {
     return (
         <div
             onClick={handleCardClick}
-            className="mx-5 rounded-2xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+            className="flex-shrink-0 w-[330px] rounded-2xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
             style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary) / 0.03) 0%, hsl(var(--primary) / 0.07) 100%)'
             }}
         >
             {/* Header */}
-            <div className="px-5 pt-5 pb-4">
+            <div className="px-4 pt-4 pb-3">
                 {/* Title */}
-                <div className="flex items-start justify-between mb-5">
+                <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 pr-2">
-                        <p className="text-base leading-relaxed">
-                            <span className="font-medium text-foreground">
-                                {currentUser?.nickname || '나'}
-                            </span>
-                            <span className="text-muted-foreground">님과 입맛이 </span>
+                        <p className="text-sm leading-relaxed">
+                            <span className="text-muted-foreground">입맛 </span>
                             <span className="font-semibold text-primary">
                                 {list.user.taste_match}%
                             </span>
@@ -97,7 +91,7 @@ export const SimilarTasteListCard: React.FC<Props> = ({ list }) => {
                             </span>
                             <span className="text-muted-foreground">님의</span>
                         </p>
-                        <div className="flex items-center gap-1.5 mt-1 text-primary">
+                        <div className="flex items-center gap-1.5 mt-1 text-sm text-primary">
                             {getTypeIcon()}
                             <span className="font-bold">{list.title}</span>
                             <span className="text-muted-foreground font-normal">이에요</span>
@@ -141,7 +135,7 @@ export const SimilarTasteListCard: React.FC<Props> = ({ list }) => {
             </div>
 
             {/* Footer - View All */}
-            <div className="px-5 py-3 border-t border-primary/5">
+            <div className="px-4 py-2.5 border-t border-primary/5">
                 <p className="text-sm text-primary font-semibold text-center">
                     {t('home.similar_taste_list.view_all', { count: list.shops.length })}
                 </p>

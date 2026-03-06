@@ -46,7 +46,7 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote, o
                 relative w-full rounded-3xl overflow-hidden shadow-sm border border-border/50
                 bg-gradient-to-br ${bgGradient}
             `}>
-                <div className="p-5">
+                <div className="p-5 flex flex-col min-h-[270px]">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-lg text-foreground">
                             {t('vs_card.title')}
@@ -63,7 +63,7 @@ export const VsCard: React.FC<Props> = ({ id, itemA, itemB, index = 0, onVote, o
                         </button>
                     </div>
 
-                    <div className="flex gap-4 relative min-h-[140px]">
+                    <div className="flex gap-4 relative flex-1 min-h-[140px]">
                         {/* Option A */}
                         <button
                             onClick={() => handleSelect('A')}

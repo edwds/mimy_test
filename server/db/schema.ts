@@ -123,6 +123,7 @@ export const shops = pgTable('shops', {
     catchtable_id: integer('catchtable_id'),
     catchtable_ref: text('catchtable_ref'),
     google_place_id: text('google_place_id').unique(),
+    naver_business_id: text('naver_business_id'),
 
     name: text('name').notNull(),
     description: text('description'),
@@ -444,4 +445,24 @@ export const notifications = pgTable('notifications', {
     user_id_idx: index('idx_notifications_user').on(table.user_id),
     created_at_idx: index('idx_notifications_created').on(table.created_at),
     user_created_idx: index('idx_notifications_user_created').on(table.user_id, table.created_at),
+}));
+
+// --- Naver AI Briefing Domain ---
+export const shop_naver_briefing = pgTable('shop_naver_briefing', {
+    id: serial('id').primaryKey(),
+    shop_id: integer('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
+    briefing_text: text('briefing_text'),
+    text_summaries: jsonb('text_summaries'),
+    image_summaries: jsonb('image_summaries'),
+    related_queries: jsonb('related_queries'),
+    source_business_id: text('source_business_id'),
+    has_briefing: boolean('has_briefing').default(false),
+    error_message: text('error_message'),
+    fetched_at: timestamp('fetched_at').defaultNow(),
+    created_at: timestamp('created_at').defaultNow(),
+    updated_at: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+    unique_shop: unique().on(table.shop_id),
+    shop_idx: index('idx_shop_naver_briefing_shop').on(table.shop_id),
+    has_briefing_idx: index('idx_shop_naver_briefing_has').on(table.has_briefing),
 }));

@@ -13,7 +13,7 @@ import { formatFoodKind } from '@/lib/foodKindMap';
 export const ShopMatchConfirm = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const { extractedNames, setConfirmedShops } = useOnboarding();
+    const { extractedNames, catchtableRefs, setConfirmedShops } = useOnboarding();
 
     const [matches, setMatches] = useState<ShopMatch[]>([]);
     const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -33,7 +33,10 @@ export const ShopMatchConfirm = () => {
 
     const matchShops = async () => {
         try {
-            const result = await OnboardingService.matchShops(extractedNames);
+            const result = await OnboardingService.matchShops(
+                extractedNames,
+                catchtableRefs.length > 0 ? catchtableRefs : undefined
+            );
 
             // Deduplicate by shop ID — keep the first occurrence only
             const seenShopIds = new Set<number>();

@@ -155,9 +155,21 @@ const createMarkerElement = (shop: Shop, isSelected: boolean, language: string =
             bgColor = '#FF6B00';
             borderColor = '#FF6B00';
             color = '#FFFFFF'; // White content
+        } else if (hasMatchScore) {
+            // Score-based color scale (not saved, not ranked)
+            const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
+            if (rating >= 4.0) {
+                color = '#DC2626'; borderColor = '#DC2626'; // 진한 빨강
+            } else if (rating >= 3.5) {
+                color = '#FF6B00'; borderColor = '#FF6B00'; // 주황
+            } else if (rating >= 3.1) {
+                color = '#F4A68C'; borderColor = '#F4A68C'; // 옅은 주황
+            } else {
+                color = '#9CA3AF'; borderColor = '#9CA3AF'; // 회색
+            }
         }
 
-        const size = 24;
+        const size = 32;
 
         const pin = document.createElement('div');
         pin.className = 'custom-marker-pin';
@@ -178,15 +190,17 @@ const createMarkerElement = (shop: Shop, isSelected: boolean, language: string =
 
         let innerHtml: string;
 
-        if (hasMatchScore) {
-            // Display score
-            const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
-            const scoreText = rating.toFixed(1);
+        if (hasRanking && shop.my_review_stats?.rank) {
+            // Display rank number for visited shops
+            const rankText = `${shop.my_review_stats.rank}`;
             const fontSize = size * 0.4;
+            innerHtml = `<div style="font-size: ${fontSize}px; font-weight: 700; color: ${color};">${rankText}</div>`;
+        } else if (hasMatchScore) {
+            // Display score for unvisited shops
+            const rating = scoreToTasteRatingStep(shop.shop_user_match_score!);
+            const scoreText = rating.toFixed(2);
+            const fontSize = size * 0.34;
             innerHtml = `<div style="font-size: ${fontSize}px; font-weight: 700; color: ${color};">${scoreText}</div>`;
-        } else if (hasRanking) {
-            // Check icon for ranked shops
-            innerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: ${size * 0.6}px; height: ${size * 0.6}px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         } else {
             // Dot for default shops
             innerHtml = `<div style="width: ${size * 0.3}px; height: ${size * 0.3}px; background-color: ${color}; border-radius: 50%;"></div>`;
@@ -212,12 +226,14 @@ const createMarkerElement = (shop: Shop, isSelected: boolean, language: string =
 
         label.style.position = 'absolute';
         label.style.left = '50%';
-        label.style.top = '10px';
+        label.style.top = '18px';
         label.style.transform = 'translateX(-50%)';
 
         label.style.whiteSpace = 'pre';
         label.style.wordBreak = 'keep-all';
         label.style.overflowWrap = 'normal';
+        label.style.textAlign = 'center';
+        label.style.lineHeight = '1.01';
 
         label.style.color = '#000';
         label.style.fontSize = '12px';
@@ -696,9 +712,9 @@ export const MapContainer = ({
         <div className="w-full h-full relative">
             <div ref={mapContainer} className="absolute inset-0" />
             <style>{`
-                /* Ensure marker interaction */
-                .marker-container {
-                    /* Since we set width via element style, this might not be needed */
+                /* Dim map tiles so shop markers stand out */
+                .maplibregl-canvas {
+                    opacity: 0.55;
                 }
             `}</style>
         </div>

@@ -88,9 +88,9 @@ export const UserRecommendationModule: React.FC<Props> = ({ onClose }) => {
                 <div className="animate-pulse">
                     <div className="h-5 bg-muted rounded w-32 mb-4" />
                     <div className="flex gap-3 overflow-hidden">
-                        {[1, 2, 3, 4, 5].map(i => (
-                            <div key={i} className="flex-shrink-0 w-28">
-                                <div className="bg-muted rounded-2xl h-40" />
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="flex-shrink-0 w-[38vw] max-w-[160px]">
+                                <div className="bg-muted rounded-2xl h-48" />
                             </div>
                         ))}
                     </div>
@@ -107,7 +107,7 @@ export const UserRecommendationModule: React.FC<Props> = ({ onClose }) => {
         <div className="py-4">
             {/* Header */}
             <div className="flex items-center justify-between px-5 mb-3">
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-lg font-bold text-foreground">
                     {t('home.user_recommendation.title')}
                 </h3>
                 {onClose && (
@@ -126,7 +126,7 @@ export const UserRecommendationModule: React.FC<Props> = ({ onClose }) => {
                     <div
                         key={user.id}
                         onClick={() => handleUserClick(user.id)}
-                        className="flex-shrink-0 w-28 bg-card border border-border rounded-2xl p-3 cursor-pointer hover:shadow-md transition-shadow"
+                        className="flex-shrink-0 w-[38vw] max-w-[160px] bg-card border border-border rounded-xl p-3 cursor-pointer hover:shadow-md transition-shadow"
                     >
                         {/* Profile Image */}
                         <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-muted">
@@ -144,7 +144,7 @@ export const UserRecommendationModule: React.FC<Props> = ({ onClose }) => {
                         </div>
 
                         {/* Nickname */}
-                        <p className="text-sm font-medium text-foreground text-center truncate mb-1">
+                        <p className="text-sm font-medium text-foreground text-center truncate mb-0.5">
                             {user.nickname || user.account_id}
                         </p>
 
@@ -179,7 +179,7 @@ export const UserRecommendationModule: React.FC<Props> = ({ onClose }) => {
             </div>
 
             {/* Subtitle */}
-            <p className="text-xs text-muted-foreground text-center mt-3 px-5">
+            <p className="text-xs text-muted-foreground text-center mt-2.5 px-5">
                 {t('home.user_recommendation.subtitle')}
             </p>
         </div>

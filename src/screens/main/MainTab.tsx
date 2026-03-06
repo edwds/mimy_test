@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Compass, Trophy, User, PlusCircle } from 'lucide-react';
+import { Home, Compass, Trophy, User, Plus, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { DiscoveryTab } from '@/screens/main/DiscoveryTab';
-import { HomeTab } from './HomeTab';
+import { HomeTabV2 } from './HomeTabV2';
 import { LeaderboardTab } from './LeaderboardTab';
 import { ShopDetailScreen } from '@/screens/shop/ShopDetailScreen';
 import { ListDetailScreen } from '@/screens/profile/ListDetailScreen';
+import { HomeFeedScreen } from '@/screens/feed/HomeFeedScreen';
 import { SwipeableOverlay } from '@/components/SwipeableOverlay';
 
-const TAB_ORDER = ['home', 'discover', 'ranking', 'profile'];
+const TAB_ORDER = ['home', 'feed', 'discover', 'ranking', 'profile'];
 
 export const MainTab = () => {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ export const MainTab = () => {
     const [activeTab, setActiveTab] = useState('home');
     const [refreshTriggers, setRefreshTriggers] = useState({
         home: 0,
+        feed: 0,
         discover: 0,
         profile: 0,
         ranking: 0 // placeholder
@@ -33,6 +35,7 @@ export const MainTab = () => {
         if (path.includes('/main/profile')) setActiveTab('profile');
         else if (path.includes('/main/ranking')) setActiveTab('ranking');
         else if (path.includes('/main/discover')) setActiveTab('discover');
+        else if (path.includes('/main/feed')) setActiveTab('feed');
         else setActiveTab('home');
     }, [location.pathname]);
 
@@ -71,7 +74,7 @@ export const MainTab = () => {
     useEffect(() => {
         // Staggered loading sequence: Feed -> Profile -> Discovery -> Leaderboard
         // Only load if not already allowed (which activeTab handles)
-        const sequence = ['home', 'profile', 'discover', 'ranking'];
+        const sequence = ['home', 'feed', 'profile', 'discover', 'ranking'];
         let timeoutIds: NodeJS.Timeout[] = [];
         let cumDelay = 500; // Start bg loading after 500ms
 
@@ -102,7 +105,6 @@ export const MainTab = () => {
                     let viewUserId = searchParams.get('viewUser');
                     const viewListUserId = searchParams.get('viewListUser');
                     const viewShopId = searchParams.get('viewShop');
-
                     // Fallback: If viewing a list but viewUser is missing, assume the list owner is the context.
                     // This keeps the profile screen mounted in the background, preventing flicker on back.
                     // EXCEPTION: If we are already on the Profile Tab (e.g. My Profile), allow the list to overlay strictly on top
@@ -138,11 +140,15 @@ export const MainTab = () => {
                 })()}
 
                 <div className={cn("h-full w-full", activeTab === 'home' ? `block ${getAnimationClass()}` : 'hidden')}>
-                    <HomeTab
-                        onWrite={() => navigate('/write')}
+                    <HomeTabV2
                         refreshTrigger={refreshTriggers.home}
                         isEnabled={allowedTabs.has('home')}
                     />
+                </div>
+                <div className={cn("h-full w-full", activeTab === 'feed' ? `block ${getAnimationClass()}` : 'hidden')}>
+                    {allowedTabs.has('feed') && (
+                        <HomeFeedScreen isTab />
+                    )}
                 </div>
                 <div className={cn("h-full w-full", activeTab === 'discover' ? `block ${getAnimationClass()}` : 'hidden')}>
                     <DiscoveryTab
@@ -164,9 +170,15 @@ export const MainTab = () => {
                 </div>
             </main>
 
-            {/* Write Sheet */}
-
-
+            {/* FAB - Write Button */}
+            <button
+                onClick={() => navigate('/write')}
+                className="absolute right-4 z-30 flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-full shadow-lg active:scale-95 transition-transform"
+                style={{ bottom: `calc(4rem + ${Capacitor.isNativePlatform() ? 'env(safe-area-inset-bottom)' : '0.5rem'} + 16px)` }}
+            >
+                <Plus size={22} strokeWidth={2.5} />
+                <span className="text-base font-semibold">기록하기</span>
+            </button>
 
             {/* Bottom Navigation */}
             <nav
@@ -181,19 +193,17 @@ export const MainTab = () => {
                         onClick={() => handleTabClick('home')}
                     />
                     <NavIcon
+                        Icon={Newspaper}
+                        label={t('nav.feed')}
+                        active={activeTab === 'feed'}
+                        onClick={() => handleTabClick('feed')}
+                    />
+                    <NavIcon
                         Icon={Compass}
                         label={t('nav.discover')}
                         active={activeTab === 'discover'}
                         onClick={() => handleTabClick('discover')}
                     />
-
-                    {/* Write Button (Center) */}
-                    <NavIcon
-                        Icon={PlusCircle}
-                        label={t('common.write')}
-                        onClick={() => navigate('/write')}
-                    />
-
                     <NavIcon
                         Icon={Trophy}
                         label={t('nav.ranking')}

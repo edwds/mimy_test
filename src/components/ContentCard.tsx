@@ -27,6 +27,7 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
     const [canExpand, setCanExpand] = useState(false);
     const [collapsedHeight, setCollapsedHeight] = useState<number | undefined>(undefined);
     const [fullHeight, setFullHeight] = useState<number | undefined>(undefined);
+    const [measured, setMeasured] = useState(false);
 
     const measure = useCallback(() => {
         const el = ref.current;
@@ -56,18 +57,23 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
         setCanExpand(isOverflow);
         setCollapsedHeight(clamped);
         setFullHeight(full);
+        setMeasured(true);
     }, [maxLines]);
 
     useLayoutEffect(() => {
         setExpanded(false);
+        setMeasured(false);
     }, [text]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         measure();
+    }, [text, maxLines, measure]);
+
+    useEffect(() => {
         const onResize = () => measure();
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
-    }, [text, maxLines, measure]);
+    }, [measure]);
 
     // Split text into paragraphs (consecutive newlines separate paragraphs)
     const paragraphs = useMemo(() => {
@@ -100,10 +106,17 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
             <div className="relative">
                 <motion.div
                     ref={ref}
-                    className="text-gray-800 whitespace-pre-wrap break-words overflow-hidden"
-                    style={{ fontSize: '15px', lineHeight: '1.6' }}
+                    className={cn(
+                        "text-gray-800 whitespace-pre-wrap break-words overflow-hidden",
+                        !measured && 'line-clamp-[var(--max-lines)]'
+                    )}
+                    style={{
+                        fontSize: '15px',
+                        lineHeight: '1.6',
+                        ...(!measured ? { '--max-lines': maxLines, display: '-webkit-box', WebkitLineClamp: maxLines, WebkitBoxOrient: 'vertical' as const } : {})
+                    } as React.CSSProperties}
                     initial={false}
-                    animate={{ height: canExpand ? (expanded ? fullHeight : collapsedHeight) : 'auto' }}
+                    animate={measured ? { height: canExpand ? (expanded ? fullHeight : collapsedHeight) : 'auto' } : {}}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
                     {paragraphs.map((paragraph, pIdx) => (
@@ -146,6 +159,20 @@ export const ContentBody = ({ text, maxLines = 10, className }: ContentBodyProps
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation();
+                        // Scroll compensation: keep the card top in view after collapse
+                        const card = ref.current?.closest('[data-content-card]') as HTMLElement | null;
+                        const scrollContainer = ref.current?.closest('[data-scroll-container]') as HTMLElement | null;
+                        if (card && scrollContainer) {
+                            const cardTop = card.offsetTop;
+                            const scrollTop = scrollContainer.scrollTop;
+                            const viewportTop = scrollTop;
+                            // If the card top is above the current viewport, scroll to it
+                            if (cardTop < viewportTop) {
+                                requestAnimationFrame(() => {
+                                    scrollContainer.scrollTo({ top: cardTop, behavior: 'smooth' });
+                                });
+                            }
+                        }
                         setExpanded(false);
                     }}
                     className="text-[13px] font-semibold text-gray-400 mt-1"
@@ -518,7 +545,7 @@ export const ContentCard = ({
 
 
     return (
-        <div className="bg-white">
+        <div className="bg-white" data-content-card>
             {/* Header */}
             <div className="flex px-5 py-4 gap-3 items-center">
                 <div

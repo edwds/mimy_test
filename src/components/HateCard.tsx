@@ -45,7 +45,7 @@ export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose
                 relative w-full rounded-3xl overflow-hidden shadow-sm border border-border/50
                 bg-gradient-to-br ${bgGradient}
             `}>
-                <div className="p-5">
+                <div className="p-5 flex flex-col min-h-[270px]">
                     <div className="flex items-center justify-between">
                         {/* Close Button */}
                         <button
@@ -63,7 +63,7 @@ export const HateCard: React.FC<Props> = ({ id, item, index = 0, onVote, onClose
                         <span className="text-3xl font-black text-foreground drop-shadow-sm">{item}</span>
                     </div>
 
-                    <div className="flex gap-4 relative min-h-[140px]">
+                    <div className="flex gap-4 relative flex-1 min-h-[140px]">
                         {/* EAT */}
                         <button
                             onClick={() => handleSelect('EAT')}

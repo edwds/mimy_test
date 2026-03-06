@@ -6,17 +6,15 @@ import { ArrowLeft, Loader2, Smile, Meh, Frown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { RelayService, RelayShop } from '@/services/RelayService';
+import { RankingService, TIER_FROM_NUM } from '@/services/RankingService';
 import { RelayCard } from '@/screens/relay/components/RelayCard';
 import { RelayCardStack } from '@/screens/relay/components/RelayCardStack';
-import { RelayComparison } from '@/screens/relay/components/RelayComparison';
 import { useOnboarding, type OnboardingRating } from '@/context/OnboardingContext';
 import { useUser } from '@/context/UserContext';
-import { RelayRating } from '@/screens/relay/RelayScreen';
+import { PlacementOverlay, type PlacementShop } from '@/components/PlacementOverlay';
 
 type SwipeDirection = 'left' | 'right' | 'up' | 'back';
 type Satisfaction = 'good' | 'ok' | 'bad';
-
-const COMPARISON_INTERVAL = 5;
 
 export const OnboardingRelay = () => {
     const navigate = useNavigate();
@@ -43,17 +41,56 @@ export const OnboardingRelay = () => {
     // Stats
     const [_stats, setStats] = useState({ recorded: 0, skipped: 0, good: 0, ok: 0, bad: 0 });
 
-    // Local ratings for comparison logic
-    const [ratings, setRatings] = useState<RelayRating[]>([]);
-
-    // Comparison mode
-    const [comparisonMode, setComparisonMode] = useState(false);
-    const [comparisonQueue, setComparisonQueue] = useState<Array<{ a: RelayRating; b: RelayRating }>>([]);
-    const [comparisonIndex, setComparisonIndex] = useState(0);
+    // --- Inline placement state ---
+    const [tierLists, setTierLists] = useState<Record<Satisfaction, PlacementShop[]>>({
+        good: [],
+        ok: [],
+        bad: [],
+    });
+    const [pendingPlacement, setPendingPlacement] = useState<{
+        shop: PlacementShop;
+        tier: Satisfaction;
+    } | null>(null);
+    const [existingRankingsLoaded, setExistingRankingsLoaded] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Track seen IDs & pagination
     const seenIdsRef = useRef<Set<number>>(new Set());
     const [offset, setOffset] = useState(0);
+
+    // Load existing rankings on mount (if user has any from previous sessions)
+    useEffect(() => {
+        const loadExisting = async () => {
+            try {
+                const rankings = await RankingService.getAll();
+                const tiers: Record<Satisfaction, PlacementShop[]> = {
+                    good: [], ok: [], bad: [],
+                };
+
+                const sorted = [...rankings].sort((a, b) => a.rank - b.rank);
+                for (const item of sorted) {
+                    const shop: PlacementShop = {
+                        shopId: item.shop_id,
+                        shopName: item.shop.name,
+                        photo_url: item.shop.thumbnail_img,
+                        food_kind: item.shop.category,
+                        region: item.shop.address_region,
+                    };
+                    const fullTier = TIER_FROM_NUM[item.satisfaction_tier] ?? 'good';
+                    // Map goat/best → good (onboarding only uses good/ok/bad)
+                    const tierName: Satisfaction = (fullTier === 'goat' || fullTier === 'best') ? 'good' : fullTier as Satisfaction;
+                    tiers[tierName].push(shop);
+                }
+
+                setTierLists(tiers);
+            } catch (err) {
+                console.error('[OnboardingRelay] Failed to load existing rankings:', err);
+            } finally {
+                setExistingRankingsLoaded(true);
+            }
+        };
+        loadExisting();
+    }, []);
 
     useEffect(() => {
         if (confirmedShops.length > 0) {
@@ -109,7 +146,7 @@ export const OnboardingRelay = () => {
     }, [coordinates]);
 
     const handleSwipe = async (direction: SwipeDirection) => {
-        if (exitDirection || showMilestoneModal || comparisonMode || showPhaseTransition) return;
+        if (exitDirection || showMilestoneModal || showPhaseTransition || pendingPlacement) return;
 
         if (showGuide) setShowGuide(false);
 
@@ -125,10 +162,6 @@ export const OnboardingRelay = () => {
 
         setStats(prev => ({ ...prev, recorded: prev.recorded + 1, [satisfaction]: prev[satisfaction] + 1 }));
 
-        // Store in local ratings (for comparison)
-        const newRatings = [...ratings, { shopId: currentShop.id, satisfaction, shop: currentShop }];
-        setRatings(newRatings);
-
         // Store in onboarding context
         const onboardingRating: OnboardingRating = {
             shopId: currentShop.id,
@@ -142,28 +175,87 @@ export const OnboardingRelay = () => {
         };
         addRating(onboardingRating);
 
-        // Check comparison trigger
-        if (newRatings.length >= COMPARISON_INTERVAL && newRatings.length % COMPARISON_INTERVAL === 0) {
-            const pairs = generateComparisonPairs(newRatings);
-            if (pairs.length > 0) {
-                setTimeout(() => {
-                    setExitDirection(null);
-                    setComparisonQueue(pairs);
-                    setComparisonIndex(0);
-                    setComparisonMode(true);
-                }, 350);
-                return;
-            }
-        }
-
+        // After card exit animation, advance index & show placement overlay
         setTimeout(() => {
             setExitDirection(null);
-            moveToNext();
+
+            // Advance card index now so the next card is ready behind the overlay
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            if (phase === 'nearby' && nextIndex < shops.length - 5 && hasMore && !isLoading) {
+                loadNearbyShops(offset);
+            }
+
+            const placementShop: PlacementShop = {
+                shopId: currentShop.id,
+                shopName: currentShop.name,
+                photo_url: currentShop.thumbnail_img,
+                food_kind: currentShop.food_kind,
+                region: currentShop.address_region || currentShop.address_full,
+            };
+            setPendingPlacement({ shop: placementShop, tier: satisfaction });
         }, 350);
     };
 
+    // Handle placement complete (card already advanced in handleSwipe)
+    const handlePlaced = useCallback((insertIndex: number) => {
+        if (!pendingPlacement) return;
+        const { shop, tier } = pendingPlacement;
+
+        setTierLists(prev => {
+            const tierList = [...prev[tier]];
+            tierList.splice(insertIndex, 0, shop);
+            return { ...prev, [tier]: tierList };
+        });
+
+        setPendingPlacement(null);
+
+        // Check phase transition (confirmed → nearby)
+        if (phase === 'confirmed' && currentIndex >= shops.length) {
+            setShowPhaseTransition(true);
+            return;
+        }
+
+        // Check end of list
+        if (currentIndex >= shops.length) {
+            if (hasMore && phase === 'nearby') {
+                loadNearbyShops(offset);
+            } else {
+                setShowMilestoneModal(true);
+            }
+        }
+    }, [pendingPlacement, phase, currentIndex, shops.length, hasMore, offset]);
+
+    // Handle placement skip (place at bottom of tier, card already advanced)
+    const handlePlacementSkip = useCallback(() => {
+        if (!pendingPlacement) return;
+        const { shop, tier } = pendingPlacement;
+
+        setTierLists(prev => ({
+            ...prev,
+            [tier]: [...prev[tier], shop],
+        }));
+
+        setPendingPlacement(null);
+
+        // Check phase transition
+        if (phase === 'confirmed' && currentIndex >= shops.length) {
+            setShowPhaseTransition(true);
+            return;
+        }
+
+        // Check end of list
+        if (currentIndex >= shops.length) {
+            if (hasMore && phase === 'nearby') {
+                loadNearbyShops(offset);
+            } else {
+                setShowMilestoneModal(true);
+            }
+        }
+    }, [pendingPlacement, phase, currentIndex, shops.length, hasMore, offset]);
+
     const handleSkip = () => {
-        if (exitDirection || showMilestoneModal || comparisonMode || showPhaseTransition) return;
+        if (exitDirection || showMilestoneModal || showPhaseTransition || pendingPlacement) return;
         if (showGuide) setShowGuide(false);
 
         setStats(prev => ({ ...prev, skipped: prev.skipped + 1 }));
@@ -200,12 +292,57 @@ export const OnboardingRelay = () => {
         }
     };
 
+    // Save rankings then navigate to analysis
+    const handleSaveAndAnalyze = async () => {
+        setShowMilestoneModal(false);
+
+        if (onboardingRatings.length === 0) {
+            navigate('/onboarding/analysis');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // 1. Batch create all rated items
+            const newItems = onboardingRatings.map(r => ({
+                shop_id: r.shopId,
+                satisfaction: r.satisfaction,
+            }));
+            if (newItems.length > 0) {
+                await RankingService.batchCreate(newItems);
+            }
+
+            // 2. Reorder everything
+            const allItems: { shop_id: number; rank: number; satisfaction_tier: number }[] = [];
+            let rank = 1;
+            for (const shop of tierLists.good) {
+                allItems.push({ shop_id: shop.shopId, rank: rank++, satisfaction_tier: 2 });
+            }
+            for (const shop of tierLists.ok) {
+                allItems.push({ shop_id: shop.shopId, rank: rank++, satisfaction_tier: 1 });
+            }
+            for (const shop of tierLists.bad) {
+                allItems.push({ shop_id: shop.shopId, rank: rank++, satisfaction_tier: 0 });
+            }
+
+            if (allItems.length > 0) {
+                await RankingService.reorder(allItems);
+            }
+        } catch (err) {
+            console.error('[OnboardingRelay] Failed to save rankings:', err);
+        } finally {
+            setIsSaving(false);
+        }
+
+        navigate('/onboarding/analysis');
+    };
+
     const handleComplete = () => {
         if (onboardingRatings.length === 0) {
             navigate('/onboarding/analysis');
             return;
         }
-        navigate('/onboarding/ranking');
+        handleSaveAndAnalyze();
     };
 
     const handleBack = () => {
@@ -229,72 +366,7 @@ export const OnboardingRelay = () => {
 
     const handleFinishFromPhaseTransition = () => {
         setShowPhaseTransition(false);
-        if (onboardingRatings.length === 0) {
-            navigate('/onboarding/analysis');
-            return;
-        }
-        navigate('/onboarding/ranking');
-    };
-
-    // Comparison logic
-    const generateComparisonPairs = (currentRatings: RelayRating[]): Array<{ a: RelayRating; b: RelayRating }> => {
-        const groups: Record<Satisfaction, RelayRating[]> = { good: [], ok: [], bad: [] };
-        for (const r of currentRatings) groups[r.satisfaction].push(r);
-
-        let targetTier: Satisfaction | null = null;
-        let maxCount = 0;
-        for (const tier of ['good', 'ok', 'bad'] as Satisfaction[]) {
-            if (groups[tier].length >= 2 && groups[tier].length > maxCount) {
-                maxCount = groups[tier].length;
-                targetTier = tier;
-            }
-        }
-        if (!targetTier) return [];
-
-        const tierItems = groups[targetTier];
-        const pairs: Array<{ a: RelayRating; b: RelayRating }> = [];
-        const len = tierItems.length;
-        if (len >= 2) pairs.push({ a: tierItems[len - 2], b: tierItems[len - 1] });
-        if (len >= 4) pairs.push({ a: tierItems[len - 4], b: tierItems[len - 3] });
-        return pairs;
-    };
-
-    const handleComparisonSelect = (winnerId: number) => {
-        setRatings(prev => {
-            const updated = [...prev];
-            const winnerIdx = updated.findIndex(r => r.shopId === winnerId);
-            const currentPair = comparisonQueue[comparisonIndex];
-            const loserId = currentPair.a.shopId === winnerId ? currentPair.b.shopId : currentPair.a.shopId;
-            const loserIdx = updated.findIndex(r => r.shopId === loserId);
-            if (winnerIdx > loserIdx && winnerIdx >= 0 && loserIdx >= 0) {
-                const [winner] = updated.splice(winnerIdx, 1);
-                updated.splice(loserIdx, 0, winner);
-            }
-            return updated;
-        });
-
-        const nextIdx = comparisonIndex + 1;
-        if (nextIdx < comparisonQueue.length) {
-            setComparisonIndex(nextIdx);
-        } else {
-            exitComparisonMode();
-        }
-    };
-
-    const handleComparisonSkip = () => {
-        const nextIdx = comparisonIndex + 1;
-        if (nextIdx < comparisonQueue.length) {
-            setComparisonIndex(nextIdx);
-        } else {
-            exitComparisonMode();
-        }
-    };
-
-    const exitComparisonMode = () => {
-        setComparisonMode(false);
-        setComparisonQueue([]);
-        setComparisonIndex(0);
-        moveToNext();
+        handleSaveAndAnalyze();
     };
 
     const currentShop = shops[currentIndex];
@@ -335,114 +407,134 @@ export const OnboardingRelay = () => {
                 progress={`${onboardingRatings.length}${t('relay.count_suffix', '개 기록')}`}
             />
 
-            {comparisonMode ? (
-                <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative">
-                    <AnimatePresence mode="wait">
-                        {comparisonQueue[comparisonIndex] && (
-                            <RelayComparison
-                                key={`${comparisonQueue[comparisonIndex].a.shopId}-${comparisonQueue[comparisonIndex].b.shopId}`}
-                                shopA={comparisonQueue[comparisonIndex].a}
-                                shopB={comparisonQueue[comparisonIndex].b}
-                                onSelect={handleComparisonSelect}
-                                onSkip={handleComparisonSkip}
-                            />
-                        )}
-                    </AnimatePresence>
-                </main>
-            ) : (
-                <>
-                    {/* Card Stack */}
-                    <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
-                        <div
-                            className="relative w-full max-w-md"
-                            style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
-                        >
-                            <RelayCardStack shops={shops} currentIndex={currentIndex} />
+            <>
+                {/* Card Stack */}
+                <main className="flex-1 flex flex-col items-center justify-center px-6 pt-4 relative overflow-visible">
+                    <div
+                        className="relative w-full max-w-md"
+                        style={{ height: 'min(calc(100vw * 1.2), 480px)', perspective: '1000px' }}
+                    >
+                        <RelayCardStack shops={shops} currentIndex={currentIndex} />
 
-                            <AnimatePresence mode="popLayout">
-                                {currentShop && !showPhaseTransition && (
-                                    <RelayCard
-                                        key={currentShop.id}
-                                        shop={currentShop}
-                                        isActive={true}
-                                        exitDirection={exitDirection}
-                                        showGuide={showGuide}
-                                        onSwipe={handleSwipe}
-                                        onDismissGuide={() => setShowGuide(false)}
-                                    />
-                                )}
-                            </AnimatePresence>
-
-                            {/* Phase transition */}
-                            {showPhaseTransition && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="absolute inset-0 flex flex-col items-center justify-center bg-white rounded-3xl border shadow-lg p-6 text-center"
-                                >
-                                    <h3 className="font-bold text-lg mb-2">
-                                        {t('onboarding.relay.phase_complete', '스크린샷 맛집 평가 완료!')}
-                                    </h3>
-                                    <p className="text-sm text-gray-600 mb-2">
-                                        {t('relay.milestone_desc', '{{count}}개의 맛집을 기록했어요!', { count: onboardingRatings.length })}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mb-6">
-                                        {t('onboarding.relay.phase_next', '근처 맛집도 더 평가해볼까요?\n더 많이 평가할수록 분석이 정확해져요.')}
-                                    </p>
-                                    <div className="flex flex-col gap-3 w-full">
-                                        <Button className="w-full rounded-xl h-11" onClick={handleContinueToNearby}>
-                                            {t('onboarding.relay.continue_nearby', '근처 맛집도 평가하기')}
-                                        </Button>
-                                        <Button variant="outline" className="w-full rounded-xl h-11" onClick={handleFinishFromPhaseTransition}>
-                                            {t('onboarding.relay.skip_nearby', '바로 순위 정리하기')}
-                                        </Button>
-                                    </div>
-                                </motion.div>
+                        <AnimatePresence mode="popLayout">
+                            {currentShop && !showPhaseTransition && (
+                                <RelayCard
+                                    key={currentShop.id}
+                                    shop={currentShop}
+                                    isActive={true}
+                                    exitDirection={exitDirection}
+                                    showGuide={showGuide}
+                                    onSwipe={handleSwipe}
+                                    onDismissGuide={() => setShowGuide(false)}
+                                />
                             )}
-                        </div>
-                    </main>
+                        </AnimatePresence>
 
-                    {/* Satisfaction Buttons */}
-                    {!showPhaseTransition && (
-                        <div className="px-6 pt-4">
-                            <div className="flex gap-2">
-                                {satisfactionButtons.map((item) => (
-                                    <button
-                                        key={item.value}
-                                        onClick={() => handleSatisfactionButton(item.value)}
-                                        disabled={!!exitDirection || showMilestoneModal}
-                                        className={cn(
-                                            "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
-                                            item.bgColor,
-                                            (exitDirection || showMilestoneModal) && "opacity-50"
-                                        )}
-                                    >
-                                        <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
-                                        <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Skip button */}
-                    {!showPhaseTransition && (
-                        <div className="px-6 pb-10 pt-3">
-                            <button
-                                onClick={handleSkip}
-                                disabled={!!exitDirection || showMilestoneModal}
-                                className={cn(
-                                    "w-full py-4 text-base text-gray-400 transition-colors",
-                                    !exitDirection && !showMilestoneModal && "hover:text-gray-500 active:text-gray-600",
-                                    (exitDirection || showMilestoneModal) && "opacity-50"
-                                )}
+                        {/* Phase transition */}
+                        {showPhaseTransition && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="absolute inset-0 flex flex-col items-center justify-center bg-white rounded-3xl border shadow-lg p-6 text-center"
                             >
-                                {t('relay.not_visited', '안 가봤어요')}
-                            </button>
+                                <h3 className="font-bold text-lg mb-2">
+                                    {t('onboarding.relay.phase_complete', '스크린샷 맛집 평가 완료!')}
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-2">
+                                    {t('relay.milestone_desc', '{{count}}개의 맛집을 기록했어요!', { count: onboardingRatings.length })}
+                                </p>
+                                <p className="text-xs text-gray-500 mb-6">
+                                    {t('onboarding.relay.phase_next', '근처 맛집도 더 평가해볼까요?\n더 많이 평가할수록 분석이 정확해져요.')}
+                                </p>
+                                <div className="flex flex-col gap-3 w-full">
+                                    <Button className="w-full rounded-xl h-11" onClick={handleContinueToNearby}>
+                                        {t('onboarding.relay.continue_nearby', '근처 맛집도 평가하기')}
+                                    </Button>
+                                    <Button variant="outline" className="w-full rounded-xl h-11" onClick={handleFinishFromPhaseTransition}>
+                                        {t('onboarding.relay.skip_nearby', '바로 분석하기')}
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
+                </main>
+
+                {/* Satisfaction Buttons */}
+                {!showPhaseTransition && (
+                    <div className="px-6 pt-4">
+                        <div className="flex gap-2">
+                            {satisfactionButtons.map((item) => (
+                                <button
+                                    key={item.value}
+                                    onClick={() => handleSatisfactionButton(item.value)}
+                                    disabled={!!exitDirection || showMilestoneModal || !!pendingPlacement}
+                                    className={cn(
+                                        "flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all active:scale-[0.98]",
+                                        item.bgColor,
+                                        (exitDirection || showMilestoneModal || pendingPlacement) && "opacity-50"
+                                    )}
+                                >
+                                    <item.icon className={cn("w-6 h-6 mb-1", item.color)} strokeWidth={2} />
+                                    <span className={cn("text-xs font-medium", item.color)}>{item.label}</span>
+                                </button>
+                            ))}
                         </div>
-                    )}
-                </>
-            )}
+                    </div>
+                )}
+
+                {/* Skip button */}
+                {!showPhaseTransition && (
+                    <div className="px-6 pb-10 pt-3">
+                        <button
+                            onClick={handleSkip}
+                            disabled={!!exitDirection || showMilestoneModal || !!pendingPlacement}
+                            className={cn(
+                                "w-full py-4 text-base text-gray-400 transition-colors",
+                                !exitDirection && !showMilestoneModal && !pendingPlacement && "hover:text-gray-500 active:text-gray-600",
+                                (exitDirection || showMilestoneModal || pendingPlacement) && "opacity-50"
+                            )}
+                        >
+                            {t('relay.not_visited', '안 가봤어요')}
+                        </button>
+                    </div>
+                )}
+            </>
+
+            {/* Inline Placement Overlay */}
+            <AnimatePresence>
+                {pendingPlacement && existingRankingsLoaded && (
+                    <PlacementOverlay
+                        key={pendingPlacement.shop.shopId}
+                        newShop={pendingPlacement.shop}
+                        tier={pendingPlacement.tier}
+                        tierShops={tierLists[pendingPlacement.tier]}
+                        tierOffset={
+                            pendingPlacement.tier === 'good' ? 0
+                            : pendingPlacement.tier === 'ok' ? tierLists.good.length
+                            : tierLists.good.length + tierLists.ok.length
+                        }
+                        onPlaced={handlePlaced}
+                        onSkip={handlePlacementSkip}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Saving overlay */}
+            <AnimatePresence>
+                {isSaving && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    >
+                        <div className="bg-white rounded-2xl p-6 flex flex-col items-center gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <p className="text-sm font-medium">{t('relay.saving', '저장 중...')}</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Back Confirmation Modal */}
             <AnimatePresence>
@@ -503,8 +595,8 @@ export const OnboardingRelay = () => {
                                 {t('relay.milestone_hint', '랭킹 순서를 정리하고 저장할 수 있어요.')}
                             </p>
                             <div className="flex flex-col gap-3">
-                                <Button className="w-full rounded-xl h-11" onClick={handleComplete}>
-                                    {t('relay.organize_ranking', '랭킹 정리하기')}
+                                <Button className="w-full rounded-xl h-11" onClick={handleSaveAndAnalyze}>
+                                    {t('relay.save_and_analyze', '저장하고 분석하기')}
                                 </Button>
                             </div>
                         </motion.div>

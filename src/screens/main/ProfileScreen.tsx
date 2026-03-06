@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MainHeader } from '@/components/MainHeader';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
-import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark, HelpCircle } from 'lucide-react';
+import { Link as LinkIcon, Edit2, List, Settings, Loader2, ListOrdered, CloudDownload, Grid, Bookmark, HelpCircle, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -44,6 +44,13 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
         const tab = searchParams.get('tab') as ProfileTabType;
         if (tab) setActiveTab(tab);
     }, [searchParams]);
+
+    // Default to 'list' tab when user has no content (URL param takes priority)
+    useEffect(() => {
+        if (!searchParams.get('tab') && user && (user.stats?.content_count || 0) === 0) {
+            setActiveTab('list');
+        }
+    }, [user?.id]);
 
     // Menu & Sheets
     // Data
@@ -410,7 +417,16 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                 </div>
                             </div>
 
-                            {user.bio && <p className="text-base whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>}
+                            {user.bio ? (
+                                <p className="text-base whitespace-pre-wrap mb-2 line-clamp-3">{user.bio}</p>
+                            ) : (
+                                <p
+                                    className="text-sm text-muted-foreground/70 mb-2 cursor-pointer hover:text-primary transition-colors"
+                                    onClick={() => navigate('/profile/edit')}
+                                >
+                                    {t('profile.setup.missing_bio')}
+                                </p>
+                            )}
 
                             {user.link && (
                                 <a
@@ -481,6 +497,53 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                             </div>
                         );
                     })()}
+
+                    {/* Setup Prompt - show 1 based on priority */}
+                    {(() => {
+                        if (!user.cluster_name) {
+                            return (
+                                <button
+                                    className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors mt-2"
+                                    onClick={() => navigate('/quiz/intro')}
+                                >
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">{t('profile.setup.no_quiz_status')}</p>
+                                        <p className="text-sm text-primary font-medium mt-1">{t('profile.setup.no_quiz_action')}</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                </button>
+                            );
+                        }
+                        if (!user.profile_image) {
+                            return (
+                                <button
+                                    className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors mt-2"
+                                    onClick={() => navigate('/profile/edit')}
+                                >
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">{t('profile.setup.missing_photo')}</p>
+                                        <p className="text-sm text-primary font-medium mt-1">{t('profile.setup.edit_profile_action')}</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                </button>
+                            );
+                        }
+                        if (!user.group_name && !user.neighborhood) {
+                            return (
+                                <button
+                                    className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors mt-2"
+                                    onClick={() => navigate('/profile/group')}
+                                >
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">{t('profile.setup.no_affiliation_status')}</p>
+                                        <p className="text-sm text-primary font-medium mt-1">{t('profile.setup.register_affiliation_action')}</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                </button>
+                            );
+                        }
+                        return null;
+                    })()}
                 </div>
 
                 {/* Tabs */}
@@ -490,26 +553,26 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                         <TabButton
                             active={activeTab === 'timeline'}
                             onClick={() => handleTabChange('timeline')}
-                            icon={<Calendar className="w-5 h-5" />}
+                            icon={<Calendar className="w-3.5 h-3.5" />}
                             label={t('profile.tabs.timeline')}
                         />
                         */}
                         <TabButton
                             active={activeTab === 'content'}
                             onClick={() => handleTabChange('content')}
-                            icon={<Grid className="w-5 h-5" />}
+                            icon={<Grid className="w-3.5 h-3.5" />}
                             label={t('profile.tabs.content')}
                         />
                         <TabButton
                             active={activeTab === 'list'}
                             onClick={() => handleTabChange('list')}
-                            icon={<List className="w-5 h-5" />}
+                            icon={<List className="w-3.5 h-3.5" />}
                             label={t('profile.tabs.list')}
                         />
                         <TabButton
                             active={activeTab === 'saved'}
                             onClick={() => handleTabChange('saved')}
-                            icon={<Bookmark className="w-5 h-5" />}
+                            icon={<Bookmark className="w-3.5 h-3.5" />}
                             label={t('profile.tabs.saved')}
                         />
                     </div>
@@ -542,10 +605,29 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : contents.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 px-6">
-                                    <p className="text-sm text-center text-muted-foreground">
-                                        {t('profile.empty.content', '게시물이 없습니다')}
-                                    </p>
+                                <div className="flex flex-col gap-3 py-8 px-5">
+                                    <button
+                                        className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                                        onClick={() => navigate('/write')}
+                                    >
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">{t('profile.empty.content_desc')}</p>
+                                            <p className="text-sm text-primary font-medium mt-1">{t('profile.empty.content_action')}</p>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                    </button>
+                                    {(user.stats?.ranking_count || 0) < 30 && (
+                                        <button
+                                            className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                                            onClick={() => navigate('/relay')}
+                                        >
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">{t('profile.empty.quick_record_desc')}</p>
+                                                <p className="text-sm text-primary font-medium mt-1">{t('profile.empty.relay_action')}</p>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <>
@@ -660,12 +742,22 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                             {t('profile.empty.lists_requirement', '30개 이상의 기록을 완료하면\n나만의 맛집 랭킹 리스트가 만들어져요')}
                                         </p>
 
-                                        <p className="text-xs text-center text-muted-foreground/70">
+                                        <p className="text-xs text-center text-muted-foreground/70 mb-4">
                                             {30 - (user.stats?.ranking_count || 0) > 0
                                                 ? t('profile.empty.remaining', '{{count}}개 더 기록하면 리스트가 생성됩니다', { count: 30 - (user.stats?.ranking_count || 0) })
                                                 : t('profile.empty.refresh', '새로고침하여 리스트를 확인하세요')
                                             }
                                         </p>
+
+                                        {/* Relay CTA inside progress card */}
+                                        <Button
+                                            variant="outline"
+                                            className="w-full gap-2 rounded-full"
+                                            onClick={() => navigate('/relay')}
+                                        >
+                                            {t('profile.empty.relay_action')}
+                                            <ChevronRight className="w-4 h-4" />
+                                        </Button>
                                     </div>
 
                                     {/* Current Rankings */}
@@ -749,10 +841,27 @@ export const ProfileScreen = ({ refreshTrigger, isEnabled = true }: ProfileScree
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : savedShops.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8 px-6">
-                                    <p className="text-sm text-center text-muted-foreground">
-                                        {t('profile.empty.saved', '저장된 장소가 없습니다.')}
-                                    </p>
+                                <div className="flex flex-col gap-3 py-4 px-0">
+                                    <button
+                                        className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                                        onClick={() => navigate('/main/discover')}
+                                    >
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">{t('profile.empty.saved_desc')}</p>
+                                            <p className="text-sm text-primary font-medium mt-1">{t('profile.empty.saved_action')}</p>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                    </button>
+                                    <button
+                                        className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                                        onClick={() => navigate('/profile/import')}
+                                    >
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">{t('profile.empty.import_desc')}</p>
+                                            <p className="text-sm text-primary font-medium mt-1">{t('profile.empty.import_action')}</p>
+                                        </div>
+                                        <CloudDownload className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                    </button>
                                 </div>
                             ) : (
                                 savedShops.map((shop: any) => (
@@ -788,13 +897,14 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick:
         onClick={onClick}
         aria-label={label}
         className={cn(
-            'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center',
+            'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
             active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
         )}
     >
-        <div className="w-5 h-5">
+        <div className="w-3.5 h-3.5">
             {icon}
         </div>
+        <span className="text-xs">{label}</span>
         {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black dark:bg-white rounded-t-full" />}
     </button>
 );
